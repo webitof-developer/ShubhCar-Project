@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const Order = require('../../models/Order.model');
 const OrderItem = require('../../models/OrderItem.model');
-const OrderVendorSplit = require('../../models/OrderVendorSplit.model');
+
 const SalesReport = require('../../models/SalesReport.model');
 
 class SalesReportsRepo {
@@ -53,24 +53,12 @@ class SalesReportsRepo {
       },
     ]);
 
-    const vendorAgg = await OrderVendorSplit.aggregate([
-      { $match: { ...(match.createdAt ? { createdAt: match.createdAt } : {}) } },
-      {
-        $group: {
-          _id: '$vendorId',
-          vendorSubtotal: { $sum: '$vendorSubtotal' },
-          vendorTax: { $sum: '$vendorTax' },
-          vendorShippingShare: { $sum: '$vendorShippingShare' },
-          platformCommission: { $sum: '$platformCommission' },
-          finalPayout: { $sum: '$finalPayout' },
-        },
-      },
-    ]);
+
 
     return {
       orders: ordersAgg[0] || { totalOrders: 0, totalRevenue: 0 },
       items: itemsAgg[0] || { totalItems: 0, totalItemRevenue: 0 },
-      vendors: vendorAgg,
+      vendors: [],
     };
   }
 }

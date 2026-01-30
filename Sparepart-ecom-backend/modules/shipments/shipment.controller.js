@@ -28,25 +28,9 @@ exports.updateStatus = asyncHandler(async (req, res) => {
   return success(res, data, 'Shipment updated');
 });
 
-exports.vendorList = asyncHandler(async (req, res) => {
-  const data = await service.vendorList(req.user);
-  return success(res, data, 'Shipments fetched');
-});
 
-exports.vendorUpdateStatus = asyncHandler(async (req, res) => {
-  const data = await service.vendorUpdateStatus(
-    req.user,
-    req.params.orderItemId,
-    req.body,
-  );
-  audit.log({
-    actor: { id: req.user?.id, role: req.user?.role || 'unknown' },
-    action: 'shipment_update_status_vendor',
-    target: { orderItemId: req.params.orderItemId },
-    meta: req.body,
-  });
-  return success(res, data, 'Shipment updated');
-});
+
+
 
 exports.list = asyncHandler(async (req, res) => {
   const data = await service.list(req.query);

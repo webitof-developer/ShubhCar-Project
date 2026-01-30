@@ -29,7 +29,7 @@ router.get(
 );
 
 // vendor list own shipments
-router.get('/vendor', auth([ROLES.VENDOR]), controller.vendorList);
+
 
 // get single shipment
 router.get(
@@ -61,13 +61,7 @@ router.patch(
 );
 
 // vendor updates status for their items
-router.patch(
-  '/vendor/:orderItemId/status',
-  auth([ROLES.VENDOR]),
-  validateId('orderItemId'),
-  validate(updateShipmentSchema),
-  controller.vendorUpdateStatus,
-);
+
 
 // delete shipment
 router.delete(

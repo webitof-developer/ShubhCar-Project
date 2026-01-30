@@ -28,20 +28,7 @@ exports.adminDecision = asyncHandler(async (req, res) => {
   return success(res, data, 'Return updated');
 });
 
-exports.vendorConfirm = asyncHandler(async (req, res) => {
-  const data = await service.vendorConfirm({
-    vendorUser: req.user,
-    id: req.params.id,
-    payload: req.body,
-  });
-  audit.log({
-    actor: { id: req.user?.id, role: req.user?.role || 'unknown' },
-    action: 'return_vendor_confirm',
-    target: { returnId: req.params.id },
-    meta: req.body,
-  });
-  return success(res, data, 'Return vendor confirmation recorded');
-});
+
 
 exports.complete = asyncHandler(async (req, res) => {
   const data = await service.complete({

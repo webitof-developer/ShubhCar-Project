@@ -8,7 +8,7 @@ const ROLES = require('../../constants/roles');
 const {
   createReturnSchema,
   adminDecisionSchema,
-  vendorConfirmSchema,
+
   completeSchema,
 } = require('./return.validator');
 
@@ -34,13 +34,7 @@ router.post(
 );
 
 // Vendor: confirm receipt/participation
-router.post(
-  '/:id/vendor-confirm',
-  auth([ROLES.VENDOR]),
-  validateId('id'),
-  validate(vendorConfirmSchema),
-  controller.vendorConfirm,
-);
+
 
 // Admin: mark completed
 router.post(

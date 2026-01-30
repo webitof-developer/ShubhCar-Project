@@ -5,7 +5,7 @@ const orderJobs = require('../../jobs/order.jobs');
 const orderRepo = require('../orders/order.repo');
 const { PAYMENT_STATUS } = require('../../constants/paymentStatus');
 const orderItemsRepo = require('../orderItems/orderItems.repo');
-const vendorRepo = require('../vendors/vendor.repo');
+
 const ROLES = require('../../constants/roles');
 
 const ALLOWED_TRANSITIONS = {
@@ -239,19 +239,9 @@ class ShipmentService {
     });
   }
 
-  async vendorList(vendorUser) {
-    const vendor = await vendorRepo.getByOwner(vendorUser.id);
-    if (!vendor) error('Vendor not found', 404);
-    return shipmentRepo.list({ vendorId: vendor._id });
-  }
 
-  async vendorUpdateStatus(vendorUser, orderItemId, payload) {
-    const vendor = await vendorRepo.getByOwner(vendorUser.id);
-    if (!vendor) error('Vendor not found', 404);
-    return this.updateShipmentStatus(orderItemId, payload, {
-      expectedVendorId: vendor._id,
-    });
-  }
+
+
 }
 
 module.exports = new ShipmentService();

@@ -1,5 +1,7 @@
 const redisUrl = process.env.REDIS_URL;
 
+// Worker disabled due to vendor module removal
+/*
 if (!redisUrl) {
   // eslint-disable-next-line no-console
   console.warn('Worker disabled: REDIS_URL not set');
@@ -56,3 +58,5 @@ if (!redisUrl) {
 
   module.exports = { worker, disabled: false };
 }
+*/
+module.exports = { worker: null, disabled: true };

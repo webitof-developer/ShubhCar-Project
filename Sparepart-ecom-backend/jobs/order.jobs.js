@@ -11,7 +11,7 @@ const { payoutQueue } = require('../queues/payout.queue');
 const { enqueueEmail } = require('../queues/email.queue');
 const userRepo = require('../modules/users/user.repo'); // or wherever user lookup is
 const notificationsService = require('../modules/notifications/notifications.service');
-const vendorRepo = require('../modules/vendors/vendor.repo');
+
 const EmailDispatch = require('../models/EmailDispatch');
 
 const AUTO_CANCEL_MS = 20 * 60 * 1000; // 20 minutes
@@ -179,27 +179,7 @@ const enqueueStatusNotification = async (orderId, status) => {
     metadata: { orderId, status },
   });
 
-  // Vendor notifications (multi-vendor orders fan out)
-  const items = await orderRepo.findItemsByOrder(orderId);
-  const vendorIds = [
-    ...new Set(
-      items
-        .map((i) => (i.vendorId ? String(i.vendorId) : null))
-        .filter(Boolean),
-    ),
-  ];
-  for (const vendorId of vendorIds) {
-    const vendor = await vendorRepo.findById(vendorId);
-    if (!vendor?.ownerUserId) continue;
-    await notificationsService.create({
-      userId: vendor.ownerUserId,
-      type: 'inapp',
-      audience: 'vendor',
-      title: `Order ${order.orderNumber} ${status}`,
-      message: `An order item under your catalog is ${status}.`,
-      metadata: { orderId, vendorId, status },
-    });
-  }
+
 
   // Admin stream notification (broadcast)
   await notificationsService.create({
