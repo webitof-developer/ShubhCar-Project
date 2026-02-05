@@ -57,7 +57,7 @@ router.post(
   '/initiate',
   paymentLimiter,
   auth(),
-  authorize([ROLES.CUSTOMER, ROLES.VENDOR, ROLES.ADMIN]),
+  authorize([ROLES.CUSTOMER,  ROLES.ADMIN]),
   validate(initiatePaymentSchema),
   controller.initiate,
 );

@@ -1,7 +1,7 @@
 // backend/workers/email.worker.js
-const redisUrl = process.env.REDIS_URL;
+const { queuesEnabled } = require('../config/queue');
 
-if (!redisUrl) {
+if (!queuesEnabled) {
   // eslint-disable-next-line no-console
   console.warn('Worker disabled: REDIS_URL not set');
   module.exports = { worker: null, disabled: true };

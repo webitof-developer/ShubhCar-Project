@@ -49,9 +49,6 @@ router.get('/', adminLimiter, auth([ROLES.ADMIN]), controller.list);
  */
 router.get('/admin/order/:orderId', adminLimiter, auth([ROLES.ADMIN]), validateId('orderId'), controller.adminListByOrder);
 
-// vendor list own shipments
-
-
 // get single shipment
 /**
  * @openapi
@@ -132,9 +129,6 @@ router.post('/:orderItemId', adminLimiter, auth([ROLES.ADMIN]), validateId('orde
  *         description: Shipment updated
  */
 router.patch('/:orderItemId/status', adminLimiter, auth([ROLES.ADMIN]), validateId('orderItemId'), validate(updateShipmentSchema), controller.updateStatus);
-
-// vendor updates status for their items
-
 
 // delete shipment
 /**

@@ -15,7 +15,6 @@ const ORDER_JOBS = {
   RELEASE_INVENTORY: 'release-inventory',
   PREPARE_SHIPMENT: 'prepare-shipment',
   ORDER_STATUS_NOTIFICATION: 'order-status-notification',
-  VENDOR_PAYOUT_ELIGIBILITY: 'vendor-payout-eligibility',
 };
 
 /* ============================================================
@@ -84,25 +83,6 @@ const enqueueOrderStatusNotification = async (orderId, status) =>
   );
 
 /**
- * Vendor payout eligibility evaluation
- */
-const enqueueVendorPayoutEligibility = async (orderId) =>
-  orderQueue.add(
-    ORDER_JOBS.VENDOR_PAYOUT_ELIGIBILITY,
-    { orderId },
-    {
-      attempts: 3,
-      backoff: { type: 'exponential', delay: 10000 },
-      removeOnComplete: true,
-      removeOnFail: true,
-    },
-  );
-
-/* ============================================================
-   AUTO-CANCEL CLEANUP
-============================================================ */
-
-/**
  * Remove scheduled auto-cancel job once payment succeeds
  */
 const cancelAutoCancel = async (orderId) => {
@@ -130,6 +110,5 @@ module.exports = {
   enqueueReleaseInventory,
   enqueueShipmentPrep,
   enqueueOrderStatusNotification,
-  enqueueVendorPayoutEligibility,
   cancelAutoCancel,
 };

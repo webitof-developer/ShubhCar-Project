@@ -144,7 +144,6 @@ class InventoryAdminService {
 
     await InventoryLog.create({
       productId,
-      vendorId: updated.vendorId || undefined,
       changeType: 'admin_adjust',
       quantityChanged: Math.abs(delta),
       previousStock: updated.stockQty - delta,

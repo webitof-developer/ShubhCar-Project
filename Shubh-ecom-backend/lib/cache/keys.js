@@ -76,8 +76,6 @@ module.exports = {
 
   orderItems: {
     byOrder: (orderId) => `order_items:order:${orderId}`,
-    byVendor: (vendorId, status = 'all') =>
-      `order_items:vendor:${vendorId}:status:${status}`,
   },
 
   reviews: {

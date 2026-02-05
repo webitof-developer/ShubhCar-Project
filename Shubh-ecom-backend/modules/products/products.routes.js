@@ -538,12 +538,12 @@ router.delete(
   controller.adminForceDelete,
 );
 
-// Vendor/Admin (protected)
+// Admin (protected)
 /**
  * @openapi
  * /api/v1/products:
  *   post:
- *     summary: Create a new product (Vendor/Admin)
+ *     summary: Create a new product (Admin)
  *     tags: [Catalog]
  *     security:
  *       - bearerAuth: []
@@ -599,7 +599,7 @@ router.post(
  * @openapi
  * /api/v1/products/{productId}:
  *   put:
- *     summary: Update a product (Vendor/Admin)
+ *     summary: Update a product (Admin)
  *     tags: [Catalog]
  *     security:
  *       - bearerAuth: []
@@ -635,7 +635,7 @@ router.put(
  * @openapi
  * /api/v1/products/{productId}:
  *   delete:
- *     summary: Soft delete a product (Vendor/Admin)
+ *     summary: Soft delete a product (Admin)
  *     tags: [Catalog]
  *     security:
  *       - bearerAuth: []

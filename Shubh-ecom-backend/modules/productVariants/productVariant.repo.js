@@ -1,13 +1,8 @@
-const ProductVariant = require('../../models/ProductVariant.model');
-const InventoryLog = require('../../models/InventoryLog.model');
-
+// Stub repository retained only for backward compatibility after removing product variant feature.
+// All methods return null/empty to indicate variants are no longer supported.
 class ProductVariantRepository {
-  getVariantById(id) {
-    return ProductVariant.findById(id).lean();
-  }
-
-  createInventoryLog(log) {
-    return InventoryLog.create(log);
+  getVariantById() {
+    return Promise.resolve(null);
   }
 }
 

@@ -71,7 +71,7 @@ exports.createProductSchema = Joi.object({
   isFeatured: Joi.boolean().optional(),
   listingFeeStatus: Joi.string().valid('pending', 'paid', 'waived').optional(),
 
-  // vendor cannot set these
+  // system-managed fields
 }).options({ allowUnknown: false });
 
 exports.updateProductSchema = Joi.object({

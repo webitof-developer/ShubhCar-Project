@@ -35,7 +35,6 @@ const router = express.Router();
  *                   type: object
  *                   properties:
  *                     orderItemId: { type: string }
- *                     vendorId: { type: string }
  *                     quantity: { type: integer }
  *                     reason: { type: string }
  *             required: [orderId, items]
@@ -111,7 +110,7 @@ router.post(
   controller.adminDecision,
 );
 
-// Vendor: confirm receipt/participation
+//   confirm receipt/participation
 
 
 /**

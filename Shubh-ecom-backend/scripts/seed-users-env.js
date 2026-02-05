@@ -4,7 +4,6 @@ const bcrypt = require('bcrypt');
 
 const ROLES = {
   ADMIN: 'admin',
-  VENDOR: 'vendor',
   CUSTOMER: 'customer',
 };
 
@@ -16,14 +15,6 @@ const users = [
     email: 'admin@spareparts.com',
     password: 'Admin@123',
     role: ROLES.ADMIN,
-    customerType: 'retail',
-  },
-  {
-    firstName: 'Vendor',
-    lastName: 'User',
-    email: 'vendor@spareparts.com',
-    password: 'Vendor@123',
-    role: ROLES.VENDOR,
     customerType: 'retail',
   },
   {

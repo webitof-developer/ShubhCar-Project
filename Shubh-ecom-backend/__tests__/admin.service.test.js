@@ -10,7 +10,7 @@ jest.mock('../modules/users/user.repo', () => ({
 
 describe('AdminService.reviewWholesaleUser', () => {
   const admin = { role: 'admin' };
-  const nonAdmin = { role: 'vendor' };
+  const nonAdmin = { role: 'customer' };
 
   afterEach(() => {
     jest.clearAllMocks();

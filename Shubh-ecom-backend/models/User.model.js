@@ -45,7 +45,7 @@ const userSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: [ROLES.ADMIN, ROLES.CUSTOMER], // prev [ROLES.ADMIN, ROLES.VENDOR, ROLES.CUSTOMER]
+      enum: [ROLES.ADMIN, ROLES.CUSTOMER], // prev [ROLES.ADMIN,   ROLES.CUSTOMER]
       required: true,
       index: true,
     },

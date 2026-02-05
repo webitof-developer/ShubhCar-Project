@@ -236,8 +236,7 @@ class ProductService {
   }
   async create(payload, user) {
     if (!user) error('Unauthorized', 401);
-    // MODIFIED: Commented out vendor-only restriction to allow admin to create products
-    // if (user.role !== ROLES.VENDOR) error('Only vendors can create products', 403);
+    if (user.role !== ROLES.ADMIN) error('Forbidden', 403);
 
     const productCode = payload.productCode
       ? String(payload.productCode).trim().toUpperCase()
@@ -286,12 +285,8 @@ class ProductService {
     const product = await repo.create({
       ...safePayload,
       slug,
-      // Single-vendor: only set vendorId for vendor users
-      vendorId: user.role === ROLES.VENDOR ? user._id : null,
-      status: user.role === ROLES.ADMIN && safePayload.status ? safePayload.status : 'draft',
-      // MODIFIED: Auto-approve for admin, pending for vendor
-      // listingFeeStatus: 'pending',
-      listingFeeStatus: user.role === ROLES.ADMIN ? 'waived' : 'pending',
+      status: safePayload.status && user.role === ROLES.ADMIN ? safePayload.status : 'draft',
+      listingFeeStatus: 'waived',
     });
 
     if (images.length) {
@@ -318,12 +313,7 @@ class ProductService {
     const product = await repo.findById(productId);
     if (!product) error('Product not found', 404);
 
-    if (
-      user.role !== ROLES.ADMIN &&
-      String(product.vendorId) !== String(user._id)
-    ) {
-      error('Forbidden', 403);
-    }
+
 
     // slug uniqueness if changing
     const oldSlug = product.slug;
@@ -332,16 +322,7 @@ class ProductService {
       if (exists) error('Slug already exists', 409);
     }
 
-    if (product.status === 'active' && user.role === ROLES.VENDOR) {
-      delete payload.retailPrice;
-      delete payload.wholesalePrice;
-    }
 
-    if (user.role === ROLES.VENDOR) {
-      delete payload.status;
-      delete payload.isFeatured;
-      delete payload.listingFeeStatus;
-    }
 
     const { primaryImageId, ...safePayload } = payload;
     [
@@ -411,12 +392,7 @@ class ProductService {
 
     if (product.isDeleted) error('Product already deleted', 400);
 
-    if (
-      user.role !== ROLES.ADMIN &&
-      String(product.vendorId) !== String(user._id)
-    ) {
-      error('Forbidden', 403);
-    }
+
 
     if (product.status === 'active' && user.role !== ROLES.ADMIN) {
       error('Active products cannot be deleted', 403);
@@ -512,7 +488,7 @@ class ProductService {
   }
 
   async adminList(query = {}) {
-    const { limit = 20, page = 1, status, vendorId, categoryId, manufacturerBrand, productType, stockStatus, isFeatured, search } = query;
+    const { limit = 20, page = 1, status, categoryId, manufacturerBrand, productType, stockStatus, isFeatured, search } = query;
 
     console.log('[adminList] Received query:', query);
     console.log('[adminList] Status param:', status);
@@ -537,7 +513,7 @@ class ProductService {
       includeDeleted = true;
     }
 
-    if (vendorId) filter.vendorId = vendorId;
+
     if (categoryId) filter.categoryId = categoryId;
     if (manufacturerBrand) filter.manufacturerBrand = manufacturerBrand;
     if (productType) {

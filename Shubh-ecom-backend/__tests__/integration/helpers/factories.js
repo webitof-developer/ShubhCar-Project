@@ -4,7 +4,6 @@ const User = require('../../../models/User.model');
 const Product = require('../../../models/Product.model');
 const ProductVariant = require('../../../models/ProductVariant.model');
 const Category = require('../../../models/Category.model');
-const Vendor = require('../../../models/Vendor.model');
 const UserAddress = require('../../../models/UserAddress.model');
 const Settings = require('../../../models/Settings.model');
 const Cart = require('../../../models/Cart.model');
@@ -33,22 +32,6 @@ async function createUser(overrides = {}) {
 }
 
 /**
- * Create a test vendor
- */
-async function createVendor(overrides = {}) {
-  const defaultVendor = {
-    name: `Vendor ${Date.now()}`,
-    email: `vendor${Date.now()}@example.com`,
-    phone: '9876543210',
-    status: 'active',
-    isDeleted: false,
-  };
-
-  const vendor = await Vendor.create({ ...defaultVendor, ...overrides });
-  return vendor;
-}
-
-/**
  * Create a test category
  */
 async function createCategory(overrides = {}) {
@@ -68,7 +51,6 @@ async function createCategory(overrides = {}) {
  */
 async function createProduct(options = {}) {
   const {
-    vendorId,
     categoryId,
     variantsCount = 1,
     stockQty = 100,
@@ -76,14 +58,12 @@ async function createProduct(options = {}) {
     ...overrides
   } = options;
 
-  const vendor = vendorId || (await createVendor())._id;
   const category = categoryId || (await createCategory())._id;
 
   const defaultProduct = {
     name: `Product ${Date.now()}`,
     slug: `product-${Date.now()}`,
     price: 100,
-    vendorId: vendor,
     categoryId: category,
     status: 'active',
     isDeleted: false,
@@ -221,7 +201,6 @@ async function createOrder(options = {}) {
       orderId: order._id,
       productId: item.productId,
       productVariantId: item.variantId,
-      vendorId: item.vendorId,
       sku: item.sku || `SKU-${item.variantId}`,
       quantity: item.quantity,
       price: item.price,
@@ -236,7 +215,6 @@ async function createOrder(options = {}) {
 
 module.exports = {
   createUser,
-  createVendor,
   createCategory,
   createProduct,
   createShippingConfig,

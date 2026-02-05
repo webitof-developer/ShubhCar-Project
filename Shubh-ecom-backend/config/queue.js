@@ -2,7 +2,7 @@ const { Queue } = require('bullmq');
 const env = require('./env');
 const logger = require('./logger');
 
-const queuesEnabled = Boolean(env.REDIS_URL);
+const queuesEnabled = Boolean(env.REDIS_URL) && env.ENABLE_REDIS !== false;
 
 let connection = null;
 let createQueue = () => ({
@@ -19,4 +19,4 @@ if (queuesEnabled) {
   logger.warn('Queues disabled: REDIS_URL not set');
 }
 
-module.exports = { createQueue, connection };
+module.exports = { createQueue, connection, queuesEnabled };

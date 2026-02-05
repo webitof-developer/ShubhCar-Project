@@ -18,18 +18,7 @@ const productSchema = new mongoose.Schema(
       uppercase: true,
       index: true,
     },
-
-    /* =====================
-       OWNERSHIP & CATEGORY
-    ====================== */
-    vendorId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Vendor',
-      required: false,
-      index: true,
-    },
-
-    categoryId: {
+     categoryId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Category',
       required: true,
@@ -194,7 +183,7 @@ productSchema.pre('save', async function () {
    INDEX DISCIPLINE
 ===================== */
 productSchema.index({ categoryId: 1, status: 1 });
-productSchema.index({ vendorId: 1, status: 1 });
+
 productSchema.index({ isFeatured: 1, status: 1 });
 productSchema.index({ status: 1, createdAt: -1 });
 productSchema.index({ ratingAvg: -1, ratingCount: -1 });

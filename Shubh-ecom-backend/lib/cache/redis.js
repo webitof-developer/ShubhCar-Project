@@ -4,7 +4,7 @@ const logger = require('../../config/logger');
 let client;
 
 const ensureClient = async () => {
-  if (!process.env.REDIS_URL) return null;
+  if (!process.env.REDIS_URL || process.env.ENABLE_REDIS === 'false') return null;
   
   if (client) {
     return client.isOpen ? client : null;
@@ -20,6 +20,7 @@ const ensureClient = async () => {
     await client.connect();
     return client;
   } catch (err) {
+    console.log('DEBUG: LIB REDIS CONNECT FAILED', err.message);
     logger.warn('Redis connect failed (cache disabled)', { error: err.message });
     client = null;
     return null;

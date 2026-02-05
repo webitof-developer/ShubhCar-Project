@@ -9,7 +9,7 @@ async function test() {
     await mongoose.connect(uri, { serverSelectionTimeoutMS: 10000 });
     console.log('Connected to MongoDB!');
     
-    const User = require('./models/User.model');
+    const User = require('../models/User.model');
     console.log('User model loaded');
     
     const count = await User.countDocuments({});

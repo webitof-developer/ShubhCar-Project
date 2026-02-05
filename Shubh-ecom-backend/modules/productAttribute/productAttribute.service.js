@@ -3,6 +3,7 @@ const categoryRepo = require('../categories/category.repo');
 const categoryAttrRepo = require('../categoryAttribute/categoryAttribute.repo');
 const repo = require('./productAttribute.repo');
 const { error } = require('../../utils/apiResponse');
+const ROLES = require('../../constants/roles');
 
 /* =====================
    HELPERS
@@ -45,12 +46,7 @@ class ProductAttributeService {
     const product = await Product.findById(productId).lean();
     if (!product) error('Product not found', 404);
 
-    if (
-      user.role !== 'Admin' &&
-      String(product.vendorId) !== String(user._id)
-    ) {
-      error('Forbidden', 403);
-    }
+    if (user.role !== ROLES.ADMIN) error('Forbidden', 403);
 
     return repo.getByProduct(productId);
   }
@@ -62,16 +58,7 @@ class ProductAttributeService {
     const product = await Product.findById(productId).lean();
     if (!product) error('Product not found', 404);
 
-    if (
-      user.role !== 'Admin' &&
-      String(product.vendorId) !== String(user._id)
-    ) {
-      error('Forbidden', 403);
-    }
-
-    if (product.status === 'active' && user.role === 'Vendor') {
-      error('Cannot edit attributes of active product', 403);
-    }
+    if (user.role !== ROLES.ADMIN) error('Forbidden', 403);
 
     const ancestryIds = await categoryRepo.getAncestryIds(product.categoryId);
     if (!ancestryIds.length) error('Product category not found', 404);
@@ -100,16 +87,7 @@ class ProductAttributeService {
     const product = await Product.findById(productId).lean();
     if (!product) error('Product not found', 404);
 
-    if (
-      user.role !== 'Admin' &&
-      String(product.vendorId) !== String(user._id)
-    ) {
-      error('Forbidden', 403);
-    }
-
-    if (product.status === 'active' && user.role === 'Vendor') {
-      error('Cannot delete attributes of active product', 403);
-    }
+    if (user.role !== ROLES.ADMIN) error('Forbidden', 403);
 
     return repo.remove(productId, attributeId);
   }

@@ -226,8 +226,7 @@ const swaggerDefinition = {
             items: {
               type: 'object',
               properties: {
-                orderItemId: { type: 'string' },
-                vendorId: { type: 'string' },
+                orderItemId: { type: 'string' }, 
                 quantity: { type: 'integer' },
                 reason: { type: 'string' },
               },

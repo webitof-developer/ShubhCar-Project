@@ -565,7 +565,7 @@ Here’s the full list of route files:
 *backend/modules/tax/tax.routes.js
 *backend/modules/userActivityLogs/userActivityLogs.routes.js
 *backend/modules/userAddresses/userAddresses.routes.js
-backend/modules/users/users.routes.js
+*backend/modules/users/users.routes.js
 *backend/modules/vehicle-management/routes/attribute.routes.js
 *backend/modules/vehicle-management/routes/attributeValue.routes.js
 *backend/modules/vehicle-management/routes/brand.routes.js

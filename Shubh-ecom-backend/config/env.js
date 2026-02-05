@@ -12,6 +12,7 @@ const schema = Joi.object({
   MONGO_URI: Joi.string(),
   MONGO_REPLICA_URI: Joi.string(),
   REDIS_URL: Joi.string().optional(),
+  ENABLE_REDIS: Joi.boolean().default(true),
 
   JWT_SECRET: Joi.string().required(),
   JWT_EXPIRES_IN: Joi.string().required(),

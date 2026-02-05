@@ -40,17 +40,6 @@ exports.apiLimiter = rateLimit({
 });
 
 /* =========================
-   VENDOR
-========================= */
-exports.vendorLimiter = rateLimit({
-  ...baseConfig,
-  windowMs: 15 * 60 * 1000,
-  max: 500,
-  keyGenerator: (req) =>
-    req.user?.id ? `vendor:${req.user.id}` : ipKey(req),
-});
-
-/* =========================
    ADMIN (STRICTER THAN API)
 ========================= */
 exports.adminLimiter = rateLimit({

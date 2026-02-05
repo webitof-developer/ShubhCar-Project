@@ -29,34 +29,28 @@ describe('NotificationsService', () => {
   it('uses cache for user list and scopes by role', async () => {
     notificationCache.get.mockResolvedValue([{ id: 1 }]);
     const result = await service.list({
-      user: { id: 'user1', role: 'user' },
+      user: { id: 'user1', role: 'customer' },
       filter: {},
     });
-    expect(notificationCache.key.user).toHaveBeenCalledWith('user1', 'user');
+    expect(notificationCache.key.user).toHaveBeenCalledWith('user1', 'customer');
     expect(result).toEqual([{ id: 1 }]);
     expect(repo.list).not.toHaveBeenCalled();
   });
 
-  it('marks all as read for vendor and clears cache', async () => {
+  it('marks all as read for admin stream and clears cache', async () => {
     repo.markAllRead.mockResolvedValue({ modifiedCount: 2 });
     const resp = await service.markAllRead(
-      { id: 'user1', role: 'vendor' },
-      { audience: 'vendor' },
+      { id: 'admin1', role: 'admin' },
+      { audience: 'admin' },
     );
-    expect(repo.markAllRead).toHaveBeenCalledWith({
-      $or: [
-        { audience: 'user', userId: 'user1' },
-        { audience: 'vendor', userId: 'user1' },
-      ],
-      audience: 'vendor',
-    });
-    expect(notificationCache.clearUser).toHaveBeenCalledWith('user1');
+    expect(repo.markAllRead).toHaveBeenCalledWith({ audience: 'admin' });
+    expect(notificationCache.clearUser).toHaveBeenCalledWith('admin1');
     expect(resp).toEqual({ updated: true });
   });
 
   it('rejects invalid audience selection for regular users', async () => {
     await expect(
-      service.markAllRead({ id: 'user1', role: 'user' }, { audience: 'vendor' }),
+      service.markAllRead({ id: 'user1', role: 'customer' }, { audience: 'admin' }),
     ).rejects.toBeInstanceOf(AppError);
   });
 
@@ -67,7 +61,7 @@ describe('NotificationsService', () => {
       audience: 'user',
     });
     repo.markRead.mockResolvedValue({ _id: 'notif1', status: 'read' });
-    const resp = await service.markRead('notif1', { id: 'user1', role: 'user' });
+    const resp = await service.markRead('notif1', { id: 'user1', role: 'customer' });
     expect(repo.markRead).toHaveBeenCalledWith('notif1');
     expect(notificationCache.clearUser).toHaveBeenCalledWith('user1');
     expect(resp.status).toBe('read');

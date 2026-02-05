@@ -9,7 +9,6 @@ function logWorkerFailure(worker, job, err) {
     entityId:
       job?.data?.orderId ||
       job?.data?.paymentId ||
-      job?.data?.vendorId ||
       job?.data?.userId ||
       job?.data?.productId ||
       null,

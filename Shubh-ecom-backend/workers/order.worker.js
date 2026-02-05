@@ -1,6 +1,6 @@
-const redisUrl = process.env.REDIS_URL;
+const { queuesEnabled } = require('../config/queue');
 
-if (!redisUrl) {
+if (!queuesEnabled) {
   // eslint-disable-next-line no-console
   console.warn('Worker disabled: REDIS_URL not set');
   module.exports = { worker: null, disabled: true };
@@ -12,7 +12,6 @@ if (!redisUrl) {
   const eventBus = require('../utils/eventBus');
   const logger = require('../config/logger');
   const { logWorkerFailure } = require('../utils/workerLogger');
-  const splitRepo = require('../modules/orders/orderVendorSplit.repo');
   const orderRepo = require('../modules/orders/order.repo');
   const shipmentService = require('../modules/shipments/shipment.service');
 
@@ -37,23 +36,6 @@ if (!redisUrl) {
           }
           if (job.name === 'prepare-shipment') {
             await shipmentService.prepareForOrder(job.data.orderId);
-          }
-          if (job.name === 'vendor-payout-eligibility') {
-            const { orderId } = job.data;
-            const orderItems = await orderRepo.findItemsByOrder(orderId);
-            if (!orderItems || !orderItems.length) return;
-            const allDelivered = orderItems.every(
-              (item) => item.status === 'delivered',
-            );
-            const status = allDelivered ? 'pending' : 'on_hold';
-            await splitRepo.updateStatusByOrder(orderId, status);
-            logger.info('Vendor payout eligibility evaluated', {
-              orderId,
-              payoutStatus: status,
-            });
-            if (allDelivered) {
-              await orderJobs.dispatchPayoutProcessing(orderId);
-            }
           }
           if (job.name === 'order-status-notification') {
             const { orderId, status } = job.data;

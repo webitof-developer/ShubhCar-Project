@@ -14,12 +14,6 @@ const shipmentSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-    vendorId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Vendor',
-      required: true,
-      index: true,
-    },
     shippingProviderId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'ShippingProvider',
@@ -78,6 +72,6 @@ shipmentSchema.virtual('trackingUrl').get(function () {
 shipmentSchema.set('toJSON', { virtuals: true });
 shipmentSchema.set('toObject', { virtuals: true });
 shipmentSchema.index({ orderItemId: 1, status: 1, createdAt: -1 });
-shipmentSchema.index({ orderId: 1, vendorId: 1, createdAt: -1 });
+shipmentSchema.index({ orderId: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Shipment', shipmentSchema);

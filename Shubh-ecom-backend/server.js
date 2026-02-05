@@ -1,3 +1,6 @@
+const dotenv = require('dotenv');
+dotenv.config();
+console.log('DEBUG: ENABLE_REDIS =', process.env.ENABLE_REDIS, typeof process.env.ENABLE_REDIS);
 const app = require('./app');
 const env = require('./config/env');
 const logger = require('./config/logger');

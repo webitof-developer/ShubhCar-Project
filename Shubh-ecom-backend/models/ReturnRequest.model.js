@@ -7,16 +7,11 @@ const returnItemSchema = new mongoose.Schema(
       ref: 'OrderItem',
       required: true,
     },
-    vendorId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Vendor',
-      required: true,
-    },
     quantity: { type: Number, required: true, min: 1 },
     reason: { type: String, required: true },
     status: {
       type: String,
-      enum: ['pending', 'vendor_confirmed', 'rejected', 'approved'],
+      enum: ['pending', 'rejected', 'approved'],
       default: 'pending',
     },
   },
@@ -40,12 +35,11 @@ const returnRequestSchema = new mongoose.Schema(
     items: { type: [returnItemSchema], default: [] },
     status: {
       type: String,
-      enum: ['pending', 'approved', 'vendor_confirmed', 'rejected', 'completed'],
+      enum: ['pending', 'approved', 'rejected', 'completed'],
       default: 'pending',
       index: true,
     },
     adminNote: { type: String, default: null },
-    vendorNote: { type: String, default: null },
   },
   { timestamps: true },
 );

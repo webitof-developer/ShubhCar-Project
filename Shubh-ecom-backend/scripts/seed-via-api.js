@@ -12,14 +12,6 @@ const users = [
     customerType: 'retail',
   },
   {
-    firstName: 'Vendor',
-    lastName: 'Demo',
-    email: 'vendor@spareparts.com',
-    password: 'Vendor@123',
-    role: 'vendor',
-    customerType: 'retail',
-  },
-  {
     firstName: 'Customer',
     lastName: 'Demo',
     email: 'customer@spareparts.com',

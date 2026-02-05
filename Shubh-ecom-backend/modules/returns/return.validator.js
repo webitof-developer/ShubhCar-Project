@@ -6,7 +6,6 @@ const createReturnSchema = Joi.object({
     .items(
       Joi.object({
         orderItemId: Joi.string().required(),
-        vendorId: Joi.string().required(),
         quantity: Joi.number().integer().min(1).required(),
         reason: Joi.string().max(500).required(),
       }),
@@ -20,10 +19,6 @@ const adminDecisionSchema = Joi.object({
   adminNote: Joi.string().max(500).optional(),
 });
 
-const vendorConfirmSchema = Joi.object({
-  vendorNote: Joi.string().max(500).optional(),
-});
-
 const completeSchema = Joi.object({
   adminNote: Joi.string().max(500).optional(),
 });
@@ -31,6 +26,5 @@ const completeSchema = Joi.object({
 module.exports = {
   createReturnSchema,
   adminDecisionSchema,
-  vendorConfirmSchema,
   completeSchema,
 };

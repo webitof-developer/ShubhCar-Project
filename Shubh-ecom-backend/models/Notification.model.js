@@ -16,7 +16,7 @@ const notificationSchema = new mongoose.Schema(
     },
     audience: {
       type: String,
-      enum: ['user', 'vendor', 'admin'],
+      enum: ['user', 'admin'],
       default: 'user',
       index: true,
     },

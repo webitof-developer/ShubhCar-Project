@@ -1,4 +1,5 @@
 const userRepo = require('./user.repo');
+const mongoose = require('mongoose');
 const { error } = require('../../utils/apiResponse');
 const { hashPassword, comparePassword } = require('../../utils/password');
 const { decideVerificationFlow } = require('../../utils/verificationFlow');

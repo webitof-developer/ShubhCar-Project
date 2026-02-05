@@ -11,12 +11,11 @@ const router = express.Router();
 
 /*
   RULES:
-  - vendor: can update only their own items (confirmed → packed → shipped)
-  - admin: can do refund / return
+  - admin: can update item status (refund/return/fulfillment)
 */
 router.patch(
   '/:id/status',
-  auth([ROLES.VENDOR, ROLES.ADMIN]),
+  auth([ROLES.ADMIN]),
   validateId('id'),
   validate(updateOrderItemStatusSchema),
   controller.updateStatus,

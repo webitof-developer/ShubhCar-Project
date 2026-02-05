@@ -3,7 +3,14 @@ const env = require('./env');
 const logger = require('./logger');
 const { redisUpGauge } = require('./metrics');
 
-const redisEnabled = Boolean(env.REDIS_URL);
+const redisEnabled = Boolean(env.REDIS_URL) && env.ENABLE_REDIS !== false;
+
+if (!redisEnabled) {
+  logger.warn('Redis disabled (config)', {
+    urlSet: Boolean(env.REDIS_URL),
+    enabledFlag: env.ENABLE_REDIS,
+  });
+}
 
 const createNoopClient = () => ({
   isOpen: false,
@@ -51,7 +58,12 @@ if (redisEnabled) {
   });
 
   connectRedis = async () => {
-    if (!redis.isOpen) await redis.connect();
+    try {
+      if (!redis.isOpen) await redis.connect();
+    } catch (err) {
+      logger.error('Redis failing to connect...', { error: err.message });
+      // Do not rethrow! Allow server to start.
+    }
   };
 
   disconnectRedis = async () => {

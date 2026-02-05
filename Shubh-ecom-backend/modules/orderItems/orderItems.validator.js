@@ -2,7 +2,6 @@ const Joi = require('joi');
 
 exports.createOrderItemSchema = Joi.object({
   orderId: Joi.string().required(),
-  vendorId: Joi.string().optional(),
   productId: Joi.string().required(),
 
   sku: Joi.string().trim().required(),

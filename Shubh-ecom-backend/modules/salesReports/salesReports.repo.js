@@ -57,8 +57,7 @@ class SalesReportsRepo {
 
     return {
       orders: ordersAgg[0] || { totalOrders: 0, totalRevenue: 0 },
-      items: itemsAgg[0] || { totalItems: 0, totalItemRevenue: 0 },
-      vendors: [],
+      items: itemsAgg[0] || { totalItems: 0, totalItemRevenue: 0 }, 
     };
   }
 }

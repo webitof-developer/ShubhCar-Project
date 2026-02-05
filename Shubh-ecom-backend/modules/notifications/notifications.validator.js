@@ -3,7 +3,7 @@ const Joi = require('joi');
 const base = {
   userId: Joi.string().optional(),
   type: Joi.string().valid('email', 'sms', 'inapp').required(),
-  audience: Joi.string().valid('user', 'vendor', 'admin').default('user'),
+  audience: Joi.string().valid('user', 'admin').default('user'),
   title: Joi.string().max(200).required(),
   message: Joi.string().max(2000).required(),
   metadata: Joi.object().optional(),

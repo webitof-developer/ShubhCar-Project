@@ -61,7 +61,6 @@ class ShipmentService {
     const shipment = await shipmentRepo.create({
       orderId: order._id,
       orderItemId,
-      vendorId: orderItem.vendorId,
       shippingProviderId: payload.shippingProviderId,
       carrierName: payload.carrierName,
       trackingNumber: payload.trackingNumber,
@@ -86,8 +85,8 @@ class ShipmentService {
   }
 
   /**
-   * Create pending shipment shells per order item grouped by vendor.
-   * Used by background job to hand off fulfillment to vendors.
+   * Create pending shipment shells per order item.
+   * Used by background job to hand off fulfillment to fulfillment partners.
    */
   async prepareForOrder(orderId) {
     const items = await orderItemsRepo.findByOrderId(orderId);
@@ -101,7 +100,6 @@ class ShipmentService {
       const shipment = await shipmentRepo.create({
         orderId,
         orderItemId: item._id,
-        vendorId: item.vendorId,
         status: 'pending',
         statusHistory: [{ status: 'pending', at: new Date() }],
       });
@@ -110,18 +108,12 @@ class ShipmentService {
     return prepared;
   }
 
-  async updateShipmentStatus(orderItemId, payload, { expectedVendorId } = {}) {
+  async updateShipmentStatus(orderItemId, payload) {
     const shipment = await shipmentRepo.findByOrderItem(orderItemId);
     if (!shipment) error('Shipment not found', 404);
 
     const orderItem = await OrderItem.findById(orderItemId).lean();
     if (!orderItem) error('Order item not found', 404);
-    if (
-      expectedVendorId &&
-      String(orderItem.vendorId) !== String(expectedVendorId)
-    ) {
-      error('Forbidden', 403);
-    }
 
     const allowedStatuses = Object.keys(ALLOWED_TRANSITIONS).filter(
       (s) => s !== 'pending',

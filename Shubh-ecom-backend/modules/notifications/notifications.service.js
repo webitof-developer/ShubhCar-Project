@@ -7,15 +7,12 @@ class NotificationsService {
   visibleFilter(user, filter = {}) {
     if (user.role === ROLES.ADMIN) return { ...filter };
     const or = [{ audience: 'user', userId: user.id }];
-    if (user.role === ROLES.VENDOR) {
-      or.push({ audience: 'vendor', userId: user.id });
-    }
     return { ...filter, $or: or };
   }
 
   async create(payload) {
     if (!payload.userId && payload.audience !== ROLES.ADMIN) {
-      error('userId required for user/vendor notifications', 400);
+      error('userId required for user notifications', 400);
     }
     const created = await repo.create(payload);
     await notificationCache.clearUser(payload.userId);
@@ -26,7 +23,6 @@ class NotificationsService {
     if (user.role === ROLES.ADMIN) return repo.list(filter);
 
     const baseFilter = this.visibleFilter(user, filter);
-    // Cache only per-user scope; vendor stream shares the same cache key.
     const cacheKey = notificationCache.key.user(user.id, user.role);
     const cached = await notificationCache.get(cacheKey);
     if (cached) return cached;
@@ -40,8 +36,7 @@ class NotificationsService {
     if (!notif) error('Notification not found', 404);
     if (
       user.role !== ROLES.ADMIN &&
-      String(notif.userId) !== String(user.id) &&
-      !(user.role === ROLES.VENDOR && notif.audience === 'vendor')
+      String(notif.userId) !== String(user.id)
     ) {
       error('Forbidden', 403);
     }
@@ -53,8 +48,7 @@ class NotificationsService {
     if (!existing) error('Notification not found', 404);
     if (
       user.role !== ROLES.ADMIN &&
-      String(existing.userId) !== String(user.id) &&
-      !(user.role === ROLES.VENDOR && existing.audience === 'vendor')
+      String(existing.userId) !== String(user.id)
     ) {
       error('Forbidden', 403);
     }
@@ -79,8 +73,7 @@ class NotificationsService {
     if (!existing) error('Notification not found', 404);
     if (
       user.role !== ROLES.ADMIN &&
-      String(existing.userId) !== String(user.id) &&
-      !(user.role === ROLES.VENDOR && existing.audience === 'vendor')
+      String(existing.userId) !== String(user.id)
     ) {
       error('Forbidden', 403);
     }
@@ -92,9 +85,7 @@ class NotificationsService {
   async markAllRead(user, payload = {}) {
     const allowedAudiences =
       user.role === ROLES.ADMIN
-        ? ['user', 'vendor', ROLES.ADMIN]
-        : user.role === ROLES.VENDOR
-        ? ['user', 'vendor']
+        ? ['user', ROLES.ADMIN]
         : ['user'];
 
     if (payload.audience && !allowedAudiences.includes(payload.audience)) {

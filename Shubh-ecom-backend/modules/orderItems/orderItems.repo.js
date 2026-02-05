@@ -12,10 +12,6 @@ class OrderItemRepository {
     return query.lean();
   }
 
-  findByVendor(vendorId, filters = {}) {
-    return OrderItem.find({ vendorId, ...filters }).lean();
-  }
-
   findById(id) {
     return OrderItem.findById(id);
   }

@@ -48,7 +48,6 @@ module.exports = function registerRoutes(app) {
   app.use('/v1/auth', require('../modules/auth/auth.routes'));
   app.use('/v1/users', require('../modules/users/users.routes'));
   app.use(
-    '/v1/user-addresses',
     require('../modules/userAddresses/userAddresses.routes'),
   );
 
@@ -67,8 +66,9 @@ module.exports = function registerRoutes(app) {
   );
   app.use(
     '/v1/user-activity-logs',
-    require('../modules/userActivityLogs/userActivityLogs.routes'),
+    require('../modules/productImages/productImages.routes'),
   );
+  return;
 
   /* =====================================================
      CATALOG

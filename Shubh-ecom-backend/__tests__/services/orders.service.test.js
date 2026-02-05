@@ -15,9 +15,6 @@ jest.mock('../../modules/products/product.repo', () => ({
 jest.mock('../../modules/productVariants/productVariant.repo', () => ({
   getVariantById: jest.fn(),
 }));
-jest.mock('../../modules/vendors/vendor.repo', () => ({
-  findById: jest.fn(),
-}));
 jest.mock('../../modules/users/userAddress.repo', () => ({
   findById: jest.fn(),
 }));
@@ -66,7 +63,6 @@ const cartRepo = require('../../modules/cart/cart.repo');
 const cartCache = require('../../modules/cart/cart.cache');
 const productRepo = require('../../modules/products/product.repo');
 const variantRepo = require('../../modules/productVariants/productVariant.repo');
-const vendorRepo = require('../../modules/vendors/vendor.repo');
 const addressRepo = require('../../modules/users/userAddress.repo');
 const couponRepo = require('../../modules/coupons/coupon.repo');
 const couponService = require('../../modules/coupons/coupons.service');
@@ -113,11 +109,9 @@ describe('OrderService.placeOrder', () => {
     });
     productRepo.findById.mockResolvedValue({
       _id: 'product1',
-      vendorId: 'vendor1',
       status: 'active',
       hsnCode: '8708',
     });
-    vendorRepo.findById.mockResolvedValue({ _id: 'vendor1', status: 'active' });
     shippingService.calculate.mockReturnValue(50);
     couponRepo.lockCoupon.mockResolvedValue(true);
     taxService.calculateGST.mockReturnValue({
@@ -216,10 +210,8 @@ describe('OrderService.placeOrder', () => {
     });
     productRepo.findById.mockResolvedValue({
       _id: 'product1',
-      vendorId: 'vendor1',
       status: 'active',
     });
-    vendorRepo.findById.mockResolvedValue({ _id: 'vendor1', status: 'active' });
     shippingService.calculate.mockReturnValue(0);
     couponRepo.lockCoupon.mockResolvedValue(false);
 

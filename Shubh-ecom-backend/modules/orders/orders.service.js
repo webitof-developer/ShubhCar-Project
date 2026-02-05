@@ -154,8 +154,6 @@ class OrderService {
         if (!product || product.status !== 'active')
           error('Product unavailable', 400);
 
-        // Single-vendor setup: skip vendor availability checks
-
         const customerType =
           user.customerType === 'wholesale' &&
           user.verificationStatus === 'approved'
@@ -179,7 +177,6 @@ class OrderService {
 
         orderItems.push({
           productId: product._id,
-          vendorId: product.vendorId || null,
           sku:
             product.sku ||
             product.productId ||
@@ -885,8 +882,6 @@ class OrderService {
         if (!product || product.status !== 'active')
           error('Product unavailable', 400);
 
-        // Single-vendor setup: skip vendor availability checks
-
         const customerType =
           user.customerType === 'wholesale' &&
           user.verificationStatus === 'approved'
@@ -907,7 +902,6 @@ class OrderService {
 
         orderItems.push({
           productId: product._id,
-          vendorId: product.vendorId || null,
           sku:
             product.sku ||
             product.productId ||

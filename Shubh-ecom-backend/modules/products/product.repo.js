@@ -111,10 +111,6 @@ class ProductRepository {
       .setOptions(options)
       .lean();
   }
-
-  countByVendor(vendorId) {
-    return Product.countDocuments({ vendorId, isDeleted: false });
-  }
   async adminList({ filter = {}, limit = 20, page = 1, includeDeleted = false, projection = null }) {
     const [products, total] = await Promise.all([
       Product.find(filter)

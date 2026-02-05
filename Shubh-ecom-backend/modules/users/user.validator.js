@@ -10,7 +10,7 @@ const registerUserSchema = Joi.object({
     .optional(),
   password: Joi.string().min(6).required(),
   role: Joi.string()
-    .valid(ROLES.CUSTOMER, ROLES.VENDOR, ROLES.ADMIN)
+    .valid(ROLES.CUSTOMER,   ROLES.ADMIN)
     .default(ROLES.CUSTOMER),
   roleId: Joi.string().optional(),
   customerType: Joi.string().valid('retail', 'wholesale').default('retail'),

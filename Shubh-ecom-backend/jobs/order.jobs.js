@@ -109,13 +109,6 @@ const dispatchShipmentPrep = async (orderId) =>
     { attempts: 3, removeOnComplete: true, removeOnFail: true },
   );
 
-const dispatchVendorPayoutEligibility = async (orderId) =>
-  orderQueue.add(
-    'vendor-payout-eligibility',
-    { orderId },
-    { attempts: 3, removeOnComplete: true, removeOnFail: true },
-  );
-
 const enqueueStatusNotification = async (orderId, status) => {
   // 1️⃣ enqueue internal notification job
   await orderQueue.add(
@@ -228,7 +221,6 @@ module.exports = {
   scheduleAutoCancel,
   processAutoCancel,
   dispatchShipmentPrep,
-  dispatchVendorPayoutEligibility,
   enqueueStatusNotification,
   dispatchPayoutProcessing,
   cancelAutoCancel,

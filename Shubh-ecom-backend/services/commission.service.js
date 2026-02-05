@@ -1,35 +1,31 @@
 class CommissionService {
   /**
    * For now: flat 10%
-   * Later: category/vendor slabs
+   * Later: category slabs
    */
   calculatePlatformCommission(amount) {
     return Math.round(amount * 0.1);
   }
 
   /**
-   * Groups order items vendor-wise
+   * Groups order items into a single commission bucket for the single-merchant setup.
+   
    */
   buildVendorSplits(orderItems) {
-    const map = {};
+    const total = (orderItems || []).reduce(
+      (sum, item) => sum + (Number(item?.total) || 0),
+      0,
+    );
 
-    for (const item of orderItems) {
-      if (!item.vendorId) {
-        continue;
-      }
-      if (!map[item.vendorId]) {
-        map[item.vendorId] = {
-          vendorId: item.vendorId,
-          itemSubtotal: 0,
-          taxAmount: 0,
-          shippingShare: 0,
-        };
-      }
+    if (!total) return [];
 
-      map[item.vendorId].itemSubtotal += item.total;
-    }
-
-    return Object.values(map);
+    return [
+      {
+        itemSubtotal: total,
+        taxAmount: 0,
+        shippingShare: 0,
+      },
+    ];
   }
 }
 

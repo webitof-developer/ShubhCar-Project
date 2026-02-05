@@ -43,18 +43,6 @@ exports.getItemsByOrder = async (orderId) => {
   return items;
 };
 
-exports.getVendorItems = async (vendorId, status) => {
-  const key = cache.keys.byVendor(vendorId, status);
-
-  const cached = await cache.get(key);
-  if (cached) return cached;
-
-  const items = await repo.findByVendor(vendorId, status ? { status } : {});
-
-  await cache.set(key, items, 300);
-  return items;
-};
-
 exports.updateStatus = async ({ orderItemId, newStatus }) => {
   const item = await repo.findById(orderItemId);
   if (!item) error('Order item not found', 404);
@@ -88,7 +76,6 @@ exports.updateStatus = async ({ orderItemId, newStatus }) => {
   }
 
   await cache.del(cache.keys.byOrder(item.orderId));
-  await cache.del(cache.keys.byVendor(item.vendorId));
 
   return updated;
 };

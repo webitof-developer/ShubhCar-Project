@@ -25,7 +25,6 @@ class ReturnService {
       }
       return {
         orderItemId: oi._id,
-        vendorId: i.vendorId || oi.vendorId,
         quantity: i.quantity,
         reason: i.reason,
         status: 'pending',

@@ -8,12 +8,6 @@ const orderItemSchema = new mongoose.Schema(
       required: true,
     },
 
-    vendorId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Vendor',
-      required: false,  // Made optional for orders without vendors
-    },
-
     productId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Product',
@@ -57,12 +51,10 @@ const orderItemSchema = new mongoose.Schema(
 );
 
 orderItemSchema.index({ orderId: 1 });
-orderItemSchema.index({ vendorId: 1, status: 1, createdAt: -1 });
 orderItemSchema.index({ productId: 1 });
 
 const IMMUTABLE_FIELDS = [
   'orderId',
-  'vendorId',
   'productId',
   'sku',
   'hsnCode',
