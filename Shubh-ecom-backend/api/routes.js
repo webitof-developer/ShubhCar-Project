@@ -68,7 +68,6 @@ module.exports = function registerRoutes(app) {
     '/v1/user-activity-logs',
     require('../modules/productImages/productImages.routes'),
   );
-  return;
 
   /* =====================================================
      CATALOG
