@@ -13,6 +13,10 @@ const brandSchema = new mongoose.Schema(
     { timestamps: true },
 );
 
+// Optimize queries filtering by type (vehicle/manufacturer)
+brandSchema.index({ type: 1, isDeleted: 1 });
+brandSchema.index({ isDeleted: 1 });
+
 brandSchema.pre(/^find/, function () {
     this.where({ isDeleted: false });
 });

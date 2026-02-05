@@ -17,7 +17,8 @@ export const brandsAPI = {
     list: async (params = {}, token) => {
         const query = new URLSearchParams(params).toString();
         const url = `${API_BASE_URL}/brands?${query}`;
-        return fetch(url).then(res => res.json());
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        return fetchWithAuth(url, { headers });
     },
 
     create: async (data, token) => {

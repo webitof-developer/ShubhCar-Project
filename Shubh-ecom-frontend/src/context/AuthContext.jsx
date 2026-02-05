@@ -17,6 +17,7 @@ import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/stora
 import * as authService from '@/services/authService';
 import * as cartService from '@/services/cartService';
 import { isTokenExpired } from '@/utils/jwt';
+
 /**
  * Authentication Context
  * 
@@ -40,24 +41,58 @@ export function AuthProvider({ children }) {
 
   // Load auth state from localStorage on mount
   useEffect(() => {
-    const loadAuthState = () => {
+    const loadAuthState = async () => {
       const storedToken = getStorageItem('accessToken');
       const storedRefreshToken = getStorageItem('refreshToken');
       const storedUser = getStorageItem('user');
 
       if (storedToken && storedUser) {
-        try {
-          const userData = JSON.parse(storedUser);
-          setAccessToken(storedToken);
-          setRefreshToken(storedRefreshToken);
-          setUser(userData);
-          console.log('[AUTH_CONTEXT] Restored session for:', userData.email || userData.phone);
-        } catch (error) {
-          console.error('[AUTH_CONTEXT] Failed to parse stored user:', error);
-          // Clear corrupted data
-          removeStorageItem('accessToken');
-          removeStorageItem('refreshToken');
-          removeStorageItem('user');
+        // Check if token is expired
+        if (isTokenExpired(storedToken)) {
+          console.log('[AUTH_CONTEXT] Stored token expired, attempting refresh...');
+
+          if (storedRefreshToken && !isTokenExpired(storedRefreshToken)) {
+            try {
+              const { accessToken: newAccessToken, refreshToken: newRefreshToken, user: newUser } = await authService.refreshAccessToken(storedRefreshToken);
+
+              // Update state with new tokens
+              setAccessToken(newAccessToken);
+              setRefreshToken(newRefreshToken);
+              setUser(newUser || JSON.parse(storedUser)); // Use new user or fallback to stored
+
+              // Persist new tokens
+              setStorageItem('accessToken', newAccessToken);
+              setStorageItem('refreshToken', newRefreshToken);
+              if (newUser) setStorageItem('user', JSON.stringify(newUser));
+
+              console.log('[AUTH_CONTEXT] Session restored via token refresh');
+            } catch (refreshError) {
+              console.error('[AUTH_CONTEXT] Token refresh failed:', refreshError);
+              // Clear expired session
+              removeStorageItem('accessToken');
+              removeStorageItem('refreshToken');
+              removeStorageItem('user');
+            }
+          } else {
+            console.log('[AUTH_CONTEXT] Refresh token missing or expired. Clearing session.');
+            removeStorageItem('accessToken');
+            removeStorageItem('refreshToken');
+            removeStorageItem('user');
+          }
+        } else {
+          try {
+            const userData = JSON.parse(storedUser);
+            setAccessToken(storedToken);
+            setRefreshToken(storedRefreshToken);
+            setUser(userData);
+            console.log('[AUTH_CONTEXT] Restored session for:', userData.email || userData.phone);
+          } catch (error) {
+            console.error('[AUTH_CONTEXT] Failed to parse stored user:', error);
+            // Clear corrupted data
+            removeStorageItem('accessToken');
+            removeStorageItem('refreshToken');
+            removeStorageItem('user');
+          }
         }
       } else {
         console.log('[AUTH_CONTEXT] No stored session found - BROWSING IN DEMO MODE');
