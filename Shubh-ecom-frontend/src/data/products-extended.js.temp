@@ -1,0 +1,87 @@
+//src/data/products.js
+/**
+ * Static product data - matches backend MongoDB structure
+ * This file will be replaced with API calls through productService
+ */
+
+// Import existing products - we'll be adding to this array
+import { products as existingProducts } from './products-base.js';
+
+// Additional products for leaf categories
+const newProducts = [
+  {
+    id: 'prod-13',
+    name: 'Semi-Metallic Brake Pad Set',
+    slug: 'semi-metallic-brake-pad-set',
+    sku: 'AKB-SMP-013',
+    brand: 'Akebono',
+    oemPartNumber: 'AKB-SMP-013',
+    category: 'Semi-Metallic Pads',
+    categorySlug: 'semi-metallic-pads',
+    categoryId: 'semi-metallic-pads',
+    type: 'Aftermarket',
+    images: [
+      'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500',
+    ],
+    description: 'High-performance semi-metallic brake pads for aggressive driving. Excellent heat dissipation and fade resistance.',
+    specifications: {
+      'Material': 'Semi-Metallic',
+      'Quantity': '4 pcs',
+      'Friction Range': '0.40-0.50',
+      'Max Temp': '700°C',
+    },
+    warranty: '2 Years / 25,000 km',
+    returnPolicy: '30 days return policy',
+    compatibility: [
+      { brand: 'Honda', model: 'Civic', yearRange: '2019-2024' },
+      { brand: 'Honda', model: 'Accord', yearRange: '2018-2024' },
+    ],
+    retailPrice: { mrp: 2799, salePrice: 2399 },
+    wholesalePrice: { mrp: 2399, salePrice: 2099 },
+    minOrderQty: 1,
+    minWholesaleQty: 15,
+    status: 'active',
+    isFeatured: false,
+    vendor: { id: 'v1', vendorName: 'BrakeMaster', rating: 4.7, reviewCount: 143, retailPrice: 2399, wholesalePrice: 2099, minWholesaleQty: 15, inStock: true, stockCount: 78, deliveryDays: '2-3' },
+    reviews: [],
+  },
+  {
+    id: 'prod-14',
+    name: 'Organic Brake Pad Set',
+    slug: 'organic-brake-pad-set',
+    sku: 'FER-OBP-014',
+    brand: 'Ferodo',
+    oemPartNumber: 'FER-OBP-014',
+    category: 'Organic Pads',
+    categorySlug: 'organic-pads',
+    categoryId: 'organic-pads',
+    type: 'OEM',
+    images: [
+      'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500',
+    ],
+    description: 'Eco-friendly organic brake pads with quiet operation. Ideal for city driving and daily commute.',
+    specifications: {
+      'Material': 'Organic NAO',
+      'Quantity': '4 pcs',
+      'Noise Level': 'Very Low',
+      'Dust Level': 'Minimal',
+    },
+    warranty: '1 Year / 20,000 km',
+    returnPolicy: '30 days return policy',
+    compatibility: [
+      { brand: 'Maruti Suzuki', model: 'Alto', yearRange: '2019-2024' },
+      { brand: 'Maruti Suzuki', model: 'WagonR', yearRange: '2019-2024' },
+    ],
+    retailPrice: { mrp: 1799, salePrice: 1599 },
+    wholesalePrice: { mrp: 1599, salePrice: 1399 },
+    minOrderQty: 1,
+    minWholesaleQty: 20,
+    status: 'active',
+    isFeatured: false,
+    vendor: { id: 'v1', vendorName: 'BrakeMaster', rating: 4.5, reviewCount: 98, retailPrice: 1599, wholesalePrice: 1399, minWholesaleQty: 20, inStock: true, stockCount: 120, deliveryDays: '2-3' },
+    reviews: [],
+  },
+];
+
+// Combine and export  
+export const products = [...existingProducts, ...newProducts];

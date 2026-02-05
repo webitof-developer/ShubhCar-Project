@@ -1,0 +1,65 @@
+/* Print styles for invoice */
+@media print {
+  @page {
+    size: A4;
+    margin: 3mm; /* Minimal margins for maximum space */
+  }
+
+  body {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Force single page */
+  #invoice-template {
+    page-break-inside: avoid;
+    page-break-after: avoid;
+    page-break-before: avoid;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+
+  /* Reduce spacing for print */
+  #invoice-template * {
+    page-break-inside: avoid;
+  }
+
+  /* Hide scrollbars */
+  * {
+    overflow: visible !important;
+  }
+}
+
+/* Mobile scaling - zoom out effect */
+@media screen and (max-width: 767px) {
+  .invoice-wrapper {
+    height: fit-content;
+    overflow: hidden;
+  }
+  
+  #invoice-template {
+    transform: scale(0.65);
+    transform-origin: top center;
+    width: 154%; /* Compensate for scale: 100% / 0.65 */
+    margin-left: -27%; /* Center the scaled content */
+    margin-bottom: -35%; /* Remove extra bottom space from scaling */
+  }
+}
+
+@media screen and (min-width: 768px) and (max-width: 1023px) {
+  .invoice-wrapper {
+    height: fit-content;
+    overflow: hidden;
+  }
+  
+  #invoice-template {
+    transform: scale(0.85);
+    transform-origin: top center;
+    width: 118%; /* Compensate for scale: 100% / 0.85 */
+    margin-left: -9%; /* Center the scaled content */
+    margin-bottom: -15%; /* Remove extra bottom space from scaling */
+  }
+}
