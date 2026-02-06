@@ -22,6 +22,7 @@ import {
   Form,
   Placeholder
 } from 'react-bootstrap'
+import FormErrorModal from '@/components/forms/FormErrorModal'
 
 
 const CustomerDataList = ({ defaultFilter = 'all' }) => {
@@ -32,7 +33,6 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
   const [error, setError] = useState(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [customerTypeFilter, setCustomerTypeFilter] = useState(defaultFilter)
-  const [approvingId, setApprovingId] = useState(null)
 
   // Modal states
   const [showModal, setShowModal] = useState(false)
@@ -63,6 +63,34 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
   const [importError, setImportError] = useState(null)
   const [importSummary, setImportSummary] = useState(null)
   const [importErrors, setImportErrors] = useState([])
+  const [approvingId, setApprovingId] = useState(null)
+  const [togglingStatusId, setTogglingStatusId] = useState(null)
+  
+  // Validation states
+  const [validationErrors, setValidationErrors] = useState({})
+  const [touchedFields, setTouchedFields] = useState({})
+  const [showErrorModal, setShowErrorModal] = useState(false)
+  const [selectedCustomers, setSelectedCustomers] = useState([])
+
+  // Select all handler
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedCustomers(customers.map(c => c._id))
+    } else {
+      setSelectedCustomers([])
+    }
+  }
+
+  // Select individual customer
+  const handleSelectOne = (customerId) => {
+    setSelectedCustomers(prev => {
+      if (prev.includes(customerId)) {
+        return prev.filter(id => id !== customerId)
+      } else {
+        return [...prev, customerId]
+      }
+    })
+  }
 
   const fetchCustomers = async (page = 1, filter = 'all') => {
     if (status !== 'authenticated') return
@@ -245,6 +273,8 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
       status: 'active'
     })
     setModalError(null)
+    setValidationErrors({})
+    setTouchedFields({})
     setShowModal(true)
   }
 
@@ -261,18 +291,58 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
       status: customer.status || 'active'
     })
     setModalError(null)
+    setValidationErrors({})
+    setTouchedFields({})
     setShowModal(true)
   }
 
   const handleCloseModal = () => {
     setShowModal(false)
     setModalError(null)
+    setValidationErrors({})
+    setTouchedFields({})
     setEditMode(false)
     setEditingCustomerId(null)
   }
 
+  const validateForm = () => {
+    const errors = {}
+    
+    if (!formData.firstName?.trim()) {
+      errors.firstName = 'First Name is required'
+    }
+    
+    if (!formData.email?.trim()) {
+      errors.email = 'Email is required'
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = 'Please enter a valid email address'
+    }
+    
+    if (formData.phone && !/^[6-9]\d{9}$/.test(formData.phone.replace(/\D/g, ''))) {
+      errors.phone = 'Please enter a valid 10-digit phone number'
+    }
+    
+    if (!editMode && !formData.password) {
+      errors.password = 'Password is required'
+    }
+    
+    if (formData.password && formData.password.length < 6) {
+      errors.password = 'Password must be at least 6 characters'
+    }
+    
+    return errors
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    // Validate form
+    const errors = validateForm()
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors)
+      setShowErrorModal(true)
+      return
+    }
 
     const token = session?.accessToken
     if (!token) return
@@ -287,6 +357,7 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
         email: formData.email,
         phone: formData.phone,
         customerType: formData.customerType,
+        status: formData.status
       }
         : {
           ...formData,
@@ -420,6 +491,42 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
       setError(err.message || 'Failed to approve wholesale customer')
     } finally {
       setApprovingId(null)
+    }
+  }
+
+  const handleToggleStatus = async (customer) => {
+    const token = session?.accessToken
+    if (!token || !customer?._id) return
+
+    try {
+      setTogglingStatusId(customer._id)
+      const newStatus = customer.status === 'active' ? 'inactive' : 'active'
+
+      const response = await fetch(`${API_BASE_URL}/users/admin/${customer._id}`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: newStatus })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || 'Failed to update customer status')
+      }
+
+      // Update local state
+      setCustomers(prev => prev.map(item => 
+        item._id === customer._id ? { ...item, status: newStatus } : item
+      ))
+      setSuccessMessage(`Customer status updated to ${newStatus}`)
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch (err) {
+      console.error(err)
+      setError(err.message || 'Failed to update customer status')
+    } finally {
+      setTogglingStatusId(null)
     }
   }
 
@@ -594,7 +701,13 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
                     <tr>
                       <th style={{ width: 20 }}>
                         <div className="form-check">
-                          <input type="checkbox" className="form-check-input" id="customCheckAll" />
+                          <input 
+                            type="checkbox" 
+                            className="form-check-input" 
+                            id="customCheckAll"
+                            checked={customers.length > 0 && selectedCustomers.length === customers.length}
+                            onChange={handleSelectAll}
+                          />
                           <label className="form-check-label" htmlFor="customCheckAll" />
                         </div>
                       </th>
@@ -604,6 +717,7 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
                       <th className="text-center">Customer Type</th>
                       <th className="text-center">Verification</th>
                       <th className="text-center">Status</th>
+                      <th className="text-center">Active</th>
                       <th>Created</th>
                       <th>Action</th>
                     </tr>
@@ -617,6 +731,8 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
                               type="checkbox"
                               className="form-check-input"
                               id={`check-${customer._id}`}
+                              checked={selectedCustomers.includes(customer._id)}
+                              onChange={() => handleSelectOne(customer._id)}
                             />
                             <label className="form-check-label" htmlFor={`check-${customer._id}`}>
                               &nbsp;
@@ -674,6 +790,16 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
                           >
                             {customer.status === 'active' ? 'Active' : customer.status === 'inactive' ? 'Inactive' : 'Unknown'}
                           </Badge>
+                        </td>
+                        <td className="text-center">
+                          <Form.Check
+                            type="switch"
+                            id={`status-toggle-${customer._id}`}
+                            checked={customer.status === 'active'}
+                            onChange={() => handleToggleStatus(customer)}
+                            disabled={togglingStatusId === customer._id}
+                            label={togglingStatusId === customer._id ? 'Updating...' : customer.status === 'active' ? 'Active' : 'Inactive'}
+                          />
                         </td>
                         <td>
                           {new Date(customer.createdAt).toLocaleDateString('en-IN', {
@@ -785,15 +911,26 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
             )}
 
             <Form.Group className="mb-3">
-              <Form.Label>First Name *</Form.Label>
+              <Form.Label>
+                First Name
+                <span className="text-danger ms-1">*</span>
+              </Form.Label>
               <Form.Control
                 type="text"
                 value={formData.firstName}
-                onChange={(e) =>
-                  setFormData({ ...formData, firstName: e.target.value })
-                }
+                onChange={(e) => {
+                  const value = e.target.value
+                  setFormData({ ...formData, firstName: value })
+                  setTouchedFields({ ...touchedFields, firstName: true })
+                }}
+                isInvalid={touchedFields.firstName && !formData.firstName?.trim()}
                 required
               />
+              {touchedFields.firstName && !formData.firstName?.trim() && (
+                <Form.Control.Feedback type="invalid">
+                  First Name is required
+                </Form.Control.Feedback>
+              )}
             </Form.Group>
 
             <Form.Group className="mb-3">
@@ -808,15 +945,26 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
             </Form.Group>
 
             <Form.Group className="mb-3">
-              <Form.Label>Email *</Form.Label>
+              <Form.Label>
+                Email
+                <span className="text-danger ms-1">*</span>
+              </Form.Label>
               <Form.Control
                 type="email"
                 value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
+                onChange={(e) => {
+                  const value = e.target.value
+                  setFormData({ ...formData, email: value })
+                  setTouchedFields({ ...touchedFields, email: true })
+                }}
+                isInvalid={touchedFields.email && validationErrors.email}
                 required
               />
+              {touchedFields.email && validationErrors.email && (
+                <Form.Control.Feedback type="invalid">
+                  {validationErrors.email}
+                </Form.Control.Feedback>
+              )}
             </Form.Group>
 
             <Form.Group className="mb-3">
@@ -824,23 +972,44 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
               <Form.Control
                 type="tel"
                 value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '').slice(0, 10)
+                  setFormData({ ...formData, phone: value })
+                  setTouchedFields({ ...touchedFields, phone: true })
+                }}
+                placeholder="10-digit mobile number"
+                maxLength={10}
+                isInvalid={touchedFields.phone && validationErrors.phone}
               />
+              {touchedFields.phone && validationErrors.phone && (
+                <Form.Control.Feedback type="invalid">
+                  {validationErrors.phone}
+                </Form.Control.Feedback>
+              )}
             </Form.Group>
 
             <Form.Group className="mb-3">
-              <Form.Label>Password {editMode ? '(leave blank to keep current)' : '*'}</Form.Label>
+              <Form.Label>
+                Password {editMode ? '(leave blank to keep current)' : ''}
+                {!editMode && <span className="text-danger ms-1">*</span>}
+              </Form.Label>
               <Form.Control
                 type="password"
                 value={formData.password}
-                onChange={(e) =>
-                  setFormData({ ...formData, password: e.target.value })
-                }
+                onChange={(e) => {
+                  const value = e.target.value
+                  setFormData({ ...formData, password: value })
+                  setTouchedFields({ ...touchedFields, password: true })
+                }}
                 required={!editMode}
                 minLength={6}
+                isInvalid={touchedFields.password && validationErrors.password}
               />
+              {touchedFields.password && validationErrors.password && (
+                <Form.Control.Feedback type="invalid">
+                  {validationErrors.password}
+                </Form.Control.Feedback>
+              )}
             </Form.Group>
 
             <Form.Group className="mb-3">
@@ -956,6 +1125,13 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
           </Modal.Footer>
         </Form>
       </Modal>
+
+      {/* Form Validation Errors Modal */}
+      <FormErrorModal
+        show={showErrorModal}
+        errors={validationErrors}
+        onClose={() => setShowErrorModal(false)}
+      />
     </>
   )
 }

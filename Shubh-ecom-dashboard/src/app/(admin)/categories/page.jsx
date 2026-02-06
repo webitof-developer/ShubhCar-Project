@@ -20,6 +20,8 @@ import {
 } from 'react-bootstrap'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import PageTItle from '@/components/PageTItle'
+import FormErrorModal from '@/components/forms/FormErrorModal'
+import DeleteConfirmModal from '@/components/shared/DeleteConfirmModal'
 
 
 const flattenCategories = (nodes = []) => {
@@ -61,6 +63,11 @@ const CategoriesPage = () => {
   const [submitting, setSubmitting] = useState(false)
   const [togglingId, setTogglingId] = useState(null)
   const [deletingId, setDeletingId] = useState(null)
+  const [showErrorModal, setShowErrorModal] = useState(false)
+  const [validationErrors, setValidationErrors] = useState({})
+  const [touchedFields, setTouchedFields] = useState({})
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [categoryToDelete, setCategoryToDelete] = useState(null)
 
   const fetchCategories = async () => {
     if (status !== 'authenticated') return
@@ -108,6 +115,8 @@ const CategoriesPage = () => {
     setShowModal(true)
     setSuccessMessage(null)
     setError(null)
+    setValidationErrors({})
+    setTouchedFields({})
   }
 
   const handleOpenEditModal = (cat) => {
@@ -135,8 +144,20 @@ const CategoriesPage = () => {
     const token = session?.accessToken
     if (!token) return
 
-    if (!formData.name || !formData.slug) {
-      setError('Name and slug are required')
+    // Validation
+    const errors = {}
+    if (!formData.name?.trim()) {
+      errors.name = 'Name is required'
+    }
+    if (!formData.slug?.trim()) {
+      errors.slug = 'Slug is required'
+    } else if (!/^[a-z0-9-]+$/.test(formData.slug)) {
+      errors.slug = 'Slug can only contain lowercase letters, numbers, and hyphens'
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors)
+      setShowErrorModal(true)
       return
     }
 
@@ -207,10 +228,18 @@ const CategoriesPage = () => {
     }
   }
 
-  const handleDelete = async (cat) => {
+  // 3. Replace delete handler with modal pattern
+  const handleDeleteClick = (cat) => {
+    setCategoryToDelete(cat)
+    setShowDeleteModal(true)
+  }
+
+  const confirmDelete = async () => {
+    const cat = categoryToDelete
+    if (!cat) return
     const token = session?.accessToken
     if (!token) return
-    if (!confirm(`Delete category "${cat.name}"?`)) return
+
     try {
       setDeletingId(cat._id)
       setError(null)
@@ -225,8 +254,11 @@ const CategoriesPage = () => {
         const errBody = await response.json().catch(() => ({}))
         throw new Error(errBody.message || 'Failed to delete category')
       }
-      setSuccessMessage('Category deleted')
+      setSuccessMessage('Category deleted successfully!')
+      setTimeout(() => setSuccessMessage(null), 3000)
       fetchCategories()
+      setShowDeleteModal(false)
+      setCategoryToDelete(null)
     } catch (err) {
       console.error(err)
       setError(err.message)
@@ -340,7 +372,7 @@ const CategoriesPage = () => {
                               variant="soft-danger"
                               size="sm"
                               disabled={deletingId === cat._id}
-                              onClick={() => handleDelete(cat)}
+                              onClick={() => handleDeleteClick(cat)}
                             >
                               {deletingId === cat._id ? (
                                 <Spinner animation="border" size="sm" />
@@ -391,23 +423,51 @@ const CategoriesPage = () => {
             </Form.Group>
 
             <Form.Group className="mb-3">
-              <Form.Label>Name *</Form.Label>
+              <Form.Label>
+                Name
+                <span className="text-danger ms-1">*</span>
+              </Form.Label>
               <Form.Control
                 type="text"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, name: e.target.value })
+                  setTouchedFields({ ...touchedFields, name: true })
+                }}
+                isInvalid={touchedFields.name && validationErrors.name}
                 required
               />
+              {touchedFields.name && validationErrors.name && (
+                <Form.Control.Feedback type="invalid">
+                  {validationErrors.name}
+                </Form.Control.Feedback>
+              )}
             </Form.Group>
 
             <Form.Group className="mb-3">
-              <Form.Label>Slug *</Form.Label>
+              <Form.Label>
+                Slug
+                <span className="text-danger ms-1">*</span>
+              </Form.Label>
               <Form.Control
                 type="text"
                 value={formData.slug}
-                onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase() })}
+                onChange={(e) => {
+                  const value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
+                  setFormData({ ...formData, slug: value })
+                  setTouchedFields({ ...touchedFields, slug: true })
+                }}
+                isInvalid={touchedFields.slug && validationErrors.slug}
                 required
               />
+              {touchedFields.slug && validationErrors.slug && (
+                <Form.Control.Feedback type="invalid">
+                  {validationErrors.slug}
+                </Form.Control.Feedback>
+              )}
+              <Form.Text className="text-muted">
+                Only lowercase letters, numbers, and hyphens allowed
+              </Form.Text>
             </Form.Group>
 
             <Form.Group className="mb-2">
@@ -429,6 +489,23 @@ const CategoriesPage = () => {
           </Modal.Footer>
         </Form>
       </Modal>
+
+      {/* Form Validation Errors Modal */}
+      <FormErrorModal
+        show={showErrorModal}
+        errors={validationErrors}
+        onClose={() => setShowErrorModal(false)}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        show={showDeleteModal}
+        onHide={() => setShowDeleteModal(false)}
+        onConfirm={confirmDelete}
+        itemType="category"
+        itemName={categoryToDelete?.name}
+        deleting={deletingId === categoryToDelete?._id}
+      />
     </>
   )
 }

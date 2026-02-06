@@ -726,6 +726,17 @@ class OrderService {
         o.orderStatus = payload.status;
       },
     });
+
+    if (updated.paymentStatus === PAYMENT_STATUS.PAID) {
+      await invoiceService.generateFromOrder(updated).catch((err) => {
+        logger.error('Failed to generate invoice on admin status update', {
+          orderId: updated._id,
+          error: err.message,
+        });
+      });
+    }
+
+    return updated;
   }
 
   async updatePaymentByAdmin({ admin, orderId, payload }) {
@@ -773,6 +784,15 @@ class OrderService {
         o.paymentStatus = nextStatus;
       },
     });
+
+    if (updated.paymentStatus === PAYMENT_STATUS.PAID) {
+      await invoiceService.generateFromOrder(updated).catch((err) => {
+        logger.error('Failed to generate invoice on admin payment update', {
+          orderId: updated._id,
+          error: err.message,
+        });
+      });
+    }
 
     return attachPaymentSummary(updated.toObject ? updated.toObject() : updated);
   }

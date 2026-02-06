@@ -119,10 +119,10 @@ const WarehouseList = ({ filters = {}, onInventoryChange }) => {
                 <thead className="bg-light-subtle">
                   <tr>
                     <th style={{ width: 20 }}>
-                      <div className="form-check">
+                      {/* <div className="form-check">
                         <input type="checkbox" className="form-check-input" id="customCheck1" />
                         <label className="form-check-label" htmlFor="customCheck1" />
-                      </div>
+                      </div> */}
                     </th>
                     <th>Product ID</th>
                     <th>Product</th>

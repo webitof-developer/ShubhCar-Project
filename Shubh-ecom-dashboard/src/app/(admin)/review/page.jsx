@@ -9,6 +9,7 @@ import { useSession } from 'next-auth/react'
 import { useEffect, useMemo, useState } from 'react'
 import { Card, CardBody, Col, Row, Spinner, Placeholder } from 'react-bootstrap'
 import { toast } from 'react-toastify'
+import DeleteConfirmModal from '@/components/shared/DeleteConfirmModal'
 
 const STATUS_LABELS = {
   published: 'Approved',
@@ -140,6 +141,8 @@ const ReviewPage = () => {
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState('all')
   const [actionId, setActionId] = useState(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [reviewToDelete, setReviewToDelete] = useState(null)
 
   useEffect(() => {
     const fetchReviews = async () => {
@@ -188,16 +191,22 @@ const ReviewPage = () => {
     }
   }
 
-  const handleDelete = async (review) => {
+  const handleDeleteClick = (review) => {
+    setReviewToDelete(review)
+    setShowDeleteModal(true)
+  }
+
+  const confirmDelete = async () => {
+    const review = reviewToDelete
     if (!review?._id || !session?.accessToken) return
-    const confirmed = window.confirm('Delete this review permanently?')
-    if (!confirmed) return
 
     try {
       setActionId(review._id)
       await reviewAPI.delete(review._id, session.accessToken)
       setReviews(prev => prev.filter((item) => item._id !== review._id))
       toast.success('Review deleted')
+      setShowDeleteModal(false)
+      setReviewToDelete(null)
     } catch (err) {
       console.error(err)
       toast.error(err?.message || 'Failed to delete review')
@@ -205,6 +214,8 @@ const ReviewPage = () => {
       setActionId(null)
     }
   }
+
+  const handleDelete = handleDeleteClick
 
   if (loading) {
     return (
@@ -286,6 +297,15 @@ const ReviewPage = () => {
           </Col>
         )}
       </Row>
+
+      <DeleteConfirmModal
+        show={showDeleteModal}
+        onHide={() => setShowDeleteModal(false)}
+        onConfirm={confirmDelete}
+        itemType="review"
+        itemName={reviewToDelete?.title || 'this review'}
+        deleting={actionId === reviewToDelete?._id}
+      />
     </>
   )
 }

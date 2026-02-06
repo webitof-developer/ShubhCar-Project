@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react';
 import IconifyIcon from '@/components/wrappers/IconifyIcon';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { toast } from 'react-toastify';
 import { Card, CardBody, CardFooter, CardHeader, CardTitle, Col, Row, Badge, Form, Button, InputGroup, Modal, Alert, ListGroup, FloatingLabel, Placeholder } from 'react-bootstrap';
 import StatusFilterTabs from './StatusFilterTabs';
 import { orderAPI, getStatusBadge, getPaymentStatusBadge } from '@/helpers/orderApi';
@@ -596,6 +597,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
       window.open(url, '_blank');
     } catch (error) {
       console.error('Failed to load invoice:', error);
+      toast.error(error.message || 'Failed to load invoice. Ensure order is paid and confirmed.');
     }
   };
 
@@ -614,6 +616,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Failed to download invoice:', error);
+      toast.error(error.message || 'Failed to download invoice. Ensure order is paid and confirmed.');
     }
   };
 
@@ -629,6 +632,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
       popup.print();
     } catch (error) {
       console.error('Failed to print invoice:', error);
+      toast.error(error.message || 'Failed to print invoice. Ensure order is paid and confirmed.');
     }
   };
 
@@ -1355,38 +1359,45 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                               <td className="py-3">
                                 <div className="d-flex flex-column gap-1">
                                   <span className="text-dark fs-13">INV-{order.orderNumber || order._id?.substring(0, 4)}</span>
-                                  <div className="d-flex align-items-center gap-2">
-                                    <Button
-                                      variant="link"
-                                      className="p-0 text-muted"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleViewInvoice(order._id);
-                                      }}
-                                    >
-                                      <IconifyIcon icon="bx:show" className="fs-5" />
-                                    </Button>
-                                    <Button
-                                      variant="link"
-                                      className="p-0 text-muted"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDownloadInvoice(order._id);
-                                      }}
-                                    >
-                                      <IconifyIcon icon="bx:download" className="fs-5" />
-                                    </Button>
-                                    <Button
-                                      variant="link"
-                                      className="p-0 text-muted"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handlePrintInvoice(order._id);
-                                      }}
-                                    >
-                                      <IconifyIcon icon="bx:printer" className="fs-5" />
-                                    </Button>
-                                  </div>
+                                  {['paid', 'refunded'].includes((order.paymentStatus || '').toLowerCase()) ? (
+                                    <div className="d-flex align-items-center gap-2">
+                                      <Button
+                                        variant="link"
+                                        className="p-0 text-muted"
+                                        title="View Invoice"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleViewInvoice(order._id);
+                                        }}
+                                      >
+                                        <IconifyIcon icon="bx:show" className="fs-5" />
+                                      </Button>
+                                      <Button
+                                        variant="link"
+                                        className="p-0 text-muted"
+                                        title="Download Invoice"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDownloadInvoice(order._id);
+                                        }}
+                                      >
+                                        <IconifyIcon icon="bx:download" className="fs-5" />
+                                      </Button>
+                                      <Button
+                                        variant="link"
+                                        className="p-0 text-muted"
+                                        title="Print Invoice"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handlePrintInvoice(order._id);
+                                        }}
+                                      >
+                                        <IconifyIcon icon="bx:printer" className="fs-5" />
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <span className="text-muted small fst-italic">Pending Payment</span>
+                                  )}
                                 </div>
                               </td>
                               <td className="fw-bold text-dark py-3 text-end pe-4">

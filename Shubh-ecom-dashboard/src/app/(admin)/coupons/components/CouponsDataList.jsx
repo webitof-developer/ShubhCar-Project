@@ -7,21 +7,52 @@ import Link from 'next/link'
 import { Card, CardFooter, CardTitle, Col, Row, Spinner, Alert, Badge, Form } from 'react-bootstrap'
 import couponService from '@/services/couponService'
 import { currency } from '@/context/constants'
+import DeleteConfirmModal from '@/components/shared/DeleteConfirmModal'
 
 const CouponsDataList = ({ coupons = [], setCoupons, loading = false }) => {
   const { data: session } = useSession()
   const [deleting, setDeleting] = useState(null)
   const [error, setError] = useState(null)
+  const [selectedCoupons, setSelectedCoupons] = useState([])
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [couponToDelete, setCouponToDelete] = useState(null)
+  
+  // Select all handler
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedCoupons(coupons.map(c => c._id))
+    } else {
+      setSelectedCoupons([])
+    }
+  }
+  
+  // Select individual coupon
+  const handleSelectOne = (couponId) => {
+    setSelectedCoupons(prev => {
+      if (prev.includes(couponId)) {
+        return prev.filter(id => id !== couponId)
+      } else {
+        return [...prev, couponId]
+      }
+    })  
+  }
 
-  const handleDelete = async (couponId) => {
-    if (!confirm('Are you sure you want to delete this coupon?')) return
+  const handleDeleteClick = (coupon) => {
+    setCouponToDelete(coupon)
+    setShowDeleteModal(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!couponToDelete) return
 
     try {
-      setDeleting(couponId)
-      await couponService.deleteCoupon(couponId, session.accessToken)
+      setDeleting(couponToDelete._id)
+      await couponService.deleteCoupon(couponToDelete._id, session.accessToken)
       
       // Remove from UI
-      setCoupons(coupons.filter(c => c._id !== couponId))
+      setCoupons(coupons.filter(c => c._id !== couponToDelete._id))
+      setShowDeleteModal(false)
+      setCouponToDelete(null)
     } catch (err) {
       alert(err.message || 'Failed to delete coupon')
     } finally {
@@ -122,7 +153,11 @@ const CouponsDataList = ({ coupons = [], setCoupons, loading = false }) => {
                 <thead className="bg-light-subtle">
                   <tr>
                     <th style={{ width: 20 }}>
-                      <Form.Check />
+                      <Form.Check 
+                        id="select-all-coupons"
+                        checked={coupons.length > 0 && selectedCoupons.length === coupons.length}
+                        onChange={handleSelectAll}
+                      />
                     </th>
                     <th>Code</th>
                     <th>Discount Type</th>
@@ -149,7 +184,10 @@ const CouponsDataList = ({ coupons = [], setCoupons, loading = false }) => {
                     coupons.map((coupon) => (
                       <tr key={coupon._id}>
                         <td>
-                          <Form.Check />
+                          <Form.Check 
+                            checked={selectedCoupons.includes(coupon._id)}
+                            onChange={() => handleSelectOne(coupon._id)}
+                          />
                         </td>
                         <td>
                           <strong className="text-primary">{coupon.code}</strong>
@@ -195,7 +233,7 @@ const CouponsDataList = ({ coupons = [], setCoupons, loading = false }) => {
                         <td>
                           <div className="d-flex gap-2">
                             <button
-                              onClick={() => handleDelete(coupon._id)}
+                              onClick={() => handleDeleteClick(coupon)}
                               className="btn btn-soft-danger btn-sm"
                               disabled={deleting === coupon._id}
                             >
@@ -216,6 +254,15 @@ const CouponsDataList = ({ coupons = [], setCoupons, loading = false }) => {
           </div>
         </Card>
       </Col>
+
+      <DeleteConfirmModal
+        show={showDeleteModal}
+        onHide={() => setShowDeleteModal(false)}
+        onConfirm={confirmDelete}
+        itemType="coupon"
+        itemName={couponToDelete?.code}
+        deleting={deleting === couponToDelete?._id}
+      />
     </Row>
   )
 }

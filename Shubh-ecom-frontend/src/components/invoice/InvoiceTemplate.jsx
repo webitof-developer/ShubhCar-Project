@@ -19,24 +19,30 @@ const InvoiceTemplate = forwardRef(({ order, items = [], address }, ref) => {
 
   const subtotal = order.subtotal || 0;
   const discount = order.discountAmount || 0;
-  const taxableAmount = Math.max(0, subtotal - discount);
   const taxAmount = order.taxAmount || 0;
   const shippingFee = order.shippingFee || 0;
   const grandTotal = order.grandTotal || 0;
   const taxBreakdown = order.taxBreakdown || { cgst: 0, sgst: 0, igst: 0 };
+
+  // This ensures Taxable + Tax + Shipping = Grand Total always holds true
+  const taxableAmount = Math.max(0, grandTotal - shippingFee - taxAmount);
+
+  // Get logo from config
+  const { logoDark, logoLight } = useSiteConfig();
+  const logo = logoDark || logoLight;
 
   return (
     <div ref={ref} className="text-sm leading-tight text-gray-900 p-6 print:p-10 print:text-[11px]" id="invoice-template">
       <div className="flex flex-row justify-between items-start mb-6 pb-4 border-b-2 border-gray-200 print:mb-3 print:pb-2">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">AS</span>
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">{siteName}</h1>
-              <p className="text-sm text-gray-600 mt-1">Tax Invoice</p>
-            </div>
+            {logo ? (
+              <img src={logo} alt={siteName} className="h-15 w-auto object-contain" />
+            ) : (
+              <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-lg">{siteName.substring(0, 2).toUpperCase()}</span>
+              </div>
+            )}
           </div>
           <div className="mt-3 text-xs text-gray-600 leading-relaxed">
             <p>{siteName} India Pvt Ltd</p>
@@ -46,8 +52,8 @@ const InvoiceTemplate = forwardRef(({ order, items = [], address }, ref) => {
           </div>
         </div>
         <div className="text-right">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">TAX INVOICE</h2>
-          <div className="text-xs space-y-1">
+          <h2 className="text-3xl font-bold text-gray-900 mt-3 ">TAX INVOICE</h2>
+          <div className="text-xs mt-12 space-y-1">
             <p><span className="text-gray-500">Invoice No:</span> <span className="font-semibold">{invoiceNumber}</span></p>
             <p><span className="text-gray-500">Invoice Date:</span> <span className="font-semibold">{invoiceDate}</span></p>
             <p><span className="text-gray-500">Order No:</span> <span className="font-semibold">{order.orderNumber}</span></p>

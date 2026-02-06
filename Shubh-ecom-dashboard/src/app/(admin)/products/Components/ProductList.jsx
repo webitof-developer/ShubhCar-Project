@@ -19,9 +19,10 @@ import {
   Badge,
   Placeholder
 } from 'react-bootstrap'
+import DeleteConfirmModal from '@/components/shared/DeleteConfirmModal'
 
 
-const ProductCard = ({ product, onDelete, onToggleFeatured, isSelected, onSelect }) => {
+const ProductCard = ({ product, onDelete, onToggleFeatured, isSelected, onSelect, onDeleteClick, onTrashClick }) => {
   const router = useRouter()
   const [deleting, setDeleting] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
@@ -32,15 +33,7 @@ const ProductCard = ({ product, onDelete, onToggleFeatured, isSelected, onSelect
   const handlePermanentDelete = async (e) => {
     e.stopPropagation()
     e.preventDefault()
-    if (!confirm(`This will permanently delete "${product.name}". Only do this if you are absolutely sure. Continue?`)) return
-    setDeleting(true)
-    try {
-      await onDelete(product._id, 'force-delete')
-    } catch (error) {
-      console.error(error)
-    } finally {
-      setDeleting(false)
-    }
+    onDeleteClick(product, 'force-delete')
   }
 
   const handleRestore = async (e) => {
@@ -72,16 +65,7 @@ const ProductCard = ({ product, onDelete, onToggleFeatured, isSelected, onSelect
   const handleSoftDelete = async (e) => {
     e.stopPropagation()
     e.preventDefault()
-    if (!confirm(`Are you sure you want to trash "${product.name}"?`)) return
-
-    setDeleting(true)
-    try {
-      await onDelete(product._id, 'delete')
-    } catch (error) {
-      console.error('Delete error:', error)
-    } finally {
-      setDeleting(false)
-    }
+    onTrashClick(product)
   }
 
   const handleRowClick = () => {
@@ -394,6 +378,16 @@ const ProductList = () => {
     stockStatus: '',
     isFeatured: ''
   })
+  
+  // Modal states
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showTrashModal, setShowTrashModal] = useState(false)
+  const [showEmptyTrashModal, setShowEmptyTrashModal] = useState(false)
+  const [showBulkModal, setShowBulkModal] = useState(false)
+  const [productToDelete, setProductToDelete] = useState(null)
+  const [productToTrash, setProductToTrash] = useState(null)
+  const [bulkAction, setBulkAction] = useState(null)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     if (session?.accessToken) {
@@ -573,47 +567,70 @@ const ProductList = () => {
     }
   }
 
-  const handleEmptyTrash = async () => {
-    if (!confirm('Are you sure you want to empty the trash? This cannot be undone.')) return
+  // Modal handlers
+  const handleDeleteClick = (product, actionType) => {
+    setProductToDelete({ product, actionType })
+    setShowDeleteModal(true)
+  }
+
+  const handleTrashClick = (product) => {
+    setProductToTrash(product)
+    setShowTrashModal(true)
+  }
+
+  const confirmPermanentDelete = async () => {
+    if (!productToDelete) return
+    const { product, actionType } = productToDelete
+    try {
+      setDeleting(true)
+      await handleAction(product._id, actionType)
+      setShowDeleteModal(false)
+      setProductToDelete(null)
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const confirmTrash = async () => {
+    if (!productToTrash) return
+    try {
+      setDeleting(true)
+      await handleAction(productToTrash._id, 'delete')
+      setShowTrashModal(false)
+      setProductToTrash(null)
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const confirmEmptyTrash = async () => {
     const token = session?.accessToken
     try {
+      setDeleting(true)
       await productService.emptyTrash(token)
       toast.success('Trash emptied successfully')
       fetchProducts()
+      setShowEmptyTrashModal(false)
     } catch (err) {
       toast.error(err.message || 'Failed to empty trash')
+    } finally {
+      setDeleting(false)
     }
   }
 
-  const handleSelectAll = (checked) => {
-    if (checked) {
-      setSelectedIds(products.map((p) => p._id))
-    } else {
-      setSelectedIds([])
-    }
-  }
-
-  const handleSelectOne = (id, checked) => {
-    setSelectedIds((prev) => {
-      if (checked) return Array.from(new Set([...prev, id]))
-      return prev.filter((item) => item !== id)
-    })
-  }
-
-  const handleBulkAction = async (action) => {
-    if (!action) return
-    if (!selectedIds.length) {
-      toast.error('Please select at least one product')
-      return
-    }
-
+  const confirmBulkAction = async () => {
+    if (!bulkAction) return
+    const action = bulkAction
     const actionLabel = action === 'delete' ? 'move to trash' : action
-    if (!confirm(`Are you sure you want to ${actionLabel} for ${selectedIds.length} product(s)?`)) return
-
     const token = session?.accessToken
     if (!token) return toast.error('Unauthorized')
 
     try {
+      setDeleting(true)
       const selectedProducts = products.filter((p) => selectedIds.includes(p._id))
       const deletedIds = selectedProducts.filter((p) => p.isDeleted).map((p) => p._id)
 
@@ -635,9 +652,42 @@ const ProductList = () => {
       }
       setSelectedIds([])
       fetchProducts()
+      setShowBulkModal(false)
+      setBulkAction(null)
     } catch (err) {
       toast.error(err.message || 'Bulk action failed')
+    } finally {
+      setDeleting(false)
     }
+  }
+
+  const handleEmptyTrash = () => {
+    setShowEmptyTrashModal(true)
+  }
+
+  const handleSelectAll = (checked) => {
+    if (checked) {
+      setSelectedIds(products.map((p) => p._id))
+    } else {
+      setSelectedIds([])
+    }
+  }
+
+  const handleSelectOne = (id, checked) => {
+    setSelectedIds((prev) => {
+      if (checked) return Array.from(new Set([...prev, id]))
+      return prev.filter((item) => item !== id)
+    })
+  }
+
+  const handleBulkAction = (action) => {
+    if (!action) return
+    if (!selectedIds.length) {
+      toast.error('Please select at least one product')
+      return
+    }
+    setBulkAction(action)
+    setShowBulkModal(true)
   }
 
   const isAllSelected = products.length > 0 && selectedIds.length === products.length
@@ -876,6 +926,8 @@ const ProductList = () => {
                     onToggleFeatured={handleToggleFeatured}
                     isSelected={selectedIds.includes(product._id)}
                     onSelect={handleSelectOne}
+                    onDeleteClick={handleDeleteClick}
+                    onTrashClick={handleTrashClick}
                   />
                 ))
               )}
@@ -970,6 +1022,51 @@ const ProductList = () => {
           </div>
         </CardFooter>
       )}
+
+      {/* Delete Confirmation Modals */}
+      <DeleteConfirmModal
+        show={showDeleteModal}
+        onHide={() => setShowDeleteModal(false)}
+        onConfirm={confirmPermanentDelete}
+        itemType="product"
+        itemName={productToDelete?.product?.name}
+        deleting={deleting}
+        title="Permanent Delete"
+        message="This will PERMANENTLY delete this product. This action cannot be undone. Only proceed if you are absolutely sure."
+        variant="danger"
+      />
+
+      <DeleteConfirmModal
+        show={showTrashModal}
+        onHide={() => setShowTrashModal(false)}
+        onConfirm={confirmTrash}
+        itemType="product"
+        itemName={productToTrash?.name}
+        deleting={deleting}
+      />
+
+      <DeleteConfirmModal
+        show={showEmptyTrashModal}
+        onHide={() => setShowEmptyTrashModal(false)}
+        onConfirm={confirmEmptyTrash}
+        itemType="trash"
+        itemName={`all ${counts.trashed || 0} trashed products`}
+        deleting={deleting}
+        title="Empty Trash"
+        message="This will permanently delete ALL trashed products. This action cannot be undone."
+        variant="danger"
+      />
+
+      <DeleteConfirmModal
+        show={showBulkModal}
+        onHide={() => setShowBulkModal(false)}
+        onConfirm={confirmBulkAction}
+        itemType={bulkAction === 'delete' ? 'products to trash' : `products to ${bulkAction}`}
+        itemName={`${selectedIds.length} selected products`}
+        deleting={deleting}
+        title={bulkAction === 'delete' ? 'Move to Trash' : bulkAction === 'published' ? 'Publish Products' : 'Move to Draft'}
+        message={`Are you sure you want to ${bulkAction === 'delete' ? 'move to trash' : bulkAction} ${selectedIds.length} product(s)?`}
+      />
     </Card>
   )
 }

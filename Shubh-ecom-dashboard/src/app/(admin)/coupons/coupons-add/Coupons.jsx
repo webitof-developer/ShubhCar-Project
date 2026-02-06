@@ -102,7 +102,7 @@ const Coupons = () => {
 
       // Redirect to list after 2 seconds
       setTimeout(() => {
-        router.push('/coupons/coupons-list')
+        router.push('/coupons')
       }, 2000)
     } catch (err) {
       console.error('Error creating coupon:', err)

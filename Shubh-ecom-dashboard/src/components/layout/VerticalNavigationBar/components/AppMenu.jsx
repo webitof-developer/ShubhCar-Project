@@ -143,7 +143,7 @@ const AppMenu = ({ menuItems }) => {
     [activeMenuItems],
   )
   const activeMenu = useCallback(() => {
-    const trimmedURL = pathname?.replaceAll('', '')
+    const trimmedURL = pathname?.endsWith('/') && pathname.length > 1 ? pathname.slice(0, -1) : pathname
     const matchingMenuItem = getMenuItemFromURL(visibleMenuItems, trimmedURL)
     if (matchingMenuItem) {
       const activeMt = findMenuItem(visibleMenuItems, matchingMenuItem.key)

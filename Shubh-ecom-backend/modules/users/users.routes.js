@@ -358,4 +358,51 @@ router.post(
   controller.adminForcePasswordReset,
 );
 
+/* =======================
+   VALIDATION ENDPOINTS (Public for real-time form checks)
+======================= */
+const validationController = require('./users.validation.controller');
+
+/**
+ * @openapi
+ * /api/v1/users/validate/email:
+ *   get:
+ *     summary: Check if email is available
+ *     tags: [Users]
+ *     parameters:
+ *       - in: query
+ *         name: email
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: excludeUserId
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Email availability status
+ */
+router.get('/validate/email', validationController.checkEmailAvailability);
+
+/**
+ * @openapi
+ * /api/v1/users/validate/phone:
+ *   get:
+ *     summary: Check if phone number is available
+ *     tags: [Users]
+ *     parameters:
+ *       - in: query
+ *         name: phone
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: excludeUserId
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Phone availability status
+ */
+router.get('/validate/phone', validationController.checkPhoneAvailability);
+
 module.exports = router;

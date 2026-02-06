@@ -5,6 +5,8 @@ const generateInvoiceNumber = require('../../utils/invoiceNumber');
 const { error } = require('../../utils/apiResponse');
 const invoiceRepo = require('./invoice.repo');
 const orderRepo = require('../orders/order.repo');
+const User = require('../../models/User.model');
+const UserAddress = require('../../models/UserAddress.model');
 
 class InvoiceService {
   async generateFromOrder(order) {
@@ -30,15 +32,35 @@ class InvoiceService {
       lineTotal: i.total,
     }));
 
+    let customerSnapshot = order.customerSnapshot;
+
+    // If snapshot is missing (common for raw orders), fetch details
+    if (!customerSnapshot) {
+      const user = await User.findById(order.userId).lean();
+      const address = await UserAddress.findById(order.shippingAddressId).lean();
+
+      if (!user && !address) {
+        // Fallback or error? Let's use order data if available or empty strings
+        customerSnapshot = {
+          name: 'Guest',
+          email: '',
+          phone: '',
+          address: {},
+        };
+      } else {
+        customerSnapshot = {
+          name: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : (address?.fullName || 'Guest'),
+          email: user?.email || '',
+          phone: user?.phone || address?.phone || '',
+          address: address || {},
+        };
+      }
+    }
+
     const invoice = await Invoice.create({
       orderId: order._id,
       invoiceNumber,
-      customerSnapshot: {
-        name: order.customerSnapshot.name,
-        email: order.customerSnapshot.email,
-        phone: order.customerSnapshot.phone,
-        address: order.shippingAddress,
-      },
+      customerSnapshot,
       items,
       totals: {
         subtotal: order.subtotal,

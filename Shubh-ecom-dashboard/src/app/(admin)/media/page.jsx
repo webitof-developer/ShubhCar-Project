@@ -7,6 +7,7 @@ import { useSession } from 'next-auth/react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, Card, CardBody, Col, Form, Row, Spinner, Modal } from 'react-bootstrap'
 import styles from './media.module.scss'
+import DeleteConfirmModal from '@/components/shared/DeleteConfirmModal'
 
 
 const MEDIA_TYPES = [
@@ -27,6 +28,9 @@ const MediaPage = () => {
   const [usedInFilter, setUsedInFilter] = useState('all')
   const [uploadUsedIn, setUploadUsedIn] = useState('product')
   const [selectedImage, setSelectedImage] = useState(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [mediaToDelete, setMediaToDelete] = useState(null)
+  const [deleting, setDeleting] = useState(false)
 
   const listParams = useMemo(() => {
     if (usedInFilter === 'all') return { limit: 50, page: 1 }
@@ -69,15 +73,24 @@ const MediaPage = () => {
     }
   }
 
-  const handleDelete = async (e, id) => {
+  const handleDeleteClick = (e, media) => {
     e.stopPropagation() // Prevent opening preview
-    if (!session?.accessToken) return
-    if (!confirm('Delete this media item?')) return
+    setMediaToDelete(media)
+    setShowDeleteModal(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!session?.accessToken || !mediaToDelete) return
     try {
-      await mediaAPI.delete(id, session.accessToken)
+      setDeleting(true)
+      await mediaAPI.delete(mediaToDelete._id, session.accessToken)
       fetchMedia()
+      setShowDeleteModal(false)
+      setMediaToDelete(null)
     } catch (error) {
       console.error('Delete failed', error)
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -129,7 +142,7 @@ const MediaPage = () => {
                 </div>
                 <button
                   className={styles.deleteBtn}
-                  onClick={(e) => handleDelete(e, item._id)}
+                  onClick={(e) => handleDeleteClick(e, item)}
                   title="Delete Image"
                 >
                   <IconifyIcon icon="solar:close-circle-bold" />
@@ -172,6 +185,15 @@ const MediaPage = () => {
           )}
         </div>
       </Modal>
+
+      <DeleteConfirmModal
+        show={showDeleteModal}
+        onHide={() => setShowDeleteModal(false)}
+        onConfirm={confirmDelete}
+        itemType="media file"
+        itemName={mediaToDelete?.key}
+        deleting={deleting}
+      />
     </>
   )
 }

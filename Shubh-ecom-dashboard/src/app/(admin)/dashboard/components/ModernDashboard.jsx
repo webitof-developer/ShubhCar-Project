@@ -113,7 +113,7 @@ const ModernDashboard = () => {
 
   const salesChartOptions = useMemo(
     () => ({
-      chart: { height: 300, type: 'line', toolbar: { show: false } },
+      chart: { height: 300, type: 'line', toolbar: { show: false }, zoom: { enabled: false } },
       stroke: { width: [3, 3], curve: 'smooth' },
       colors: ['#0f766e', '#f97316'],
       series: [
@@ -315,7 +315,7 @@ const ModernDashboard = () => {
                 className="dashboard-kpi"
                 role="button"
                 style={{ cursor: 'pointer' }}
-                onClick={() => router.push(`/orders/orders-list?status=${item.status}`)}
+                onClick={() => router.push(`/orders?status=${item.status}`)}
               >
                 <CardBody>
                   <div className="d-flex align-items-center justify-content-between">

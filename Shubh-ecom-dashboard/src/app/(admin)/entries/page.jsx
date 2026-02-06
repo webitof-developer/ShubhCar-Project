@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import { toast } from 'react-toastify'
+import DeleteConfirmModal from '@/components/shared/DeleteConfirmModal'
 const escapeCsvValue = (value) => {
     const text = value == null ? '' : String(value)
     return `"${text.replace(/"/g, '""')}"`
@@ -26,6 +27,9 @@ const EntriesPage = () => {
     const [stats, setStats] = useState({ today: 0, last7Days: 0, last30Days: 0, total: 0 })
     const [viewEntry, setViewEntry] = useState(null)
     const [showModal, setShowModal] = useState(false)
+    const [showDeleteModal, setShowDeleteModal] = useState(false)
+    const [entryToDelete, setEntryToDelete] = useState(null)
+    const [deleting, setDeleting] = useState(false)
 
     // Filters
     const [filters, setFilters] = useState({
@@ -75,22 +79,35 @@ const EntriesPage = () => {
         return () => clearTimeout(timeout)
     }, [filters, session])
 
-    const handleDelete = async (id) => {
-        if (!confirm('Are you sure you want to delete this entry?')) return
+    const handleDeleteClick = (id) => {
+        const entry = entries.find(e => e._id === id)
+        setEntryToDelete(entry)
+        setShowDeleteModal(true)
+    }
+
+    const confirmDelete = async () => {
+        if (!entryToDelete) return
         try {
-            await entriesAPI.delete(id, session.accessToken)
+            setDeleting(true)
+            await entriesAPI.delete(entryToDelete._id, session.accessToken)
             toast.success('Entry deleted')
             fetchEntries()
             fetchStats()
-            if (showModal && viewEntry?._id === id) {
+            if (showModal && viewEntry?._id === entryToDelete._id) {
                 setShowModal(false)
                 setViewEntry(null)
             }
+            setShowDeleteModal(false)
+            setEntryToDelete(null)
         } catch (error) {
             console.error(error)
             toast.error('Failed to delete')
+        } finally {
+            setDeleting(false)
         }
     }
+
+    const handleDelete = handleDeleteClick
 
     // Mark as read
     const handleMarkRead = async (id) => {
@@ -370,6 +387,15 @@ const EntriesPage = () => {
                     </Button>
                 </Modal.Footer>
             </Modal>
+
+            <DeleteConfirmModal
+                show={showDeleteModal}
+                onHide={() => setShowDeleteModal(false)}
+                onConfirm={confirmDelete}
+                itemType="contact entry"
+                itemName={entryToDelete?.name || entryToDelete?.email}
+                deleting={deleting}
+            />
         </>
     )
 }

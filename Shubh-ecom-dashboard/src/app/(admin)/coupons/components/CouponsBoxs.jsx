@@ -10,7 +10,8 @@ const CouponsBoxs = ({ coupons = [], loading = false }) => {
     total: coupons.length,
     active: coupons.filter(c => c.isActive && new Date(c.validTo) >= now).length,
     expired: coupons.filter(c => new Date(c.validTo) < now).length,
-    inactive: coupons.filter(c => !c.isActive).length,
+    // Only count as inactive if NOT expired (expired takes priority)
+    inactive: coupons.filter(c => !c.isActive && new Date(c.validTo) >= now).length,
   }
 
   const statCards = [

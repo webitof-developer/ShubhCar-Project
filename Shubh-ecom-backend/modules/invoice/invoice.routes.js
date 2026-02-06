@@ -5,6 +5,8 @@ const auth = require('../../middlewares/auth.middleware');
 const { adminLimiter } = require('../../middlewares/rateLimiter.middleware');
 const ROLES = require('../../constants/roles');
 const PDFDocument = require('pdfkit');
+const invoiceService = require('./invoice.service');
+const Order = require('../../models/Order.model');
 
 const streamInvoicePdf = (invoice, res, { download = false } = {}) => {
   const doc = new PDFDocument({ margin: 50 });
@@ -225,7 +227,22 @@ router.get('/order/:orderId', adminLimiter, auth([ROLES.ADMIN]), async (req, res
  */
 router.get('/order/:orderId/pdf', adminLimiter, auth([ROLES.ADMIN]), async (req, res) => {
   try {
-    const invoice = await Invoice.findOne({ orderId: req.params.orderId }).lean();
+    let invoice = await Invoice.findOne({ orderId: req.params.orderId }).lean();
+
+    if (!invoice) {
+      const order = await Order.findById(req.params.orderId);
+      if (order && order.paymentStatus === 'paid') {
+        try {
+          invoice = await invoiceService.generateFromOrder(order);
+          if (invoice && typeof invoice.toObject === 'function') {
+            invoice = invoice.toObject();
+          }
+        } catch (genError) {
+          console.error('Lazy invoice generation failed:', genError);
+        }
+      }
+    }
+
     if (!invoice) {
       return res.fail('Invoice not found for this order', 404);
     }

@@ -20,6 +20,8 @@ import PageTItle from '@/components/PageTItle'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import { rolesAPI } from '@/helpers/rolesApi'
 import { usePermissions } from '@/hooks/usePermissions'
+import ValidatedInput from '@/components/forms/ValidatedInput'
+import FormErrorModal from '@/components/forms/FormErrorModal'
 
 
 const UsersPage = () => {
@@ -53,6 +55,10 @@ const UsersPage = () => {
 
   const [submitting, setSubmitting] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
+  const [showErrorModal, setShowErrorModal] = useState(false)
+  const [validationErrors, setValidationErrors] = useState({})
+  const [fieldErrors, setFieldErrors] = useState({})
+  const [touchedFields, setTouchedFields] = useState({})
   const canCreateUsers = hasPermission('users.create')
   const canUpdateUsers = hasPermission('users.update')
   const canDeleteUsers = hasPermission('users.delete')
@@ -139,6 +145,8 @@ const UsersPage = () => {
       status: 'active'
     })
     setModalError(null)
+    setFieldErrors({})
+    setTouchedFields({})
     setShowModal(true)
   }
 
@@ -156,18 +164,58 @@ const UsersPage = () => {
       status: user.status || 'active'
     })
     setModalError(null)
+    setFieldErrors({})
+    setTouchedFields({})
     setShowModal(true)
   }
 
   const handleCloseModal = () => {
     setShowModal(false)
     setModalError(null)
+    setFieldErrors({})
+    setTouchedFields({})
     setEditMode(false)
     setEditingUserId(null)
   }
 
+  const validateForm = () => {
+    const errors = {}
+    
+    if (!formData.firstName?.trim()) {
+      errors.firstName = 'First Name is required'
+    }
+    
+    if (!formData.email?.trim()) {
+      errors.email = 'Email is required'
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = 'Please enter a valid email address'
+    }
+    
+    if (formData.phone && !/^[6-9]\d{9}$/.test(formData.phone.replace(/\D/g, ''))) {
+      errors.phone = 'Please enter a valid 10-digit phone number'
+    }
+    
+    if (!editMode && !formData.password) {
+      errors.password = 'Password is required'
+    }
+    
+    if (formData.password && formData.password.length < 6) {
+      errors.password = 'Password must be at least 6 characters'
+    }
+    
+    return errors
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    // Validate form
+    const errors = validateForm()
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors)
+      setShowErrorModal(true)
+      return
+    }
 
     const token = session?.accessToken
     if (!token) return
@@ -475,15 +523,26 @@ const UsersPage = () => {
             )}
 
             <Form.Group className="mb-3">
-              <Form.Label>First Name *</Form.Label>
+              <Form.Label>
+                First Name
+                <span className="text-danger ms-1">*</span>
+              </Form.Label>
               <Form.Control
                 type="text"
                 value={formData.firstName}
-                onChange={(e) =>
-                  setFormData({ ...formData, firstName: e.target.value })
-                }
+                onChange={(e) => {
+                  const value = e.target.value
+                  setFormData({ ...formData, firstName: value })
+                  setTouchedFields({ ...touchedFields, firstName: true })
+                }}
+                isInvalid={touchedFields.firstName && !formData.firstName?.trim()}
                 required
               />
+              {touchedFields.firstName && !formData.firstName?.trim() && (
+                <Form.Control.Feedback type="invalid">
+                  First Name is required
+                </Form.Control.Feedback>
+              )}
             </Form.Group>
 
             <Form.Group className="mb-3">
@@ -498,15 +557,26 @@ const UsersPage = () => {
             </Form.Group>
 
             <Form.Group className="mb-3">
-              <Form.Label>Email *</Form.Label>
+              <Form.Label>
+                Email
+                <span className="text-danger ms-1">*</span>
+              </Form.Label>
               <Form.Control
                 type="email"
                 value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
+                onChange={(e) => {
+                  const value = e.target.value
+                  setFormData({ ...formData, email: value })
+                  setTouchedFields({ ...touchedFields, email: true })
+                }}
+                isInvalid={touchedFields.email && validationErrors.email}
                 required
               />
+              {touchedFields.email && validationErrors.email && (
+                <Form.Control.Feedback type="invalid">
+                  {validationErrors.email}
+                </Form.Control.Feedback>
+              )}
             </Form.Group>
 
             <Form.Group className="mb-3">
@@ -514,23 +584,44 @@ const UsersPage = () => {
               <Form.Control
                 type="tel"
                 value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '').slice(0, 10)
+                  setFormData({ ...formData, phone: value })
+                  setTouchedFields({ ...touchedFields, phone: true })
+                }}
+                placeholder="10-digit mobile number"
+                maxLength={10}
+                isInvalid={touchedFields.phone && validationErrors.phone}
               />
+              {touchedFields.phone && validationErrors.phone && (
+                <Form.Control.Feedback type="invalid">
+                  {validationErrors.phone}
+                </Form.Control.Feedback>
+              )}
             </Form.Group>
 
             <Form.Group className="mb-3">
-              <Form.Label>Password {editMode ? '(leave blank to keep current)' : '*'}</Form.Label>
+              <Form.Label>
+                Password {editMode ? '(leave blank to keep current)' : ''}
+                {!editMode && <span className="text-danger ms-1">*</span>}
+              </Form.Label>
               <Form.Control
                 type="password"
                 value={formData.password}
-                onChange={(e) =>
-                  setFormData({ ...formData, password: e.target.value })
-                }
+                onChange={(e) => {
+                  const value = e.target.value
+                  setFormData({ ...formData, password: value })
+                  setTouchedFields({ ...touchedFields, password: true })
+                }}
                 required={!editMode}
                 minLength={6}
+                isInvalid={touchedFields.password && validationErrors.password}
               />
+              {touchedFields.password && validationErrors.password && (
+                <Form.Control.Feedback type="invalid">
+                  {validationErrors.password}
+                </Form.Control.Feedback>
+              )}
             </Form.Group>
 
             <Form.Group className="mb-3">
@@ -602,6 +693,13 @@ const UsersPage = () => {
           </Button>
         </Modal.Footer>
       </Modal>
+
+      {/* Form Validation Errors Modal */}
+      <FormErrorModal
+        show={showErrorModal}
+        errors={validationErrors}
+        onClose={() => setShowErrorModal(false)}
+      />
     </>
   )
 }
