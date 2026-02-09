@@ -335,52 +335,7 @@ const EntriesPage = () => {
                             <div className="mb-4 bg-light p-3 rounded">
                                 <h6 className="text-muted mb-1">Message</h6>
                                 <p className="mb-0" style={{ whiteSpace: 'pre-wrap' }}>{viewEntry.message}</p>
-                            </div>
-                            <hr />
-                            <h6 className="text-muted mb-2">Technical Details</h6>
-                            <Row className="g-3">
-                                <Col md={4}>
-                                    <div className="p-2 border rounded">
-                                        <small className="d-block text-muted mb-1">IP Address</small>
-                                        <div className="d-flex flex-column gap-1 px-50">
-                                            {(viewEntry.ip || 'N/A').split(',').map((ip, idx) => (
-                                                <Badge 
-                                                    key={idx} 
-                                                    bg="light" 
-                                                    text="dark" 
-                                                    className="text-start px-10"
-                                                    style={{ 
-                                                        wordBreak: 'break-all', 
-                                                        fontSize: '11px',
-                                                        fontFamily: 'monospace',
-                                                        fontWeight: 'normal'
-                                                    }}
-                                                >
-                                                    {ip.trim()}
-                                                </Badge>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </Col>
-                                <Col md={4}>
-                                    <div className="p-2 border rounded">
-                                        <small className="d-block text-muted">Browser</small>
-                                        <strong style={{ wordBreak: 'break-word', fontSize: '14px' }}>{viewEntry.browser || 'N/A'}</strong>
-                                    </div>
-                                </Col>
-                                <Col md={4}>
-                                    <div className="p-2 border rounded">
-                                        <small className="d-block text-muted">OS</small>
-                                        <strong style={{ wordBreak: 'break-word', fontSize: '14px' }}>{viewEntry.os || 'N/A'}</strong>
-                                    </div>
-                                </Col>
-                                <Col md={12}>
-                                    <div className="p-2 border rounded">
-                                        <small className="d-block text-muted">User Agent</small>
-                                        <code className="small" style={{ wordBreak: 'break-all', display: 'block', whiteSpace: 'normal' }}>{viewEntry.userAgent || 'N/A'}</code>
-                                    </div>
-                                </Col>
-                            </Row>
+                            </div>                            
                         </div>
                     )}
                 </Modal.Body>

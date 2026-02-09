@@ -59,8 +59,12 @@ export async function fetchTaxSettings() {
  * @returns {Object} - Normalized settings matching app.config.js structure
  */
 function normalizeTaxSettings(backendSettings) {
+  // Parse and validate tax rate (clamp between 0-100%)
+  const rawRate = parseFloat(backendSettings.tax_rate) || 0;
+  const validatedRate = Math.min(100, Math.max(0, rawRate));
+  
   const normalized = {
-    defaultRate: parseFloat(backendSettings.tax_rate) || 0,
+    defaultRate: validatedRate,
     displayShop: backendSettings.tax_price_display_shop || 'including',
     displayCart: backendSettings.tax_price_display_cart || 'including',
     pricesIncludeTax: backendSettings.prices_include_tax === true || backendSettings.prices_include_tax === 'true',

@@ -27,6 +27,7 @@ const emptySlabRow = {
   minAmount: '',
   maxAmount: '',
   status: 'active',
+  errors: {}, // Validation errors
 }
 
 const normalizeRegionRow = (row) => ({
@@ -288,71 +289,169 @@ const TaxSettingsPage = () => {
   }
 
   const handleSlabChange = (index, field, value) => {
-    setSlabRows(prev => prev.map((row, idx) => (idx === index ? { ...row, [field]: value } : row)))
-  }
+    setSlabRows(prev => prev.map((row, idx) => {
+      if (idx !== index) return row;
+      const updated = { ...row, [field]: value };
+      // Clear error for this field when user types
+      if (updated.errors && updated.errors[field]) {
+        delete updated.errors[field];
+      }
+      return updated;
+    }));
+  };
+
+  const validateSlab = (slab, index) => {
+    const errors = {};
+
+    // Validate HSN code (exactly 8 digits)
+    if (!slab.hsnCode || !slab.hsnCode.trim()) {
+      errors.hsnCode = 'HSN code is required';
+    } else if (!/^\d{8}$/.test(slab.hsnCode.trim())) {
+      errors.hsnCode = 'HSN code must be exactly 8 digits';
+    } else {
+      // Check for duplicates in current slabs
+      const duplicate = slabRows.findIndex(
+        (s, i) => i !== index && s.hsnCode.trim() === slab.hsnCode.trim()
+      );
+      if (duplicate !== -1) {
+        errors.hsnCode = 'Duplicate HSN code';
+      }
+    }
+
+    // Validate rate (0-100%)
+    if (!slab.ratePercent && slab.ratePercent !== 0) {
+      errors.ratePercent = 'Tax rate is required';
+    } else {
+      const rate = parseFloat(slab.ratePercent);
+      if (isNaN(rate)) {
+        errors.ratePercent = 'Must be a valid number';
+      } else if (rate < 0) {
+        errors.ratePercent = 'Cannot be negative';
+      } else if (rate > 100) {
+        errors.ratePercent = 'Cannot exceed 100%';
+      }
+    }
+
+    // Validate minAmount
+    if (slab.minAmount !== '' && slab.minAmount != null) {
+      const minAmount = parseFloat(slab.minAmount);
+      if (isNaN(minAmount) || minAmount < 0) {
+        errors.minAmount = 'Must be a positive number';
+      }
+    }
+
+    // Validate maxAmount and relationship with minAmount
+    if (slab.maxAmount !== '' && slab.maxAmount != null) {
+      const maxAmount = parseFloat(slab.maxAmount);
+      if (isNaN(maxAmount) || maxAmount < 0) {
+        errors.maxAmount = 'Must be a positive number';
+      } else {
+        const minAmount = parseFloat(slab.minAmount || 0);
+        if (maxAmount < minAmount) {
+          errors.maxAmount = 'Must be ≥ min amount';
+        }
+      }
+    }
+
+    return errors;
+  };
 
   const handleAddSlab = () => {
-    setSlabRows(prev => [...prev, { ...emptySlabRow }])
-  }
+    setSlabRows(prev => [...prev, { ...emptySlabRow }]);
+  };
 
   const handleRemoveSlab = (index) => {
-    const slab = slabRows[index]
-    if (slab?._id) {
-      setDeletedSlabIds(prev => [...prev, slab._id])
+    if (!confirm('Are you sure you want to delete this HSN slab?')) {
+      return;
     }
-    setSlabRows(prev => prev.filter((_, idx) => idx !== index))
-  }
+    const slab = slabRows[index];
+    if (slab?._id) {
+      setDeletedSlabIds(prev => [...prev, slab._id]);
+    }
+    setSlabRows(prev => prev.filter((_, idx) => idx !== index));
+  };
 
   const handleSaveSlabs = async () => {
-    if (!session?.accessToken) return
-    try {
-      setSlabSaving(true)
-      const token = session.accessToken
+    if (!session?.accessToken) return;
 
+    // Validate all slabs
+    const validatedSlabs = slabRows.map((slab, index) => ({
+      ...slab,
+      errors: validateSlab(slab, index),
+    }));
+
+    // Check for any validation errors
+    const hasErrors = validatedSlabs.some((slab) => Object.keys(slab.errors).length > 0);
+    
+    if (hasErrors) {
+      setSlabRows(validatedSlabs);
+      toast.error('Please fix validation errors before saving');
+      return;
+    }
+
+    // Filter out empty slabs (rows with no HSN code)
+    const nonEmptySlabs = validatedSlabs.filter((row) => row.hsnCode && row.hsnCode.trim());
+
+    if (nonEmptySlabs.length === 0) {
+      toast.warning('No HSN slabs to save');
+      return;
+    }
+
+    try {
+      setSlabSaving(true);
+      const token = session.accessToken;
+
+      // Delete removed slabs
       if (deletedSlabIds.length) {
-        await Promise.all(deletedSlabIds.map((id) => taxAPI.removeSlab(id, token)))
-        setDeletedSlabIds([])
+        await Promise.all(deletedSlabIds.map((id) => taxAPI.removeSlab(id, token)));
+        setDeletedSlabIds([]);
       }
 
-      const actions = slabRows
-        .filter((row) => row.hsnCode && row.ratePercent !== '')
-        .map((row) => {
-          const payload = {
-            hsnCode: row.hsnCode.trim(),
-            rate: Number(row.ratePercent) / 100,
-            minAmount: row.minAmount === '' ? 0 : Number(row.minAmount),
-            maxAmount: row.maxAmount === '' ? null : Number(row.maxAmount),
-            status: row.status || 'active',
-          }
-          if (row._id) {
-            return taxAPI.updateSlab(row._id, payload, token)
-          }
-          return taxAPI.createSlab(payload, token)
-        })
+      // Create or update slabs
+      const actions = nonEmptySlabs.map((row) => {
+        const payload = {
+          hsnCode: row.hsnCode.trim(),
+          rate: Number(row.ratePercent) / 100,
+          minAmount: row.minAmount === '' ? 0 : Number(row.minAmount),
+          maxAmount: row.maxAmount === '' ? null : Number(row.maxAmount),
+          status: row.status || 'active',
+        };
+        if (row._id) {
+          return taxAPI.updateSlab(row._id, payload, token);
+        }
+        return taxAPI.createSlab(payload, token);
+      });
 
       if (actions.length) {
-        await Promise.all(actions)
+        await Promise.all(actions);
       }
 
-      const refreshed = await taxAPI.listSlabs(token)
-      const slabs = refreshed.data || []
-      setSlabRows(slabs.map((slab) => ({
-        _id: slab._id,
-        hsnCode: slab.hsnCode || '',
-        ratePercent: slab.rate != null ? String(Number(slab.rate) * 100) : '',
-        minAmount: slab.minAmount ?? '',
-        maxAmount: slab.maxAmount ?? '',
-        status: slab.status || 'active',
-      })))
+      // Refresh slabs from backend
+      const refreshed = await taxAPI.listSlabs(token);
+      const slabs = refreshed.data || [];
+      setSlabRows(
+        slabs.length
+          ? slabs.map((slab) => ({
+              _id: slab._id,
+              hsnCode: slab.hsnCode || '',
+              ratePercent: slab.rate != null ? String(Number(slab.rate) * 100) : '',
+              minAmount: slab.minAmount ?? '',
+              maxAmount: slab.maxAmount ?? '',
+              status: slab.status || 'active',
+              errors: {},
+            }))
+          : [{ ...emptySlabRow }]
+      );
 
-      toast.success('Tax slabs saved successfully!')
+      toast.success('Tax slabs saved successfully!');
     } catch (error) {
-      console.error(error)
-      toast.error('Failed to save tax slabs')
+      console.error(error);
+      const errorMsg = error.message || 'Failed to save tax slabs';
+      toast.error(errorMsg);
     } finally {
-      setSlabSaving(false)
+      setSlabSaving(false);
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -673,6 +772,18 @@ const TaxSettingsPage = () => {
               </div>
             </CardHeader>
             <CardBody>
+              {/* HSN Guidance Alert */}
+              <div className="alert alert-info d-flex align-items-start mb-3">
+                <IconifyIcon icon="solar:info-circle-bold" className="fs-20 me-2" style={{ marginTop: '2px' }} />
+                <div className="flex-fill">
+                  <strong>HSN Code Format:</strong> Must be exactly 8 digits (e.g., 27101980, 84713000, 87032310).
+                  <br />
+                  <small className="text-muted">
+                    HSN (Harmonized System of Nomenclature) codes are used for GST tax classification in India. 
+                    Different products have different tax rates based on their HSN code.
+                  </small>
+                </div>
+              </div>
               <div className="table-responsive">
                 <Table className="align-middle table-bordered">
                   <thead className="bg-light-subtle">
@@ -688,40 +799,66 @@ const TaxSettingsPage = () => {
                   <tbody>
                     {slabRows.map((row, index) => (
                       <tr key={`slab-${row._id || index}`}>
-                        <td>
+                        <td style={{ minWidth: '160px' }}>
                           <Form.Control
                             value={row.hsnCode}
                             onChange={(e) => handleSlabChange(index, 'hsnCode', e.target.value)}
-                            placeholder="8708"
+                            placeholder="e.g., 87032310"
+                            isInvalid={row.errors && row.errors.hsnCode}
+                            maxLength={8}
                           />
+                          {row.errors && row.errors.hsnCode && (
+                            <Form.Control.Feedback type="invalid" style={{ display: 'block' }}>
+                              {row.errors.hsnCode}
+                            </Form.Control.Feedback>
+                          )}
                         </td>
-                        <td>
+                        <td style={{ minWidth: '120px' }}>
                           <Form.Control
                             type="number"
                             min="0"
+                            max="100"
                             step="0.01"
                             value={row.ratePercent}
                             onChange={(e) => handleSlabChange(index, 'ratePercent', e.target.value)}
                             placeholder="18"
+                            isInvalid={row.errors && row.errors.ratePercent}
                           />
+                          {row.errors && row.errors.ratePercent && (
+                            <Form.Control.Feedback type="invalid" style={{ display: 'block' }}>
+                              {row.errors.ratePercent}
+                            </Form.Control.Feedback>
+                          )}
                         </td>
-                        <td>
+                        <td style={{ minWidth: '120px' }}>
                           <Form.Control
                             type="number"
                             min="0"
                             value={row.minAmount}
                             onChange={(e) => handleSlabChange(index, 'minAmount', e.target.value)}
                             placeholder="0"
+                            isInvalid={row.errors && row.errors.minAmount}
                           />
+                          {row.errors && row.errors.minAmount && (
+                            <Form.Control.Feedback type="invalid" style={{ display: 'block' }}>
+                              {row.errors.minAmount}
+                            </Form.Control.Feedback>
+                          )}
                         </td>
-                        <td>
+                        <td style={{ minWidth: '120px' }}>
                           <Form.Control
                             type="number"
                             min="0"
                             value={row.maxAmount}
                             onChange={(e) => handleSlabChange(index, 'maxAmount', e.target.value)}
                             placeholder="No max"
+                            isInvalid={row.errors && row.errors.maxAmount}
                           />
+                          {row.errors && row.errors.maxAmount && (
+                            <Form.Control.Feedback type="invalid" style={{ display: 'block' }}>
+                              {row.errors.maxAmount}
+                            </Form.Control.Feedback>
+                          )}
                         </td>
                         <td>
                           <Form.Select

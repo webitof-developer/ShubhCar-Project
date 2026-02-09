@@ -182,6 +182,12 @@ const EcommerceSettings = () => {
             <CardBody>
               <Tabs defaultActiveKey="store" className="nav-tabs card-tabs">
               <Tab eventKey="store" title="Store Address">
+                <div className="alert alert-info border-info d-flex align-items-start gap-2 mt-3">
+                  <IconifyIcon icon="mdi:information-outline" className="fs-20 mt-1" />
+                  <div>
+                    <strong>Store Address:</strong> Your business location and owner details. This is used for general store information and can be copied to Invoice Settings for tax documents.
+                  </div>
+                </div>
                 <Row className="mt-3">
                   <Col lg={12}>
                     <h6 className="text-muted text-uppercase">Store Details</h6>

@@ -26,11 +26,13 @@ const AddProduct = () => {
   const [subcategories, setSubcategories] = useState([])
   const [manufacturerBrands, setManufacturerBrands] = useState([])
   const [taxOptions, setTaxOptions] = useState([])
+  const [hsnSlabs, setHsnSlabs] = useState([]) // HSN code slabs from tax settings
 
   const [selectedCategory, setSelectedCategory] = useState('')
   const [selectedSubcategory, setSelectedSubcategory] = useState('')
   const [loadingCategories, setLoadingCategories] = useState(false)
   const [loadingSubcategories, setLoadingSubcategories] = useState(false)
+  const [loadingHsnSlabs, setLoadingHsnSlabs] = useState(false)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -272,10 +274,12 @@ const AddProduct = () => {
       try {
         const headers = { Authorization: `Bearer ${token}` }
         setLoadingVehicleBrands(true)
-        const [manufacturerRes, taxRes, vehicleBrandRes] = await Promise.allSettled([
+        setLoadingHsnSlabs(true)
+        const [manufacturerRes, taxRes, vehicleBrandRes, hsnSlabsRes] = await Promise.allSettled([
           fetch(`${API_BASE_URL}/brands?type=manufacturer`, { headers }),
           fetch(`${API_BASE_URL}/settings?group=tax`, { headers }),
-          fetch(`${API_BASE_URL}/vehicle-brands?status=active&limit=200`, { headers })
+          fetch(`${API_BASE_URL}/vehicle-brands?status=active&limit=200`, { headers }),
+          fetch(`${API_BASE_URL}/tax/slabs`, { headers }) // Fetch HSN slabs
         ])
 
         if (manufacturerRes.status === 'fulfilled' && manufacturerRes.value.ok) {
@@ -309,10 +313,18 @@ const AddProduct = () => {
           const list = data?.data?.items || data?.data || data?.items || data?.brands || []
           setVehicleBrands(Array.isArray(list) ? list : [])
         }
+
+        // Fetch HSN slabs
+        if (hsnSlabsRes.status === 'fulfilled' && hsnSlabsRes.value.ok) {
+          const data = await hsnSlabsRes.value.json()
+          const slabs = data?.data || []
+          setHsnSlabs(Array.isArray(slabs) ? slabs.filter(s => s.status === 'active') : [])
+        }
       } catch (err) {
         console.error('Error fetching lookups:', err)
       } finally {
         setLoadingVehicleBrands(false)
+        setLoadingHsnSlabs(false)
       }
     }
 
@@ -927,15 +939,31 @@ const AddProduct = () => {
                     />
                   </Col>
                   <Col lg={3} md={6}>
-                    <label className="form-label">HSN</label>
-                    <input
-                      type="text"
+                    <label className="form-label">HSN Code</label>
+                    <select
+                      className="form-select product-field"
                       name="hsnCode"
-                      className="form-control product-field"
-                      placeholder="HSN"
                       value={formData.hsnCode}
                       onChange={handleInputChange}
-                    />
+                      disabled={loadingHsnSlabs}
+                    >
+                      <option value="">
+                        {loadingHsnSlabs ? 'Loading HSN codes...' : 'No HSN code'}
+                      </option>
+                      {hsnSlabs.map((slab) => (
+                        <option key={slab._id} value={slab.hsnCode}>
+                          {slab.hsnCode} ({(slab.rate * 100).toFixed(0)}%)
+                          {slab.minAmount || slab.maxAmount
+                            ? ` - ₹${slab.minAmount || 0}${slab.maxAmount ? `-₹${slab.maxAmount}` : '+'}`
+                            : ''}
+                        </option>
+                      ))}
+                    </select>
+                    {hsnSlabs.length === 0 && !loadingHsnSlabs && (
+                      <small className="text-muted">
+                        Configure HSN codes in <a href="/tax-settings" target="_blank">Tax Settings</a>
+                      </small>
+                    )}
                   </Col>
                   {formData.productType === 'OEM' && (
                     <>
