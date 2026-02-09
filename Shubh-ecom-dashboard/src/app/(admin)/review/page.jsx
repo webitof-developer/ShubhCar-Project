@@ -7,7 +7,7 @@ import { getRatingStatus } from '@/utils/other'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { useEffect, useMemo, useState } from 'react'
-import { Card, CardBody, Col, Row, Spinner, Placeholder } from 'react-bootstrap'
+import { Card, CardBody, Col, Row, Spinner, Placeholder, OverlayTrigger, Popover, Button } from 'react-bootstrap'
 import { toast } from 'react-toastify'
 import DeleteConfirmModal from '@/components/shared/DeleteConfirmModal'
 
@@ -257,8 +257,8 @@ const ReviewPage = () => {
   return (
     <>
       <PageTItle title="REVIEWS" />
-      <div className="mb-4">
-        <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+      <div className="mb-3">
+        <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
           <div>
             <h4 className="mb-1">Customer Reviews</h4>
             <p className="text-muted mb-0">Moderate, approve, or flag customer feedback in one place.</p>
@@ -283,29 +283,131 @@ const ReviewPage = () => {
         </div>
       </div>
 
-      <Row className="g-4">
-        {filteredReviews.map((review) => (
-          <Col xl={6} key={review._id || review.id}>
-            <div className={actionId === (review._id || review.id) ? 'opacity-75' : undefined}>
-              <ReviewCard review={review} onUpdateStatus={handleUpdateStatus} onDelete={handleDelete} />
-            </div>
-          </Col>
-        ))}
-        {filteredReviews.length === 0 && (
-          <Col xs={12}>
-            <div className="alert alert-light text-center">No reviews found.</div>
-          </Col>
-        )}
-      </Row>
-
-      <DeleteConfirmModal
-        show={showDeleteModal}
-        onHide={() => setShowDeleteModal(false)}
-        onConfirm={confirmDelete}
-        itemType="review"
-        itemName={reviewToDelete?.title || 'this review'}
-        deleting={actionId === reviewToDelete?._id}
-      />
+      <div className="table-responsive">
+        <table className="table table-hover table-nowrap align-middle">
+          <thead className="table-light">
+            <tr>
+              <th>Date</th>
+              <th>Product</th>
+              <th>Title & Comment</th>
+              <th>Customer</th>
+              <th>Rating</th>
+              <th>Status</th>
+              <th className="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredReviews.map((review) => {
+              const id = review._id || review.id
+              const rating = Number(review?.rating || 0)
+              const user = review?.userId || review?.user
+              const product = review?.productId
+              const createdAt = review?.createdAt ? new Date(review.createdAt).toLocaleDateString() : '-'
+              const status = review?.status || 'published'
+              return (
+                <tr key={id} className={actionId === id ? 'opacity-75' : undefined}>
+                  <td>{createdAt}</td>
+                  <td>
+                    {product ? (
+                      <Link href={`/products/product-add?id=${product?._id || product?.id}`} className="text-decoration-none">
+                        {product?.name || 'View Product'}
+                      </Link>
+                    ) : (
+                      <span className="text-muted">-</span>
+                    )}
+                  </td>
+                  <td style={{ minWidth: 280 }}>
+                    <div className="fw-semibold text-dark">{review?.title || 'Review'}</div>
+                    <div className="text-muted small text-truncate" style={{ maxWidth: 420 }}>
+                      {review?.comment || 'No review message provided.'}
+                    </div>
+                  </td>
+                  <td style={{ minWidth: 180 }}>
+                    <div className="fw-semibold text-dark">{formatUserName(user)}</div>
+                    <div className="text-muted small">{user?.email || 'No email'}</div>
+                  </td>
+                  <td>
+                    <div className="d-flex align-items-center gap-2">
+                      <ul className="d-flex m-0 fs-16 list-unstyled">
+                        {Array.from({ length: 5 }).map((_star, idx) => (
+                          <li
+                            className={idx < Math.round(rating) ? 'text-warning' : 'text-muted'}
+                            key={idx}
+                          >
+                            <IconifyIcon icon="bxs:star" />
+                          </li>
+                        ))}
+                      </ul>
+                      <span className="fw-semibold">{rating.toFixed(1)}</span>
+                    </div>
+                    <div className="text-muted small">{getRatingStatus(rating)} Quality</div>
+                  </td>
+                  <td>
+                    <span className={`badge bg-${STATUS_VARIANTS[status] || 'secondary'} text-uppercase`}>
+                      {STATUS_LABELS[status] || status}
+                    </span>
+                  </td>
+                  <td className="text-end">
+                    <OverlayTrigger
+                      trigger="click"
+                      rootClose
+                      placement="left"
+                      overlay={
+                        <Popover id={`review-actions-${id}`}>
+                          <Popover.Body className="p-2 d-flex flex-column gap-1">
+                            <button
+                              className="dropdown-item d-flex align-items-center gap-2"
+                              disabled={status === 'published'}
+                              onClick={() => handleUpdateStatus(review, 'published')}
+                            >
+                              <IconifyIcon icon="solar:check-circle-bold-duotone" className="text-success" />
+                              Approve
+                            </button>
+                            <button
+                              className="dropdown-item   d-flex align-items-center gap-2"
+                              disabled={status === 'hidden'}
+                              onClick={() => handleUpdateStatus(review, 'hidden')}
+                            >
+                              <IconifyIcon icon="solar:close-circle-bold-duotone" className="text-secondary" />
+                              Disapprove
+                            </button>
+                            <button
+                              className="dropdown-item   d-flex align-items-center gap-2"
+                              disabled={status === 'spam'}
+                              onClick={() => handleUpdateStatus(review, 'spam')}
+                            >
+                              <IconifyIcon icon="solar:shield-warning-bold-duotone" className="text-warning" />
+                              Spam
+                            </button>
+                            <button
+                              className="dropdown-item   d-flex align-items-center gap-2 text-danger"
+                              onClick={() => handleDelete(review)}
+                            >
+                              <IconifyIcon icon="solar:trash-bin-2-bold-duotone" />
+                              Delete
+                            </button>
+                          </Popover.Body>
+                        </Popover>
+                      }
+                    >
+                      <Button variant="light" size="sm" className="border">
+                        <IconifyIcon icon="solar:menu-dots-bold" />
+                      </Button>
+                    </OverlayTrigger>
+                  </td>
+                </tr>
+              )
+            })}
+            {filteredReviews.length === 0 && (
+              <tr>
+                <td colSpan="7" className="text-center text-muted py-4">
+                  No reviews found.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </>
   )
 }
