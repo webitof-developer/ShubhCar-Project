@@ -167,6 +167,27 @@ const Checkout = () => {
       return;
     }
 
+    // Validate payment method is still available (edge case: admin disabled mid-checkout)
+    try {
+      const { getPaymentMethods } = await import('@/services/paymentService');
+      const paymentData = await getPaymentMethods();
+      const enabledMethods = (paymentData?.methods || []).filter(m => m.enabled);
+      const selectedMethodStillValid = enabledMethods.find(m => m.code === paymentMethod);
+      
+      if (!selectedMethodStillValid) {
+        toast.error('Payment method unavailable', {
+          description: 'The selected payment method is no longer available. Please choose another.',
+        });
+        console.warn('[CHECKOUT] Payment method no longer enabled:', paymentMethod);
+        setCurrentStep(3); // Go back to payment step
+        return;
+      }
+    } catch (methodError) {
+      console.error('[CHECKOUT] Failed to validate payment method:', methodError);
+      // Continue anyway - backend will validate
+    }
+
+
     setPlacingOrder(true);
 
     try {

@@ -44,8 +44,10 @@ const InvoiceSettings = () => {
   const { data: session } = useSession()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [copying, setCopying] = useState(false)
   const [formData, setFormData] = useState(defaultData)
   const [activeTab, setActiveTab] = useState('numbering')
+  const [gstinError, setGstinError] = useState('')
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -72,8 +74,81 @@ const InvoiceSettings = () => {
     fetchSettings()
   }, [session])
 
+  // Validate GSTIN format (15 alphanumeric characters)
+  const validateGSTIN = (gstin) => {
+    if (!gstin) return { valid: false, message: 'GSTIN is required for invoices' }
+    const trimmed = gstin.trim()
+    if (trimmed.length !== 15) {
+      return { valid: false, message: 'GSTIN must be exactly 15 characters' }
+    }
+    const gstinRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/
+    if (!gstinRegex.test(trimmed)) {
+      return { valid: false, message: 'Invalid GSTIN format (e.g., 27AAAAA0000A1Z5)' }
+    }
+    return { valid: true, message: '' }
+  }
+
+  // Copy store address details to invoice settings
+  const copyFromStoreSettings = async () => {
+    if (!session?.accessToken) {
+      toast.error('Authentication required')
+      return
+    }
+
+    setCopying(true)
+    try {
+      const response = await settingsAPI.list(undefined, session.accessToken)
+      const data = response.data || response
+
+      // Check if any store data exists
+      const hasStoreData = data.store_name || data.store_address || data.store_city || data.store_email || data.store_phone
+
+      if (!hasStoreData) {
+        toast.warning('No store address found. Please fill in Ecommerce Settings first.')
+        setCopying(false)
+        return
+      }
+
+      // Map store fields to invoice fields, preserving existing values when store data is empty
+      const updates = {}
+      if (data.store_name) updates.invoice_company_name = data.store_name
+      if (data.store_address) updates.invoice_company_address_line1 = data.store_address
+      if (data.store_city) updates.invoice_company_city = data.store_city
+      if (data.store_zip) updates.invoice_company_pincode = data.store_zip
+      if (data.store_email) updates.invoice_company_email = data.store_email
+      if (data.store_phone) updates.invoice_company_phone = data.store_phone
+      if (data.billing_state) updates.invoice_company_state = data.billing_state
+
+      if (Object.keys(updates).length === 0) {
+        toast.info('No complete store information available to copy')
+        setCopying(false)
+        return
+      }
+
+      setFormData(prev => ({ ...prev, ...updates }))
+      toast.success(`Copied ${Object.keys(updates).length} fields from store address. Please review and add GSTIN.`)
+    } catch (error) {
+      console.error('Copy failed:', error)
+      toast.error('Failed to copy store details. Please try again.')
+    } finally {
+      setCopying(false)
+    }
+  }
+
+
   const handleSave = async (overrides = {}) => {
     if (!session?.accessToken) return
+
+    // Validate GSTIN before saving
+    const gstinValidation = validateGSTIN(formData.invoice_company_gstin)
+    if (!gstinValidation.valid) {
+      setGstinError(gstinValidation.message)
+      toast.error(gstinValidation.message)
+      setActiveTab('company') // Switch to company tab to show error
+      return
+    }
+    setGstinError('') // Clear any previous error
+
     setSaving(true)
     try {
       const payload = {
@@ -93,7 +168,7 @@ const InvoiceSettings = () => {
         invoice_company_city: formData.invoice_company_city,
         invoice_company_state: formData.invoice_company_state,
         invoice_company_pincode: formData.invoice_company_pincode,
-        invoice_company_gstin: formData.invoice_company_gstin,
+        invoice_company_gstin: formData.invoice_company_gstin.trim().toUpperCase(),
         // Contact
         invoice_company_email: formData.invoice_company_email,
         invoice_company_phone: formData.invoice_company_phone,
@@ -257,6 +332,33 @@ const InvoiceSettings = () => {
 
                 {/* Company Details Tab */}
                 <Tab.Pane eventKey="company">
+                  <div className="alert alert-info border-info d-flex align-items-start gap-2 mb-3">
+                    <IconifyIcon icon="mdi:information-outline" className="fs-20 mt-1" />
+                    <div className="flex-grow-1">
+                      <strong>Invoice Company Details:</strong> This information appears on customer invoices and must include GSTIN for tax compliance.
+                      <div className="mt-2">
+                        <Button
+                          size="sm"
+                          variant="outline-primary"
+                          onClick={copyFromStoreSettings}
+                          disabled={copying || loading}
+                        >
+                          {copying ? (
+                            <>
+                              <Spinner size="sm" className="me-1" />
+                              Copying...
+                            </>
+                          ) : (
+                            <>
+                              <IconifyIcon icon="mdi:content-copy" className="me-1" />
+                              Copy from Store Address
+                            </>
+                          )}
+                        </Button>
+                        <small className="text-muted ms-2">Quickly fill fields from your Ecommerce Settings</small>
+                      </div>
+                    </div>
+                  </div>
                   <Row className="g-3">
                     <Col md={12}>
                       <Form.Label>Company Name <span className="text-danger">*</span></Form.Label>
@@ -311,11 +413,20 @@ const InvoiceSettings = () => {
                       <Form.Label>GST Identification Number (GSTIN) <span className="text-danger">*</span></Form.Label>
                       <Form.Control
                         value={formData.invoice_company_gstin}
-                        onChange={(e) => setFormData(prev => ({ ...prev, invoice_company_gstin: e.target.value.toUpperCase() }))}
+                        onChange={(e) => {
+                          setFormData(prev => ({ ...prev, invoice_company_gstin: e.target.value.toUpperCase() }))
+                          setGstinError('') // Clear error on change
+                        }}
                         placeholder="06AAACA1234A1ZA"
                         maxLength={15}
+                        isInvalid={!!gstinError}
                       />
-                      <small className="text-muted">15-character alphanumeric GST number</small>
+                      {gstinError && (
+                        <Form.Control.Feedback type="invalid" className="d-block">
+                          {gstinError}
+                        </Form.Control.Feedback>
+                      )}
+                      <small className="text-muted">15-character alphanumeric GST number (auto-converts to uppercase)</small>
                     </Col>
                   </Row>
                 </Tab.Pane>
