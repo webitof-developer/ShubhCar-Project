@@ -67,6 +67,7 @@ const connectMongo = async () => {
       logger.info(`Connecting to MongoDB at ${mongoUri.replace(/:([^:@]{1,})@/, ':****@')}`);
       await mongoose.connect(mongoUri, {
         serverSelectionTimeoutMS: 10000, // Prevent indefinite hangs
+        readPreference: 'primaryPreferred', // Read from secondary if primary down
       });
       logger.info('MongoDB connected');
       ensureReplicaIfRequired();

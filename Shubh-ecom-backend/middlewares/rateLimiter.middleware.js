@@ -1,12 +1,22 @@
 const rateLimit = require('express-rate-limit');
+const { RedisStore } = require('rate-limit-redis');
+const { redis, redisEnabled } = require('../config/redis');
 const { ipKeyGenerator } = rateLimit;
 
 /* =========================
    SHARED CONFIG
 ========================= */
+const store = redisEnabled
+  ? new RedisStore({
+      sendCommand: (...args) => redis.sendCommand(args),
+    })
+  : undefined; // Defaults to MemoryStore
+
 const baseConfig = {
+  store, // Use Redis store if enabled
   standardHeaders: true,
   legacyHeaders: false,
+  passOnStoreError: true, // If Redis fails, allow request to proceed (Fail Open)
   handler: (req, res) => {
     return res.status(429).json({
       success: false,
@@ -25,7 +35,7 @@ const ipKey = (req) => ipKeyGenerator(req);
 exports.authLimiter = rateLimit({
   ...baseConfig,
   windowMs: 60 * 1000, // 1 minute
-  max: 5, // dY"' HARD LIMIT
+  max: 5, // HARD LIMIT
   keyGenerator: (req) =>
     `${ipKey(req)}:${req.body?.email || req.body?.phone || 'unknown'}`,
 });
