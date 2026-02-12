@@ -1173,7 +1173,7 @@ const AddProduct = () => {
           </Col>
 
           <Col xl={4} lg={12}>
-            <div className="product-image-panel bg-white mb-3">
+            <div className="product-image-panel bg-white mb-3 p-3">
               <div className="d-flex align-items-center justify-content-between mb-3">
                 <h5 className="mb-0">Featured Image</h5>
                 <div className="d-flex gap-2">
