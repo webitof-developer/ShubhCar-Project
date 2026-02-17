@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { createSafeSession } = require('../../utils/mongoTransaction');
 const paymentRepo = require('./payment.repo');
 const orderRepo = require('../orders/order.repo');
 const { error } = require('../../utils/apiResponse');
@@ -30,8 +31,10 @@ class PaymentsService {
       method: context.method,
       userId: context.userId || null,
     });
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    const session = await createSafeSession();
+    if (!session._isStandalone) {
+      session.startTransaction();
+    }
 
     try {
       /* =====================
@@ -62,7 +65,9 @@ class PaymentsService {
       );
 
       if (existing) {
-        await session.commitTransaction();
+        if (!session._isStandalone && session.inTransaction()) {
+          await session.commitTransaction();
+        }
         return {
           paymentId: existing._id,
           gatewayPayload: existing.gatewayResponse,
@@ -87,15 +92,23 @@ class PaymentsService {
         }
 
         // Allow Env fallback if DB settings are empty
-        const keyId = paymentSettings.razorpayKeyId || process.env.RAZORPAY_KEY_ID;
-        const keySecret = paymentSettings.razorpayKeySecret || process.env.RAZORPAY_KEY_SECRET;
+        const keyId =
+          paymentSettings.razorpayKeyId || process.env.RAZORPAY_KEY_ID;
+        const keySecret =
+          paymentSettings.razorpayKeySecret || process.env.RAZORPAY_KEY_SECRET;
 
         if (!keyId || !keySecret) {
           error('Razorpay credentials are missing (DB or Env)', 500);
         }
 
-        console.log('Using Razorpay Key:', keyId ? `...${keyId.slice(-4)}` : 'MISSING');
-        console.log('Using Razorpay Secret:', keySecret ? `...${keySecret.slice(-4)}` : 'MISSING');
+        console.log(
+          'Using Razorpay Key:',
+          keyId ? `...${keyId.slice(-4)}` : 'MISSING',
+        );
+        console.log(
+          'Using Razorpay Secret:',
+          keySecret ? `...${keySecret.slice(-4)}` : 'MISSING',
+        );
 
         gatewayResponse = await razorpayService.createOrder({
           amount: order.grandTotal,
@@ -144,7 +157,9 @@ class PaymentsService {
       };
       await order.save({ session });
 
-      await session.commitTransaction();
+      if (!session._isStandalone && session.inTransaction()) {
+        await session.commitTransaction();
+      }
 
       log.info('payment_intent_created', {
         type: 'payment',
@@ -159,7 +174,9 @@ class PaymentsService {
         gatewayPayload: gatewayResponse,
       };
     } catch (e) {
-      await session.abortTransaction();
+      if (!session._isStandalone && session.inTransaction()) {
+        await session.abortTransaction();
+      }
 
       // 👇 Handle duplicate key safely
       if (e.code === 11000) {
@@ -296,12 +313,19 @@ class PaymentsService {
       payment.transactionId = transactionId;
     }
 
-    console.log('[CONFIRM_PAYMENT] Fetching status from gateway for payment:', payment._id, 'transactionId:', payment.transactionId);
+    console.log(
+      '[CONFIRM_PAYMENT] Fetching status from gateway for payment:',
+      payment._id,
+      'transactionId:',
+      payment.transactionId,
+    );
 
     const gatewayStatus = await paymentGatewayService.fetchStatus(payment);
     console.log('[CONFIRM_PAYMENT] Gateway status response:', gatewayStatus);
     if (!gatewayStatus) {
-      console.log('[CONFIRM_PAYMENT] No gateway status returned, exiting early');
+      console.log(
+        '[CONFIRM_PAYMENT] No gateway status returned, exiting early',
+      );
       return {
         paymentId: payment._id,
         status: payment.status,
@@ -324,14 +348,22 @@ class PaymentsService {
       }
     } else if (normalized === 'failed') {
       if (payment.status !== PAYMENT_RECORD_STATUS.FAILED) {
-        await paymentRepo.markFailed(payment._id, { reason: 'gateway_failure' });
+        await paymentRepo.markFailed(payment._id, {
+          reason: 'gateway_failure',
+        });
       }
       if (order.paymentStatus !== PAYMENT_STATUS.FAILED) {
         await orderService.failOrder(order._id);
       }
     } else if (normalized === 'refunded') {
-      await paymentRepo.finalizeRefund(payment._id, Boolean(gatewayStatus.fullRefund));
-      await orderService.markRefunded(order._id, Boolean(gatewayStatus.fullRefund));
+      await paymentRepo.finalizeRefund(
+        payment._id,
+        Boolean(gatewayStatus.fullRefund),
+      );
+      await orderService.markRefunded(
+        order._id,
+        Boolean(gatewayStatus.fullRefund),
+      );
     }
 
     await orderRepo.updateById(order._id, {
@@ -339,11 +371,13 @@ class PaymentsService {
         paymentId: payment._id,
         gateway: payment.paymentGateway,
         gatewayOrderId: payment.gatewayOrderId || null,
-        transactionId: gatewayStatus.transactionId || payment.transactionId || null,
+        transactionId:
+          gatewayStatus.transactionId || payment.transactionId || null,
         status: normalized,
         amount: payment.amount,
         currency: payment.currency || 'INR',
-        createdAt: order.paymentSnapshot?.createdAt || payment.createdAt || new Date(),
+        createdAt:
+          order.paymentSnapshot?.createdAt || payment.createdAt || new Date(),
         updatedAt: new Date(),
       },
     });

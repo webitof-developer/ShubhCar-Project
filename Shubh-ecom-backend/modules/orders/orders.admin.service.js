@@ -8,12 +8,30 @@ const { attachPaymentSummary } = require('./paymentSummary');
 const { ORDER_STATUS_LIST } = require('../../constants/orderStatus');
 const mongoose = require('mongoose');
 const ProductImage = require('../../models/ProductImage.model');
+const userRepo = require('../users/user.repo');
+const Role = require('../../models/Role.model');
+
+const isSalesmanActor = async (actor = {}) => {
+  if (String(actor?.role || '').toLowerCase() === 'salesman') return true;
+  const actorId = actor?.id || actor?._id;
+  if (!actorId || !mongoose.Types.ObjectId.isValid(actorId)) return false;
+  const actorUser = await userRepo.findById(actorId);
+  if (!actorUser) return false;
+  if (String(actorUser.role || '').toLowerCase() === 'salesman') return true;
+  if (!actorUser.roleId) return false;
+  const roleDoc = await Role.findById(actorUser.roleId).select('slug name').lean();
+  const slug = String(roleDoc?.slug || '').toLowerCase();
+  const name = String(roleDoc?.name || '').toLowerCase();
+  return slug === 'salesman' || name.includes('salesman');
+};
 
 // Admin list orders method
-exports.adminList = async (query = {}) => {
+exports.adminList = async (query = {}, actor = {}) => {
   const {
     status,
     paymentStatus,
+    customerType,
+    productType,
     page = 1,
     limit = 20,
     from,
@@ -27,9 +45,13 @@ exports.adminList = async (query = {}) => {
   const safeLimit = Math.max(1, Number(limit) || 20);
   const skip = (safePage - 1) * safeLimit;
   const filter = { isDeleted: false };
+  const isSalesman = await isSalesmanActor(actor);
 
   if (status) filter.orderStatus = status;
   if (paymentStatus) filter.paymentStatus = paymentStatus;
+  if (isSalesman) {
+    filter.salesmanId = new mongoose.Types.ObjectId(actor.id);
+  }
   if (userId && mongoose.Types.ObjectId.isValid(userId)) {
     filter.userId = new mongoose.Types.ObjectId(userId);
   }
@@ -44,6 +66,19 @@ exports.adminList = async (query = {}) => {
   const searchValue = typeof search === 'string' ? search.trim() : '';
   const hasSearch = Boolean(searchValue);
   const searchRegex = hasSearch ? new RegExp(escapeRegex(searchValue), 'i') : null;
+  const normalizedCustomerType = String(customerType || '')
+    .trim()
+    .toLowerCase();
+  const normalizedProductTypes = String(productType || '')
+    .split(',')
+    .map((value) => value.trim().toUpperCase())
+    .filter(Boolean)
+    .filter((value) => ['OEM', 'AFTERMARKET'].includes(value));
+  const customerTypeMatch =
+    normalizedCustomerType && normalizedCustomerType !== 'all'
+      ? { 'user.customerType': normalizedCustomerType }
+      : null;
+  const hasProductTypeFilter = normalizedProductTypes.length > 0;
   const searchMatch = hasSearch
     ? {
       $or: [
@@ -120,6 +155,40 @@ exports.adminList = async (query = {}) => {
   if (searchMatch) {
     pipeline.push({ $match: searchMatch });
   }
+  if (customerTypeMatch) {
+    pipeline.push({ $match: customerTypeMatch });
+  }
+  if (hasProductTypeFilter) {
+    pipeline.push(
+      {
+        $lookup: {
+          from: 'orderitems',
+          localField: '_id',
+          foreignField: 'orderId',
+          as: 'orderItems',
+        },
+      },
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'orderItems.productId',
+          foreignField: '_id',
+          as: 'orderProducts',
+        },
+      },
+      {
+        $match: {
+          'orderProducts.productType': { $in: normalizedProductTypes },
+        },
+      },
+      {
+        $project: {
+          orderItems: 0,
+          orderProducts: 0,
+        },
+      },
+    );
+  }
 
   pipeline.push({
     $facet: {
@@ -143,8 +212,13 @@ exports.adminList = async (query = {}) => {
 };
 
 // Admin get status counts method
-exports.adminGetStatusCounts = async () => {
+exports.adminGetStatusCounts = async (actor = {}) => {
+  const match = { isDeleted: false };
+  if (await isSalesmanActor(actor)) {
+    match.salesmanId = new mongoose.Types.ObjectId(actor.id);
+  }
   const counts = await Order.aggregate([
+    { $match: match },
     {
       $group: {
         _id: '$orderStatus',
@@ -172,9 +246,14 @@ exports.adminGetStatusCounts = async () => {
 };
 
 // Admin get single order
-exports.adminGetOrder = async (orderId) => {
-  const order = await Order.findById(orderId)
+exports.adminGetOrder = async (orderId, actor = {}) => {
+  const filter = { _id: orderId };
+  if (await isSalesmanActor(actor)) {
+    filter.salesmanId = actor.id;
+  }
+  const order = await Order.findOne(filter)
     .populate('userId', 'firstName lastName email phone customerType')
+    .populate('salesmanId', 'firstName lastName email phone')
     .populate('shippingAddressId')
     .populate('billingAddressId')
     .lean();
@@ -229,6 +308,10 @@ exports.adminGetOrderNotes = async (orderId) => {
 
 // Admin add order note
 exports.adminAddOrderNote = async ({ admin, orderId, payload }) => {
+  if (await isSalesmanActor(admin)) {
+    error('Salesman cannot edit orders', 403);
+  }
+
   const { noteType, noteContent } = payload;
   
   const order = await orderRepo.findByIdLean(orderId);

@@ -145,7 +145,7 @@ router.get('/my', auth(), controller.myOrders);
 router.get(
   '/admin/counts',
   adminLimiter,
-  auth([ROLES.ADMIN]),
+  auth([ROLES.ADMIN, ROLES.SALESMAN]),
   cacheRead({
     key: () => cacheKeys.analytics.orderStatusCounts(),
     allowAuth: true,
@@ -206,7 +206,7 @@ router.post('/admin/:orderId/notes', adminLimiter, auth([ROLES.ADMIN]), validate
 router.post(
   '/admin/create',
   adminLimiter,
-  auth([ROLES.ADMIN]),
+  auth([ROLES.ADMIN, ROLES.SALESMAN]),
   validate(adminCreateOrderSchema),
   controller.adminCreateOrder,
 );
@@ -285,7 +285,7 @@ router.post(
  *                 success:
  *                   type: boolean
  */
-router.get('/', adminLimiter, auth([ROLES.ADMIN]), controller.adminList);
+router.get('/', adminLimiter, auth([ROLES.ADMIN, ROLES.SALESMAN]), controller.adminList);
 
 /**
  * @openapi
@@ -342,7 +342,7 @@ router.get(
 router.get(
   '/admin/:orderId',
   adminLimiter,
-  auth([ROLES.ADMIN]),
+  auth([ROLES.ADMIN, ROLES.SALESMAN]),
   validateId('orderId'),
   controller.adminGetOrder,
 );

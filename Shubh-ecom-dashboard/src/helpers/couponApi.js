@@ -18,6 +18,13 @@ const fetchWithAuth = async (url, options = {}) => {
 };
 
 export const couponAPI = {
+  list: async (token) => {
+    const url = `${API_BASE_URL}/coupons`;
+    return fetchWithAuth(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  },
+
   preview: async (payload, token) => {
     const url = `${API_BASE_URL}/coupons/preview`;
     return fetchWithAuth(url, {

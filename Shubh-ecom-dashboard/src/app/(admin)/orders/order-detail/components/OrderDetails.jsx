@@ -456,7 +456,7 @@ const CustomerDetails = ({ user, order }) => {
   )
 }
 
-export const PaymentInformation = ({ order, onPaymentUpdate, updatingPayment, onSyncPayment, syncingPayment }) => {
+export const PaymentInformation = ({ order, onPaymentUpdate, updatingPayment, onSyncPayment, syncingPayment, canManage = true }) => {
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
 
@@ -523,7 +523,7 @@ export const PaymentInformation = ({ order, onPaymentUpdate, updatingPayment, on
             )}
           </div>
         )}
-        {isCOD && (
+        {isCOD && canManage && (
           <div className="mt-3 pt-3 border-top">
             <Form.Label className="text-muted fs-13 mb-2">Update COD Payment</Form.Label>
             <Form.Group className="mb-2">
@@ -576,7 +576,7 @@ export const PaymentInformation = ({ order, onPaymentUpdate, updatingPayment, on
             )}
           </div>
         )}
-        {!isCOD && onSyncPayment && (order.paymentSnapshot?.paymentId || order.paymentSnapshot?.gatewayOrderId || order.paymentSnapshot?.transactionId) && (
+        {!isCOD && canManage && onSyncPayment && (order.paymentSnapshot?.paymentId || order.paymentSnapshot?.gatewayOrderId || order.paymentSnapshot?.transactionId) && (
           <div className="mt-3 pt-3 border-top">
             <p className="text-muted fs-13 mb-2">
               Verify payment status directly from the gateway.
@@ -636,15 +636,15 @@ const Documents = ({ onDownloadInvoice, invoiceDisabled }) => {
   )
 }
 
-const OrderDetails = ({ order, shipments, items, notes, onStatusUpdate, updatingStatus, onAddNote, addingNote, onDownloadInvoice, onUpsertShipment, savingShipment }) => {
+const OrderDetails = ({ order, shipments, items, notes, onStatusUpdate, updatingStatus, onAddNote, addingNote, onDownloadInvoice, onUpsertShipment, savingShipment, canManage = true }) => {
   if (!order) return null;
   return (
     <div>
-      <OrderActions order={order} onStatusUpdate={onStatusUpdate} updatingStatus={updatingStatus} />
-      <ShipmentTracking shipments={shipments} items={items} onUpsertShipment={onUpsertShipment} savingShipment={savingShipment} />
+      {canManage && <OrderActions order={order} onStatusUpdate={onStatusUpdate} updatingStatus={updatingStatus} />}
+      {canManage && <ShipmentTracking shipments={shipments} items={items} onUpsertShipment={onUpsertShipment} savingShipment={savingShipment} />}
       <Documents onDownloadInvoice={onDownloadInvoice} invoiceDisabled={order.paymentStatus !== 'paid'} />
       <CustomerDetails user={order.userId} order={order} />
-      <OrderNotes notes={notes} onAddNote={onAddNote} addingNote={addingNote} />
+      {canManage && <OrderNotes notes={notes} onAddNote={onAddNote} addingNote={addingNote} />}
     </div>
   )
 }

@@ -5,7 +5,10 @@ const analyticsQuerySchema = Joi.object({
   to: Joi.date().iso(),
   limit: Joi.number().integer().min(1).max(100).default(10),
   threshold: Joi.number().integer().min(0).max(100000).default(5),
-  range: Joi.string().valid('today', 'week', 'month', 'year', 'custom').default('month'),
+  range: Joi.string()
+    .valid('today', 'week', 'month', 'year', 'custom')
+    .default('month'),
+  salesmanId: Joi.string().hex().length(24).optional(),
 });
 
 module.exports = {

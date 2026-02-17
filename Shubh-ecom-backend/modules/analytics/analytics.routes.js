@@ -135,8 +135,13 @@ router.get(
 router.get(
   '/dashboard',
   adminLimiter,
-  auth([ROLES.ADMIN]),
-  cacheRead({ key: () => cacheKeys.analytics.dashboard(), allowAuth: true, ttl: 60 }),
+  auth([ROLES.ADMIN, ROLES.SALESMAN]),
+  cacheRead({
+    key: (req) =>
+      `${cacheKeys.analytics.dashboard()}:${req.user?.role || 'unknown'}:${req.user?.id || 'anon'}`,
+    allowAuth: true,
+    ttl: 60,
+  }),
   controller.dashboardStats,
 );
 /**
@@ -152,9 +157,10 @@ router.get(
 router.get(
   '/dashboard/chart',
   adminLimiter,
-  auth([ROLES.ADMIN]),
+  auth([ROLES.ADMIN, ROLES.SALESMAN]),
   cacheRead({
-    key: (req) => cacheKeys.analytics.revenueChart(req.query),
+    key: (req) =>
+      `${cacheKeys.analytics.revenueChart(req.query)}:${req.user?.role || 'unknown'}:${req.user?.id || 'anon'}`,
     allowAuth: true,
     ttl: 300,
   }),

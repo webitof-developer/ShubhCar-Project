@@ -185,14 +185,14 @@ router.post(
 router.get(
   '/admin',
   adminLimiter,
-  auth([ROLES.ADMIN]),
+  auth([ROLES.ADMIN, ROLES.SALESMAN]),
   validate(adminListQuerySchema, 'query'),
   controller.adminList,
 );
 router.post(
   '/admin',
   adminLimiter,
-  auth([ROLES.ADMIN]),
+  auth([ROLES.ADMIN, ROLES.SALESMAN]),
   validate(adminCreateSchema),
   controller.adminCreate,
 );

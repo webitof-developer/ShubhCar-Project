@@ -3,7 +3,7 @@ const analyticsService = require('./analytics.service');
 const { success } = require('../../utils/apiResponse');
 
 exports.revenue = asyncHandler(async (req, res) => {
-  const data = await analyticsService.revenueSummary(req.query);
+  const data = await analyticsService.revenueSummary(req.query, req.user);
   return success(res, data);
 });
 
@@ -28,12 +28,15 @@ exports.reviews = asyncHandler(async (req, res) => {
 });
 
 exports.dashboardStats = asyncHandler(async (req, res) => {
-  const data = await analyticsService.dashboardStats();
+  const data = await analyticsService.dashboardStats(
+    req.user,
+    req.query.salesmanId,
+  );
   return success(res, data);
 });
 
 exports.revenueChartData = asyncHandler(async (req, res) => {
-  const data = await analyticsService.revenueChartData(req.query);
+  const data = await analyticsService.revenueChartData(req.query, req.user);
   return success(res, data);
 });
 

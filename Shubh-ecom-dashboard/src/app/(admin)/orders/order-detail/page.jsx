@@ -11,10 +11,12 @@ import OrderTotals from './components/OrderTotals';
 import { Card, CardBody, Col, Placeholder, Row } from 'react-bootstrap';
 import PageTItle from '@/components/PageTItle';
 import { orderAPI } from '@/helpers/orderApi';
+import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from 'react-toastify';
 
 const OrderDetailPage = () => {
   const { data: session } = useSession();
+  const { hasPermission } = usePermissions();
   const searchParams = useSearchParams();
   const orderId = searchParams.get('id');
   const [orderData, setOrderData] = useState(null);
@@ -27,6 +29,7 @@ const OrderDetailPage = () => {
   const [savingShipment, setSavingShipment] = useState(false);
   const [updatingPayment, setUpdatingPayment] = useState(false);
   const [syncingPayment, setSyncingPayment] = useState(false);
+  const canManageOrders = hasPermission('orders.update');
 
   useEffect(() => {
     if (orderId && session?.accessToken) {
@@ -58,6 +61,7 @@ const OrderDetailPage = () => {
   };
 
   const handleStatusUpdate = async (status) => {
+    if (!canManageOrders) return;
     if (!orderId || !session?.accessToken) return;
     try {
       setUpdatingStatus(true);
@@ -74,6 +78,7 @@ const OrderDetailPage = () => {
   };
 
   const handlePaymentUpdate = async (payload) => {
+    if (!canManageOrders) return false;
     if (!orderId || !session?.accessToken) return false;
     try {
       setUpdatingPayment(true);
@@ -92,6 +97,7 @@ const OrderDetailPage = () => {
   };
 
   const handleAddNote = async ({ noteType, noteContent }) => {
+    if (!canManageOrders) return false;
     if (!orderId || !session?.accessToken) return false;
     try {
       setAddingNote(true);
@@ -127,6 +133,7 @@ const OrderDetailPage = () => {
   };
 
   const handleUpsertShipment = async (orderItemId, payload, hasExisting) => {
+    if (!canManageOrders) return false;
     if (!orderId || !session?.accessToken) return false;
     try {
       setSavingShipment(true);
@@ -364,6 +371,7 @@ const OrderDetailPage = () => {
                 updatingPayment={updatingPayment}
                 onSyncPayment={handleSyncPayment}
                 syncingPayment={syncingPayment}
+                canManage={canManageOrders}
               />
             </Col>
             <Col lg={6}>
@@ -386,6 +394,7 @@ const OrderDetailPage = () => {
             onDownloadInvoice={handleDownloadInvoice}
             onUpsertShipment={handleUpsertShipment}
             savingShipment={savingShipment}
+            canManage={canManageOrders}
           />
         </Col>
       </Row>

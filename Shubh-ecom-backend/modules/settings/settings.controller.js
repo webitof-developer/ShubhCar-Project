@@ -3,7 +3,7 @@ const settingsService = require('./settings.service');
 const { success } = require('../../utils/apiResponse');
 
 exports.list = asyncHandler(async (req, res) => {
-    const data = await settingsService.list(req.query.group);
+    const data = await settingsService.list(req.query.group, req.user);
     return success(res, data);
 });
 

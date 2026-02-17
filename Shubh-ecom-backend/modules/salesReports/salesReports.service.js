@@ -5,6 +5,10 @@ class SalesReportsService {
     return repo.summary(params);
   }
 
+  salesmanPerformance(params) {
+    return repo.salesmanPerformance(params);
+  }
+
   list(filter = {}) {
     return repo.list(filter);
   }

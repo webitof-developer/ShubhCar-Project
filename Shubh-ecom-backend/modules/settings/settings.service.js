@@ -1,13 +1,36 @@
 const Setting = require('../../models/Setting.model');
 const taxService = require('../../services/tax.service');
+const ROLES = require('../../constants/roles');
 
 class SettingsService {
     /**
      * Get all settings, optionally filtered by group
      */
-    async list(group) {
+    async list(group, actor = null) {
+        const actorRole = String(actor?.role || '').toLowerCase();
+        const isSalesman = actorRole === ROLES.SALESMAN;
+
+        const salesmanAllowedGroups = new Set(['shipping', 'orders', 'payment']);
+        const salesmanAllowedKeys = new Set([
+            'shipping_enabled',
+            'shipping_flat_rate',
+            'shipping_free_threshold',
+            'shipping_handling_days',
+            'maxSalesmanDiscountPercent',
+            'salesmanCommissionPercent',
+            'payment_cod_enabled',
+            'payment_razorpay_enabled',
+        ]);
+
+        if (isSalesman && group && !salesmanAllowedGroups.has(group)) {
+            return {};
+        }
+
         const filter = {};
         if (group) filter.group = group;
+        if (isSalesman && !group) {
+            filter.group = { $in: [...salesmanAllowedGroups] };
+        }
 
         // Return key-value pair object for easy frontend consumption
         const settings = await Setting.find(filter);
@@ -21,6 +44,9 @@ class SettingsService {
         // For frontend use, a map is often easier: settings.store_name
 
         settings.forEach(s => {
+            if (isSalesman && !salesmanAllowedKeys.has(s.key)) {
+                return;
+            }
             result[s.key] = s.value;
         });
 
@@ -81,6 +107,8 @@ class SettingsService {
             order_number_digits: 'orders',
             order_number_start: 'orders',
             order_number_next: 'orders',
+            maxSalesmanDiscountPercent: 'orders',
+            salesmanCommissionPercent: 'orders',
             invoice_number_prefix: 'invoice',
             invoice_number_digits: 'invoice',
             invoice_number_start: 'invoice',

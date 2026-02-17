@@ -28,6 +28,13 @@ export const MENU_ITEMS = [
     permission: 'analytics.view',
   },
   {
+    key: 'salesman-analytics',
+    label: 'Salesman Analytics',
+    icon: 'solar:chart-2-bold-duotone',
+    url: '/salesman-analytics',
+    permission: 'analytics.view',
+  },
+  {
     key: 'coupons',
     label: 'Coupons',
     icon: 'solar:leaf-bold-duotone',

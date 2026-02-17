@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { createSafeSession } = require('../utils/mongoTransaction');
 const logger = require('../config/logger');
 
 const orderRepo = require('../modules/orders/order.repo');
@@ -20,19 +21,25 @@ const AUTO_CANCEL_MS = 20 * 60 * 1000; // 20 minutes
    AUTO CANCEL (TRANSACTION-SAFE, INVENTORY-SAFE)
 ============================================================ */
 const processAutoCancel = async (orderId) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  const session = await createSafeSession();
+  if (!session._isStandalone) {
+    session.startTransaction();
+  }
 
   try {
     const order = await orderRepo.findById(orderId, session);
     if (!order) {
-      await session.commitTransaction();
+      if (!session._isStandalone && session.inTransaction()) {
+        await session.commitTransaction();
+      }
       return;
     }
 
     // Only auto-cancel unpaid + unconfirmed orders
     if (order.paymentStatus !== 'pending' || order.orderStatus !== 'created') {
-      await session.commitTransaction();
+      if (!session._isStandalone && session.inTransaction()) {
+        await session.commitTransaction();
+      }
       return;
     }
 
@@ -40,7 +47,9 @@ const processAutoCancel = async (orderId) => {
     const latestPayment = await paymentRepo.findLatestByOrder(orderId, session);
     if (latestPayment && latestPayment.status === 'created') {
       logger.info('Auto-cancel skipped, payment intent exists', { orderId });
-      await session.commitTransaction();
+      if (!session._isStandalone && session.inTransaction()) {
+        await session.commitTransaction();
+      }
       return;
     }
 
@@ -59,12 +68,9 @@ const processAutoCancel = async (orderId) => {
     // RELEASE INVENTORY (IN SAME TX)
     const items = await orderRepo.findItemsByOrder(orderId, session);
     for (const item of items) {
-      await inventoryService.release(
-        item.productId,
-        item.quantity,
-        session,
-        { orderId },
-      );
+      await inventoryService.release(item.productId, item.quantity, session, {
+        orderId,
+      });
     }
 
     // PAYMENT RECORD
@@ -80,13 +86,17 @@ const processAutoCancel = async (orderId) => {
       await couponRepo.removeUsageByOrder(orderId, session);
     }
 
-    await session.commitTransaction();
+    if (!session._isStandalone && session.inTransaction()) {
+      await session.commitTransaction();
+    }
 
     await enqueueStatusNotification(orderId, 'cancelled');
 
     logger.info('Order auto-cancelled safely', { orderId });
   } catch (err) {
-    await session.abortTransaction();
+    if (!session._isStandalone && session.inTransaction()) {
+      await session.abortTransaction();
+    }
     logger.error('Auto-cancel failed', { orderId, err });
     throw err;
   } finally {
@@ -138,19 +148,18 @@ const enqueueStatusNotification = async (orderId, status) => {
   if (!templateName) return;
 
   if (templateName) {
-  await sendOrderEmailOnce({
-    orderId,
-    type: templateName.toUpperCase(),
-    to: user.email,
-    template: templateName,
-    variables: {
-      orderNumber: order.orderNumber,
-      status,
-      trackingNumber: order.shipment?.trackingNumber || null,
-    },
-  });
-}
-
+    await sendOrderEmailOnce({
+      orderId,
+      type: templateName.toUpperCase(),
+      to: user.email,
+      template: templateName,
+      variables: {
+        orderNumber: order.orderNumber,
+        status,
+        trackingNumber: order.shipment?.trackingNumber || null,
+      },
+    });
+  }
 
   // 5️⃣ enqueue email (DO NOT await)
   enqueueEmail({
@@ -172,8 +181,6 @@ const enqueueStatusNotification = async (orderId, status) => {
     metadata: { orderId, status },
   });
 
-
-
   // Admin stream notification (broadcast)
   await notificationsService.create({
     userId: null,
@@ -192,7 +199,13 @@ const dispatchPayoutProcessing = async (orderId) =>
     { attempts: 3, removeOnComplete: true, removeOnFail: true },
   );
 
-const sendOrderEmailOnce = async ({ orderId, type, to, template, variables }) => {
+const sendOrderEmailOnce = async ({
+  orderId,
+  type,
+  to,
+  template,
+  variables,
+}) => {
   const exists = await EmailDispatch.findOne({ orderId, type });
   if (exists) return;
 

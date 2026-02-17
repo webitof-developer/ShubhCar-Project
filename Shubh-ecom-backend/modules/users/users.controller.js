@@ -52,7 +52,8 @@ exports.adminList = asyncHandler(async (req, res) => {
 });
 exports.adminCreate = asyncHandler(async (req, res) => {
   const data = await userService.adminCreate(req.user, req.body);
-  return res.ok(data, 'User created', 201);
+  const message = req.user?.role === 'salesman' ? 'Customer created' : 'User created';
+  return res.ok(data, message, 201);
 });
 exports.adminGet = asyncHandler(async (req, res) => {
   const data = await userService.adminGet(req.user, req.params.userId);

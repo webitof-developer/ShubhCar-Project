@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { createSafeSession } = require('../../utils/mongoTransaction');
 const ProductVariant = require('../../models/ProductVariant.model');
 const InventoryLog = require('../../models/InventoryLog.model');
 const { error } = require('../../utils/apiResponse');
@@ -9,7 +10,7 @@ class ProductVariantService {
    */
   async create(productId, payload, user) {
     if (!user) error('Unauthorized', 401);
-    
+
     const variant = await ProductVariant.create({
       productId,
       ...payload,
@@ -23,11 +24,11 @@ class ProductVariantService {
    * Get all variants for a product
    */
   async listByProduct(productId) {
-    const variants = await ProductVariant.find({ 
+    const variants = await ProductVariant.find({
       productId,
-      isDeleted: false 
+      isDeleted: false,
     }).lean();
-    
+
     return variants;
   }
 
@@ -37,9 +38,9 @@ class ProductVariantService {
   async getById(variantId) {
     const variant = await ProductVariant.findOne({
       _id: variantId,
-      isDeleted: false
+      isDeleted: false,
     }).lean();
-    
+
     if (!variant) error('Variant not found', 404);
     return variant;
   }
@@ -52,15 +53,15 @@ class ProductVariantService {
 
     const variant = await ProductVariant.findOne({
       _id: variantId,
-      isDeleted: false
+      isDeleted: false,
     });
-    
+
     if (!variant) error('Variant not found', 404);
 
     // Update fields
     Object.assign(variant, payload);
     variant.updatedBy = user._id;
-    
+
     await variant.save();
     return variant.toObject();
   }
@@ -73,15 +74,15 @@ class ProductVariantService {
 
     const variant = await ProductVariant.findOne({
       _id: variantId,
-      isDeleted: false
+      isDeleted: false,
     });
-    
+
     if (!variant) error('Variant not found', 404);
 
     variant.isDeleted = true;
     variant.deletedAt = new Date();
     variant.deletedBy = user._id;
-    
+
     await variant.save();
     return { message: 'Variant deleted successfully' };
   }
@@ -90,11 +91,18 @@ class ProductVariantService {
    * Admin stock adjustment with audit log.
    * Delta can be positive (increase) or negative (decrease).
    */
-  async adjustStock({ variantId, delta, changeType = 'admin_adjust', referenceId }) {
+  async adjustStock({
+    variantId,
+    delta,
+    changeType = 'admin_adjust',
+    referenceId,
+  }) {
     if (!delta || delta === 0) error('delta must be non-zero', 400);
 
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    const session = await createSafeSession();
+    if (!session._isStandalone) {
+      session.startTransaction();
+    }
 
     try {
       const variant = await ProductVariant.findById(variantId).session(session);
@@ -122,10 +130,14 @@ class ProductVariantService {
         { session },
       );
 
-      await session.commitTransaction();
+      if (!session._isStandalone && session.inTransaction()) {
+        await session.commitTransaction();
+      }
       return variant.toObject();
     } catch (e) {
-      await session.abortTransaction();
+      if (!session._isStandalone && session.inTransaction()) {
+        await session.abortTransaction();
+      }
       throw e;
     } finally {
       session.endSession();

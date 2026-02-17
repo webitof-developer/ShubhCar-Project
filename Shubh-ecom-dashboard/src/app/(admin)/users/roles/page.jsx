@@ -220,24 +220,30 @@ const RolesPage = () => {
                           </td>
                           <td>{role.isSystem ? 'Default' : 'Custom'}</td>
                           <td className="text-end">
-                            <div className="d-flex gap-2 justify-content-end">
-                              <Button
-                                size="sm"
-                                variant="outline-primary"
-                                onClick={() => handleOpenEdit(role)}
-                                disabled={role.isSystem || !canUpdateRoles}
-                              >
-                                Edit
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline-danger"
-                                onClick={() => handleDelete(role)}
-                                disabled={role.isSystem || !canDeleteRoles}
-                              >
-                                Delete
-                              </Button>
-                            </div>
+                            {role.isSystem ? (
+                              <span className="text-muted small">Protected</span>
+                            ) : (
+                              <div className="d-flex gap-2 justify-content-end">
+                                {canUpdateRoles && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline-primary"
+                                    onClick={() => handleOpenEdit(role)}
+                                  >
+                                    Edit
+                                  </Button>
+                                )}
+                                {canDeleteRoles && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline-danger"
+                                    onClick={() => handleDelete(role)}
+                                  >
+                                    Delete
+                                  </Button>
+                                )}
+                              </div>
+                            )}
                           </td>
                         </tr>
                       ))}

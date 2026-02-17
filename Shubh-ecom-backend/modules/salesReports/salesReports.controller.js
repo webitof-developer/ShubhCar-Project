@@ -7,6 +7,11 @@ exports.summary = asyncHandler(async (req, res) => {
   return success(res, data, 'Sales report summary');
 });
 
+exports.salesmanPerformance = asyncHandler(async (req, res) => {
+  const data = await service.salesmanPerformance(req.query);
+  return success(res, data, 'Salesman performance fetched');
+});
+
 exports.list = asyncHandler(async (req, res) => {
   const data = await service.list(req.query);
   return success(res, data, 'Sales reports fetched');

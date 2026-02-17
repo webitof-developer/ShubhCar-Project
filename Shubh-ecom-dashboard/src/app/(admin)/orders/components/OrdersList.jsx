@@ -1,31 +1,55 @@
-'use client';
-import { useState, useEffect, useRef } from 'react';
-import { useSession } from 'next-auth/react';
-import IconifyIcon from '@/components/wrappers/IconifyIcon';
-import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { toast } from 'react-toastify';
-import { Card, CardBody, CardFooter, CardHeader, CardTitle, Col, Row, Badge, Form, Button, InputGroup, Modal, Alert, ListGroup, FloatingLabel, Placeholder } from 'react-bootstrap';
-import StatusFilterTabs from './StatusFilterTabs';
-import { orderAPI, getStatusBadge, getPaymentStatusBadge } from '@/helpers/orderApi';
-import { productAPI } from '@/helpers/productApi';
-import { userAPI } from '@/helpers/userApi';
-import { userAddressAPI } from '@/helpers/userAddressApi';
-import { couponAPI } from '@/helpers/couponApi';
-import clsx from 'clsx';
-import { currency } from '@/context/constants';
-import { INDIA_COUNTRY, INDIA_STATES, getIndiaStateName, normalizeIndiaStateCode } from '@/helpers/indiaRegions';
+'use client'
+import { useState, useEffect, useRef } from 'react'
+import { useSession } from 'next-auth/react'
+import IconifyIcon from '@/components/wrappers/IconifyIcon'
+import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { toast } from 'react-toastify'
+import {
+  Card,
+  CardBody,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+  Col,
+  Row,
+  Badge,
+  Form,
+  Button,
+  InputGroup,
+  Modal,
+  Alert,
+  FloatingLabel,
+  Placeholder,
+} from 'react-bootstrap'
+import StatusFilterTabs from './StatusFilterTabs'
+import { orderAPI, getStatusBadge, getPaymentStatusBadge } from '@/helpers/orderApi'
+import { productAPI } from '@/helpers/productApi'
+import { userAPI } from '@/helpers/userApi'
+import { userAddressAPI } from '@/helpers/userAddressApi'
+import { couponAPI } from '@/helpers/couponApi'
+import { settingsAPI } from '@/helpers/settingsApi'
+import { usePermissions } from '@/hooks/usePermissions'
+import clsx from 'clsx'
+import { currency } from '@/context/constants'
+import { INDIA_COUNTRY, INDIA_STATES, getIndiaStateName, normalizeIndiaStateCode } from '@/helpers/indiaRegions'
 
 const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
-  const { data: session } = useSession();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [ordersData, setOrdersData] = useState([]);
-  const [loading, setLoading] = useState(!hideList);
-  const [activeStatus, setActiveStatus] = useState('all');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
+  const { data: session } = useSession()
+  const { hasPermission } = usePermissions()
+  const actorRole = String(session?.user?.role || '').toLowerCase()
+  const isSalesman = actorRole === 'salesman'
+  const isAdmin = actorRole === 'admin'
+  const currentActorId =
+    session?.user?.id || session?.user?._id || session?.user?.userId || ''
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const [ordersData, setOrdersData] = useState([])
+  const [loading, setLoading] = useState(!hideList)
+  const [activeStatus, setActiveStatus] = useState('all')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
   const emptyAddress = {
     fullName: '',
     phone: '',
@@ -35,22 +59,27 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
     state: '',
     postalCode: '',
     country: INDIA_COUNTRY.code,
-  };
+  }
   const emptyItem = {
     productSearch: '',
     productOptions: [],
     productId: '',
     productName: '',
     productPrice: 0,
+    productRetailPrice: 0,
+    productWholesalePrice: 0,
     quantity: 1,
-  };
+  }
   const emptyForm = {
     userId: '',
+    salesmanId: '',
     customer: null,
     paymentMethod: 'cod',
+    paymentCompleted: false,
     billingSameAsShipping: true,
     couponCode: '',
     manualDiscount: '',
+    discountPercent: '',
     taxPercent: '18',
     shippingFee: '',
     shippingAddressId: '',
@@ -58,230 +87,429 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
     shippingAddress: { ...emptyAddress },
     billingAddress: { ...emptyAddress },
     items: [{ ...emptyItem }],
-  };
+  }
 
   // Filter states
-  const [selectedOrders, setSelectedOrders] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [dateFilter, setDateFilter] = useState('all');
-  const [customerTypeFilter, setCustomerTypeFilter] = useState('all');
-  const [productTypeFilter, setProductTypeFilter] = useState('all');
-  const [showCreateModal, setShowCreateModal] = useState(initialShowCreate && !hideList);
-  const [createForm, setCreateForm] = useState(emptyForm);
-  const [createError, setCreateError] = useState('');
-  const [createSaving, setCreateSaving] = useState(false);
-  const [hoveredOrderId, setHoveredOrderId] = useState(null);
-  const [statusCounts, setStatusCounts] = useState({ all: 0 });
-  const [customerSearch, setCustomerSearch] = useState('');
-  const [customerResults, setCustomerResults] = useState([]);
-  const [customerLoading, setCustomerLoading] = useState(false);
-  const [showCustomerModal, setShowCustomerModal] = useState(false);
-  const [customerAddresses, setCustomerAddresses] = useState([]);
-  const [couponState, setCouponState] = useState({ loading: false, error: '', discount: 0 });
+  const [selectedOrders, setSelectedOrders] = useState([])
+  const [searchTerm, setSearchTerm] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [dateFilter, setDateFilter] = useState('all')
+  const [customerTypeFilter, setCustomerTypeFilter] = useState('all')
+  const [productTypeFilter, setProductTypeFilter] = useState('all')
+  const [showCreateModal, setShowCreateModal] = useState(initialShowCreate && !hideList)
+  const [createForm, setCreateForm] = useState(emptyForm)
+  const [createError, setCreateError] = useState('')
+  const [createSaving, setCreateSaving] = useState(false)
+  const [hoveredOrderId, setHoveredOrderId] = useState(null)
+  const [statusCounts, setStatusCounts] = useState({ all: 0 })
+  const [customerSearch, setCustomerSearch] = useState('')
+  const [customerResults, setCustomerResults] = useState([])
+  const [customerLoading, setCustomerLoading] = useState(false)
+  const [showCustomerModal, setShowCustomerModal] = useState(false)
+  const [creatingCustomer, setCreatingCustomer] = useState(false)
+  const [customerCreateError, setCustomerCreateError] = useState('')
   const [newCustomerForm, setNewCustomerForm] = useState({
     firstName: '',
     lastName: '',
     email: '',
     phone: '',
     password: '',
-  });
-  const customerSearchTimer = useRef(null);
-  const productSearchTimers = useRef({});
+    customerType: 'retail',
+  })
+  const [customerAddresses, setCustomerAddresses] = useState([])
+  const [couponState, setCouponState] = useState({ loading: false, error: '', discount: 0 })
+  const [allCoupons, setAllCoupons] = useState([])
+  const [couponSearch, setCouponSearch] = useState('')
+  const [couponOptions, setCouponOptions] = useState([])
+  const [couponLoading, setCouponLoading] = useState(false)
+  const [pricingPolicy, setPricingPolicy] = useState({
+    shippingEnabled: true,
+    shippingFlatRate: 0,
+    maxDiscountPercent: 0,
+  })
+  const [paymentPolicy, setPaymentPolicy] = useState({
+    codEnabled: true,
+    razorpayEnabled: false,
+  })
+  const customerSearchTimer = useRef(null)
+  const couponSearchTimer = useRef(null)
+  const productSearchTimers = useRef({})
+  const [salesmen, setSalesmen] = useState([])
+  const [salesmenLoading, setSalesmenLoading] = useState(false)
+  const canCreateOrders = hasPermission('orders.create')
+  const selectedCustomerType = createForm.customer?.customerType === 'wholesale' ? 'wholesale' : 'retail'
+
+  const resolveProductPriceByType = (product, customerType = 'retail') => {
+    const retailPrice = Number(
+      product?.retailPrice?.salePrice ??
+        product?.retailPrice?.mrp ??
+        product?.price?.salePrice ??
+        product?.price?.mrp ??
+        product?.discountPrice ??
+        product?.price ??
+        0,
+    )
+    const wholesalePrice = Number(product?.wholesalePrice?.salePrice ?? product?.wholesalePrice?.mrp ?? retailPrice)
+    const unitPrice = customerType === 'wholesale' ? wholesalePrice : retailPrice
+    return { unitPrice, retailPrice, wholesalePrice }
+  }
 
   const getItemUnitPrice = (item) => {
-    return Number(item.productPrice || 0);
-  };
+    return Number(item.productPrice || 0)
+  }
 
-  const calculateSubtotal = (items) =>
-    items.reduce((sum, item) => sum + getItemUnitPrice(item) * Number(item.quantity || 0), 0);
+  const calculateSubtotal = (items) => items.reduce((sum, item) => sum + getItemUnitPrice(item) * Number(item.quantity || 0), 0)
 
-  const subtotal = calculateSubtotal(createForm.items);
-  const isListLoading = loading && !hideList;
+  const subtotal = calculateSubtotal(createForm.items)
+  const isListLoading = loading && !hideList
 
   useEffect(() => {
-    if (hideList) return;
+    if (hideList) return
     if (session?.accessToken) {
-      fetchOrders();
+      fetchOrders()
     }
-  }, [activeStatus, currentPage, searchQuery, dateFilter, customerTypeFilter, productTypeFilter, session, hideList]);
+  }, [activeStatus, currentPage, searchQuery, dateFilter, customerTypeFilter, productTypeFilter, session, hideList])
 
   useEffect(() => {
-    if (hideList) return;
-    const statusParam = searchParams?.get('status') || '';
-    if (!statusParam) return;
+    if (hideList) return
+    const statusParam = searchParams?.get('status') || ''
+    if (!statusParam) return
     if (statusParam !== activeStatus) {
-      setActiveStatus(statusParam);
-      setCurrentPage(1);
+      setActiveStatus(statusParam)
+      setCurrentPage(1)
     }
-  }, [searchParams, hideList]);
+  }, [searchParams, hideList])
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setSearchQuery(searchTerm.trim());
-      setCurrentPage(1);
-    }, 350);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
+      setSearchQuery(searchTerm.trim())
+      setCurrentPage(1)
+    }, 350)
+    return () => clearTimeout(timer)
+  }, [searchTerm])
 
   useEffect(() => {
-    if (hideList) return;
-    if (!session?.accessToken) return;
+    if (hideList) return
+    if (!session?.accessToken) return
     const fetchCounts = async () => {
       try {
-        const response = await orderAPI.getStatusCounts(session.accessToken);
-        setStatusCounts(response?.data || { all: 0 });
+        const response = await orderAPI.getStatusCounts(session.accessToken)
+        setStatusCounts(response?.data || { all: 0 })
       } catch (error) {
-        console.error('Failed to fetch status counts:', error);
+        console.error('Failed to fetch status counts:', error)
       }
-    };
-    fetchCounts();
-  }, [session, hideList]);
+    }
+    fetchCounts()
+  }, [session, hideList])
 
   useEffect(() => {
-    if (!createForm.couponCode) {
-      setCouponState({ loading: false, error: '', discount: 0 });
-      return;
+    if (!session?.accessToken || !isAdmin) return
+    const fetchSalesmen = async () => {
+      setSalesmenLoading(true)
+      try {
+        const normalizeList = (response) => {
+          const data = response?.data?.items || response?.data || response?.items || []
+          return Array.isArray(data) ? data : []
+        }
+
+        let response = await userAPI.adminList(
+          { role: 'salesman', status: 'active', limit: 100, page: 1 },
+          session.accessToken,
+        )
+        let list = normalizeList(response)
+
+        // Fallback: some records may not have status set to active explicitly.
+        if (!list.length) {
+          response = await userAPI.adminList(
+            { role: 'salesman', limit: 100, page: 1 },
+            session.accessToken,
+          )
+          list = normalizeList(response)
+        }
+
+        setSalesmen(list)
+      } catch (error) {
+        console.error('Failed to load salesmen:', error)
+        setSalesmen([])
+      } finally {
+        setSalesmenLoading(false)
+      }
+    }
+    fetchSalesmen()
+  }, [session?.accessToken, isAdmin])
+
+  useEffect(() => {
+    if (!session?.accessToken) return
+    const fetchPricingPolicy = async () => {
+      try {
+        const [shippingResp, ordersResp, paymentResp] = await Promise.all([
+          settingsAPI.list('shipping', session.accessToken),
+          settingsAPI.list('orders', session.accessToken),
+          settingsAPI.list('payment', session.accessToken),
+        ])
+        const shippingData = shippingResp?.data || shippingResp || {}
+        const ordersData = ordersResp?.data || ordersResp || {}
+        const paymentData = paymentResp?.data || paymentResp || {}
+        const toBool = (value, fallback) => {
+          if (value === true || value === 'true' || value === 1 || value === '1') return true
+          if (value === false || value === 'false' || value === 0 || value === '0') return false
+          return fallback
+        }
+        const toNumber = (value, fallback) => {
+          if (value === null || value === undefined || value === '') return fallback
+          const parsed = Number(value)
+          return Number.isNaN(parsed) ? fallback : parsed
+        }
+        setPricingPolicy({
+          shippingEnabled: toBool(shippingData.shipping_enabled, true),
+          shippingFlatRate: Math.max(0, toNumber(shippingData.shipping_flat_rate, 0)),
+          maxDiscountPercent: Math.max(0, toNumber(ordersData.maxSalesmanDiscountPercent, 0)),
+        })
+        setPaymentPolicy({
+          codEnabled: toBool(paymentData.payment_cod_enabled, true),
+          razorpayEnabled: toBool(paymentData.payment_razorpay_enabled, false),
+        })
+      } catch (error) {
+        console.error('Failed to load pricing policy settings:', error)
+      }
+    }
+    fetchPricingPolicy()
+  }, [session?.accessToken])
+
+  useEffect(() => {
+    if (!hideList) return
+    if (createForm.shippingFee !== '' && createForm.shippingFee !== null) return
+    setCreateForm((prev) => ({
+      ...prev,
+      shippingFee: pricingPolicy.shippingEnabled ? String(pricingPolicy.shippingFlatRate || 0) : '0',
+    }))
+  }, [hideList, pricingPolicy, createForm.shippingFee])
+
+  useEffect(() => {
+    const enabledMethods = []
+    if (paymentPolicy.codEnabled) enabledMethods.push('cod')
+    if (paymentPolicy.razorpayEnabled) enabledMethods.push('razorpay')
+    if (!enabledMethods.length) return
+    if (enabledMethods.includes(createForm.paymentMethod)) return
+    const nextMethod = enabledMethods[0]
+    setCreateForm((prev) => ({
+      ...prev,
+      paymentMethod: nextMethod,
+      paymentCompleted: nextMethod === 'razorpay' ? prev.paymentCompleted : false,
+    }))
+  }, [paymentPolicy.codEnabled, paymentPolicy.razorpayEnabled, createForm.paymentMethod])
+
+  useEffect(() => {
+    if (!showCreateModal || isSalesman || !session?.accessToken) return
+    const fetchCoupons = async () => {
+      setCouponLoading(true)
+      try {
+        const response = await couponAPI.list(session.accessToken)
+        const data = response?.data || []
+        const normalized = Array.isArray(data) ? data : []
+        setAllCoupons(normalized)
+        setCouponOptions(normalized.slice(0, 20))
+      } catch (error) {
+        console.error('Failed to load coupons:', error)
+        setAllCoupons([])
+        setCouponOptions([])
+      } finally {
+        setCouponLoading(false)
+      }
+    }
+    fetchCoupons()
+  }, [showCreateModal, isSalesman, session?.accessToken])
+
+  useEffect(() => {
+    if (!currentActorId || !isSalesman) return
+    setCreateForm((prev) => ({ ...prev, salesmanId: currentActorId }))
+  }, [currentActorId, isSalesman])
+
+  const openCreateDialog = () => {
+    const defaultPaymentMethod = paymentPolicy.codEnabled ? 'cod' : paymentPolicy.razorpayEnabled ? 'razorpay' : 'cod'
+    setCreateError('')
+    setCustomerSearch('')
+    setCustomerResults([])
+    setCustomerAddresses([])
+    setCouponSearch('')
+    setCouponOptions(allCoupons.slice(0, 20))
+    setCouponState({ loading: false, error: '', discount: 0 })
+    setCreateForm({
+      ...emptyForm,
+      salesmanId: isSalesman ? currentActorId : '',
+      paymentMethod: defaultPaymentMethod,
+      paymentCompleted: false,
+      shippingFee: pricingPolicy.shippingEnabled ? String(pricingPolicy.shippingFlatRate || 0) : '0',
+    })
+    setShowCreateModal(true)
+  }
+
+  const searchCoupons = (term) => {
+    const query = String(term || '')
+      .trim()
+      .toUpperCase()
+    setCouponSearch(query)
+    if (!query) {
+      setCouponOptions(allCoupons.slice(0, 20))
+      return
+    }
+    if (couponSearchTimer.current) {
+      clearTimeout(couponSearchTimer.current)
+    }
+    couponSearchTimer.current = setTimeout(() => {
+      const filtered = allCoupons.filter((coupon) =>
+        String(coupon.code || '')
+          .toUpperCase()
+          .includes(query),
+      )
+      setCouponOptions(filtered.slice(0, 20))
+    }, 250)
+  }
+
+  useEffect(() => {
+    if (isSalesman || !createForm.couponCode) {
+      setCouponState({ loading: false, error: '', discount: 0 })
+      return
     }
     if (!createForm.userId || subtotal <= 0 || !session?.accessToken) {
-      setCouponState({ loading: false, error: '', discount: 0 });
-      return;
+      setCouponState({ loading: false, error: '', discount: 0 })
+      return
     }
     const timer = setTimeout(async () => {
-      setCouponState({ loading: true, error: '', discount: 0 });
+      setCouponState({ loading: true, error: '', discount: 0 })
       try {
         const response = await couponAPI.preview(
           {
             userId: createForm.userId,
-            code: createForm.couponCode.trim(),
+            code: createForm.couponCode.trim().toUpperCase(),
             orderSubtotal: subtotal,
           },
-          session.accessToken
-        );
-        const discountAmount = response.data?.discountAmount || 0;
-        setCouponState({ loading: false, error: '', discount: discountAmount });
+          session.accessToken,
+        )
+        const discountAmount = response.data?.discountAmount || 0
+        setCouponState({ loading: false, error: '', discount: discountAmount })
       } catch (error) {
         setCouponState({
           loading: false,
           error: error.message || 'Invalid coupon',
           discount: 0,
-        });
+        })
       }
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [createForm.couponCode, createForm.userId, subtotal, session]);
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [createForm.couponCode, createForm.userId, subtotal, session, isSalesman])
 
   const fetchOrders = async () => {
     try {
-      setLoading(true);
-      const params = {};
+      setLoading(true)
+      const params = {}
       if (activeStatus && activeStatus !== 'all') {
-        params.status = activeStatus;
+        params.status = activeStatus
       }
-      params.page = currentPage;
-      params.limit = 10;
-      params.summary = true;
+      params.page = currentPage
+      params.limit = 10
+      params.summary = true
       if (searchQuery) {
-        params.search = searchQuery;
+        params.search = searchQuery
       }
       if (dateFilter && dateFilter !== 'all') {
-        const now = new Date();
-        let fromDate = null;
-        let toDate = new Date(now);
+        const now = new Date()
+        let fromDate = null
+        let toDate = new Date(now)
         if (dateFilter === 'today') {
-          const start = new Date(now);
-          start.setHours(0, 0, 0, 0);
-          const end = new Date(now);
-          end.setHours(23, 59, 59, 999);
-          fromDate = start;
-          toDate = end;
+          const start = new Date(now)
+          start.setHours(0, 0, 0, 0)
+          const end = new Date(now)
+          end.setHours(23, 59, 59, 999)
+          fromDate = start
+          toDate = end
         } else if (dateFilter === 'yesterday') {
-          const y = new Date(now);
-          y.setDate(y.getDate() - 1);
-          fromDate = new Date(y.setHours(0, 0, 0, 0));
-          toDate = new Date(y.setHours(23, 59, 59, 999));
+          const y = new Date(now)
+          y.setDate(y.getDate() - 1)
+          fromDate = new Date(y.setHours(0, 0, 0, 0))
+          toDate = new Date(y.setHours(23, 59, 59, 999))
         } else if (dateFilter === 'last7') {
-          fromDate = new Date(now);
-          fromDate.setDate(fromDate.getDate() - 7);
+          fromDate = new Date(now)
+          fromDate.setDate(fromDate.getDate() - 7)
         } else if (dateFilter === 'last30') {
-          fromDate = new Date(now);
-          fromDate.setDate(fromDate.getDate() - 30);
+          fromDate = new Date(now)
+          fromDate.setDate(fromDate.getDate() - 30)
         } else if (dateFilter === 'last6m') {
-          fromDate = new Date(now);
-          fromDate.setMonth(fromDate.getMonth() - 6);
+          fromDate = new Date(now)
+          fromDate.setMonth(fromDate.getMonth() - 6)
         } else if (dateFilter === 'last1y') {
-          fromDate = new Date(now);
-          fromDate.setFullYear(fromDate.getFullYear() - 1);
+          fromDate = new Date(now)
+          fromDate.setFullYear(fromDate.getFullYear() - 1)
         }
         if (fromDate) {
-          params.from = fromDate.toISOString();
-          params.to = toDate.toISOString();
+          params.from = fromDate.toISOString()
+          params.to = toDate.toISOString()
         }
       }
       if (customerTypeFilter && customerTypeFilter !== 'all') {
-        params.customerType = customerTypeFilter;
+        params.customerType = customerTypeFilter
       }
       if (productTypeFilter && productTypeFilter !== 'all') {
-        params.productType = productTypeFilter;
+        params.productType = productTypeFilter
       }
 
-      const token = session?.accessToken;
+      const token = session?.accessToken
       if (!token) {
-        console.error('No authentication token available');
-        setOrdersData([]);
-        setLoading(false);
-        return;
+        console.error('No authentication token available')
+        setOrdersData([])
+        setLoading(false)
+        return
       }
 
-      const response = await orderAPI.list(params, token);
-      const payload = response?.data || [];
+      const response = await orderAPI.list(params, token)
+      const payload = response?.data || []
       if (Array.isArray(payload)) {
-        setOrdersData(payload);
-        setTotalCount(payload.length);
-        setTotalPages(1);
+        setOrdersData(payload)
+        setTotalCount(payload.length)
+        setTotalPages(1)
       } else {
-        setOrdersData(payload.items || []);
-        setTotalCount(payload.total || 0);
-        setTotalPages(payload.totalPages || 1);
+        setOrdersData(payload.items || [])
+        setTotalCount(payload.total || 0)
+        setTotalPages(payload.totalPages || 1)
       }
     } catch (error) {
-      console.error('Failed to fetch orders:', error);
-      setOrdersData([]);
-      setTotalCount(0);
-      setTotalPages(1);
+      console.error('Failed to fetch orders:', error)
+      setOrdersData([])
+      setTotalCount(0)
+      setTotalPages(1)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleStatusChange = (status) => {
-    setActiveStatus(status);
-    setCurrentPage(1);
-  };
+    setActiveStatus(status)
+    setCurrentPage(1)
+  }
 
   const handleRowClick = (orderId) => {
-    router.push(`/orders/order-detail?id=${orderId}`);
-  };
+    router.push(`/orders/order-detail?id=${orderId}`)
+  }
 
   const toggleSelectAll = (e) => {
     if (e.target.checked) {
-      setSelectedOrders(ordersData.map(o => o._id));
+      setSelectedOrders(ordersData.map((o) => o._id))
     } else {
-      setSelectedOrders([]);
+      setSelectedOrders([])
     }
-  };
+  }
 
   const toggleSelectOrder = (e, orderId) => {
-    e.stopPropagation(); // Prevent row click
+    e.stopPropagation() // Prevent row click
     if (e.target.checked) {
-      setSelectedOrders(prev => [...prev, orderId]);
+      setSelectedOrders((prev) => [...prev, orderId])
     } else {
-      setSelectedOrders(prev => prev.filter(id => id !== orderId));
+      setSelectedOrders((prev) => prev.filter((id) => id !== orderId))
     }
-  };
+  }
 
   const updateAddressField = (section, field, value) => {
-    setCreateForm(prev => ({
+    setCreateForm((prev) => ({
       ...prev,
       [section]: {
         ...prev[section],
@@ -289,36 +517,36 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
       },
       ...(section === 'shippingAddress' && prev.billingSameAsShipping
         ? {
-          billingAddress: {
-            ...prev.billingAddress,
-            [field]: value,
-          },
-        }
+            billingAddress: {
+              ...prev.billingAddress,
+              [field]: value,
+            },
+          }
         : {}),
-    }));
-  };
+    }))
+  }
 
   const updateItemField = (index, field, value) => {
-    setCreateForm(prev => {
-      const items = [...prev.items];
-      items[index] = { ...items[index], [field]: value };
-      return { ...prev, items };
-    });
-  };
+    setCreateForm((prev) => {
+      const items = [...prev.items]
+      items[index] = { ...items[index], [field]: value }
+      return { ...prev, items }
+    })
+  }
 
   const addItemRow = () => {
-    setCreateForm(prev => ({
+    setCreateForm((prev) => ({
       ...prev,
       items: [...prev.items, { ...emptyItem }],
-    }));
-  };
+    }))
+  }
 
   const removeItemRow = (index) => {
-    setCreateForm(prev => ({
+    setCreateForm((prev) => ({
       ...prev,
       items: prev.items.filter((_, idx) => idx !== index),
-    }));
-  };
+    }))
+  }
 
   const normalizeAddress = (address) => ({
     fullName: address.fullName.trim(),
@@ -329,17 +557,17 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
     state: normalizeIndiaStateCode(address.state),
     postalCode: address.postalCode.trim(),
     country: INDIA_COUNTRY.code,
-  });
+  })
 
   const requiredLabel = (text) => (
     <span>
       {text} <span className="text-danger">*</span>
     </span>
-  );
+  )
 
   const applyAddressToForm = (address, type) => {
-    if (!address) return;
-    setCreateForm(prev => ({
+    if (!address) return
+    setCreateForm((prev) => ({
       ...prev,
       [`${type}AddressId`]: address._id || '',
       [`${type}Address`]: {
@@ -352,169 +580,286 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
         postalCode: address.postalCode || '',
         country: INDIA_COUNTRY.code,
       },
-    }));
-  };
+    }))
+  }
 
   const formatAddressOption = (address) => {
-    const parts = [
-      address.line1,
-      address.city,
-      getIndiaStateName(address.state),
-      address.postalCode,
-    ].filter(Boolean);
-    return parts.join(', ');
-  };
+    const parts = [address.line1, address.city, getIndiaStateName(address.state), address.postalCode].filter(Boolean)
+    return parts.join(', ')
+  }
 
   const handleSelectAddress = (type, addressId) => {
-    const address = customerAddresses.find((addr) => addr._id === addressId);
+    const address = customerAddresses.find((addr) => addr._id === addressId)
     if (address) {
-      applyAddressToForm(address, type);
+      applyAddressToForm(address, type)
       if (type === 'shipping' && createForm.billingSameAsShipping) {
-        applyAddressToForm(address, 'billing');
+        applyAddressToForm(address, 'billing')
       }
     }
-  };
+  }
 
   const handleCreateOrder = async (e) => {
-    e.preventDefault();
-    setCreateError('');
+    e.preventDefault()
+    setCreateError('')
 
-    const token = session?.accessToken;
+    const token = session?.accessToken
     if (!token) {
-      setCreateError('No authentication token available');
-      return;
+      setCreateError('No authentication token available')
+      return
     }
 
     if (!createForm.userId.trim()) {
-      setCreateError('Customer is required');
-      return;
+      setCreateError('Customer is required')
+      return
     }
 
-    if (createForm.items.some(item => !item.productId)) {
-      setCreateError('Each item needs a product');
-      return;
+    if (createForm.items.some((item) => !item.productId)) {
+      setCreateError('Each item needs a product')
+      return
     }
 
-    if (createForm.items.some(item => Number(item.quantity) < 1)) {
-      setCreateError('Item quantities must be at least 1');
-      return;
+    if (createForm.items.some((item) => Number(item.quantity) < 1)) {
+      setCreateError('Item quantities must be at least 1')
+      return
+    }
+    if (createForm.paymentMethod === 'razorpay' && !createForm.paymentCompleted) {
+      setCreateError('Razorpay order can only be created after payment is completed')
+      return
     }
 
-    setCreateSaving(true);
+    setCreateSaving(true)
     try {
       const payload = {
         userId: createForm.userId.trim(),
+        salesmanId: isSalesman
+          ? currentActorId || undefined
+          : createForm.salesmanId || undefined,
         paymentMethod: createForm.paymentMethod,
+        paymentCompleted: createForm.paymentMethod === 'razorpay' ? !!createForm.paymentCompleted : false,
         billingSameAsShipping: createForm.billingSameAsShipping,
-        couponCode: createForm.couponCode ? createForm.couponCode.trim() : undefined,
-        manualDiscount: createForm.manualDiscount ? Number(createForm.manualDiscount) : 0,
+        couponCode: isSalesman ? undefined : createForm.couponCode ? createForm.couponCode.trim().toUpperCase() : undefined,
+        manualDiscount: isSalesman ? 0 : cappedManualDiscount,
+        discountPercent: isSalesman ? Number(createForm.discountPercent || 0) : 0,
         taxPercent: createForm.taxPercent ? Number(createForm.taxPercent) : undefined,
         shippingFee: createForm.shippingFee ? Number(createForm.shippingFee) : undefined,
         shippingAddressId: createForm.shippingAddressId || undefined,
         billingAddressId: createForm.billingAddressId || undefined,
         shippingAddress: normalizeAddress(createForm.shippingAddress),
-        items: createForm.items.map(item => ({
+        items: createForm.items.map((item) => ({
           productId: item.productId,
           quantity: Number(item.quantity),
         })),
-      };
+      }
 
       if (!createForm.billingSameAsShipping) {
-        payload.billingAddress = normalizeAddress(createForm.billingAddress);
+        payload.billingAddress = normalizeAddress(createForm.billingAddress)
       }
 
-      await orderAPI.createManual(payload, token);
+      await orderAPI.createManual(payload, token)
       if (hideList) {
-        router.push('/orders/orders-list');
-        return;
+        router.push('/orders/orders-list')
+        return
       }
-      setShowCreateModal(false);
-      setCreateForm(emptyForm);
-      setCustomerSearch('');
-      setCustomerResults([]);
-      setCustomerAddresses([]);
-      setCouponState({ loading: false, error: '', discount: 0 });
-      fetchOrders();
+      setShowCreateModal(false)
+      setCreateForm(emptyForm)
+      setCustomerSearch('')
+      setCustomerResults([])
+      setCustomerAddresses([])
+      setCouponState({ loading: false, error: '', discount: 0 })
+      fetchOrders()
     } catch (error) {
-      setCreateError(error.message || 'Failed to create order');
+      setCreateError(error.message || 'Failed to create order')
     } finally {
-      setCreateSaving(false);
+      setCreateSaving(false)
     }
-  };
+  }
 
   const searchCustomers = (term) => {
-    if (!session?.accessToken) return;
+    if (!session?.accessToken) return
     if (customerSearchTimer.current) {
-      clearTimeout(customerSearchTimer.current);
+      clearTimeout(customerSearchTimer.current)
     }
     customerSearchTimer.current = setTimeout(async () => {
-      if (!term || term.trim().length < 2) {
-        setCustomerResults([]);
-        return;
-      }
-      setCustomerLoading(true);
+      const query = String(term || '').trim()
+      setCustomerLoading(true)
       try {
-        const response = await userAPI.adminList(
-          { search: term.trim(), role: 'customer', limit: 8, page: 1 },
-          session.accessToken
-        );
-        const data = response.data || [];
-        setCustomerResults(Array.isArray(data) ? data : []);
+        const response = await userAPI.adminList({ search: query, role: 'customer', limit: 8, page: 1 }, session.accessToken)
+        const data = response?.data?.items || response?.data || response?.items || []
+        setCustomerResults(Array.isArray(data) ? data : [])
       } catch (error) {
-        console.error('Failed to search customers:', error);
-        setCustomerResults([]);
+        console.error('Failed to search customers:', error)
+        setCustomerResults([])
       } finally {
-        setCustomerLoading(false);
+        setCustomerLoading(false)
       }
-    }, 300);
-  };
+    }, 300)
+  }
+
+  const formatCustomerLabel = (customer) => {
+    const fullName = `${customer?.firstName || ''} ${customer?.lastName || ''}`.trim()
+    const secondary = customer?.email || customer?.phone || customer?._id || ''
+    return fullName ? `${fullName} (${secondary})` : secondary
+  }
 
   const handleSelectCustomer = (customer) => {
-    setCreateForm(prev => ({
+    const customerType = customer?.customerType === 'wholesale' ? 'wholesale' : 'retail'
+    setCreateForm((prev) => ({
       ...prev,
       userId: customer._id,
       customer,
-    }));
-    setCustomerSearch(`${customer.firstName || ''} ${customer.lastName || ''}`.trim());
-    setCustomerResults([]);
-    if (!session?.accessToken) return;
+      shippingAddressId: '',
+      billingAddressId: '',
+      shippingAddress: { ...emptyAddress },
+      billingAddress: { ...emptyAddress },
+      items: prev.items.map((item) => ({
+        ...item,
+        productPrice:
+          customerType === 'wholesale'
+            ? Number(item.productWholesalePrice || item.productPrice || 0)
+            : Number(item.productRetailPrice || item.productPrice || 0),
+      })),
+    }))
+    setCustomerSearch(`${customer.firstName || ''} ${customer.lastName || ''}`.trim())
+    setCustomerResults([])
+    if (!session?.accessToken) return
     userAddressAPI
       .adminListByUser(customer._id, session.accessToken)
       .then((response) => {
-        const data = response.data || [];
-        setCustomerAddresses(Array.isArray(data) ? data : []);
-        const defaultShipping = data.find((addr) => addr.isDefaultShipping) || data[0];
-        const defaultBilling = data.find((addr) => addr.isDefaultBilling) || defaultShipping;
+        const data = response.data || []
+        setCustomerAddresses(Array.isArray(data) ? data : [])
+        if (!Array.isArray(data) || data.length === 0) {
+          setCreateForm((prev) => ({
+            ...prev,
+            shippingAddressId: '',
+            billingAddressId: '',
+            shippingAddress: { ...emptyAddress },
+            billingAddress: prev.billingSameAsShipping ? { ...emptyAddress } : prev.billingAddress,
+          }))
+          return
+        }
+        const defaultShipping = data.find((addr) => addr.isDefaultShipping) || data[0]
+        const defaultBilling = data.find((addr) => addr.isDefaultBilling) || defaultShipping
         if (defaultShipping) {
-          applyAddressToForm(defaultShipping, 'shipping');
+          applyAddressToForm(defaultShipping, 'shipping')
         }
         if (defaultBilling) {
-          applyAddressToForm(defaultBilling, 'billing');
+          applyAddressToForm(defaultBilling, 'billing')
         }
         if (defaultShipping && defaultBilling && defaultShipping._id === defaultBilling._id) {
-          setCreateForm(prev => ({ ...prev, billingSameAsShipping: true }));
+          setCreateForm((prev) => ({ ...prev, billingSameAsShipping: true }))
         }
       })
       .catch((error) => {
-        console.error('Failed to load addresses:', error);
-        setCustomerAddresses([]);
-      });
-  };
+        console.error('Failed to load addresses:', error)
+        setCustomerAddresses([])
+      })
+  }
+
+  const handleSelectCustomerById = async (customerId) => {
+    if (!customerId) {
+      setCreateForm((prev) => ({
+        ...prev,
+        userId: '',
+        customer: null,
+        items: prev.items.map((item) => ({
+          ...item,
+          productPrice: Number(item.productRetailPrice || item.productPrice || 0),
+        })),
+        shippingAddressId: '',
+        billingAddressId: '',
+        shippingAddress: { ...emptyAddress },
+        billingAddress: { ...emptyAddress },
+      }))
+      setCustomerAddresses([])
+      return
+    }
+
+    const availableCustomers = [...(Array.isArray(customerResults) ? customerResults : []), ...(createForm.customer ? [createForm.customer] : [])]
+    const selected = availableCustomers.find((customer) => customer?._id === customerId)
+    if (selected) {
+      handleSelectCustomer(selected)
+      return
+    }
+
+    if (!session?.accessToken) return
+    try {
+      const customer = await userAPI.adminGetById(customerId, session.accessToken)
+      if (customer?._id) {
+        handleSelectCustomer(customer)
+      }
+    } catch (error) {
+      console.error('Failed to fetch selected customer:', error)
+    }
+  }
+
+  const searchProducts = (index, term) => {
+    if (!session?.accessToken) return
+    updateItemField(index, 'productSearch', term)
+    if (productSearchTimers.current[index]) {
+      clearTimeout(productSearchTimers.current[index])
+    }
+    productSearchTimers.current[index] = setTimeout(async () => {
+      try {
+        const query = String(term || '').trim()
+        const response = await productAPI.list({ search: query, limit: 8 }, session.accessToken)
+        const data = response?.data?.items || response?.data || response?.items || []
+        updateItemField(index, 'productOptions', Array.isArray(data) ? data : [])
+      } catch (error) {
+        console.error('Failed to search products:', error)
+        updateItemField(index, 'productOptions', [])
+      }
+    }, 300)
+  }
+
+  const handleSelectProduct = async (index, product) => {
+    const { unitPrice, retailPrice, wholesalePrice } = resolveProductPriceByType(product, selectedCustomerType)
+    updateItemField(index, 'productId', product._id)
+    updateItemField(index, 'productName', product.name)
+    updateItemField(index, 'productOptions', [])
+    updateItemField(index, 'productSearch', product.name || '')
+    updateItemField(index, 'productRetailPrice', retailPrice)
+    updateItemField(index, 'productWholesalePrice', wholesalePrice)
+    updateItemField(index, 'productPrice', unitPrice)
+  }
+
+  const handleSelectProductById = async (index, productId) => {
+    if (!productId) {
+      updateItemField(index, 'productId', '')
+      updateItemField(index, 'productName', '')
+      updateItemField(index, 'productPrice', 0)
+      updateItemField(index, 'productRetailPrice', 0)
+      updateItemField(index, 'productWholesalePrice', 0)
+      updateItemField(index, 'productSearch', '')
+      return
+    }
+    const item = createForm.items[index]
+    const selected = (item?.productOptions || []).find((product) => product._id === productId)
+    if (selected) {
+      await handleSelectProduct(index, selected)
+      return
+    }
+    if (item?.productId === productId) {
+      return
+    }
+  }
 
   const handleCreateCustomer = async (e) => {
-    e.preventDefault();
+    e.preventDefault()
+    setCustomerCreateError('')
     if (!newCustomerForm.firstName.trim()) {
-      setCreateError('Customer first name is required');
-      return;
+      setCustomerCreateError('First name is required')
+      return
     }
     if (!newCustomerForm.email.trim() && !newCustomerForm.phone.trim()) {
-      setCreateError('Customer email or phone is required');
-      return;
+      setCustomerCreateError('Email or phone is required')
+      return
     }
     if (!newCustomerForm.password.trim()) {
-      setCreateError('Customer password is required');
-      return;
+      setCustomerCreateError('Password is required')
+      return
     }
+
+    setCreatingCustomer(true)
     try {
       const payload = {
         firstName: newCustomerForm.firstName.trim(),
@@ -523,130 +868,106 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
         phone: newCustomerForm.phone.trim() || undefined,
         password: newCustomerForm.password,
         role: 'customer',
-      };
-      const response = await userAPI.register(payload);
-      const created = response.data;
-      if (created?._id) {
-        handleSelectCustomer(created);
-        setShowCustomerModal(false);
-        setNewCustomerForm({
-          firstName: '',
-          lastName: '',
-          email: '',
-          phone: '',
-          password: '',
-        });
+        customerType: newCustomerForm.customerType || 'retail',
       }
+      const response = await userAPI.register(payload)
+      const createdUser = response?.data || response?.user || response
+      if (!createdUser?._id) {
+        throw new Error('Customer was not created')
+      }
+      handleSelectCustomer(createdUser)
+      setShowCustomerModal(false)
+      setNewCustomerForm({
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        password: '',
+        customerType: 'retail',
+      })
     } catch (error) {
-      console.error('Failed to create customer:', error);
-      setCreateError(error.message || 'Failed to create customer');
+      setCustomerCreateError(error.message || 'Failed to create customer')
+    } finally {
+      setCreatingCustomer(false)
     }
-  };
-
-  const searchProducts = (index, term) => {
-    if (!session?.accessToken) return;
-    updateItemField(index, 'productSearch', term);
-    if (productSearchTimers.current[index]) {
-      clearTimeout(productSearchTimers.current[index]);
-    }
-    productSearchTimers.current[index] = setTimeout(async () => {
-      if (!term || term.trim().length < 2) {
-        updateItemField(index, 'productOptions', []);
-        return;
-      }
-      try {
-        const response = await productAPI.list({ search: term.trim(), limit: 8 }, session.accessToken);
-        const data = response.data?.items || [];
-        updateItemField(index, 'productOptions', Array.isArray(data) ? data : []);
-      } catch (error) {
-        console.error('Failed to search products:', error);
-        updateItemField(index, 'productOptions', []);
-      }
-    }, 300);
-  };
-
-  const handleSelectProduct = async (index, product) => {
-    const fallbackProductPrice = Number(
-      product?.retailPrice?.salePrice ??
-      product?.retailPrice?.mrp ??
-      product?.price?.salePrice ??
-      product?.price?.mrp ??
-      product?.discountPrice ??
-      product?.price ??
-      0
-    );
-    updateItemField(index, 'productId', product._id);
-    updateItemField(index, 'productName', product.name);
-    updateItemField(index, 'productOptions', []);
-    updateItemField(index, 'productSearch', product.name || '');
-    updateItemField(index, 'productPrice', fallbackProductPrice);
-  };
+  }
 
   const handleCustomerClick = (e, customerId) => {
-    e.stopPropagation();
-    if (!customerId) return;
-    router.push(`/customer/customer-detail?id=${customerId}`);
-  };
+    e.stopPropagation()
+    if (!customerId) return
+    router.push(`/customer/customer-detail?id=${customerId}`)
+  }
 
   const handleViewInvoice = async (orderId) => {
     try {
-      const token = session?.accessToken;
-      if (!token) return;
-      const blob = await orderAPI.getInvoicePdfByOrder(orderId, token, false);
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank');
+      const token = session?.accessToken
+      if (!token) return
+      const blob = await orderAPI.getInvoicePdfByOrder(orderId, token, false)
+      const url = URL.createObjectURL(blob)
+      window.open(url, '_blank')
     } catch (error) {
-      console.error('Failed to load invoice:', error);
-      toast.error(error.message || 'Failed to load invoice. Ensure order is paid and confirmed.');
+      console.error('Failed to load invoice:', error)
+      toast.error(error.message || 'Failed to load invoice. Ensure order is paid and confirmed.')
     }
-  };
+  }
 
   const handleDownloadInvoice = async (orderId) => {
     try {
-      const token = session?.accessToken;
-      if (!token) return;
-      const blob = await orderAPI.getInvoicePdfByOrder(orderId, token, true);
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `invoice-${orderId}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
+      const token = session?.accessToken
+      if (!token) return
+      const blob = await orderAPI.getInvoicePdfByOrder(orderId, token, true)
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `invoice-${orderId}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
     } catch (error) {
-      console.error('Failed to download invoice:', error);
-      toast.error(error.message || 'Failed to download invoice. Ensure order is paid and confirmed.');
+      console.error('Failed to download invoice:', error)
+      toast.error(error.message || 'Failed to download invoice. Ensure order is paid and confirmed.')
     }
-  };
+  }
 
   const handlePrintInvoice = async (orderId) => {
     try {
-      const token = session?.accessToken;
-      if (!token) return;
-      const blob = await orderAPI.getInvoicePdfByOrder(orderId, token, false);
-      const url = URL.createObjectURL(blob);
-      const popup = window.open(url, '_blank');
-      if (!popup) return;
-      popup.focus();
-      popup.print();
+      const token = session?.accessToken
+      if (!token) return
+      const blob = await orderAPI.getInvoicePdfByOrder(orderId, token, false)
+      const url = URL.createObjectURL(blob)
+      const popup = window.open(url, '_blank')
+      if (!popup) return
+      popup.focus()
+      popup.print()
     } catch (error) {
-      console.error('Failed to print invoice:', error);
-      toast.error(error.message || 'Failed to print invoice. Ensure order is paid and confirmed.');
+      console.error('Failed to print invoice:', error)
+      toast.error(error.message || 'Failed to print invoice. Ensure order is paid and confirmed.')
     }
-  };
+  }
 
-  const manualDiscount = Math.max(0, Number(createForm.manualDiscount || 0));
-  const couponDiscount = couponState.discount || 0;
-  const cappedManualDiscount = Math.min(manualDiscount, Math.max(0, subtotal - couponDiscount));
-  const totalDiscount = couponDiscount + cappedManualDiscount;
-  const taxableAmount = Math.max(0, subtotal - totalDiscount);
-  const taxPercent = Number(createForm.taxPercent || 0);
-  const taxAmount = (taxableAmount * taxPercent) / 100;
-  const hasShippingOverride = createForm.shippingFee !== '' && createForm.shippingFee !== null;
-  const shippingFee = hasShippingOverride ? Number(createForm.shippingFee || 0) : 0;
-  const grandTotal = taxableAmount + taxAmount + shippingFee;
-  const gstOptions = [0, 5, 12, 18, 28];
+  const manualDiscount = Math.max(0, Number(createForm.manualDiscount || 0))
+  const couponDiscount = isSalesman ? 0 : couponState.discount || 0
+  const discountPercent = Math.max(0, Number(createForm.discountPercent || 0))
+  const percentDiscount = Math.max(0, (subtotal * discountPercent) / 100)
+  const remainingAfterCoupon = Math.max(0, subtotal - couponDiscount)
+  const maxAdditionalDiscountBySetting =
+    pricingPolicy.maxDiscountPercent > 0
+      ? (subtotal * pricingPolicy.maxDiscountPercent) / 100
+      : Number.POSITIVE_INFINITY
+  const cappedManualDiscount = Math.min(manualDiscount, remainingAfterCoupon, maxAdditionalDiscountBySetting)
+  const totalDiscount = isSalesman ? Math.min(subtotal, percentDiscount) : couponDiscount + cappedManualDiscount
+  const taxableAmount = Math.max(0, subtotal - totalDiscount)
+  const taxPercent = Number(createForm.taxPercent || 0)
+  const taxAmount = (taxableAmount * taxPercent) / 100
+  const hasShippingOverride = createForm.shippingFee !== '' && createForm.shippingFee !== null
+  const shippingFee = hasShippingOverride ? Number(createForm.shippingFee || 0) : 0
+  const grandTotal = taxableAmount + taxAmount + shippingFee
+  const gstOptions = [0, 5, 12, 18, 28]
+  const customerSelectOptions = [...(Array.isArray(customerResults) ? customerResults : [])]
+    .filter((customer, idx, arr) => arr.findIndex((item) => item?._id === customer?._id) === idx)
+    .map((customer) => customer)
+  const hasSavedAddresses = customerAddresses.length > 0
   const createFormContent = (
     <>
       {createError && (
@@ -658,94 +979,209 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
       <Row className="g-3">
         <Col xl={8}>
           <Row className="g-2">
+            <Col md={4}>
+              <FloatingLabel controlId="manual-salesman" label="Salesperson">
+                <Form.Select
+                  value={createForm.salesmanId || ''}
+                  onChange={(e) => setCreateForm((prev) => ({ ...prev, salesmanId: e.target.value }))}
+                  disabled={isSalesman || salesmenLoading}>
+                  {isSalesman ? (
+                    <option value={currentActorId || ''}>
+                      {session?.user?.name || 'Current Salesperson'}
+                    </option>
+                  ) : (
+                    <>
+                      <option value="">Unassigned</option>
+                      {salesmen.map((salesman) => (
+                        <option key={salesman._id} value={salesman._id}>
+                          {`${salesman.firstName || ''} ${salesman.lastName || ''}`.trim() || salesman.email || salesman.phone || salesman._id}
+                        </option>
+                      ))}
+                      {!salesmen.length && !salesmenLoading && (
+                        <option value="" disabled>
+                          No salespersons found
+                        </option>
+                      )}
+                    </>
+                  )}
+                </Form.Select>
+              </FloatingLabel>
+            </Col>
             <Col md={8}>
-              <InputGroup>
-                <FloatingLabel controlId="manual-customer" label={requiredLabel('Customer')}>
-                  <Form.Control
-                    value={customerSearch}
-                    onChange={(e) => {
-                      const next = e.target.value;
-                      setCustomerSearch(next);
-                      setCreateForm(prev => ({ ...prev, userId: '', customer: null }));
-                      searchCustomers(next);
-                    }}
-                    placeholder="Search customer"
-                    required
-                  />
-                </FloatingLabel>
-                <Button
-                  variant="outline-secondary"
-                  onClick={() => setShowCustomerModal(true)}
-                >
-                  New
-                </Button>
-              </InputGroup>
-              {customerResults.length > 0 && (
-                <ListGroup className="border mt-2">
-                  {customerResults.map((customer) => (
-                    <ListGroup.Item
-                      key={customer._id}
-                      action
-                      onClick={() => handleSelectCustomer(customer)}
-                    >
-                      <div className="fw-medium">
-                        {(customer.firstName || '') + ' ' + (customer.lastName || '')}
+              <Row className="g-2">
+                <Col md={10}>
+                  <div className="position-relative">
+                    <FloatingLabel controlId="manual-customer" label={requiredLabel('Customer')}>
+                      <Form.Control
+                        value={customerSearch}
+                        onChange={(e) => {
+                          const next = e.target.value
+                          setCustomerSearch(next)
+                          if (!next.trim()) {
+                            handleSelectCustomerById('')
+                            return
+                          }
+                          if (createForm.customer) {
+                            setCreateForm((prev) => ({ ...prev, userId: '', customer: null }))
+                          }
+                          searchCustomers(next)
+                        }}
+                        onFocus={() => {
+                          const selectedName = `${createForm.customer?.firstName || ''} ${createForm.customer?.lastName || ''}`.trim()
+                          if (!createForm.customer || customerSearch.trim() !== selectedName) {
+                            searchCustomers(customerSearch)
+                          }
+                        }}
+                        placeholder="Search customer"
+                        required
+                      />
+                    </FloatingLabel>
+                    {customerSearch.trim().length > 0 && customerSelectOptions.length > 0 && (
+                      <div
+                        className="border rounded-2 bg-white position-absolute start-0 end-0 mt-1 overflow-auto"
+                        style={{ zIndex: 2200, maxHeight: 220 }}>
+                        {customerSelectOptions.map((customer) => (
+                          <button
+                            key={customer._id}
+                            type="button"
+                            className="btn btn-link text-start w-100 text-decoration-none border-bottom rounded-0 px-2 py-1"
+                            onClick={() => handleSelectCustomer(customer)}>
+                            {formatCustomerLabel(customer)}
+                          </button>
+                        ))}
                       </div>
-                      <div className="text-muted small">
-                        {customer.email || customer.phone || customer._id}
-                      </div>
-                    </ListGroup.Item>
-                  ))}
-                </ListGroup>
-              )}
+                    )}
+                  </div>
+                </Col>
+                <Col md={2} className="d-flex align-items-end">
+                  <Button
+                    variant="outline-secondary"
+                    className="d-inline-flex align-items-center justify-content-center p-0"
+                    title="Add new customer"
+                    style={{ width: 44, height: 44 }}
+                    onClick={() => {
+                      setCustomerCreateError('')
+                      setShowCustomerModal(true)
+                    }}>
+                    <IconifyIcon icon="bx:plus" />
+                  </Button>
+                </Col>
+              </Row>
               {customerLoading && <div className="text-muted small mt-2">Searching customers...</div>}
             </Col>
             <Col md={4}>
               <FloatingLabel controlId="manual-payment" label={requiredLabel('Payment Method')}>
                 <Form.Select
                   value={createForm.paymentMethod}
-                  onChange={(e) => setCreateForm(prev => ({ ...prev, paymentMethod: e.target.value }))}
-                  required
-                >
-                  <option value="cod">Cash on Delivery</option>
-                  <option value="upi">UPI</option>
-                  <option value="card">Card</option>
-                  <option value="bank_transfer">Bank Transfer</option>
+                  onChange={(e) =>
+                    setCreateForm((prev) => ({
+                      ...prev,
+                      paymentMethod: e.target.value,
+                      paymentCompleted: e.target.value === 'razorpay' ? false : prev.paymentCompleted,
+                    }))
+                  }
+                  required>
+                  {paymentPolicy.codEnabled && <option value="cod">Cash on Delivery</option>}
+                  {paymentPolicy.razorpayEnabled && <option value="razorpay">Razorpay</option>}
+                  {!paymentPolicy.codEnabled && !paymentPolicy.razorpayEnabled && (
+                    <option value="">No payment method enabled</option>
+                  )}
                 </Form.Select>
               </FloatingLabel>
             </Col>
           </Row>
 
           <Row className="g-2 mt-2">
-            <Col md={4}>
-              <FloatingLabel controlId="manual-coupon" label="Coupon Code">
-                <Form.Control
-                  value={createForm.couponCode}
-                  onChange={(e) => setCreateForm(prev => ({ ...prev, couponCode: e.target.value }))}
-                  placeholder="Coupon Code"
-                />
-              </FloatingLabel>
-              {couponState.loading && <div className="text-muted small mt-1">Checking coupon...</div>}
-              {couponState.error && <div className="text-danger small mt-1">{couponState.error}</div>}
-            </Col>
-            <Col md={4}>
-              <FloatingLabel controlId="manual-discount" label="Additional Discount">
-                <Form.Control
-                  type="number"
-                  min="0"
-                  value={createForm.manualDiscount}
-                  onChange={(e) => setCreateForm(prev => ({ ...prev, manualDiscount: e.target.value }))}
-                  placeholder="0"
-                />
-              </FloatingLabel>
-            </Col>
+            {isSalesman ? (
+              <Col md={4}>
+                <FloatingLabel controlId="manual-discount-percent" label="Discount %">
+                  <Form.Control
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={createForm.discountPercent}
+                    onChange={(e) => setCreateForm((prev) => ({ ...prev, discountPercent: e.target.value }))}
+                    placeholder="0"
+                  />
+                </FloatingLabel>
+              </Col>
+            ) : (
+              <>
+                <Col md={4}>
+                  <div className="position-relative">
+                    <FloatingLabel controlId="manual-coupon" label="Coupon Code">
+                      <Form.Control
+                        value={couponSearch}
+                        onChange={(e) => {
+                          const next = String(e.target.value || '').toUpperCase()
+                          setCouponSearch(next)
+                          setCreateForm((prev) => ({ ...prev, couponCode: next }))
+                          searchCoupons(next)
+                        }}
+                        onFocus={() => {
+                          if ((couponSearch || '').trim() !== (createForm.couponCode || '').trim()) {
+                            searchCoupons(couponSearch || createForm.couponCode || '')
+                          }
+                        }}
+                        placeholder="Search coupon"
+                      />
+                    </FloatingLabel>
+                    {couponSearch.trim().length > 0 && couponOptions.length > 0 && (
+                      <div
+                        className="border rounded-2 bg-white position-absolute start-0 end-0 mt-1 overflow-auto"
+                        style={{ zIndex: 2200, maxHeight: 220 }}>
+                        {couponOptions.map((coupon) => (
+                          <button
+                            key={coupon._id}
+                            type="button"
+                            className="btn btn-link text-start w-100 text-decoration-none border-bottom rounded-0 px-2 py-1"
+                            onClick={() => {
+                              const code = String(coupon.code || '').toUpperCase()
+                              setCouponSearch(code)
+                              setCreateForm((prev) => ({ ...prev, couponCode: code }))
+                              setCouponOptions([])
+                            }}>
+                            {coupon.code}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {couponLoading && <div className="text-muted small mt-1">Loading coupons...</div>}
+                  {couponState.loading && <div className="text-muted small mt-1">Checking coupon...</div>}
+                  {couponState.error && <div className="text-danger small mt-1">{couponState.error}</div>}
+                </Col>
+                <Col md={4}>
+                  <FloatingLabel controlId="manual-discount" label="Additional Discount">
+                    <Form.Control
+                      type="number"
+                      min="0"
+                      value={createForm.manualDiscount}
+                      onChange={(e) => {
+                        const nextRaw = Number(e.target.value || 0)
+                        const maxAllowed = Number.isFinite(maxAdditionalDiscountBySetting)
+                          ? Math.max(0, Math.min(remainingAfterCoupon, maxAdditionalDiscountBySetting))
+                          : Math.max(0, remainingAfterCoupon)
+                        const safeValue = Math.min(Math.max(0, nextRaw), maxAllowed)
+                        setCreateForm((prev) => ({ ...prev, manualDiscount: String(safeValue) }))
+                      }}
+                      placeholder="0"
+                    />
+                  </FloatingLabel>
+                  {!isSalesman && pricingPolicy.maxDiscountPercent > 0 && (
+                    <div className="text-muted small mt-1">
+                      Max additional discount: {pricingPolicy.maxDiscountPercent}% ({currency}{Math.max(0, Math.min(remainingAfterCoupon, maxAdditionalDiscountBySetting)).toFixed(2)})
+                    </div>
+                  )}
+                </Col>
+              </>
+            )}
             <Col md={4}>
               <FloatingLabel controlId="manual-gst" label={requiredLabel('GST')}>
                 <Form.Select
                   value={createForm.taxPercent}
-                  onChange={(e) => setCreateForm(prev => ({ ...prev, taxPercent: e.target.value }))}
-                  required
-                >
+                  onChange={(e) => setCreateForm((prev) => ({ ...prev, taxPercent: e.target.value }))}
+                  required>
                   {gstOptions.map((rate) => (
                     <option key={rate} value={rate}>{`GST ${rate}%`}</option>
                   ))}
@@ -758,11 +1194,23 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                   type="number"
                   min="0"
                   value={createForm.shippingFee}
-                  onChange={(e) => setCreateForm(prev => ({ ...prev, shippingFee: e.target.value }))}
+                  onChange={(e) => setCreateForm((prev) => ({ ...prev, shippingFee: e.target.value }))}
                   placeholder="Auto"
                 />
               </FloatingLabel>
             </Col>
+            {createForm.paymentMethod === 'razorpay' && (
+              <Col md={4}>
+                <Form.Check
+                  id="manual-payment-completed"
+                  type="checkbox"
+                  className="mt-2"
+                  label="Payment completed"
+                  checked={!!createForm.paymentCompleted}
+                  onChange={(e) => setCreateForm((prev) => ({ ...prev, paymentCompleted: e.target.checked }))}
+                />
+              </Col>
+            )}
           </Row>
 
           <div className="d-flex align-items-center justify-content-between mt-3 mb-2">
@@ -773,31 +1221,50 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
           </div>
           {createForm.items.map((item, index) => (
             <Row className="g-2 align-items-end mb-2" key={`item-${index}`}>
-              <Col md={7}>
-                <FloatingLabel controlId={`manual-product-${index}`} label={requiredLabel('Product')}>
-                  <Form.Control
-                    value={item.productSearch}
-                    onChange={(e) => searchProducts(index, e.target.value)}
-                    placeholder="Search product"
-                    required
-                  />
-                </FloatingLabel>
-                {item.productOptions.length > 0 && (
-                  <ListGroup className="border mt-2">
-                    {item.productOptions.map((product) => (
-                      <ListGroup.Item
-                        key={product._id}
-                        action
-                        onClick={() => handleSelectProduct(index, product)}
-                      >
-                        <div className="fw-medium">{product.name}</div>
-                        <div className="text-muted small">{product.sku || product._id}</div>
-                      </ListGroup.Item>
-                    ))}
-                  </ListGroup>
-                )}
+              <Col md={6}>
+                <div className="position-relative">
+                  <FloatingLabel controlId={`manual-product-${index}`} label={requiredLabel('Product')}>
+                    <Form.Control
+                      value={item.productSearch || ''}
+                      onChange={(e) => {
+                        const next = e.target.value
+                        if (item.productId && next.trim() !== (item.productName || '').trim()) {
+                          updateItemField(index, 'productId', '')
+                        }
+                        updateItemField(index, 'productSearch', next)
+                        if (!next.trim()) {
+                          handleSelectProductById(index, '')
+                          return
+                        }
+                        searchProducts(index, next)
+                      }}
+                      onFocus={() => {
+                        if (!item.productId || (item.productSearch || '').trim() !== (item.productName || '').trim()) {
+                          searchProducts(index, item.productSearch || '')
+                        }
+                      }}
+                      placeholder="Search product"
+                      required
+                    />
+                  </FloatingLabel>
+                  {(item.productSearch || '').trim().length > 0 && (item.productOptions || []).length > 0 && (
+                    <div
+                      className="border rounded-2 bg-white position-absolute start-0 end-0 mt-1 overflow-auto"
+                      style={{ zIndex: 2200, maxHeight: 220 }}>
+                      {(item.productOptions || []).map((product) => (
+                        <button
+                          key={product._id}
+                          type="button"
+                          className="btn btn-link text-start w-100 text-decoration-none border-bottom rounded-0 px-2 py-1"
+                          onClick={() => handleSelectProduct(index, product)}>
+                          {`${product.name}${product.sku ? ` (${product.sku})` : ''}`}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </Col>
-              <Col md={3}>
+              <Col md={2}>
                 <FloatingLabel controlId={`manual-qty-${index}`} label={requiredLabel('Qty')}>
                   <Form.Control
                     type="number"
@@ -809,13 +1276,15 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                   />
                 </FloatingLabel>
               </Col>
-              <Col md={2} className="d-flex justify-content-end">
-                <Button
-                  variant="outline-danger"
-                  size="sm"
-                  onClick={() => removeItemRow(index)}
-                  disabled={createForm.items.length === 1}
-                >
+              <Col md={3}>
+                <FloatingLabel
+                  controlId={`manual-price-${index}`}
+                  label={`Unit Price (${selectedCustomerType === 'wholesale' ? 'Wholesale' : 'Retail'})`}>
+                  <Form.Control type="number" min="0" step="0.01" value={item.productPrice ?? 0} readOnly placeholder="0" />
+                </FloatingLabel>
+              </Col>
+              <Col md={1} className="d-flex justify-content-end">
+                <Button variant="outline-danger" size="sm" onClick={() => removeItemRow(index)} disabled={createForm.items.length === 1}>
                   <IconifyIcon icon="bx:trash" />
                 </Button>
               </Col>
@@ -826,19 +1295,20 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
             <Col md={12}>
               <div className="border rounded-3 p-2">
                 <div className="text-uppercase text-muted fs-12 mb-2">Shipping</div>
-                <FloatingLabel controlId="shipping-saved" label="Saved Address">
-                  <Form.Select
-                    value={createForm.shippingAddressId || ''}
-                    onChange={(e) => handleSelectAddress('shipping', e.target.value)}
-                  >
-                    <option value="">Select saved address</option>
-                    {customerAddresses.map((address) => (
-                      <option key={address._id} value={address._id}>
-                        {formatAddressOption(address)}
-                      </option>
-                    ))}
-                  </Form.Select>
-                </FloatingLabel>
+                {hasSavedAddresses ? (
+                  <FloatingLabel controlId="shipping-saved" label="Saved Address">
+                    <Form.Select value={createForm.shippingAddressId || ''} onChange={(e) => handleSelectAddress('shipping', e.target.value)}>
+                      <option value="">Select saved address</option>
+                      {customerAddresses.map((address) => (
+                        <option key={address._id} value={address._id}>
+                          {formatAddressOption(address)}
+                        </option>
+                      ))}
+                    </Form.Select>
+                  </FloatingLabel>
+                ) : (
+                  <div className="small text-muted mb-2">No saved address found for this customer. Enter shipping address manually.</div>
+                )}
                 <Row className="g-2 mt-2">
                   <Col md={6}>
                     <FloatingLabel controlId="ship-name" label={requiredLabel('Full Name')}>
@@ -894,8 +1364,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                       <Form.Select
                         value={normalizeIndiaStateCode(createForm.shippingAddress.state)}
                         onChange={(e) => updateAddressField('shippingAddress', 'state', e.target.value)}
-                        required
-                      >
+                        required>
                         <option value="">Select state</option>
                         {INDIA_STATES.map((state) => (
                           <option key={state.code} value={state.code}>
@@ -934,32 +1403,33 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                   label="Same as shipping"
                   checked={createForm.billingSameAsShipping}
                   onChange={(e) => {
-                    const checked = e.target.checked;
-                    setCreateForm(prev => ({
+                    const checked = e.target.checked
+                    setCreateForm((prev) => ({
                       ...prev,
                       billingSameAsShipping: checked,
                       billingAddress: checked ? { ...prev.shippingAddress } : prev.billingAddress,
                       billingAddressId: checked ? prev.shippingAddressId : prev.billingAddressId,
-                    }));
+                    }))
                   }}
                 />
               </div>
 
               {!createForm.billingSameAsShipping && (
                 <div className="border rounded-3 p-2">
-                  <FloatingLabel controlId="billing-saved" label="Saved Address">
-                    <Form.Select
-                      value={createForm.billingAddressId || ''}
-                      onChange={(e) => handleSelectAddress('billing', e.target.value)}
-                    >
-                      <option value="">Select saved address</option>
-                      {customerAddresses.map((address) => (
-                        <option key={address._id} value={address._id}>
-                          {formatAddressOption(address)}
-                        </option>
-                      ))}
-                    </Form.Select>
-                  </FloatingLabel>
+                  {hasSavedAddresses ? (
+                    <FloatingLabel controlId="billing-saved" label="Saved Address">
+                      <Form.Select value={createForm.billingAddressId || ''} onChange={(e) => handleSelectAddress('billing', e.target.value)}>
+                        <option value="">Select saved address</option>
+                        {customerAddresses.map((address) => (
+                          <option key={address._id} value={address._id}>
+                            {formatAddressOption(address)}
+                          </option>
+                        ))}
+                      </Form.Select>
+                    </FloatingLabel>
+                  ) : (
+                    <div className="small text-muted mb-2">No saved address found for this customer. Enter billing address manually.</div>
+                  )}
                   <Row className="g-2 mt-2">
                     <Col md={6}>
                       <FloatingLabel controlId="bill-name" label={requiredLabel('Full Name')}>
@@ -1011,20 +1481,19 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                       </FloatingLabel>
                     </Col>
                     <Col md={4}>
-                    <FloatingLabel controlId="bill-state" label={requiredLabel('State')}>
-                      <Form.Select
-                        value={normalizeIndiaStateCode(createForm.billingAddress.state)}
-                        onChange={(e) => updateAddressField('billingAddress', 'state', e.target.value)}
-                        required
-                      >
-                        <option value="">Select state</option>
-                        {INDIA_STATES.map((state) => (
-                          <option key={state.code} value={state.code}>
-                            {state.name}
-                          </option>
-                        ))}
-                      </Form.Select>
-                    </FloatingLabel>
+                      <FloatingLabel controlId="bill-state" label={requiredLabel('State')}>
+                        <Form.Select
+                          value={normalizeIndiaStateCode(createForm.billingAddress.state)}
+                          onChange={(e) => updateAddressField('billingAddress', 'state', e.target.value)}
+                          required>
+                          <option value="">Select state</option>
+                          {INDIA_STATES.map((state) => (
+                            <option key={state.code} value={state.code}>
+                              {state.name}
+                            </option>
+                          ))}
+                        </Form.Select>
+                      </FloatingLabel>
                     </Col>
                     <Col md={4}>
                       <FloatingLabel controlId="bill-postal" label={requiredLabel('Postal Code')}>
@@ -1037,15 +1506,15 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                       </FloatingLabel>
                     </Col>
                     <Col md={6}>
-                    <FloatingLabel controlId="bill-country" label={requiredLabel('Country')}>
-                      <Form.Select value={INDIA_COUNTRY.code} disabled>
-                        <option value={INDIA_COUNTRY.code}>{INDIA_COUNTRY.name}</option>
-                      </Form.Select>
-                    </FloatingLabel>
-                  </Col>
-                </Row>
-              </div>
-            )}
+                      <FloatingLabel controlId="bill-country" label={requiredLabel('Country')}>
+                        <Form.Select value={INDIA_COUNTRY.code} disabled>
+                          <option value={INDIA_COUNTRY.code}>{INDIA_COUNTRY.name}</option>
+                        </Form.Select>
+                      </FloatingLabel>
+                    </Col>
+                  </Row>
+                </div>
+              )}
             </Col>
           </Row>
         </Col>
@@ -1055,42 +1524,50 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
               <h6 className="text-uppercase text-muted fs-12 mb-3">Price Breakdown</h6>
               <div className="d-flex justify-content-between mb-2">
                 <span className="text-muted">Subtotal</span>
-                <span className="fw-semibold">{currency}{subtotal.toFixed(2)}</span>
+                <span className="fw-semibold">
+                  {currency}
+                  {subtotal.toFixed(2)}
+                </span>
               </div>
               <div className="d-flex justify-content-between mb-2">
-                <span className="text-muted">Coupon Discount</span>
-                <span className="fw-semibold text-success">- {currency}{couponDiscount.toFixed(2)}</span>
+                <span className="text-muted">{isSalesman ? 'Discount (%)' : 'Coupon Discount'}</span>
+                <span className="fw-semibold text-success">
+                  {isSalesman ? `${discountPercent.toFixed(2)}%` : `- ${currency}${couponDiscount.toFixed(2)}`}
+                </span>
               </div>
               <div className="d-flex justify-content-between mb-2">
-                <span className="text-muted">Extra Discount</span>
-                <span className="fw-semibold text-success">- {currency}{cappedManualDiscount.toFixed(2)}</span>
+                <span className="text-muted">{isSalesman ? 'Discount Amount' : 'Extra Discount'}</span>
+                <span className="fw-semibold text-success">
+                  - {currency}
+                  {(isSalesman ? totalDiscount : cappedManualDiscount).toFixed(2)}
+                </span>
               </div>
               <div className="d-flex justify-content-between mb-2">
                 <span className="text-muted">Tax ({taxPercent}%)</span>
-                <span className="fw-semibold">{currency}{taxAmount.toFixed(2)}</span>
+                <span className="fw-semibold">
+                  {currency}
+                  {taxAmount.toFixed(2)}
+                </span>
               </div>
               <div className="d-flex justify-content-between mb-2">
                 <span className="text-muted">Shipping</span>
-                <span className="fw-semibold">
-                  {hasShippingOverride ? `${currency}${shippingFee.toFixed(2)}` : 'Auto'}
-                </span>
+                <span className="fw-semibold">{hasShippingOverride ? `${currency}${shippingFee.toFixed(2)}` : 'Auto'}</span>
               </div>
               <hr />
               <div className="d-flex justify-content-between">
                 <span className="fw-semibold">Total</span>
-                <span className="fw-bold">{currency}{grandTotal.toFixed(2)}</span>
+                <span className="fw-bold">
+                  {currency}
+                  {grandTotal.toFixed(2)}
+                </span>
               </div>
-              {!hasShippingOverride && (
-                <div className="text-muted small mt-2">
-                  Shipping is calculated automatically on save.
-                </div>
-              )}
+              {!hasShippingOverride && <div className="text-muted small mt-2">Shipping is calculated automatically on save.</div>}
             </CardBody>
           </Card>
         </Col>
       </Row>
     </>
-  );
+  )
 
   const renderRowSkeletons = (count = 6) =>
     Array.from({ length: count }).map((_, idx) => (
@@ -1120,31 +1597,37 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
           <Placeholder xs={4} />
         </td>
       </tr>
-    ));
+    ))
 
   return (
     <Row>
       {!hideList && (
         <Col xl={12}>
           <Card>
-            <CardHeader className="d-flex align-items-center justify-content-between gap-3 flex-wrap">
-              <div className="d-flex align-items-center gap-3 flex-wrap">
+            <CardHeader className="d-flex flex-column gap-2">
+              <div className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
                 <CardTitle as={'h4'} className="mb-0">
-                  Orders List{' '}
-                  <span className="text-muted fs-14">
-                    {`(${statusCounts.all || ordersData.length})`}
-                  </span>
+                  Orders List <span className="text-muted fs-14">{`(${statusCounts.all || ordersData.length})`}</span>
                 </CardTitle>
-                <div className="flex-grow-1 overflow-hidden" style={{ minWidth: 0 }}>
-                  <StatusFilterTabs
-                    activeStatus={activeStatus}
-                    onStatusChange={handleStatusChange}
-                    compact
-                    className="mb-0"
-                    statusCounts={statusCounts}
-                    loading={isListLoading}
-                  />
-                </div>
+                <Button
+                  size="sm"
+                  variant="primary"
+                  className="d-inline-flex align-items-center gap-1 ms-auto"
+                  onClick={openCreateDialog}
+                  disabled={!canCreateOrders}>
+                  <IconifyIcon icon="bx:plus" />
+                  Add Order
+                </Button>
+              </div>
+              <div className="overflow-hidden" style={{ minWidth: 0 }}>
+                <StatusFilterTabs
+                  activeStatus={activeStatus}
+                  onStatusChange={handleStatusChange}
+                  compact
+                  className="mb-0"
+                  statusCounts={statusCounts}
+                  loading={isListLoading}
+                />
               </div>
             </CardHeader>
 
@@ -1155,10 +1638,9 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                     className="form-select form-select-sm"
                     value={dateFilter}
                     onChange={(e) => {
-                      setDateFilter(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                  >
+                      setDateFilter(e.target.value)
+                      setCurrentPage(1)
+                    }}>
                     <option value="all">All dates</option>
                     <option value="today">Today</option>
                     <option value="yesterday">Yesterday</option>
@@ -1174,10 +1656,9 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                     className="form-select form-select-sm"
                     value={customerTypeFilter}
                     onChange={(e) => {
-                      setCustomerTypeFilter(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                  >
+                      setCustomerTypeFilter(e.target.value)
+                      setCurrentPage(1)
+                    }}>
                     <option value="all">Customer type</option>
                     <option value="retail">Retail</option>
                     <option value="wholesale">Wholesale</option>
@@ -1189,10 +1670,9 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                     className="form-select form-select-sm"
                     value={productTypeFilter}
                     onChange={(e) => {
-                      setProductTypeFilter(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                  >
+                      setProductTypeFilter(e.target.value)
+                      setCurrentPage(1)
+                    }}>
                     <option value="all">Product type</option>
                     <option value="oem">OEM</option>
                     <option value="aftermarket">Aftermarket</option>
@@ -1254,163 +1734,152 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                       </tr>
                     ) : (
                       ordersData.map((order, idx) => {
-                          const statusBadge = getStatusBadge(order.orderStatus);
-                            const paymentBadge = getPaymentStatusBadge(order.paymentStatus);
-                            const gatewayPaymentId = order.paymentSnapshot?.transactionId || '';
-                          const customerName = order.userId
-                            ? `${order.userId.firstName || ''} ${order.userId.lastName || ''}`.trim() || 'Guest User'
-                            : 'Guest User';
-                          const customerEmail = order.userId?.email || '';
-                          const customerId = order.userId?._id || null;
+                        const statusBadge = getStatusBadge(order.orderStatus)
+                        const paymentBadge = getPaymentStatusBadge(order.paymentStatus)
+                        const gatewayPaymentId = order.paymentSnapshot?.transactionId || ''
+                        const customerName = order.userId
+                          ? `${order.userId.firstName || ''} ${order.userId.lastName || ''}`.trim() || 'Guest User'
+                          : 'Guest User'
+                        const customerEmail = order.userId?.email || ''
+                        const customerId = order.userId?._id || null
 
-                          return (
-                            <tr
-                              key={order._id || idx}
-                              onClick={() => handleRowClick(order._id)}
-                              style={{ cursor: 'pointer' }}
-                              className="position-relative"
-                              onMouseEnter={() => setHoveredOrderId(order._id)}
-                              onMouseLeave={() => setHoveredOrderId(null)}
-                            >
-                              <td className="ps-3 py-3" onClick={(e) => e.stopPropagation()}>
-                                <Form.Check
-                                  type="checkbox"
-                                  checked={selectedOrders.includes(order._id)}
-                                  onChange={(e) => toggleSelectOrder(e, order._id)}
-                                  className="form-check-input-primary"
-                                />
-                              </td>
-                              <td className="py-3">
-                                  <span className="fw-bold text-primary fs-13">#{order.orderNumber || order._id?.substring(0, 8).toUpperCase()}</span>
-                                  {gatewayPaymentId && (
-                                    <div className="text-muted small mt-1">
-                                      Txn: <span className="font-monospace">{gatewayPaymentId}</span>
-                                    </div>
-                                  )}
-                                {hoveredOrderId === order._id && (
-                                  <div className="d-flex align-items-center gap-2 text-muted small mt-2">
-                                    <div
-                                      className="avatar-sm bg-primary-subtle rounded-circle d-flex align-items-center justify-content-center text-primary fw-bold flex-shrink-0"
-                                      style={{ width: '32px', height: '32px' }}
-                                      onClick={(e) => handleCustomerClick(e, customerId)}
-                                    >
-                                      {customerName ? customerName.charAt(0).toUpperCase() : 'G'}
-                                    </div>
-                                    <div className="d-flex flex-column">
+                        return (
+                          <tr
+                            key={order._id || idx}
+                            onClick={() => handleRowClick(order._id)}
+                            style={{ cursor: 'pointer' }}
+                            className="position-relative"
+                            onMouseEnter={() => setHoveredOrderId(order._id)}
+                            onMouseLeave={() => setHoveredOrderId(null)}>
+                            <td className="ps-3 py-3" onClick={(e) => e.stopPropagation()}>
+                              <Form.Check
+                                type="checkbox"
+                                checked={selectedOrders.includes(order._id)}
+                                onChange={(e) => toggleSelectOrder(e, order._id)}
+                                className="form-check-input-primary"
+                              />
+                            </td>
+                            <td className="py-3">
+                              <span className="fw-bold text-primary fs-13">#{order.orderNumber || order._id?.substring(0, 8).toUpperCase()}</span>
+                              {gatewayPaymentId && (
+                                <div className="text-muted small mt-1">
+                                  Txn: <span className="font-monospace">{gatewayPaymentId}</span>
+                                </div>
+                              )}
+                              {hoveredOrderId === order._id && (
+                                <div className="d-flex align-items-center gap-2 text-muted small mt-2">
+                                  <div
+                                    className="avatar-sm bg-primary-subtle rounded-circle d-flex align-items-center justify-content-center text-primary fw-bold flex-shrink-0"
+                                    style={{ width: '32px', height: '32px' }}
+                                    onClick={(e) => handleCustomerClick(e, customerId)}>
+                                    {customerName ? customerName.charAt(0).toUpperCase() : 'G'}
+                                  </div>
+                                  <div className="d-flex flex-column">
+                                    <button
+                                      type="button"
+                                      className="btn btn-link p-0 text-start fw-medium text-dark"
+                                      onClick={(e) => handleCustomerClick(e, customerId)}>
+                                      {customerName}
+                                    </button>
+                                    {customerEmail && (
                                       <button
                                         type="button"
-                                        className="btn btn-link p-0 text-start fw-medium text-dark"
-                                        onClick={(e) => handleCustomerClick(e, customerId)}
-                                      >
-                                        {customerName}
+                                        className="btn btn-link p-0 text-start text-muted"
+                                        style={{ fontSize: '0.75rem' }}
+                                        onClick={(e) => handleCustomerClick(e, customerId)}>
+                                        {customerEmail}
                                       </button>
-                                      {customerEmail && (
-                                        <button
-                                          type="button"
-                                          className="btn btn-link p-0 text-start text-muted"
-                                          style={{ fontSize: '0.75rem' }}
-                                          onClick={(e) => handleCustomerClick(e, customerId)}
-                                        >
-                                          {customerEmail}
-                                        </button>
-                                      )}
-                                    </div>
+                                    )}
                                   </div>
+                                </div>
+                              )}
+                            </td>
+                            <td className="text-muted py-3">
+                              {order.createdAt
+                                ? new Date(order.createdAt).toLocaleDateString('en-IN', {
+                                    day: 'numeric',
+                                    month: 'short',
+                                    year: 'numeric',
+                                  })
+                                : '-'}
+                              <div className="small text-muted opacity-75" style={{ fontSize: '0.7rem' }}>
+                                {order.createdAt ? new Date(order.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}
+                              </div>
+                            </td>
+                            <td className="py-3">
+                              <Badge
+                                bg={statusBadge.bg}
+                                className="fs-12 fw-medium text-capitalize" // Removed explicit border/bg opacity classes
+                              >
+                                {statusBadge.text}
+                              </Badge>
+                            </td>
+                            <td className="py-3">
+                              {(() => {
+                                const paymentMethod = (order.paymentMethod || '').toLowerCase()
+                                return (
+                                  <div className="d-flex flex-column">
+                                    <Badge bg={paymentBadge.bg} className="fs-12 fw-medium text-capitalize d-inline-flex align-items-center gap-1">
+                                      {paymentMethod === 'cod' && <IconifyIcon icon="mdi:cash" className="fs-6 text-success" />}
+                                      {paymentMethod === 'razorpay' && <IconifyIcon icon="simple-icons:razorpay" className="fs-6 text-primary" />}
+                                      {paymentBadge.text}
+                                    </Badge>
+                                  </div>
+                                )
+                              })()}
+                            </td>
+                            <td className="py-3">
+                              <div className="d-flex flex-column align-items-start small">
+                                <span className="text-muted">NA</span>
+                              </div>
+                            </td>
+                            <td className="py-3">
+                              <div className="d-flex flex-column gap-1">
+                                <span className="text-dark fs-13">INV-{order.orderNumber || order._id?.substring(0, 4)}</span>
+                                {['paid', 'refunded'].includes((order.paymentStatus || '').toLowerCase()) ? (
+                                  <div className="d-flex align-items-center gap-2">
+                                    <Button
+                                      variant="link"
+                                      className="p-0 text-muted"
+                                      title="View Invoice"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleViewInvoice(order._id)
+                                      }}>
+                                      <IconifyIcon icon="bx:show" className="fs-5" />
+                                    </Button>
+                                    <Button
+                                      variant="link"
+                                      className="p-0 text-muted"
+                                      title="Download Invoice"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleDownloadInvoice(order._id)
+                                      }}>
+                                      <IconifyIcon icon="bx:download" className="fs-5" />
+                                    </Button>
+                                    <Button
+                                      variant="link"
+                                      className="p-0 text-muted"
+                                      title="Print Invoice"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handlePrintInvoice(order._id)
+                                      }}>
+                                      <IconifyIcon icon="bx:printer" className="fs-5" />
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <span className="text-muted small fst-italic">Pending Payment</span>
                                 )}
-                              </td>
-                              <td className="text-muted py-3">
-                                {order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-IN', {
-                                  day: 'numeric',
-                                  month: 'short',
-                                  year: 'numeric',
-                                }) : '-'}
-                                <div className="small text-muted opacity-75" style={{ fontSize: '0.7rem' }}>
-                                  {order.createdAt ? new Date(order.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}
-                                </div>
-                              </td>
-                              <td className="py-3">
-                                <Badge
-                                  bg={statusBadge.bg}
-                                  className="fs-12 fw-medium text-capitalize" // Removed explicit border/bg opacity classes
-                                >
-                                  {statusBadge.text}
-                                </Badge>
-                              </td>
-                              <td className="py-3">
-                                {(() => {
-                                  const paymentMethod = (order.paymentMethod || '').toLowerCase();
-                                  return (
-                                    <div className="d-flex flex-column">
-                                      <Badge
-                                        bg={paymentBadge.bg}
-                                        className="fs-12 fw-medium text-capitalize d-inline-flex align-items-center gap-1"
-                                      >
-                                        {paymentMethod === 'cod' && (
-                                          <IconifyIcon icon="mdi:cash" className="fs-6 text-success" />
-                                        )}
-                                        {paymentMethod === 'razorpay' && (
-                                          <IconifyIcon icon="simple-icons:razorpay" className="fs-6 text-primary" />
-                                        )}
-                                        {paymentBadge.text}
-                                      </Badge>
-                                    </div>
-                                  );
-                                })()}
-                              </td>
-                              <td className="py-3">
-                                <div className="d-flex flex-column align-items-start small">
-                                  <span className="text-muted">NA</span>
-                                </div>
-                              </td>
-                              <td className="py-3">
-                                <div className="d-flex flex-column gap-1">
-                                  <span className="text-dark fs-13">INV-{order.orderNumber || order._id?.substring(0, 4)}</span>
-                                  {['paid', 'refunded'].includes((order.paymentStatus || '').toLowerCase()) ? (
-                                    <div className="d-flex align-items-center gap-2">
-                                      <Button
-                                        variant="link"
-                                        className="p-0 text-muted"
-                                        title="View Invoice"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleViewInvoice(order._id);
-                                        }}
-                                      >
-                                        <IconifyIcon icon="bx:show" className="fs-5" />
-                                      </Button>
-                                      <Button
-                                        variant="link"
-                                        className="p-0 text-muted"
-                                        title="Download Invoice"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleDownloadInvoice(order._id);
-                                        }}
-                                      >
-                                        <IconifyIcon icon="bx:download" className="fs-5" />
-                                      </Button>
-                                      <Button
-                                        variant="link"
-                                        className="p-0 text-muted"
-                                        title="Print Invoice"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handlePrintInvoice(order._id);
-                                        }}
-                                      >
-                                        <IconifyIcon icon="bx:printer" className="fs-5" />
-                                      </Button>
-                                    </div>
-                                  ) : (
-                                    <span className="text-muted small fst-italic">Pending Payment</span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="fw-bold text-dark py-3 text-end pe-4">
-                                {currency}{order.grandTotal?.toFixed(2) || '0.00'}
-                              </td>
-                            </tr>
-                          );
+                              </div>
+                            </td>
+                            <td className="fw-bold text-dark py-3 text-end pe-4">
+                              {currency}
+                              {order.grandTotal?.toFixed(2) || '0.00'}
+                            </td>
+                          </tr>
+                        )
                       })
                     )}
                   </tbody>
@@ -1425,11 +1894,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                 <nav aria-label="Page navigation">
                   <ul className="pagination justify-content-end mb-0">
                     <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
-                      <button
-                        className="page-link"
-                        onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                        disabled={currentPage === 1}
-                      >
+                      <button className="page-link" onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))} disabled={currentPage === 1}>
                         «
                       </button>
                     </li>
@@ -1442,8 +1907,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                       <button
                         className="page-link"
                         onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                        disabled={currentPage === totalPages}
-                      >
+                        disabled={currentPage === totalPages}>
                         »
                       </button>
                     </li>
@@ -1465,10 +1929,9 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                   <Button
                     variant="light"
                     onClick={() => {
-                      setCreateError('');
-                      router.push('/orders/orders-list');
-                    }}
-                  >
+                      setCreateError('')
+                      router.push('/orders/orders-list')
+                    }}>
                     Back to orders
                   </Button>
                 </div>
@@ -1478,10 +1941,9 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                 <Button
                   variant="light"
                   onClick={() => {
-                    setCreateError('');
-                    router.push('/orders/orders-list');
-                  }}
-                >
+                    setCreateError('')
+                    router.push('/orders/orders-list')
+                  }}>
                   Cancel
                 </Button>
                 <Button type="submit" variant="primary" disabled={createSaving}>
@@ -1492,103 +1954,137 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
           </Form>
         </Col>
       ) : (
-        <Modal
-          show={showCreateModal}
-          onHide={() => {
-            setShowCreateModal(false);
-            setCreateError('');
-            setCustomerResults([]);
-            setCustomerAddresses([]);
-            setCouponState({ loading: false, error: '', discount: 0 });
-          }}
-          size="xl"
-          centered
-        >
-          <Form onSubmit={handleCreateOrder}>
-            <Modal.Header closeButton>
-              <Modal.Title>Create Manual Order</Modal.Title>
-            </Modal.Header>
-            <Modal.Body className="py-3">
-              {createFormContent}
-            </Modal.Body>
-            <Modal.Footer>
-              <Button
-                variant="light"
-                onClick={() => {
-                  setShowCreateModal(false);
-                  setCreateError('');
-                }}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" variant="primary" disabled={createSaving}>
-                {createSaving ? 'Creating...' : 'Create Order'}
-              </Button>
-            </Modal.Footer>
-          </Form>
-        </Modal>
+        <>
+          <Modal
+            show={showCreateModal}
+            onHide={() => {
+              setShowCreateModal(false)
+              setCreateError('')
+              setCustomerResults([])
+              setCustomerAddresses([])
+              setCouponState({ loading: false, error: '', discount: 0 })
+            }}
+            size="xl"
+            centered>
+            <Form onSubmit={handleCreateOrder}>
+              <Modal.Header closeButton>
+                <Modal.Title>Create Manual Order</Modal.Title>
+              </Modal.Header>
+              <Modal.Body className="py-3">{createFormContent}</Modal.Body>
+              <Modal.Footer>
+                <Button
+                  variant="light"
+                  onClick={() => {
+                    setShowCreateModal(false)
+                    setCreateError('')
+                  }}>
+                  Cancel
+                </Button>
+                <Button type="submit" variant="primary" disabled={createSaving}>
+                  {createSaving ? 'Creating...' : 'Create Order'}
+                </Button>
+              </Modal.Footer>
+            </Form>
+          </Modal>
+
+          <Modal
+            show={showCustomerModal}
+            onHide={() => {
+              setShowCustomerModal(false)
+              setCustomerCreateError('')
+            }}
+            centered>
+            <Form onSubmit={handleCreateCustomer}>
+              <Modal.Header closeButton>
+                <Modal.Title>Create Customer</Modal.Title>
+              </Modal.Header>
+              <Modal.Body>
+                {customerCreateError && (
+                  <Alert variant="danger" className="py-2">
+                    {customerCreateError}
+                  </Alert>
+                )}
+                <Row className="g-2">
+                  <Col md={6}>
+                    <FloatingLabel controlId="new-customer-first-name" label="First Name *">
+                      <Form.Control
+                        value={newCustomerForm.firstName}
+                        onChange={(e) => setNewCustomerForm((prev) => ({ ...prev, firstName: e.target.value }))}
+                        placeholder="First Name"
+                        required
+                      />
+                    </FloatingLabel>
+                  </Col>
+                  <Col md={6}>
+                    <FloatingLabel controlId="new-customer-last-name" label="Last Name">
+                      <Form.Control
+                        value={newCustomerForm.lastName}
+                        onChange={(e) => setNewCustomerForm((prev) => ({ ...prev, lastName: e.target.value }))}
+                        placeholder="Last Name"
+                      />
+                    </FloatingLabel>
+                  </Col>
+                  <Col md={6}>
+                    <FloatingLabel controlId="new-customer-email" label="Email">
+                      <Form.Control
+                        type="email"
+                        value={newCustomerForm.email}
+                        onChange={(e) => setNewCustomerForm((prev) => ({ ...prev, email: e.target.value }))}
+                        placeholder="Email"
+                      />
+                    </FloatingLabel>
+                  </Col>
+                  <Col md={6}>
+                    <FloatingLabel controlId="new-customer-phone" label="Phone">
+                      <Form.Control
+                        value={newCustomerForm.phone}
+                        onChange={(e) => setNewCustomerForm((prev) => ({ ...prev, phone: e.target.value }))}
+                        placeholder="Phone"
+                      />
+                    </FloatingLabel>
+                  </Col>
+                  <Col md={6}>
+                    <FloatingLabel controlId="new-customer-password" label="Password *">
+                      <Form.Control
+                        type="password"
+                        value={newCustomerForm.password}
+                        onChange={(e) => setNewCustomerForm((prev) => ({ ...prev, password: e.target.value }))}
+                        placeholder="Password"
+                        required
+                      />
+                    </FloatingLabel>
+                  </Col>
+                  <Col md={6}>
+                    <FloatingLabel controlId="new-customer-type" label="Customer Type">
+                      <Form.Select
+                        value={newCustomerForm.customerType}
+                        onChange={(e) => setNewCustomerForm((prev) => ({ ...prev, customerType: e.target.value }))}>
+                        <option value="retail">Retail</option>
+                        <option value="wholesale">Wholesale</option>
+                      </Form.Select>
+                    </FloatingLabel>
+                  </Col>
+                </Row>
+              </Modal.Body>
+              <Modal.Footer>
+                <Button
+                  variant="light"
+                  onClick={() => {
+                    setShowCustomerModal(false)
+                    setCustomerCreateError('')
+                  }}>
+                  Cancel
+                </Button>
+                <Button type="submit" variant="primary" disabled={creatingCustomer}>
+                  {creatingCustomer ? 'Creating...' : 'Create Customer'}
+                </Button>
+              </Modal.Footer>
+            </Form>
+          </Modal>
+        </>
       )}
-
-      <Modal show={showCustomerModal} onHide={() => setShowCustomerModal(false)} centered>
-        <Form onSubmit={handleCreateCustomer}>
-          <Modal.Header closeButton>
-            <Modal.Title>Create Customer</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <Row className="g-3">
-              <Col md={6}>
-                <Form.Label>First Name</Form.Label>
-                <Form.Control
-                  value={newCustomerForm.firstName}
-                  onChange={(e) => setNewCustomerForm(prev => ({ ...prev, firstName: e.target.value }))}
-                  required
-                />
-              </Col>
-              <Col md={6}>
-                <Form.Label>Last Name</Form.Label>
-                <Form.Control
-                  value={newCustomerForm.lastName}
-                  onChange={(e) => setNewCustomerForm(prev => ({ ...prev, lastName: e.target.value }))}
-                />
-              </Col>
-              <Col md={6}>
-                <Form.Label>Email</Form.Label>
-                <Form.Control
-                  type="email"
-                  value={newCustomerForm.email}
-                  onChange={(e) => setNewCustomerForm(prev => ({ ...prev, email: e.target.value }))}
-                />
-              </Col>
-              <Col md={6}>
-                <Form.Label>Phone</Form.Label>
-                <Form.Control
-                  value={newCustomerForm.phone}
-                  onChange={(e) => setNewCustomerForm(prev => ({ ...prev, phone: e.target.value }))}
-                />
-              </Col>
-              <Col md={12}>
-                <Form.Label>Password</Form.Label>
-                <Form.Control
-                  type="password"
-                  value={newCustomerForm.password}
-                  onChange={(e) => setNewCustomerForm(prev => ({ ...prev, password: e.target.value }))}
-                  required
-                />
-              </Col>
-            </Row>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="light" onClick={() => setShowCustomerModal(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary">
-              Create Customer
-            </Button>
-          </Modal.Footer>
-        </Form>
-      </Modal>
     </Row>
-  );
-};
+  )
+}
 
-export default OrdersList;
+export default OrdersList

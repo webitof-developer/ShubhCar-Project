@@ -35,14 +35,33 @@ export const usePermissions = () => {
       try {
         const meResponse = await fetchWithAuth(`${API_BASE_URL}/users/me`, token)
         const me = meResponse?.data || meResponse
-        if (!me || me.role !== 'admin') {
+        if (!me) {
           setPermissions([])
           setLoading(false)
           return
         }
 
+        const effectiveRole = String(session?.user?.role || me.role || '').toLowerCase()
+
+        // Salesmen cannot access admin role endpoints; use safe defaults.
+        if (effectiveRole === 'salesman') {
+          setPermissions([
+            'dashboard.view',
+            'orders.view',
+            'orders.create',
+            'customers.view',
+            'customers.create',
+          ])
+          setLoading(false)
+          return
+        }
+
         if (!me.roleId) {
-          setPermissions(['*'])
+          if (effectiveRole === 'admin') {
+            setPermissions(['*'])
+          } else {
+            setPermissions([])
+          }
           setLoading(false)
           return
         }

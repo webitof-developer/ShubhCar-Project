@@ -33,7 +33,7 @@ router.get('/public', controller.listPublic);
  */
 router.get(
   '/',
-  auth([ROLES.ADMIN]),
+  auth([ROLES.ADMIN, ROLES.SALESMAN]),
   validate(listSettingsQuerySchema, 'query'),
   controller.list,
 );

@@ -42,6 +42,18 @@ const DEFAULT_ROLES = [
     ],
     isSystem: true,
   },
+  {
+    name: 'Salesman',
+    slug: 'salesman',
+    permissions: [
+      'dashboard.view',
+      'customers.view',
+      'customers.create',
+      'orders.view',
+      'orders.create',
+    ],
+    isSystem: true,
+  },
 ];
 
 const normalizeSlug = (value) =>
@@ -57,9 +69,31 @@ class RolesService {
     const existingSlugs = new Set(existing.map((role) => role.slug));
 
     const missing = DEFAULT_ROLES.filter((role) => !existingSlugs.has(role.slug));
-    if (!missing.length) return;
+    if (missing.length) {
+      await Promise.all(missing.map((role) => rolesRepo.create(role)));
+    }
 
-    await Promise.all(missing.map((role) => rolesRepo.create(role)));
+    const systemDefaultsBySlug = new Map(
+      DEFAULT_ROLES.map((role) => [role.slug, role]),
+    );
+    const syncTasks = existing
+      .filter((role) => role.isSystem && systemDefaultsBySlug.has(role.slug))
+      .map((role) => {
+        const defaultRole = systemDefaultsBySlug.get(role.slug);
+        const currentPermissions = Array.isArray(role.permissions) ? role.permissions : [];
+        const targetPermissions = Array.isArray(defaultRole.permissions) ? defaultRole.permissions : [];
+        const sameLength = currentPermissions.length === targetPermissions.length;
+        const samePermissions = sameLength && targetPermissions.every((perm) => currentPermissions.includes(perm));
+        if (samePermissions) return null;
+        return rolesRepo.updateById(role._id, {
+          permissions: targetPermissions,
+        });
+      })
+      .filter(Boolean);
+
+    if (syncTasks.length) {
+      await Promise.all(syncTasks);
+    }
   }
 
   async list() {

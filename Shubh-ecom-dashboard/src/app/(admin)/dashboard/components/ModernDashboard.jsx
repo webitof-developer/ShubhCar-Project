@@ -4,6 +4,9 @@ import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import { analyticsAPI } from '@/helpers/analyticsApi'
 import { dashboardAPI } from '@/helpers/dashboardApi'
 import { orderAPI, getPaymentStatusBadge } from '@/helpers/orderApi'
+import { salesReportsAPI } from '@/helpers/salesReportsApi'
+import { settingsAPI } from '@/helpers/settingsApi'
+import { usePermissions } from '@/hooks/usePermissions'
 import { DASHBOARD_STATUS_CARDS } from '@/constants/orderStatus'
 import { currency } from '@/context/constants'
 import { useSession } from 'next-auth/react'
@@ -11,6 +14,7 @@ import { useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Badge, Button, Card, CardBody, CardHeader, CardTitle, Col, Form, Placeholder, Row, Table } from 'react-bootstrap'
 import { useRouter } from 'next/navigation'
+import { toast } from 'react-toastify'
 
 const ReactApexChart = dynamic(() => import('react-apexcharts'), {
   ssr: false,
@@ -19,6 +23,7 @@ const ReactApexChart = dynamic(() => import('react-apexcharts'), {
 
 const ModernDashboard = () => {
   const { data: session } = useSession()
+  const { hasPermission, loading: permissionsLoading } = usePermissions()
   const router = useRouter()
   const [loading, setLoading] = useState({
     stats: true,
@@ -41,11 +46,24 @@ const ModernDashboard = () => {
   const [orders, setOrders] = useState([])
   const [statusCounts, setStatusCounts] = useState({})
   const [salesByState, setSalesByState] = useState([])
+  const [salesBySalesman, setSalesBySalesman] = useState([])
+  const [salesmanPolicy, setSalesmanPolicy] = useState({
+    maxSalesmanDiscountPercent: 0,
+    salesmanCommissionPercent: 0,
+  })
+  const [savingSalesmanPolicy, setSavingSalesmanPolicy] = useState(false)
   const [chartRange, setChartRange] = useState('month')
   const [ordersSearch, setOrdersSearch] = useState('')
+  const role = String(session?.user?.role || '').toLowerCase()
+  const isSalesman = permissionsLoading
+    ? role === 'salesman'
+    : hasPermission('orders.create') && !hasPermission('orders.update')
 
   useEffect(() => {
     const token = session?.accessToken
+    if (permissionsLoading) {
+      return
+    }
     if (!token) {
       setLoading((prev) => ({ ...prev, stats: false, statusCounts: false, topProducts: false, orders: false, states: false }))
       return
@@ -68,15 +86,34 @@ const ModernDashboard = () => {
 
     const fetchNonCritical = async () => {
       try {
-        const [productsResponse, ordersResponse, stateResponse] = await Promise.all([
+        const ordersResponsePromise = orderAPI.list({ limit: 5, summary: true }, token)
+        if (isSalesman) {
+          const ordersResponse = await ordersResponsePromise
+          const ordersPayload = ordersResponse.data || []
+          setOrders(Array.isArray(ordersPayload) ? ordersPayload : (ordersPayload.items || []))
+          setTopProducts([])
+          setSalesByState([])
+          setSalesBySalesman([])
+          return
+        }
+
+        const [productsResponse, ordersResponse, stateResponse, reportsResponse, settingsResponse] = await Promise.all([
           analyticsAPI.topProducts({ limit: 5 }, token),
-          orderAPI.list({ limit: 5, summary: true }, token),
+          ordersResponsePromise,
           analyticsAPI.salesByState({ limit: 5 }, token),
+          salesReportsAPI.summary({}, token),
+          settingsAPI.list('orders', token),
         ])
         setTopProducts(productsResponse.data || [])
         const ordersPayload = ordersResponse.data || []
         setOrders(Array.isArray(ordersPayload) ? ordersPayload : (ordersPayload.items || []))
         setSalesByState(stateResponse.data || [])
+        setSalesBySalesman(reportsResponse?.data?.salesBySalesman || [])
+        const settingsData = settingsResponse?.data || {}
+        setSalesmanPolicy({
+          maxSalesmanDiscountPercent: Number(settingsData.maxSalesmanDiscountPercent || 0),
+          salesmanCommissionPercent: Number(settingsData.salesmanCommissionPercent || 0),
+        })
       } catch (error) {
         console.error('Failed to load dashboard details', error)
       } finally {
@@ -87,7 +124,7 @@ const ModernDashboard = () => {
     fetchCritical().finally(() => {
       setTimeout(fetchNonCritical, 0)
     })
-  }, [session])
+  }, [session, isSalesman, permissionsLoading])
 
   useEffect(() => {
     const token = session?.accessToken
@@ -165,6 +202,26 @@ const ModernDashboard = () => {
     })
   }, [orders, ordersSearch])
 
+  const handleSaveSalesmanPolicy = async () => {
+    if (!session?.accessToken || isSalesman) return
+    setSavingSalesmanPolicy(true)
+    try {
+      await settingsAPI.update(
+        {
+          maxSalesmanDiscountPercent: Number(salesmanPolicy.maxSalesmanDiscountPercent || 0),
+          salesmanCommissionPercent: Number(salesmanPolicy.salesmanCommissionPercent || 0),
+        },
+        session.accessToken,
+      )
+      toast.success('Salesman policy updated')
+    } catch (error) {
+      console.error('Failed to save salesman policy', error)
+      toast.error(error.message || 'Failed to update salesman policy')
+    } finally {
+      setSavingSalesmanPolicy(false)
+    }
+  }
+
   const KpiSkeleton = () => (
     <Card className="dashboard-kpi">
       <CardBody>
@@ -227,18 +284,24 @@ const ModernDashboard = () => {
                 <CardBody>
                   <div className="d-flex align-items-center justify-content-between">
                     <div>
-                      <p className="text-muted mb-1">Total Revenue</p>
-                      <h3 className="mb-0">{currency}{Number(stats.revenue || 0).toLocaleString()}</h3>
+                      <p className="text-muted mb-1">{isSalesman ? 'My Total Sales' : 'Total Revenue'}</p>
+                      <h3 className="mb-0">{currency}{Number((isSalesman ? stats.myTotalSales : stats.revenue) || 0).toLocaleString()}</h3>
                     </div>
                     <div className="kpi-icon bg-soft-primary text-primary">
                       <IconifyIcon icon="solar:wallet-money-bold-duotone" />
                     </div>
                   </div>
                   <div className="kpi-meta">
-                    <span className={`badge bg-${stats.revenueChange >= 0 ? 'success' : 'danger'}`}>
-                      {Math.abs(stats.revenueChange || 0).toFixed(1)}%
-                    </span>
-                    <span className="text-muted">vs last month</span>
+                    {isSalesman ? (
+                      <span className="text-muted">Based on your assigned orders</span>
+                    ) : (
+                      <>
+                        <span className={`badge bg-${stats.revenueChange >= 0 ? 'success' : 'danger'}`}>
+                          {Math.abs(stats.revenueChange || 0).toFixed(1)}%
+                        </span>
+                        <span className="text-muted">vs last month</span>
+                      </>
+                    )}
                   </div>
                 </CardBody>
               </Card>
@@ -256,10 +319,16 @@ const ModernDashboard = () => {
                     </div>
                   </div>
                   <div className="kpi-meta">
-                    <span className={`badge bg-${stats.ordersChange >= 0 ? 'success' : 'danger'}`}>
-                      {Math.abs(stats.ordersChange || 0).toFixed(1)}%
-                    </span>
-                    <span className="text-muted">vs last month</span>
+                    {isSalesman ? (
+                      <span className="text-muted">Your assigned orders</span>
+                    ) : (
+                      <>
+                        <span className={`badge bg-${stats.ordersChange >= 0 ? 'success' : 'danger'}`}>
+                          {Math.abs(stats.ordersChange || 0).toFixed(1)}%
+                        </span>
+                        <span className="text-muted">vs last month</span>
+                      </>
+                    )}
                   </div>
                 </CardBody>
               </Card>
@@ -269,18 +338,28 @@ const ModernDashboard = () => {
                 <CardBody>
                   <div className="d-flex align-items-center justify-content-between">
                     <div>
-                      <p className="text-muted mb-1">New Leads</p>
-                      <h3 className="mb-0">{Number(stats.newLeads || 0).toLocaleString()}</h3>
+                      <p className="text-muted mb-1">{isSalesman ? 'My Total Commission' : 'New Leads'}</p>
+                      <h3 className="mb-0">
+                        {isSalesman
+                          ? `${currency}${Number(stats.myTotalCommission || 0).toLocaleString()}`
+                          : Number(stats.newLeads || 0).toLocaleString()}
+                      </h3>
                     </div>
                     <div className="kpi-icon bg-soft-warning text-warning">
                       <IconifyIcon icon="solar:user-hand-up-bold-duotone" />
                     </div>
                   </div>
                   <div className="kpi-meta">
-                    <span className={`badge bg-${stats.leadsChange >= 0 ? 'success' : 'danger'}`}>
-                      {Math.abs(stats.leadsChange || 0).toFixed(1)}%
-                    </span>
-                    <span className="text-muted">vs last month</span>
+                    {isSalesman ? (
+                      <span className="text-muted">Cancelled orders are excluded</span>
+                    ) : (
+                      <>
+                        <span className={`badge bg-${stats.leadsChange >= 0 ? 'success' : 'danger'}`}>
+                          {Math.abs(stats.leadsChange || 0).toFixed(1)}%
+                        </span>
+                        <span className="text-muted">vs last month</span>
+                      </>
+                    )}
                   </div>
                 </CardBody>
               </Card>
@@ -298,7 +377,7 @@ const ModernDashboard = () => {
                     </div>
                   </div>
                   <div className="kpi-meta">
-                    <span className="text-muted">Orders vs leads</span>
+                    <span className="text-muted">{isSalesman ? 'My conversion snapshot' : 'Orders vs leads'}</span>
                   </div>
                 </CardBody>
               </Card>
@@ -386,7 +465,8 @@ const ModernDashboard = () => {
             </CardBody>
           </Card>
         </Col>
-        <Col xl={5} className="d-flex">
+        {!isSalesman && (
+          <Col xl={5} className="d-flex">
           <Card className="dashboard-card flex-fill h-100 w-100">
             <CardHeader className="dashboard-card-header">
               <CardTitle as="h4">Sales by State</CardTitle>
@@ -419,14 +499,15 @@ const ModernDashboard = () => {
               )}
             </CardBody>
           </Card>
-        </Col>
+          </Col>
+        )}
       </Row>
 
       <Row className="g-3 mt-1">
         <Col xl={7} className="d-flex">
           <Card className="dashboard-card flex-fill">
             <CardHeader className="dashboard-card-header">
-              <CardTitle as="h4">Recent Sales</CardTitle>
+              <CardTitle as="h4">{isSalesman ? 'My Orders' : 'Recent Sales'}</CardTitle>
               <Form className="dashboard-search">
                 <Form.Control
                   type="search"
@@ -484,7 +565,8 @@ const ModernDashboard = () => {
             </CardBody>
           </Card>
         </Col>
-        <Col xl={5} className="d-flex">
+        {!isSalesman && (
+          <Col xl={5} className="d-flex">
           <Card className="dashboard-card flex-fill">
             <CardHeader className="dashboard-card-header">
               <CardTitle as="h4">Top Selling Items</CardTitle>
@@ -524,7 +606,8 @@ const ModernDashboard = () => {
               )}
             </CardBody>
           </Card>
-        </Col>
+          </Col>
+        )}
       </Row>
 
       <Row className="g-3 mt-1">
@@ -569,6 +652,92 @@ const ModernDashboard = () => {
           </Card>
         </Col>
       </Row>
+
+      {!isSalesman && (
+        <Row className="g-3 mt-1">
+          <Col xl={7}>
+            <Card className="dashboard-card">
+              <CardHeader className="dashboard-card-header">
+                <CardTitle as="h4">Sales Per Salesman</CardTitle>
+              </CardHeader>
+              <CardBody className="p-0">
+                <div className="table-responsive">
+                  <Table hover className="table-nowrap mb-0">
+                    <thead>
+                      <tr>
+                        <th>Salesman</th>
+                        <th className="text-end">Total Sales</th>
+                        <th className="text-end">Total Commission</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {salesBySalesman.map((row, idx) => (
+                        <tr key={`${row.salesmanId || idx}`}>
+                          <td>{row.salesmanName || row.salesmanEmail || 'Unknown'}</td>
+                          <td className="text-end">{currency}{Number(row.totalSales || 0).toLocaleString()}</td>
+                          <td className="text-end">{currency}{Number(row.totalCommission || 0).toLocaleString()}</td>
+                        </tr>
+                      ))}
+                      {salesBySalesman.length === 0 && (
+                        <tr>
+                          <td colSpan="3" className="text-center py-4 text-muted">No salesman sales found</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </Table>
+                </div>
+              </CardBody>
+            </Card>
+          </Col>
+          <Col xl={5}>
+            <Card className="dashboard-card">
+              <CardHeader className="dashboard-card-header d-flex align-items-center justify-content-between">
+                <CardTitle as="h4">Salesman Policy</CardTitle>
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={handleSaveSalesmanPolicy}
+                  disabled={savingSalesmanPolicy}
+                >
+                  {savingSalesmanPolicy ? 'Saving...' : 'Save'}
+                </Button>
+              </CardHeader>
+              <CardBody>
+                <Form.Group className="mb-3">
+                  <Form.Label>Max Salesman Discount %</Form.Label>
+                  <Form.Control
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={salesmanPolicy.maxSalesmanDiscountPercent}
+                    onChange={(event) =>
+                      setSalesmanPolicy((prev) => ({
+                        ...prev,
+                        maxSalesmanDiscountPercent: event.target.value,
+                      }))
+                    }
+                  />
+                </Form.Group>
+                <Form.Group>
+                  <Form.Label>Salesman Commission %</Form.Label>
+                  <Form.Control
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={salesmanPolicy.salesmanCommissionPercent}
+                    onChange={(event) =>
+                      setSalesmanPolicy((prev) => ({
+                        ...prev,
+                        salesmanCommissionPercent: event.target.value,
+                      }))
+                    }
+                  />
+                </Form.Group>
+              </CardBody>
+            </Card>
+          </Col>
+        </Row>
+      )}
     </div>
   )
 }

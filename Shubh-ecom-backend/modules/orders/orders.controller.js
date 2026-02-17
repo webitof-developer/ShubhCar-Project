@@ -97,7 +97,7 @@ exports.adminFlagFraud = asyncHandler(async (req, res) => {
 });
 
 exports.adminList = asyncHandler(async (req, res) => {
-  const data = await adminService.adminList(req.query);
+  const data = await adminService.adminList(req.query, req.user);
   return success(res, data, 'Orders fetched');
 });
 
@@ -107,7 +107,7 @@ exports.adminGetOrderHistory = asyncHandler(async (req, res) => {
 });
 
 exports.adminGetOrder = asyncHandler(async (req, res) => {
-  const data = await adminService.adminGetOrder(req.params.orderId);
+  const data = await adminService.adminGetOrder(req.params.orderId, req.user);
   return success(res, data, 'Order fetched');
 });
 
@@ -154,6 +154,6 @@ exports.adminCreateOrder = asyncHandler(async (req, res) => {
 
 // New method for status counts
 exports.adminGetStatusCounts = asyncHandler(async (req, res) => {
-  const data = await adminService.adminGetStatusCounts();
+  const data = await adminService.adminGetStatusCounts(req.user);
   return success(res, data, 'Status counts fetched');
 });

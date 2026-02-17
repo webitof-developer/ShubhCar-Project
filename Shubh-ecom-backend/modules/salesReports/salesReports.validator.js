@@ -5,6 +5,14 @@ const summaryQuerySchema = Joi.object({
   to: Joi.date().iso(),
 });
 
+const salesmanPerformanceQuerySchema = Joi.object({
+  from: Joi.date().iso(),
+  to: Joi.date().iso(),
+  salesmanId: Joi.string().trim().hex().length(24),
+  limit: Joi.number().integer().min(1).max(100).default(20),
+  page: Joi.number().integer().min(1).default(1),
+});
+
 const listSalesReportsQuerySchema = Joi.object({
   date: Joi.date().iso(),
 });
@@ -27,6 +35,7 @@ const updateSalesReportSchema = Joi.object({
 
 module.exports = {
   summaryQuerySchema,
+  salesmanPerformanceQuerySchema,
   listSalesReportsQuerySchema,
   createSalesReportSchema,
   updateSalesReportSchema,

@@ -45,7 +45,7 @@ const userSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: [ROLES.ADMIN, ROLES.CUSTOMER], // prev [ROLES.ADMIN,   ROLES.CUSTOMER]
+      enum: [ROLES.ADMIN, ROLES.CUSTOMER, ROLES.SALESMAN], // prev [ROLES.ADMIN,   ROLES.CUSTOMER]
       required: true,
       index: true,
     },
@@ -53,6 +53,12 @@ const userSchema = new mongoose.Schema(
     roleId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Role',
+      required: false,
+      index: true,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
       required: false,
       index: true,
     },
@@ -127,5 +133,6 @@ userSchema.pre(/^find/, function () {
 userSchema.index({ role: 1, status: 1 });
 userSchema.index({ customerType: 1, verificationStatus: 1 });
 userSchema.index({ role: 1, createdAt: -1 });
+userSchema.index({ createdBy: 1, role: 1, createdAt: -1 });
 
 module.exports = mongoose.model('User', userSchema);

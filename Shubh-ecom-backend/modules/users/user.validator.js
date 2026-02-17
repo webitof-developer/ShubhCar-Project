@@ -12,7 +12,7 @@ const registerUserSchema = Joi.object({
   role: Joi.string()
     .valid(ROLES.CUSTOMER,   ROLES.ADMIN)
     .default(ROLES.CUSTOMER),
-  roleId: Joi.string().optional(),
+  roleId: Joi.string().trim().allow('').optional(),
   customerType: Joi.string().valid('retail', 'wholesale').default('retail'),
   wholesaleInfo: Joi.object().optional(),
 }).or('email', 'phone');
@@ -25,7 +25,9 @@ const adminCreateSchema = Joi.object({
     .pattern(/^[6-9]\d{9}$/)
     .optional(),
   password: Joi.string().min(6).required(),
-  roleId: Joi.string().optional(),
+  role: Joi.string().valid(ROLES.CUSTOMER, ROLES.ADMIN, ROLES.SALESMAN).optional(),
+  roleId: Joi.string().trim().allow('').optional(),
+  customerType: Joi.string().valid('retail', 'wholesale').default('retail'),
   status: Joi.string().valid('active', 'inactive', 'banned').default('active'),
 }).or('email', 'phone');
 
@@ -39,7 +41,7 @@ const profileUpdateSchema = Joi.object({
 }).min(1);
 
 const adminListQuerySchema = Joi.object({
-  role: Joi.string().valid(ROLES.ADMIN, ROLES.CUSTOMER),
+  role: Joi.string().valid(ROLES.ADMIN, ROLES.CUSTOMER, ROLES.SALESMAN),
   status: Joi.string().valid('active', 'inactive', 'banned'),
   customerType: Joi.string().valid('retail', 'wholesale'),
   verificationStatus: Joi.string().valid(
@@ -78,7 +80,7 @@ const adminUpdateSchema = Joi.object({
     .pattern(/^[6-9]\d{9}$/)
     .optional(),
   customerType: Joi.string().valid('retail', 'wholesale'),
-  roleId: Joi.string(),
+  roleId: Joi.string().trim().allow(''),
   status: Joi.string().valid('active', 'inactive', 'banned'),
 }).min(1);
 

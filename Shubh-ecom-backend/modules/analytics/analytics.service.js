@@ -1,11 +1,56 @@
+const mongoose = require('mongoose');
 const Order = require('../../models/Order.model');
 const OrderItem = require('../../models/OrderItem.model');
 const User = require('../../models/User.model');
 const Product = require('../../models/Product.model');
 const Review = require('../../models/ProductReview.model');
+const Role = require('../../models/Role.model');
 const { error } = require('../../utils/apiResponse');
 
 class AnalyticsService {
+  async _resolveSalesmanActor(user = {}) {
+    const actorId = user?.id || user?._id;
+    if (!actorId || !mongoose.Types.ObjectId.isValid(actorId)) return null;
+    if (String(user?.role || '').toLowerCase() === 'salesman') {
+      return new mongoose.Types.ObjectId(actorId);
+    }
+    const actor = await User.findById(actorId).select('role roleId').lean();
+    if (!actor) return null;
+    if (String(actor.role || '').toLowerCase() === 'salesman') {
+      return new mongoose.Types.ObjectId(actorId);
+    }
+    if (!actor.roleId || !mongoose.Types.ObjectId.isValid(actor.roleId))
+      return null;
+    const roleDoc = await Role.findById(actor.roleId)
+      .select('slug name')
+      .lean();
+    const slug = String(roleDoc?.slug || '').toLowerCase();
+    const name = String(roleDoc?.name || '').toLowerCase();
+    return slug === 'salesman' || name.includes('salesman')
+      ? new mongoose.Types.ObjectId(actorId)
+      : null;
+  }
+
+  async _roleScopedOrderMatch(user = {}, extra = {}, targetSalesmanId = null) {
+    const match = { ...extra };
+
+    // 1. If user is Admin and targetSalesmanId is provided, force filter by that salesman
+    if (targetSalesmanId) {
+      const actorRole = String(user?.role || '').toLowerCase();
+      if (actorRole === 'admin') {
+        match.salesmanId = new mongoose.Types.ObjectId(targetSalesmanId);
+        return match;
+      }
+    }
+
+    // 2. Otherwise, applies normal role-based scoping (Salesman sees own data)
+    const salesmanId = await this._resolveSalesmanActor(user);
+    if (salesmanId) {
+      match.salesmanId = salesmanId;
+    }
+    return match;
+  }
+
   _dateFilter(from, to) {
     const filter = {};
     if (from || to) {
@@ -19,8 +64,15 @@ class AnalyticsService {
   /* =======================
      REVENUE & ORDERS
   ======================== */
-  async revenueSummary({ from, to }) {
-    const match = { ...this._dateFilter(from, to), isDeleted: false };
+  async revenueSummary({ from, to, salesmanId }, user = {}) {
+    const match = {
+      ...(await this._roleScopedOrderMatch(
+        user,
+        this._dateFilter(from, to),
+        salesmanId,
+      )),
+      isDeleted: false,
+    };
     const pendingStatuses = ['pending', 'partially_paid'];
 
     const [
@@ -35,7 +87,10 @@ class AnalyticsService {
     ] = await Promise.all([
       Order.countDocuments(match),
       Order.countDocuments({ ...match, paymentStatus: 'paid' }),
-      Order.countDocuments({ ...match, paymentStatus: { $in: pendingStatuses } }),
+      Order.countDocuments({
+        ...match,
+        paymentStatus: { $in: pendingStatuses },
+      }),
       Order.countDocuments({ ...match, orderStatus: 'cancelled' }),
       Order.countDocuments({ ...match, paymentStatus: 'refunded' }),
       Order.aggregate([
@@ -48,7 +103,13 @@ class AnalyticsService {
       ]),
       Order.aggregate([
         { $match: { ...match, paymentStatus: 'paid' } },
-        { $group: { _id: '$paymentMethod', orders: { $sum: 1 }, revenue: { $sum: '$grandTotal' } } },
+        {
+          $group: {
+            _id: '$paymentMethod',
+            orders: { $sum: 1 },
+            revenue: { $sum: '$grandTotal' },
+          },
+        },
         { $sort: { revenue: -1 } },
       ]),
     ]);
@@ -95,7 +156,11 @@ class AnalyticsService {
   }
 
   async repeatCustomerSummary({ from, to } = {}) {
-    const match = { ...this._dateFilter(from, to), paymentStatus: 'paid', isDeleted: false };
+    const match = {
+      ...this._dateFilter(from, to),
+      paymentStatus: 'paid',
+      isDeleted: false,
+    };
     const data = await Order.aggregate([
       { $match: match },
       {
@@ -132,22 +197,50 @@ class AnalyticsService {
     const match = { ...this._dateFilter(from, to), isDeleted: false };
     const [shipAgg, deliverAgg] = await Promise.all([
       Order.aggregate([
-        { $match: { ...match, placedAt: { $ne: null }, shippedAt: { $ne: null } } },
         {
-          $project: {
-            hoursToShip: { $divide: [{ $subtract: ['$shippedAt', '$placedAt'] }, 3600000] },
+          $match: {
+            ...match,
+            placedAt: { $ne: null },
+            shippedAt: { $ne: null },
           },
         },
-        { $group: { _id: null, avgHoursToShip: { $avg: '$hoursToShip' }, count: { $sum: 1 } } },
+        {
+          $project: {
+            hoursToShip: {
+              $divide: [{ $subtract: ['$shippedAt', '$placedAt'] }, 3600000],
+            },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            avgHoursToShip: { $avg: '$hoursToShip' },
+            count: { $sum: 1 },
+          },
+        },
       ]),
       Order.aggregate([
-        { $match: { ...match, placedAt: { $ne: null }, deliveredAt: { $ne: null } } },
         {
-          $project: {
-            hoursToDeliver: { $divide: [{ $subtract: ['$deliveredAt', '$placedAt'] }, 3600000] },
+          $match: {
+            ...match,
+            placedAt: { $ne: null },
+            deliveredAt: { $ne: null },
           },
         },
-        { $group: { _id: null, avgHoursToDeliver: { $avg: '$hoursToDeliver' }, count: { $sum: 1 } } },
+        {
+          $project: {
+            hoursToDeliver: {
+              $divide: [{ $subtract: ['$deliveredAt', '$placedAt'] }, 3600000],
+            },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            avgHoursToDeliver: { $avg: '$hoursToDeliver' },
+            count: { $sum: 1 },
+          },
+        },
       ]),
     ]);
 
@@ -161,7 +254,14 @@ class AnalyticsService {
 
   async orderFunnel({ from, to } = {}) {
     const match = { ...this._dateFilter(from, to), isDeleted: false };
-    const [totalOrders, paidOrders, shippedOrders, deliveredOrders, cancelledOrders, refundedOrders] = await Promise.all([
+    const [
+      totalOrders,
+      paidOrders,
+      shippedOrders,
+      deliveredOrders,
+      cancelledOrders,
+      refundedOrders,
+    ] = await Promise.all([
       Order.countDocuments(match),
       Order.countDocuments({ ...match, paymentStatus: 'paid' }),
       Order.countDocuments({ ...match, orderStatus: 'shipped' }),
@@ -181,7 +281,11 @@ class AnalyticsService {
   }
 
   async topCategories({ from, to, limit = 6 } = {}) {
-    const match = { ...this._dateFilter(from, to), paymentStatus: 'paid', isDeleted: false };
+    const match = {
+      ...this._dateFilter(from, to),
+      paymentStatus: 'paid',
+      isDeleted: false,
+    };
     return OrderItem.aggregate([
       {
         $lookup: {
@@ -244,7 +348,11 @@ class AnalyticsService {
   }
 
   async topBrands({ from, to, limit = 6 } = {}) {
-    const match = { ...this._dateFilter(from, to), paymentStatus: 'paid', isDeleted: false };
+    const match = {
+      ...this._dateFilter(from, to),
+      paymentStatus: 'paid',
+      isDeleted: false,
+    };
     return OrderItem.aggregate([
       {
         $lookup: {
@@ -280,7 +388,9 @@ class AnalyticsService {
       { $unwind: '$product' },
       {
         $group: {
-          _id: { $ifNull: ['$product.manufacturerBrand', '$product.vehicleBrand'] },
+          _id: {
+            $ifNull: ['$product.manufacturerBrand', '$product.vehicleBrand'],
+          },
           quantitySold: { $sum: '$quantitySold' },
         },
       },
@@ -292,7 +402,11 @@ class AnalyticsService {
   }
 
   async inventoryTurnover({ from, to, limit = 6 } = {}) {
-    const match = { ...this._dateFilter(from, to), paymentStatus: 'paid', isDeleted: false };
+    const match = {
+      ...this._dateFilter(from, to),
+      paymentStatus: 'paid',
+      isDeleted: false,
+    };
     const soldAgg = await OrderItem.aggregate([
       {
         $lookup: {
@@ -382,7 +496,9 @@ class AnalyticsService {
           as: 'shippingAddress',
         },
       },
-      { $unwind: { path: '$shippingAddress', preserveNullAndEmptyArrays: true } },
+      {
+        $unwind: { path: '$shippingAddress', preserveNullAndEmptyArrays: true },
+      },
       {
         $group: {
           _id: '$shippingAddress.city',
@@ -505,34 +621,56 @@ class AnalyticsService {
   /* =======================
      DASHBOARD STATS
   ======================== */
-  async dashboardStats() {
+  async dashboardStats(user = {}, targetSalesmanId = null) {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 
     // Helper for date range
-    const filter = (start, end) => ({
-      createdAt: { $gte: start, $lte: end }
+    const isSalesman = Boolean(await this._resolveSalesmanActor(user));
+    const isAdmin =
+      String(user?.role || '').toLowerCase() === 'admin' && !isSalesman;
+
+    const filter = async (start, end) =>
+      this._roleScopedOrderMatch(
+        user,
+        {
+          createdAt: { $gte: start, $lte: end },
+          isDeleted: false,
+        },
+        targetSalesmanId,
+      );
+    const userFilter = (start, end) => ({
+      createdAt: { $gte: start, $lte: end },
+      role: 'customer',
+      isDeleted: false,
     });
+    const currentPeriodMatch = await filter(startOfMonth, now);
+    const previousPeriodMatch = await filter(startOfLastMonth, endOfLastMonth);
 
     const [
-      currentOrders, lastMonthOrders,
-      currentRevenue, lastMonthRevenue,
-      currentUsers, lastMonthUsers
+      currentOrders,
+      lastMonthOrders,
+      currentRevenue,
+      lastMonthRevenue,
+      currentUsers,
+      lastMonthUsers,
     ] = await Promise.all([
-      Order.countDocuments(filter(startOfMonth, now)),
-      Order.countDocuments(filter(startOfLastMonth, endOfLastMonth)),
+      Order.countDocuments(currentPeriodMatch),
+      Order.countDocuments(previousPeriodMatch),
       Order.aggregate([
-        { $match: { ...filter(startOfMonth, now), paymentStatus: 'paid' } },
-        { $group: { _id: null, total: { $sum: '$grandTotal' } } }
+        { $match: { ...currentPeriodMatch, paymentStatus: 'paid' } },
+        { $group: { _id: null, total: { $sum: '$grandTotal' } } },
       ]),
       Order.aggregate([
-        { $match: { ...filter(startOfLastMonth, endOfLastMonth), paymentStatus: 'paid' } },
-        { $group: { _id: null, total: { $sum: '$grandTotal' } } }
+        { $match: { ...previousPeriodMatch, paymentStatus: 'paid' } },
+        { $group: { _id: null, total: { $sum: '$grandTotal' } } },
       ]),
-      User.countDocuments({ ...filter(startOfMonth, now), role: 'customer' }),
-      User.countDocuments({ ...filter(startOfLastMonth, endOfLastMonth), role: 'customer' }),
+      isAdmin ? User.countDocuments(userFilter(startOfMonth, now)) : 0,
+      isAdmin
+        ? User.countDocuments(userFilter(startOfLastMonth, endOfLastMonth))
+        : 0,
     ]);
 
     const calculateChange = (current, previous) => {
@@ -543,7 +681,7 @@ class AnalyticsService {
     const revenue = currentRevenue[0]?.total || 0;
     const prevRevenue = lastMonthRevenue[0]?.total || 0;
 
-    return {
+    const response = {
       totalOrders: currentOrders,
       ordersChange: calculateChange(currentOrders, lastMonthOrders),
       newLeads: currentUsers,
@@ -551,14 +689,101 @@ class AnalyticsService {
       deals: currentOrders, // Utilizing orders as deals for now
       dealsChange: calculateChange(currentOrders, lastMonthOrders),
       revenue: revenue,
-      revenueChange: calculateChange(revenue, prevRevenue)
+      revenueChange: calculateChange(revenue, prevRevenue),
     };
+
+    if (isAdmin) {
+      const salesmanRows = await Order.aggregate([
+        {
+          $match: {
+            isDeleted: false,
+            salesmanId: { $ne: null },
+          },
+        },
+        {
+          $group: {
+            _id: '$salesmanId',
+            totalSales: { $sum: '$grandTotal' },
+            totalCommission: {
+              $sum: {
+                $cond: [
+                  { $eq: ['$orderStatus', 'cancelled'] },
+                  0,
+                  '$commissionAmount',
+                ],
+              },
+            },
+          },
+        },
+        {
+          $lookup: {
+            from: 'users',
+            localField: '_id',
+            foreignField: '_id',
+            as: 'salesman',
+          },
+        },
+        { $unwind: { path: '$salesman', preserveNullAndEmptyArrays: true } },
+        { $sort: { totalSales: -1 } },
+        {
+          $project: {
+            _id: 0,
+            salesmanId: '$_id',
+            salesmanName: {
+              $trim: {
+                input: {
+                  $concat: [
+                    { $ifNull: ['$salesman.firstName', ''] },
+                    ' ',
+                    { $ifNull: ['$salesman.lastName', ''] },
+                  ],
+                },
+              },
+            },
+            salesmanEmail: '$salesman.email',
+            totalSales: 1,
+            totalCommission: 1,
+          },
+        },
+      ]);
+      response.salesBySalesman = salesmanRows;
+    }
+
+    if (isSalesman) {
+      const [myTotals] = await Order.aggregate([
+        {
+          $match: await this._roleScopedOrderMatch(user, { isDeleted: false }),
+        },
+        {
+          $group: {
+            _id: null,
+            myTotalSales: { $sum: '$grandTotal' },
+            myTotalCommission: {
+              $sum: {
+                $cond: [
+                  { $eq: ['$orderStatus', 'cancelled'] },
+                  0,
+                  '$commissionAmount',
+                ],
+              },
+            },
+          },
+        },
+      ]);
+      response.myTotalSales = myTotals?.myTotalSales || 0;
+      response.myTotalCommission = myTotals?.myTotalCommission || 0;
+    }
+
+    return response;
   }
 
   /* =======================
      CHART DATA
   ======================== */
-  async revenueChartData({ range = 'month', from, to } = {}) {
+  async revenueChartData(
+    { range = 'month', from, to, salesmanId } = {},
+    user = {},
+  ) {
     const now = new Date();
     let startDate = new Date();
     let endDate = now;
@@ -585,13 +810,25 @@ class AnalyticsService {
     } else if (range === 'today') {
       startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       points = 24;
-      groupId = { year: { $year: '$createdAt' }, month: { $month: '$createdAt' }, day: { $dayOfMonth: '$createdAt' }, hour: { $hour: '$createdAt' } };
-      labels = Array.from({ length: points }, (_, idx) => `${String(idx).padStart(2, '0')}:00`);
+      groupId = {
+        year: { $year: '$createdAt' },
+        month: { $month: '$createdAt' },
+        day: { $dayOfMonth: '$createdAt' },
+        hour: { $hour: '$createdAt' },
+      };
+      labels = Array.from(
+        { length: points },
+        (_, idx) => `${String(idx).padStart(2, '0')}:00`,
+      );
     } else if (range === 'week') {
       startDate = new Date(now);
       startDate.setDate(startDate.getDate() - 6);
       points = 7;
-      groupId = { year: { $year: '$createdAt' }, month: { $month: '$createdAt' }, day: { $dayOfMonth: '$createdAt' } };
+      groupId = {
+        year: { $year: '$createdAt' },
+        month: { $month: '$createdAt' },
+        day: { $dayOfMonth: '$createdAt' },
+      };
       labels = Array.from({ length: points }, (_, idx) => {
         const d = new Date(startDate);
         d.setDate(d.getDate() + idx);
@@ -601,7 +838,11 @@ class AnalyticsService {
       startDate = new Date(now);
       startDate.setDate(startDate.getDate() - 29);
       points = 30;
-      groupId = { year: { $year: '$createdAt' }, month: { $month: '$createdAt' }, day: { $dayOfMonth: '$createdAt' } };
+      groupId = {
+        year: { $year: '$createdAt' },
+        month: { $month: '$createdAt' },
+        day: { $dayOfMonth: '$createdAt' },
+      };
       labels = Array.from({ length: points }, (_, idx) => {
         const d = new Date(startDate);
         d.setDate(d.getDate() + idx);
@@ -611,7 +852,10 @@ class AnalyticsService {
       const months = 12;
       startDate = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
       points = months;
-      groupId = { year: { $year: '$createdAt' }, month: { $month: '$createdAt' } };
+      groupId = {
+        year: { $year: '$createdAt' },
+        month: { $month: '$createdAt' },
+      };
       labels = Array.from({ length: points }, (_, idx) => {
         const d = new Date(startDate);
         d.setMonth(d.getMonth() + idx);
@@ -622,6 +866,7 @@ class AnalyticsService {
     const data = await Order.aggregate([
       {
         $match: {
+          ...(await this._roleScopedOrderMatch(user, {}, salesmanId)),
           createdAt: { $gte: startDate, $lte: endDate },
           paymentStatus: 'paid',
           isDeleted: false,
@@ -642,8 +887,15 @@ class AnalyticsService {
     for (let i = 0; i < points; i++) {
       const current = new Date(startDate);
       if (range === 'today') current.setHours(i, 0, 0, 0);
-      if (range === 'week' || range === 'month' || range === 'custom') current.setDate(current.getDate() + i);
-      if (range !== 'today' && range !== 'week' && range !== 'month' && range !== 'custom') current.setMonth(current.getMonth() + i);
+      if (range === 'week' || range === 'month' || range === 'custom')
+        current.setDate(current.getDate() + i);
+      if (
+        range !== 'today' &&
+        range !== 'week' &&
+        range !== 'month' &&
+        range !== 'custom'
+      )
+        current.setMonth(current.getMonth() + i);
 
       const year = current.getFullYear();
       const month = current.getMonth() + 1;
@@ -652,10 +904,19 @@ class AnalyticsService {
 
       const found = data.find((item) => {
         if (range === 'today') {
-          return item._id.year === year && item._id.month === month && item._id.day === day && item._id.hour === hour;
+          return (
+            item._id.year === year &&
+            item._id.month === month &&
+            item._id.day === day &&
+            item._id.hour === hour
+          );
         }
         if (range === 'week' || range === 'month' || range === 'custom') {
-          return item._id.year === year && item._id.month === month && item._id.day === day;
+          return (
+            item._id.year === year &&
+            item._id.month === month &&
+            item._id.day === day
+          );
         }
         return item._id.year === year && item._id.month === month;
       });
@@ -689,7 +950,9 @@ class AnalyticsService {
           as: 'shippingAddress',
         },
       },
-      { $unwind: { path: '$shippingAddress', preserveNullAndEmptyArrays: true } },
+      {
+        $unwind: { path: '$shippingAddress', preserveNullAndEmptyArrays: true },
+      },
       {
         $group: {
           _id: '$shippingAddress.state',

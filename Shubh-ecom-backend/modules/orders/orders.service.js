@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { createSafeSession } = require('../../utils/mongoTransaction');
 const cartCache = require('../cart/cart.cache');
 const cartRepo = require('../cart/cart.repo');
 const productRepo = require('../products/product.repo');
@@ -26,6 +27,8 @@ const UserAddress = require('../../models/UserAddress.model');
 const Order = require('../../models/Order.model');
 const OrderItem = require('../../models/OrderItem.model');
 const ProductImage = require('../../models/ProductImage.model');
+const Setting = require('../../models/Setting.model');
+const Role = require('../../models/Role.model');
 const userRepo = require('../users/user.repo');
 const { getPaymentSettings } = require('../../utils/paymentSettings');
 const { placeOrderSchema } = require('./order.validator');
@@ -44,10 +47,57 @@ const {
   derivePaymentStatus,
 } = require('./paymentSummary');
 const { error } = require('../../utils/apiResponse');
-const ROLES = require('../../constants/roles'); 
+const ROLES = require('../../constants/roles');
 const { generateOrderNumber } = require('../../utils/numbering');
+const { ADMIN_STATUS_UPDATES } = require('../../constants/orderStatus');
 
 const roundCurrency = (value) => Math.round((Number(value) || 0) * 100) / 100;
+const normalizeOrderStatus = (status) =>
+  String(status || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+const isSalesmanUser = async (user) => {
+  if (!user) return false;
+  if (String(user.role || '').toLowerCase() === ROLES.SALESMAN) return true;
+  if (!user.roleId) return false;
+
+  const roleDoc = await Role.findById(user.roleId).select('slug name').lean();
+  const slug = String(roleDoc?.slug || '').toLowerCase();
+  const name = String(roleDoc?.name || '').toLowerCase();
+  return slug === 'salesman' || name.includes('salesman');
+};
+const isSalesmanActor = async (actor = {}) => {
+  if (String(actor?.role || '').toLowerCase() === ROLES.SALESMAN) return true;
+  const actorId = actor?.id || actor?._id;
+  if (!actorId || !mongoose.Types.ObjectId.isValid(actorId)) return false;
+  const user = await userRepo.findById(actorId);
+  return isSalesmanUser(user);
+};
+
+const getSalesmanPolicy = async () => {
+  const rows = await Setting.find({
+    key: { $in: ['maxSalesmanDiscountPercent', 'salesmanCommissionPercent'] },
+  }).lean();
+
+  const map = rows.reduce((acc, row) => {
+    acc[row.key] = Number(row.value);
+    return acc;
+  }, {});
+
+  const maxSalesmanDiscountPercent = Number.isFinite(
+    map.maxSalesmanDiscountPercent,
+  )
+    ? Math.max(0, map.maxSalesmanDiscountPercent)
+    : 0;
+  const salesmanCommissionPercent = Number.isFinite(
+    map.salesmanCommissionPercent,
+  )
+    ? Math.max(0, map.salesmanCommissionPercent)
+    : 0;
+
+  return { maxSalesmanDiscountPercent, salesmanCommissionPercent };
+};
 
 const assertPaymentMethodEnabled = async (paymentMethod, gateway) => {
   const settings = await getPaymentSettings();
@@ -113,6 +163,12 @@ class OrderService {
     if (!cartItems.length) error('Cart is empty', 400);
 
     await assertPaymentMethodEnabled(payload.paymentMethod, payload.gateway);
+    if (payload.paymentMethod === 'razorpay' && !payload.paymentCompleted) {
+      error(
+        'Razorpay order can only be created after payment is completed',
+        400,
+      );
+    }
 
     const [shippingAddress, billingAddress] = await Promise.all([
       addressRepo.findById(payload.shippingAddressId),
@@ -126,7 +182,7 @@ class OrderService {
       error('Invalid billing address', 400);
 
     // Coupon lock is acquired before starting the transaction
-    const session = await mongoose.startSession();
+    const session = await createSafeSession();
     let transactionStarted = false;
     let couponLocked = false;
 
@@ -142,8 +198,10 @@ class OrderService {
         if (!couponLocked) error('Coupon is currently in use', 409);
       }
 
-      session.startTransaction();
-      transactionStarted = true;
+      if (!session._isStandalone) {
+        session.startTransaction();
+        transactionStarted = true;
+      }
 
       let subtotal = 0;
       let totalItems = 0;
@@ -188,7 +246,10 @@ class OrderService {
           productName: product.name || 'Unknown Product',
           productSlug: product.slug || null,
           productImage: primaryImageUrl,
-          productDescription: product.shortDescription || product.description?.substring(0, 250) || null,
+          productDescription:
+            product.shortDescription ||
+            product.description?.substring(0, 250) ||
+            null,
           // Existing fields
           sku:
             product.sku ||
@@ -295,7 +356,9 @@ class OrderService {
         );
       }
 
-      await session.commitTransaction();
+      if (!session._isStandalone && session.inTransaction()) {
+        await session.commitTransaction();
+      }
       await cartCache.clearCart(user.id, sessionId);
       await orderJobs.scheduleAutoCancel(order._id);
 
@@ -308,7 +371,13 @@ class OrderService {
 
       return order;
     } catch (e) {
-      if (transactionStarted) await session.abortTransaction();
+      if (
+        transactionStarted &&
+        !session._isStandalone &&
+        session.inTransaction()
+      ) {
+        await session.abortTransaction();
+      }
       throw e;
     } finally {
       session.endSession();
@@ -334,8 +403,10 @@ class OrderService {
   }
 
   async confirmOrder(orderId) {
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    const session = await createSafeSession();
+    if (!session._isStandalone) {
+      session.startTransaction();
+    }
 
     try {
       const order = await orderRepo.findById(orderId, session);
@@ -345,11 +416,16 @@ class OrderService {
         order.paymentStatus === PAYMENT_STATUS.PAID &&
         order.orderStatus === ORDER_STATUS.CONFIRMED
       ) {
-        await session.commitTransaction();
+        if (!session._isStandalone && session.inTransaction()) {
+          await session.commitTransaction();
+        }
         return order;
       }
 
-      orderStateMachine.assertTransition(order.orderStatus, ORDER_STATUS.CONFIRMED);
+      orderStateMachine.assertTransition(
+        order.orderStatus,
+        ORDER_STATUS.CONFIRMED,
+      );
 
       order.paymentStatus = PAYMENT_STATUS.PAID;
       order.orderStatus = ORDER_STATUS.CONFIRMED;
@@ -360,12 +436,18 @@ class OrderService {
 
       if (order.couponId) {
         await couponRepo.recordUsage(
-          { couponId: order.couponId, userId: order.userId, orderId: order._id },
+          {
+            couponId: order.couponId,
+            userId: order.userId,
+            orderId: order._id,
+          },
           session,
         );
       }
 
-      await session.commitTransaction();
+      if (!session._isStandalone && session.inTransaction()) {
+        await session.commitTransaction();
+      }
 
       // 🔥 SIDE EFFECTS (OUTSIDE TX)
       await orderJobs.enqueueStatusNotification(order._id, 'confirmed');
@@ -385,7 +467,9 @@ class OrderService {
 
       return order;
     } catch (e) {
-      await session.abortTransaction();
+      if (!session._isStandalone && session.inTransaction()) {
+        await session.abortTransaction();
+      }
       throw e;
     } finally {
       session.endSession();
@@ -393,31 +477,36 @@ class OrderService {
   }
 
   async failOrder(orderId, context = {}) {
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    const session = await createSafeSession();
+    if (!session._isStandalone) {
+      session.startTransaction();
+    }
 
     try {
       const order = await orderRepo.findById(orderId, session);
       if (!order) error('Order not found', 404);
 
-      orderStateMachine.assertTransition(order.orderStatus, ORDER_STATUS.CANCELLED);
+      orderStateMachine.assertTransition(
+        order.orderStatus,
+        ORDER_STATUS.CANCELLED,
+      );
 
       if (
         order.orderStatus !== ORDER_STATUS.CREATED ||
         order.paymentStatus !== PAYMENT_STATUS.PENDING
       ) {
-        await session.commitTransaction();
+        if (!session._isStandalone && session.inTransaction()) {
+          await session.commitTransaction();
+        }
         return;
       }
 
       const items = await orderRepo.findItemsByOrder(orderId, session);
       for (const item of items) {
-        await inventoryService.release(
-          item.productId,
-          item.quantity,
-          session,
-          { ...context, orderId },
-        );
+        await inventoryService.release(item.productId, item.quantity, session, {
+          ...context,
+          orderId,
+        });
       }
 
       order.orderStatus = ORDER_STATUS.CANCELLED;
@@ -441,7 +530,9 @@ class OrderService {
         session,
       });
 
-      await session.commitTransaction();
+      if (!session._isStandalone && session.inTransaction()) {
+        await session.commitTransaction();
+      }
 
       // Send cancellation email (async, don't block)
       this.sendOrderCancellationEmail(order).catch((err) => {
@@ -451,7 +542,9 @@ class OrderService {
         });
       });
     } catch (e) {
-      await session.abortTransaction();
+      if (!session._isStandalone && session.inTransaction()) {
+        await session.abortTransaction();
+      }
       throw e;
     } finally {
       session.endSession();
@@ -459,15 +552,19 @@ class OrderService {
   }
 
   async markRefunded(orderId, isFullRefund, context = {}) {
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    const session = await createSafeSession();
+    if (!session._isStandalone) {
+      session.startTransaction();
+    }
 
     try {
       const order = await orderRepo.findById(orderId, session);
       if (!order) error('Order not found', 404);
 
       if (order.orderStatus === ORDER_STATUS.REFUNDED) {
-        await session.commitTransaction();
+        if (!session._isStandalone && session.inTransaction()) {
+          await session.commitTransaction();
+        }
         return order;
       }
 
@@ -483,7 +580,10 @@ class OrderService {
         }
       }
 
-      orderStateMachine.assertTransition(order.orderStatus, ORDER_STATUS.REFUNDED);
+      orderStateMachine.assertTransition(
+        order.orderStatus,
+        ORDER_STATUS.REFUNDED,
+      );
 
       order.paymentStatus = PAYMENT_STATUS.REFUNDED;
       order.orderStatus = ORDER_STATUS.REFUNDED;
@@ -498,7 +598,9 @@ class OrderService {
         });
       }
 
-      await session.commitTransaction();
+      if (!session._isStandalone && session.inTransaction()) {
+        await session.commitTransaction();
+      }
 
       // Send refund confirmation email (async, don't block)
       this.sendRefundConfirmationEmail(order, isFullRefund).catch((err) => {
@@ -510,7 +612,9 @@ class OrderService {
 
       return order;
     } catch (e) {
-      await session.abortTransaction();
+      if (!session._isStandalone && session.inTransaction()) {
+        await session.abortTransaction();
+      }
       throw e;
     } finally {
       session.endSession();
@@ -560,7 +664,10 @@ class OrderService {
       actor,
       reason: 'delivery',
       mutateFn: (o) => {
-        orderStateMachine.assertTransition(o.orderStatus, ORDER_STATUS.DELIVERED);
+        orderStateMachine.assertTransition(
+          o.orderStatus,
+          ORDER_STATUS.DELIVERED,
+        );
         o.orderStatus = ORDER_STATUS.DELIVERED;
         o.deliveredAt = new Date();
       },
@@ -641,7 +748,10 @@ class OrderService {
     if (!order) error('Order not found', 404);
 
     const items = await OrderItem.find({ orderId })
-      .populate('productId', 'name productType manufacturerBrand oemNumber vehicleBrand')
+      .populate(
+        'productId',
+        'name productType manufacturerBrand oemNumber vehicleBrand',
+      )
       .lean();
     const productIds = items
       .map((item) => item.productId?._id || item.productId)
@@ -676,7 +786,9 @@ class OrderService {
       orderItemId: { $in: items.map((i) => i._id) },
     });
     const events = await orderEventRepo.listByOrder(orderId);
-    const notes = (events || []).filter((event) => event.noteType === 'customer');
+    const notes = (events || []).filter(
+      (event) => event.noteType === 'customer',
+    );
 
     return {
       order: attachPaymentSummary(order),
@@ -727,20 +839,28 @@ class OrderService {
   }
 
   async updateByAdmin({ admin, orderId, payload }) {
+    if (await isSalesmanActor(admin)) {
+      error('Salesman cannot edit orders', 403);
+    }
+
     const order = await orderRepo.findById(orderId);
     if (!order) error('Order not found', 404);
 
     const previousStatus = order.orderStatus;
     const previousPaymentStatus = order.paymentStatus;
 
+    const nextStatus = normalizeOrderStatus(payload.status);
+    if (!ADMIN_STATUS_UPDATES.includes(nextStatus)) {
+      error('Invalid status', 400, 'INVALID_STATUS');
+    }
+
     const updated = await orderRepo.applyOrderMutation({
       orderId,
       actor: { id: admin.id, role: admin.role },
       reason: 'admin_update',
       mutateFn: (o) => {
-        orderStateMachine.assertTransition(o.orderStatus, payload.status);
-        o.orderStatus = payload.status;
-        
+        o.orderStatus = nextStatus;
+
         // Allow updating payment status for COD
         if (payload.paymentStatus) {
           o.paymentStatus = payload.paymentStatus;
@@ -763,13 +883,15 @@ class OrderService {
       // Check if invoice exists
       const invoice = await invoiceRepo.findByOrder(updated._id);
       if (invoice && invoice.type === 'invoice') {
-        await invoiceService.generateCreditNote(updated, invoice).catch((err) => {
-          logger.error('Failed to generate credit note for cancelled order', {
-            orderId: updated._id,
-            invoiceId: invoice._id,
-            error: err.message,
+        await invoiceService
+          .generateCreditNote(updated, invoice)
+          .catch((err) => {
+            logger.error('Failed to generate credit note for cancelled order', {
+              orderId: updated._id,
+              invoiceId: invoice._id,
+              error: err.message,
+            });
           });
-        });
       }
     }
 
@@ -777,6 +899,10 @@ class OrderService {
   }
 
   async updatePaymentByAdmin({ admin, orderId, payload }) {
+    if (await isSalesmanActor(admin)) {
+      error('Salesman cannot edit orders', 403);
+    }
+
     const order = await orderRepo.findById(orderId);
     if (!order) error('Order not found', 404);
 
@@ -784,7 +910,11 @@ class OrderService {
       error('Manual payment updates are allowed only for COD orders', 400);
     }
 
-    if ([PAYMENT_STATUS.FAILED, PAYMENT_STATUS.REFUNDED].includes(order.paymentStatus)) {
+    if (
+      [PAYMENT_STATUS.FAILED, PAYMENT_STATUS.REFUNDED].includes(
+        order.paymentStatus,
+      )
+    ) {
       error('Payment updates are not allowed for failed/refunded orders', 400);
     }
 
@@ -817,7 +947,9 @@ class OrderService {
       actor: { id: admin.id, role: admin.role },
       reason: 'admin_payment_update',
       mutateFn: (o) => {
-        o.codPayments = Array.isArray(o.codPayments) ? [...o.codPayments, entry] : [entry];
+        o.codPayments = Array.isArray(o.codPayments)
+          ? [...o.codPayments, entry]
+          : [entry];
         o.paymentStatus = nextStatus;
       },
     });
@@ -831,10 +963,16 @@ class OrderService {
       });
     }
 
-    return attachPaymentSummary(updated.toObject ? updated.toObject() : updated);
+    return attachPaymentSummary(
+      updated.toObject ? updated.toObject() : updated,
+    );
   }
 
   async setFraudFlag({ admin, orderId, payload }) {
+    if (await isSalesmanActor(admin)) {
+      error('Salesman cannot edit orders', 403);
+    }
+
     const order = await orderRepo.findById(orderId);
     if (!order) error('Order not found', 404);
 
@@ -877,10 +1015,63 @@ class OrderService {
       error('Orders can only be created for customers', 400);
     }
 
+    const actorRole = String(admin?.role || '').toLowerCase();
+    let isSalesmanActor = actorRole === ROLES.SALESMAN;
+    let actorUser = null;
+    if (!isSalesmanActor && admin?.id) {
+      actorUser = await userRepo.findById(admin.id);
+      isSalesmanActor = await isSalesmanUser(actorUser);
+    }
+    let assignedSalesmanId = null;
+    if (isSalesmanActor) {
+      assignedSalesmanId = admin.id;
+    } else if (payload.salesmanId) {
+      if (!mongoose.Types.ObjectId.isValid(payload.salesmanId)) {
+        error('Invalid salesman selected', 400);
+      }
+      const salesman = await userRepo.findById(payload.salesmanId);
+      const validSalesman = await isSalesmanUser(salesman);
+      if (!validSalesman) {
+        error('Invalid salesman selected', 400);
+      }
+      assignedSalesmanId = salesman._id;
+    } else if (admin?.id) {
+      // Fallback: if token role is stale/mismatched but actor is a salesman in DB,
+      // auto-assign to current actor instead of leaving as unassigned.
+      if (!actorUser) {
+        actorUser = await userRepo.findById(admin.id);
+      }
+      if (await isSalesmanUser(actorUser)) {
+        assignedSalesmanId = actorUser._id;
+      }
+    }
+    const requestedDiscountPercent = Number(payload.discountPercent || 0);
+    if (
+      !Number.isFinite(requestedDiscountPercent) ||
+      requestedDiscountPercent < 0
+    ) {
+      error('Invalid discount percent', 400);
+    }
+
+    const policy = await getSalesmanPolicy();
+    let maxSalesmanDiscountPercent = policy.maxSalesmanDiscountPercent;
+    let salesmanCommissionPercent = 0;
+    if (isSalesmanActor) {
+      salesmanCommissionPercent = policy.salesmanCommissionPercent;
+      if (requestedDiscountPercent > maxSalesmanDiscountPercent) {
+        error(
+          `Discount cannot exceed configured max ${maxSalesmanDiscountPercent}%`,
+          400,
+        );
+      }
+    }
+
     await assertPaymentMethodEnabled(payload.paymentMethod, payload.gateway);
 
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    const session = await createSafeSession();
+    if (!session._isStandalone) {
+      session.startTransaction();
+    }
 
     try {
       let shippingAddress = null;
@@ -928,7 +1119,7 @@ class OrderService {
       let subtotal = 0;
       let totalItems = 0;
       let taxAmount = 0;
-      const taxBreakdown = { cgst: 0, sgst: 0, igst: 0 };
+      let taxBreakdown = { cgst: 0, sgst: 0, igst: 0 };
       const orderItems = [];
       const shippingItems = [];
       const taxMetaByItem = new Map();
@@ -957,8 +1148,20 @@ class OrderService {
         subtotal += unitPrice * item.quantity;
         totalItems += item.quantity;
 
+        let primaryImageUrl = null;
+        if (product.productImages && product.productImages.length > 0) {
+          primaryImageUrl = product.productImages[0].imageUrl || null;
+        }
+
         orderItems.push({
           productId: product._id,
+          productName: product.name || 'Unknown Product',
+          productSlug: product.slug || null,
+          productImage: primaryImageUrl,
+          productDescription:
+            product.shortDescription ||
+            product.description?.substring(0, 250) ||
+            null,
           sku:
             product.sku ||
             product.productId ||
@@ -995,7 +1198,7 @@ class OrderService {
       }
 
       const couponPayload = { couponId: null, couponCode: null, discount: 0 };
-      if (payload.couponCode) {
+      if (payload.couponCode && !isSalesmanActor) {
         const preview = await couponService.preview({
           userId: user._id,
           code: payload.couponCode,
@@ -1007,10 +1210,28 @@ class OrderService {
         couponPayload.discount = preview.discountAmount || 0;
       }
 
-      const manualDiscount = Math.max(0, Number(payload.manualDiscount || 0));
-      const remainingAfterCoupon = Math.max(0, subtotal - couponPayload.discount);
-      const safeManualDiscount = Math.min(manualDiscount, remainingAfterCoupon);
-      const totalDiscount = couponPayload.discount + safeManualDiscount;
+      let discountPercent = 0;
+      let totalDiscount = 0;
+      if (isSalesmanActor) {
+        discountPercent = requestedDiscountPercent;
+        totalDiscount = roundCurrency((subtotal * discountPercent) / 100);
+      } else {
+        const manualDiscount = Math.max(0, Number(payload.manualDiscount || 0));
+        const remainingAfterCoupon = Math.max(
+          0,
+          subtotal - couponPayload.discount,
+        );
+        const maxManualByPolicy =
+          maxSalesmanDiscountPercent > 0
+            ? (subtotal * maxSalesmanDiscountPercent) / 100
+            : Number.POSITIVE_INFINITY;
+        const safeManualDiscount = Math.min(
+          manualDiscount,
+          remainingAfterCoupon,
+          maxManualByPolicy,
+        );
+        totalDiscount = couponPayload.discount + safeManualDiscount;
+      }
       const discountRatio = subtotal > 0 ? totalDiscount / subtotal : 0;
       const taxOverrideRate =
         payload.taxPercent != null ? Number(payload.taxPercent) / 100 : null;
@@ -1066,9 +1287,24 @@ class OrderService {
         taxBreakdown = { cgst: cgstRounded, sgst: sgstRounded, igst: 0 };
       }
 
-      allocateRoundedComponent(orderItems, taxBreakdown.cgst, rawCgst, 'cgstComponent');
-      allocateRoundedComponent(orderItems, taxBreakdown.sgst, rawSgst, 'sgstComponent');
-      allocateRoundedComponent(orderItems, taxBreakdown.igst, rawIgst, 'igstComponent');
+      allocateRoundedComponent(
+        orderItems,
+        taxBreakdown.cgst,
+        rawCgst,
+        'cgstComponent',
+      );
+      allocateRoundedComponent(
+        orderItems,
+        taxBreakdown.sgst,
+        rawSgst,
+        'sgstComponent',
+      );
+      allocateRoundedComponent(
+        orderItems,
+        taxBreakdown.igst,
+        rawIgst,
+        'igstComponent',
+      );
 
       orderItems.forEach((item) => {
         const cgst = item.cgstComponent || 0;
@@ -1092,6 +1328,16 @@ class OrderService {
               paymentMethod: payload.paymentMethod,
             });
       const grandTotal = subtotal - totalDiscount + taxAmount + shippingFee;
+      const totalAfterDiscount = roundCurrency(grandTotal);
+      const commissionPercent = isSalesmanActor ? salesmanCommissionPercent : 0;
+      const commissionAmount = isSalesmanActor
+        ? roundCurrency((totalAfterDiscount * commissionPercent) / 100)
+        : 0;
+
+      const initialPaymentStatus =
+        payload.paymentMethod === 'razorpay' && payload.paymentCompleted
+          ? PAYMENT_STATUS.PAID
+          : PAYMENT_STATUS.PENDING;
 
       const [order] = await orderRepo.createOrder(
         {
@@ -1102,13 +1348,18 @@ class OrderService {
           totalItems,
           subtotal,
           discountAmount: totalDiscount,
+          discountPercent: isSalesmanActor ? discountPercent : 0,
+          salesmanId: assignedSalesmanId || null,
+          commissionPercent,
+          commissionAmount,
+          orderSource: 'dashboard',
           couponId: couponPayload.couponId,
           couponCode: couponPayload.couponCode,
           taxAmount,
           taxBreakdown,
           shippingFee,
           grandTotal,
-          paymentStatus: PAYMENT_STATUS.PENDING,
+          paymentStatus: initialPaymentStatus,
           orderStatus: ORDER_STATUS.CREATED,
           paymentMethod: payload.paymentMethod,
           placedAt: new Date(),
@@ -1130,19 +1381,25 @@ class OrderService {
         );
       }
 
-      await session.commitTransaction();
-      await orderJobs.scheduleAutoCancel(order._id);
+      if (!session._isStandalone && session.inTransaction()) {
+        await session.commitTransaction();
+      }
+      if (initialPaymentStatus === PAYMENT_STATUS.PENDING) {
+        await orderJobs.scheduleAutoCancel(order._id);
+      }
 
       log.info('order_manual_created', {
         type: 'order_event',
         entityId: order._id.toString(),
         orderId: order._id.toString(),
-        paymentStatus: PAYMENT_STATUS.PENDING,
+        paymentStatus: initialPaymentStatus,
       });
 
       return order;
     } catch (e) {
-      await session.abortTransaction();
+      if (!session._isStandalone && session.inTransaction()) {
+        await session.abortTransaction();
+      }
       throw e;
     } finally {
       session.endSession();
@@ -1204,18 +1461,22 @@ class OrderService {
     try {
       const user = await require('../users/user.repo').findById(order.userId);
       if (!user || !user.email) {
-        logger.warn('Cannot send shipping notification - user or email missing', {
-          orderId: order._id,
-          userId: order.userId,
-        });
+        logger.warn(
+          'Cannot send shipping notification - user or email missing',
+          {
+            orderId: order._id,
+            userId: order.userId,
+          },
+        );
         return;
       }
 
       const trackingNumber = order.shipment?.trackingNumber || 'N/A';
       const carrier = order.shipment?.carrier || 'Courier Service';
-      const trackingUrl = trackingNumber !== 'N/A'
-        ? `https://www.google.com/search?q=${encodeURIComponent(carrier + ' ' + trackingNumber)}`
-        : '';
+      const trackingUrl =
+        trackingNumber !== 'N/A'
+          ? `https://www.google.com/search?q=${encodeURIComponent(carrier + ' ' + trackingNumber)}`
+          : '';
 
       await emailNotification.send({
         templateName: 'order_shipped',
@@ -1227,7 +1488,9 @@ class OrderService {
           trackingNumber: trackingNumber,
           trackingUrl: trackingUrl,
           estimatedDelivery: order.shipment?.estimatedDeliveryDate
-            ? new Date(order.shipment.estimatedDeliveryDate).toLocaleDateString('en-IN')
+            ? new Date(order.shipment.estimatedDeliveryDate).toLocaleDateString(
+                'en-IN',
+              )
             : '3-7 business days',
         },
       });
@@ -1256,10 +1519,13 @@ class OrderService {
     try {
       const user = await require('../users/user.repo').findById(order.userId);
       if (!user || !user.email) {
-        logger.warn('Cannot send delivery confirmation - user or email missing', {
-          orderId: order._id,
-          userId: order.userId,
-        });
+        logger.warn(
+          'Cannot send delivery confirmation - user or email missing',
+          {
+            orderId: order._id,
+            userId: order.userId,
+          },
+        );
         return;
       }
 
@@ -1310,9 +1576,10 @@ class OrderService {
           customerName: user.name || 'Customer',
           orderNumber: order.orderNumber,
           cancellationDate: new Date().toLocaleDateString('en-IN'),
-          refundInfo: order.paymentStatus === 'pending' 
-            ? 'No payment was processed.'
-            : 'Refund will be processed within 5-7 business days.',
+          refundInfo:
+            order.paymentStatus === 'pending'
+              ? 'No payment was processed.'
+              : 'Refund will be processed within 5-7 business days.',
         },
       });
 

@@ -41,6 +41,8 @@ const EcommerceSettings = () => {
     shipping_free_threshold: 0,
     shipping_flat_rate: 0,
     shipping_handling_days: '2-4',
+    maxSalesmanDiscountPercent: 0,
+    salesmanCommissionPercent: 0,
     site_logo_dark: '',
     site_logo_light: '',
     site_favicon: '',
@@ -90,6 +92,8 @@ const EcommerceSettings = () => {
           shipping_free_threshold: toNumber(data.shipping_free_threshold, prev.shipping_free_threshold),
           shipping_flat_rate: toNumber(data.shipping_flat_rate, prev.shipping_flat_rate),
           shipping_handling_days: data.shipping_handling_days || prev.shipping_handling_days,
+          maxSalesmanDiscountPercent: toNumber(data.maxSalesmanDiscountPercent, 0),
+          salesmanCommissionPercent: toNumber(data.salesmanCommissionPercent, 0),
           site_logo_dark: data.site_logo_dark || '',
           site_logo_light: data.site_logo_light || '',
           site_favicon: data.site_favicon || '',
@@ -131,6 +135,8 @@ const EcommerceSettings = () => {
           shipping_free_threshold: Number(formData.shipping_free_threshold || 0),
           shipping_flat_rate: Number(formData.shipping_flat_rate || 0),
           shipping_handling_days: formData.shipping_handling_days,
+          maxSalesmanDiscountPercent: Number(formData.maxSalesmanDiscountPercent || 0),
+          salesmanCommissionPercent: Number(formData.salesmanCommissionPercent || 0),
           site_logo_dark: formData.site_logo_dark || null,
           site_logo_light: formData.site_logo_light || null,
           site_favicon: formData.site_favicon || null,
@@ -461,6 +467,44 @@ const EcommerceSettings = () => {
                         value={formData.shipping_handling_days}
                         onChange={(e) => setFormData(prev => ({ ...prev, shipping_handling_days: e.target.value }))}
                       />
+                    </div>
+                  </Col>
+                </Row>
+              </Tab>
+              <Tab eventKey="salesperson" title="Salesperson">
+                <Row className="mt-3">
+                  <Col lg={6}>
+                    <div className="mb-3">
+                      <label htmlFor="maxSalesmanDiscountPercent" className="form-label">
+                        Max Discount in Manual Order (%)
+                      </label>
+                      <input
+                        id="maxSalesmanDiscountPercent"
+                        className="form-control"
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={formData.maxSalesmanDiscountPercent}
+                        onChange={(e) => setFormData(prev => ({ ...prev, maxSalesmanDiscountPercent: e.target.value }))}
+                      />
+                      <small className="text-muted">Leave empty to use 0.</small>
+                    </div>
+                  </Col>
+                  <Col lg={6}>
+                    <div className="mb-3">
+                      <label htmlFor="salesmanCommissionPercent" className="form-label">
+                        Salesperson Commission (%)
+                      </label>
+                      <input
+                        id="salesmanCommissionPercent"
+                        className="form-control"
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={formData.salesmanCommissionPercent}
+                        onChange={(e) => setFormData(prev => ({ ...prev, salesmanCommissionPercent: e.target.value }))}
+                      />
+                      <small className="text-muted">Leave empty to use 0.</small>
                     </div>
                   </Col>
                 </Row>

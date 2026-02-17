@@ -26,9 +26,12 @@ const addressSchema = Joi.object({
 
 const adminCreateOrderSchema = Joi.object({
   userId: Joi.string().required(),
-  paymentMethod: Joi.string().required(),
+  salesmanId: Joi.string().trim().allow('', null).optional(),
+  paymentMethod: Joi.string().valid('cod', 'razorpay').required(),
+  paymentCompleted: Joi.boolean().default(false),
   couponCode: Joi.string().uppercase().optional(),
   manualDiscount: Joi.number().min(0).default(0),
+  discountPercent: Joi.number().min(0).max(100).default(0),
   shippingFee: Joi.number().min(0).optional(),
   taxPercent: Joi.number().min(0).optional(),
   shippingAddressId: Joi.string().optional(),

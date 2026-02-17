@@ -7,6 +7,7 @@ const { adminLimiter } = require('../../middlewares/rateLimiter.middleware');
 const ROLES = require('../../constants/roles');
 const {
   summaryQuerySchema,
+  salesmanPerformanceQuerySchema,
   listSalesReportsQuerySchema,
   createSalesReportSchema,
   updateSalesReportSchema,
@@ -30,6 +31,14 @@ router.get(
   auth([ROLES.ADMIN]),
   validate(summaryQuerySchema, 'query'),
   controller.summary,
+);
+
+router.get(
+  '/salesman-performance',
+  adminLimiter,
+  auth([ROLES.ADMIN]),
+  validate(salesmanPerformanceQuerySchema, 'query'),
+  controller.salesmanPerformance,
 );
 
 /**

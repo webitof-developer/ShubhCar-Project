@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { createSafeSession } = require('../../utils/mongoTransaction');
 const returnRepo = require('./return.repo');
 const orderRepo = require('../orders/order.repo');
 const orderItemsRepo = require('../orderItems/orderItems.repo');
@@ -50,11 +51,11 @@ class ReturnService {
     return updated;
   }
 
-
-
   async complete({ admin, id, payload, context = {} }) {
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    const session = await createSafeSession();
+    if (!session._isStandalone) {
+      session.startTransaction();
+    }
 
     try {
       const existing = await returnRepo.findById(id, session);
@@ -70,12 +71,10 @@ class ReturnService {
       for (const ret of existing.items) {
         const oi = itemMap.get(String(ret.orderItemId));
         if (!oi) error('Return item invalid', 400);
-        await inventoryService.release(
-          oi.productId,
-          ret.quantity,
-          session,
-          { ...context, orderId: existing.orderId },
-        );
+        await inventoryService.release(oi.productId, ret.quantity, session, {
+          ...context,
+          orderId: existing.orderId,
+        });
         await OrderItem.findByIdAndUpdate(
           oi._id,
           { status: 'returned' },
@@ -92,10 +91,14 @@ class ReturnService {
         { session },
       );
 
-      await session.commitTransaction();
+      if (!session._isStandalone && session.inTransaction()) {
+        await session.commitTransaction();
+      }
       return updated;
     } catch (e) {
-      await session.abortTransaction();
+      if (!session._isStandalone && session.inTransaction()) {
+        await session.abortTransaction();
+      }
       throw e;
     } finally {
       session.endSession();

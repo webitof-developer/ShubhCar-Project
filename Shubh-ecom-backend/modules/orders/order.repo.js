@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { createSafeSession } = require('../../utils/mongoTransaction');
 const Order = require('../../models/Order.model');
 const OrderItem = require('../../models/OrderItem.model');
 const orderVersionRepo = require('./orderVersion.repo');
@@ -34,8 +35,7 @@ class OrderRepository {
   }
 
   findItemsByOrderWithDetails(orderId, session) {
-    const query = OrderItem.find({ orderId })
-      .populate('productId', 'name');
+    const query = OrderItem.find({ orderId }).populate('productId', 'name');
     if (session) query.session(session);
     return query.lean();
   }
@@ -56,31 +56,28 @@ class OrderRepository {
     if (user.role === 'admin') {
       return this.findByIdLean(id, session);
     }
+    if (user.role === 'salesman') {
+      const query = Order.findOne({ _id: id, salesmanId: user.id });
+      if (session) query.session(session);
+      return query.lean();
+    }
     const query = Order.findOne({ _id: id, userId: user.id });
     if (session) query.session(session);
     return query.lean();
   }
 
   updateById(id, update, session) {
-    return Order.findByIdAndUpdate(
-      id,
-      update,
-      {
-        new: true,
-        session,
-      },
-    );
+    return Order.findByIdAndUpdate(id, update, {
+      new: true,
+      session,
+    });
   }
 
   updateStatus(id, update, session) {
-    return Order.findByIdAndUpdate(
-      id,
-      update,
-      {
-        new: true,
-        session,
-      },
-    );
+    return Order.findByIdAndUpdate(id, update, {
+      new: true,
+      session,
+    });
   }
 
   updateItemsStatusByOrder(orderId, status, session) {
@@ -98,8 +95,10 @@ class OrderRepository {
   }
 
   async updateWithVersion({ orderId, mutate, reason, actor }) {
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    const session = await createSafeSession();
+    if (!session._isStandalone) {
+      session.startTransaction();
+    }
 
     try {
       const order = await Order.findById(orderId).session(session);
@@ -131,10 +130,14 @@ class OrderRepository {
         session,
       );
 
-      await session.commitTransaction();
+      if (!session._isStandalone && session.inTransaction()) {
+        await session.commitTransaction();
+      }
       return order;
     } catch (e) {
-      await session.abortTransaction();
+      if (!session._isStandalone && session.inTransaction()) {
+        await session.abortTransaction();
+      }
       throw e;
     } finally {
       session.endSession();
@@ -149,13 +152,15 @@ class OrderRepository {
 
     const txSession =
       supportsTransactions && ownsSession
-        ? await mongoose.startSession()
+        ? await createSafeSession()
         : supportsTransactions
           ? session
           : null;
 
     const shouldManageTx =
-      supportsTransactions && txSession && (ownsSession || !txSession.inTransaction());
+      supportsTransactions &&
+      txSession &&
+      (ownsSession || !txSession.inTransaction());
 
     if (shouldManageTx) txSession.startTransaction();
 
@@ -185,7 +190,11 @@ class OrderRepository {
       if (beforeStatus !== order.orderStatus) {
         const mappedStatus = ORDER_STATUS_TO_ITEM_STATUS[order.orderStatus];
         if (mappedStatus) {
-          await this.updateItemsStatusByOrder(orderId, mappedStatus, txSession || undefined);
+          await this.updateItemsStatusByOrder(
+            orderId,
+            mappedStatus,
+            txSession || undefined,
+          );
         }
       }
 

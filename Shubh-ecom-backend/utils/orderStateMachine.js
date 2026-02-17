@@ -1,6 +1,5 @@
 const { ORDER_STATUS } = require('../constants/orderStatus');
 const { error } = require('./apiResponse');
- 
 
 const TRANSITIONS = {
   [ORDER_STATUS.CREATED]: [
@@ -53,6 +52,10 @@ const TRANSITIONS = {
 };
 
 module.exports = {
+  getNextStatuses(current) {
+    return [...(TRANSITIONS[current] || [])];
+  },
+
   canTransition(current, next) {
     if (current === next) return true;
     return (TRANSITIONS[current] || []).includes(next);
@@ -60,8 +63,11 @@ module.exports = {
 
   assertTransition(current, next) {
     if (!this.canTransition(current, next)) {
+      const allowed = this.getNextStatuses(current);
       error(
-        `Invalid status transition from ${current} → ${next}`,
+        `Invalid status transition from ${current} to ${next}. Allowed: ${
+          allowed.length ? allowed.join(', ') : 'none'
+        }`,
         400,
         'INVALID_ORDER_STATE',
       );

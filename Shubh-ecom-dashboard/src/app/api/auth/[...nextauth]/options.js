@@ -48,6 +48,7 @@ export const options = {
               email: data.data.user.email,
               name: `${data.data.user.firstName} ${data.data.user.lastName}`,
               role: data.data.user.role,
+              roleId: data.data.user.roleId || null,
               firstName: data.data.user.firstName,
               lastName: data.data.user.lastName,
               accessToken: data.data.accessToken,
@@ -78,6 +79,7 @@ export const options = {
         token.refreshToken = user.refreshToken
         token.userId = user.id
         token.role = user.role
+        token.roleId = user.roleId
         token.firstName = user.firstName
         token.lastName = user.lastName
       }
@@ -91,6 +93,7 @@ export const options = {
           email: token.email,
           name: token.name,
           role: token.role,
+          roleId: token.roleId || null,
           firstName: token.firstName,
           lastName: token.lastName,
         }

@@ -13,6 +13,21 @@ import CRUDModal from '@/components/shared/CRUDModal'
 import DeleteConfirmModal from '@/components/shared/DeleteConfirmModal'
 import useAPI from '@/hooks/useAPI'
 
+const ADMIN_FULL_ACCESS_VALUE = '__admin_full_access__'
+
+const normalizeRoleId = (roleId) => {
+  if (!roleId) return ''
+  if (typeof roleId === 'string') return roleId
+  if (typeof roleId === 'object') {
+    if (roleId._id) return normalizeRoleId(roleId._id)
+    if (typeof roleId.toString === 'function') {
+      const asText = roleId.toString()
+      if (asText && asText !== '[object Object]') return asText
+    }
+  }
+  return ''
+}
+
 const UsersPage = () => {
   const { data: session, status } = useSession()
   const { hasPermission } = usePermissions()
@@ -37,6 +52,7 @@ const UsersPage = () => {
   const canCreateUsers = hasPermission('users.create')
   const canUpdateUsers = hasPermission('users.update')
   const canDeleteUsers = hasPermission('users.delete')
+  const canManageRole = session?.user?.role === 'admin'
 
   // --- API Hooks ---
 
@@ -60,8 +76,14 @@ const UsersPage = () => {
          // Edit mode: if password empty, remove it to prevent overwrite
          delete payload.password
       }
+      if (payload.roleId === ADMIN_FULL_ACCESS_VALUE || !payload.roleId) {
+        delete payload.roleId
+      }
+      if (!canManageRole) {
+        delete payload.roleId
+      }
       return fetch(url, {
-        method: id ? 'PUT' : 'POST',
+        method: id ? 'PATCH' : 'POST',
         headers: {
           Authorization: `Bearer ${session?.accessToken}`,
           'Content-Type': 'application/json'
@@ -121,11 +143,11 @@ const UsersPage = () => {
 
   useEffect(() => {
     fetchUsers(currentPage)
-  }, [currentPage, status])
+  }, [currentPage, status, session?.accessToken])
 
   useEffect(() => {
     fetchRoles()
-  }, [status])
+  }, [status, session?.accessToken])
 
   // --- External Actions (Query Params) ---
   useEffect(() => {
@@ -144,7 +166,15 @@ const UsersPage = () => {
   // --- Handlers ---
 
   const handleOpenModal = (user = null) => {
-    setEditingItem(user)
+    if (!user) {
+      setEditingItem(null)
+      setShowModal(true)
+      return
+    }
+    setEditingItem({
+      ...user,
+      roleId: normalizeRoleId(user.roleId) || ADMIN_FULL_ACCESS_VALUE,
+    })
     setShowModal(true)
   }
 
@@ -189,9 +219,11 @@ const UsersPage = () => {
     { 
         name: 'roleId', label: 'User Role', type: 'select', 
         options: [
-            { value: '', label: 'Admin (Full Access)' },
+            { value: ADMIN_FULL_ACCESS_VALUE, label: 'Admin (Full Access)' },
             ...roles.map(r => ({ value: r._id, label: r.name }))
-        ]
+        ],
+        disabled: !canManageRole,
+        helpText: !canManageRole ? 'Only admin can change role' : undefined,
     },
     { 
         name: 'status', label: 'Status', type: 'select', 
@@ -247,7 +279,10 @@ const UsersPage = () => {
                     )},
                     { key: 'email', label: 'Email', render: (user) => user.email || '-' },
                     { key: 'phone', label: 'Phone', render: (user) => user.phone || '-' },
-                    { key: 'role', label: 'Role', render: (user) => roles.find((role) => role._id === user.roleId)?.name || 'Admin' },
+                    { key: 'role', label: 'Role', render: (user) => {
+                      const resolvedRoleId = normalizeRoleId(user.roleId)
+                      return roles.find((role) => String(role._id) === resolvedRoleId)?.name || 'Admin (Full Access)'
+                    } },
                     { key: 'status', label: 'Status', render: (user) => (
                       <Badge bg={user.status === 'active' ? 'success' : user.status === 'inactive' ? 'warning' : 'danger'} className="badge-subtle">
                         {user.status}
@@ -297,7 +332,7 @@ const UsersPage = () => {
         fields={formFields}
         initialData={editingItem || { 
             firstName: '', lastName: '', email: '', phone: '', 
-            password: '', roleId: '', status: 'active' 
+            password: '', roleId: ADMIN_FULL_ACCESS_VALUE, status: 'active' 
         }}
         onSubmit={handleSubmit}
         submitting={saving}

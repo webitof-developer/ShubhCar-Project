@@ -5,6 +5,7 @@ const { hashPassword, comparePassword } = require('../../utils/password');
 const { decideVerificationFlow } = require('../../utils/verificationFlow');
 const eventBus = require('../../utils/eventBus');
 const Role = require('../../models/Role.model');
+const ROLES = require('../../constants/roles');
 const ExcelJS = require('exceljs');
 const { Readable } = require('stream');
 const crypto = require('crypto');
@@ -13,6 +14,14 @@ const crypto = require('crypto');
    USERS SERVICE
 ======================= */
 class UsersService {
+  _actorObjectId(actor) {
+    const actorId = actor?.id || actor?._id;
+    if (!actorId || !mongoose.Types.ObjectId.isValid(actorId)) {
+      return null;
+    }
+    return new mongoose.Types.ObjectId(String(actorId));
+  }
+
   /**
    * Register a new user
    * Public
@@ -100,7 +109,10 @@ class UsersService {
   }
 
   async adminList(actor, query = {}) {
-    if (actor.role !== 'admin') error('Forbidden', 403);
+    const actorRole = String(actor?.role || '').toLowerCase();
+    const isAdminActor = actorRole === 'admin';
+    const isSalesmanActor = actorRole === 'salesman';
+    if (!isAdminActor && !isSalesmanActor) error('Forbidden', 403);
 
     const {
       role,
@@ -112,22 +124,96 @@ class UsersService {
       page = 1,
     } = query;
 
-    const filter = {};
-    if (role) filter.role = role;
-    if (status) filter.status = status;
-    if (customerType) filter.customerType = customerType;
-    if (verificationStatus) filter.verificationStatus = verificationStatus;
+    const clauses = [];
+    const normalizedRole = String(role || '').trim().toLowerCase();
+    const actorObjectId = this._actorObjectId(actor);
+
+    if (isSalesmanActor) {
+      if (!normalizedRole || normalizedRole === ROLES.CUSTOMER) {
+        clauses.push({ role: ROLES.CUSTOMER });
+      } else {
+        error('Access denied', 403);
+      }
+      if (!actorObjectId) error('Access denied', 403);
+      clauses.push({ createdBy: actorObjectId });
+    }
+
+    if (role && !isSalesmanActor) {
+      if (normalizedRole === 'salesman') {
+        const salesmanRoles = await Role.find({
+          $or: [{ slug: 'salesman' }, { name: /salesman/i }],
+        })
+          .select('_id')
+          .lean();
+        const salesmanRoleIds = salesmanRoles.map((r) => r._id);
+        clauses.push({
+          $or: [
+            { role: 'salesman' },
+            { role: 'admin', roleId: { $in: salesmanRoleIds } },
+          ],
+        });
+      } else {
+        clauses.push({ role: normalizedRole });
+      }
+    }
+
+    if (status) clauses.push({ status });
+    if (customerType) clauses.push({ customerType });
+    if (verificationStatus) clauses.push({ verificationStatus });
     if (search) {
       const term = String(search).trim();
       if (term) {
-        filter.$or = [
-          { firstName: { $regex: term, $options: 'i' } },
-          { lastName: { $regex: term, $options: 'i' } },
-          { email: { $regex: term, $options: 'i' } },
-          { phone: { $regex: term, $options: 'i' } },
-        ];
+        const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        clauses.push({
+          $or: [
+            { firstName: { $regex: escapedTerm, $options: 'i' } },
+            { lastName: { $regex: escapedTerm, $options: 'i' } },
+            { email: { $regex: escapedTerm, $options: 'i' } },
+            { phone: { $regex: escapedTerm, $options: 'i' } },
+            {
+              $expr: {
+                $regexMatch: {
+                  input: {
+                    $trim: {
+                      input: {
+                        $concat: [
+                          { $ifNull: ['$firstName', ''] },
+                          ' ',
+                          { $ifNull: ['$lastName', ''] },
+                        ],
+                      },
+                    },
+                  },
+                  regex: escapedTerm,
+                  options: 'i',
+                },
+              },
+            },
+            {
+              $expr: {
+                $regexMatch: {
+                  input: {
+                    $trim: {
+                      input: {
+                        $concat: [
+                          { $ifNull: ['$lastName', ''] },
+                          ' ',
+                          { $ifNull: ['$firstName', ''] },
+                        ],
+                      },
+                    },
+                  },
+                  regex: escapedTerm,
+                  options: 'i',
+                },
+              },
+            },
+          ],
+        });
       }
     }
+
+    const filter = clauses.length ? { $and: clauses } : {};
 
     const users = await userRepo.list(filter, {
       limit: Number(limit),
@@ -155,11 +241,50 @@ class UsersService {
     if (search) {
       const term = String(search).trim();
       if (term) {
+        const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         filter.$or = [
-          { firstName: { $regex: term, $options: 'i' } },
-          { lastName: { $regex: term, $options: 'i' } },
-          { email: { $regex: term, $options: 'i' } },
-          { phone: { $regex: term, $options: 'i' } },
+          { firstName: { $regex: escapedTerm, $options: 'i' } },
+          { lastName: { $regex: escapedTerm, $options: 'i' } },
+          { email: { $regex: escapedTerm, $options: 'i' } },
+          { phone: { $regex: escapedTerm, $options: 'i' } },
+          {
+            $expr: {
+              $regexMatch: {
+                input: {
+                  $trim: {
+                    input: {
+                      $concat: [
+                        { $ifNull: ['$firstName', ''] },
+                        ' ',
+                        { $ifNull: ['$lastName', ''] },
+                      ],
+                    },
+                  },
+                },
+                regex: escapedTerm,
+                options: 'i',
+              },
+            },
+          },
+          {
+            $expr: {
+              $regexMatch: {
+                input: {
+                  $trim: {
+                    input: {
+                      $concat: [
+                        { $ifNull: ['$lastName', ''] },
+                        ' ',
+                        { $ifNull: ['$firstName', ''] },
+                      ],
+                    },
+                  },
+                },
+                regex: escapedTerm,
+                options: 'i',
+              },
+            },
+          },
         ];
       }
     }
@@ -374,7 +499,10 @@ class UsersService {
   }
 
   async adminCreate(actor, payload) {
-    if (actor.role !== 'admin') error('Forbidden', 403);
+    const actorRole = String(actor?.role || '').toLowerCase();
+    const isAdminActor = actorRole === 'admin';
+    const isSalesmanActor = actorRole === 'salesman';
+    if (!isAdminActor && !isSalesmanActor) error('Forbidden', 403);
 
     const { email, phone, password, roleId } = payload;
     if (!email && !phone) error('Email or phone is required', 400);
@@ -392,19 +520,40 @@ class UsersService {
     if (!password) error('Password is required', 400);
     const passwordHash = await hashPassword(password);
 
-    if (roleId) {
-      const role = await Role.findById(roleId).lean();
-      if (!role) error('Role not found', 404);
+    let createPayload = null;
+
+    if (isSalesmanActor) {
+      // Salesman can create customer users only.
+      createPayload = {
+        firstName: payload.firstName,
+        lastName: payload.lastName || '',
+        email: payload.email || undefined,
+        phone: payload.phone || undefined,
+        role: ROLES.CUSTOMER,
+        createdBy: this._actorObjectId(actor) || undefined,
+        customerType: payload.customerType || 'retail',
+        status: payload.status || 'active',
+        passwordHash,
+        verificationStatus: 'not_required',
+        verificationType: 'email',
+      };
+    } else {
+      if (roleId) {
+        const role = await Role.findById(roleId).lean();
+        if (!role) error('Role not found', 404);
+      }
+
+      createPayload = {
+        ...payload,
+        role: 'admin',
+        roleId: roleId || undefined,
+        passwordHash,
+        verificationStatus: 'not_required',
+        verificationType: 'email',
+      };
     }
 
-    const user = await userRepo.create({
-      ...payload,
-      role: 'admin',
-      roleId: roleId || undefined,
-      passwordHash,
-      verificationStatus: 'not_required',
-      verificationType: 'email',
-    });
+    const user = await userRepo.create(createPayload);
 
     return this._sanitize(user);
   }
