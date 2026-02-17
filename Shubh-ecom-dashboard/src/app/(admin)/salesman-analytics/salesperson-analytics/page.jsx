@@ -1,8 +1,8 @@
 'use client'
 
 import PageTItle from '@/components/PageTItle'
-import SalespersonDashboard from './components/SalespersonDashboard'
-import SalespersonFilter from './components/SalespersonFilter'
+import SalespersonDashboard from '../components/SalespersonDashboard'
+import SalespersonFilter from '../components/SalespersonFilter'
 import { useState } from 'react'
 import { Col, Row } from 'react-bootstrap'
 
