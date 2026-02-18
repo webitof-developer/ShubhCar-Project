@@ -22,9 +22,10 @@ import {
 import DeleteConfirmModal from '@/components/shared/DeleteConfirmModal'
 
 
-const ProductCard = ({ product, onDelete, onToggleFeatured, isSelected, onSelect, onDeleteClick, onTrashClick }) => {
+const ProductCard = ({ product, onDelete, onToggleFeatured, isSelected, onSelect, onDeleteClick, onTrashClick, onDuplicate }) => {
   const router = useRouter()
   const [deleting, setDeleting] = useState(false)
+  const [duplicating, setDuplicating] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
   const numericId = String(product.productId || product._id || '')
     .replace(/\D/g, '')
@@ -59,6 +60,19 @@ const ProductCard = ({ product, onDelete, onToggleFeatured, isSelected, onSelect
       console.error(error)
     } finally {
       setDeleting(false)
+    }
+  }
+
+  const handleDuplicate = async (e) => {
+    e.stopPropagation()
+    e.preventDefault()
+    setDuplicating(true)
+    try {
+      await onDuplicate(product._id)
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setDuplicating(false)
     }
   }
 
@@ -335,6 +349,20 @@ const ProductCard = ({ product, onDelete, onToggleFeatured, isSelected, onSelect
               >
                 <IconifyIcon icon="solar:pen-2-broken" className="align-middle fs-18" />
               </Link>
+              {productType === 'OEM' && (
+                <button
+                  onClick={handleDuplicate}
+                  className="btn btn-soft-info btn-sm"
+                  disabled={duplicating}
+                  title="Create Aftermarket Copy"
+                >
+                  {duplicating ? (
+                    <Spinner size="sm" />
+                  ) : (
+                    <IconifyIcon icon="solar:copy-bold" className="align-middle fs-18" />
+                  )}
+                </button>
+              )}
               <button
                 onClick={handleSoftDelete}
                 className="btn btn-soft-danger btn-sm"
@@ -690,6 +718,22 @@ const ProductList = () => {
     setShowBulkModal(true)
   }
 
+  const handleDuplicateAsAftermarket = async (productId) => {
+    const token = session?.accessToken
+    if (!token) return toast.error('Unauthorized')
+
+    try {
+      const result = await productService.duplicateAsAftermarket(productId, token)
+      toast.success('Aftermarket copy created successfully!')
+      fetchProducts()
+      // Optionally redirect to edit page
+      // router.push(`/products/product-edit?id=${result.data._id}`)
+    } catch (err) {
+      toast.error(err.message || 'Failed to duplicate product')
+    }
+  }
+
+
   const isAllSelected = products.length > 0 && selectedIds.length === products.length
   const isSomeSelected = selectedIds.length > 0 && selectedIds.length < products.length
 
@@ -928,6 +972,7 @@ const ProductList = () => {
                     onSelect={handleSelectOne}
                     onDeleteClick={handleDeleteClick}
                     onTrashClick={handleTrashClick}
+                    onDuplicate={handleDuplicateAsAftermarket}
                   />
                 ))
               )}

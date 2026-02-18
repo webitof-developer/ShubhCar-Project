@@ -49,7 +49,9 @@ const productSchema = new mongoose.Schema(
     vehicleBrand: { type: String },
     oemNumber: { type: String },
     manufacturerBrand: { type: String },
+    hlaapNo: { type: String }, // HLAAP Number for Aftermarket products
     tags: [{ type: String }], // Array of Tag names or IDs depending on use. Storing names/slugs is simpler for search.
+
 
 
     /* =====================

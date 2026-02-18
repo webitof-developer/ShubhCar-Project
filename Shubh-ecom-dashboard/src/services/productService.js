@@ -167,6 +167,16 @@ class ProductService {
     if (!response.ok) throw new Error((await response.json()).message);
     return response.json();
   }
+
+  async duplicateAsAftermarket(productId, token) {
+    const response = await fetch(`${API_PREFIX}/products/admin/${productId}/duplicate-aftermarket`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) throw new Error((await response.json()).message);
+    return response.json();
+  }
 }
+
 
 export default new ProductService();

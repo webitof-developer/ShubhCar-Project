@@ -46,6 +46,7 @@ const AddProduct = () => {
     oemNumber: '',
     taxClassKey: '',
     taxRate: '',
+    hlaapNo: '',
     stockQty: '',
     weight: '',
     length: '',
@@ -157,6 +158,7 @@ const AddProduct = () => {
         oemNumber: product.oemNumber || product.oemPartNumber || '',
         taxClassKey: product.taxClassKey || '',
         taxRate: product.taxRate !== undefined && product.taxRate !== null ? String(product.taxRate) : '',
+        hlaapNo: product.hlaapNo || '',
         stockQty: product.stockQty !== undefined && product.stockQty !== null ? String(product.stockQty) : '',
         weight: product.weight !== undefined && product.weight !== null ? String(product.weight) : '',
         length: product.length !== undefined && product.length !== null ? String(product.length) : '',
@@ -571,8 +573,10 @@ const AddProduct = () => {
         height: parseNumber(formData.height),
         taxClassKey: formData.taxClassKey || undefined,
         taxRate: parseNumber(formData.taxRate),
+        hlaapNo: formData.productType === 'AFTERMARKET' ? formData.hlaapNo : undefined,
         status: formData.status
       }
+
 
       if (!isEditMode) {
         productData.slug = generateSlug(formData.name)
@@ -674,6 +678,7 @@ const AddProduct = () => {
           oemNumber: '',
           taxClassKey: '',
           taxRate: '',
+          hlaapNo: '',
           stockQty: '',
           weight: '',
           length: '',
@@ -1017,6 +1022,19 @@ const AddProduct = () => {
                       ))}
                     </select>
                   </Col>
+                  {formData.productType === 'AFTERMARKET' && (
+                    <Col lg={3} md={6}>
+                      <label className="form-label">HLAAP No.</label>
+                      <input
+                        type="text"
+                        name="hlaapNo"
+                        className="form-control product-field"
+                        placeholder="HLAAP Number"
+                        value={formData.hlaapNo}
+                        onChange={handleInputChange}
+                      />
+                    </Col>
+                  )}
                   <Col lg={3} md={6}>
                     <label className="form-label">Quantity (Stock)</label>
                     <input
@@ -1174,9 +1192,9 @@ const AddProduct = () => {
 
           <Col xl={4} lg={12}>
             <div className="product-image-panel bg-white mb-3 p-3">
-              <div className="d-flex align-items-center justify-content-between mb-3">
+              <div className="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-3">
                 <h5 className="mb-0">Featured Image</h5>
-                <div className="d-flex gap-2">
+                <div className="d-flex flex-wrap gap-2">
                   <label className="btn btn-sm btn-outline-primary mb-0">
                     <IconifyIcon icon="solar:upload-bold" className="me-1" />
                     Upload
@@ -1225,7 +1243,7 @@ const AddProduct = () => {
                 <span className="text-muted small">{existingImages.length + selectedImages.length}/5</span>
               </div>
 
-              <div className="d-flex flex-wrap gap-2">
+              <div className="d-flex flex-wrap gap-2" style={{ maxHeight: '200px', overflowY: 'auto' }}>
                 {existingImages.length === 0 && selectedImages.length === 0 && (
                   <div className="text-muted small">No gallery images yet</div>
                 )}

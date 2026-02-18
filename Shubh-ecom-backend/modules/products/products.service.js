@@ -334,7 +334,7 @@ class ProductService {
       if (safePayload[field]) safePayload[field] = sanitize(safePayload[field]);
     });
 
-    const typeFieldsTouched = ['productType', 'vehicleBrand', 'oemNumber', 'manufacturerBrand']
+    const typeFieldsTouched = ['productType', 'vehicleBrand', 'oemNumber', 'manufacturerBrand', 'hlaapNo']
       .some((field) => Object.prototype.hasOwnProperty.call(safePayload, field));
 
     if (typeFieldsTouched) {
@@ -342,6 +342,7 @@ class ProductService {
       const nextVehicleBrand = safePayload.vehicleBrand ?? product.vehicleBrand ?? null;
       const nextOemNumber = safePayload.oemNumber ?? product.oemNumber ?? product.oemPartNumber ?? null;
       const nextManufacturerBrand = safePayload.manufacturerBrand ?? product.manufacturerBrand ?? product.brand ?? null;
+      const nextHlaapNo = safePayload.hlaapNo ?? product.hlaapNo ?? null;
 
       ensureProductTypeFields({
         productType: nextType,
@@ -355,8 +356,10 @@ class ProductService {
         safePayload.vehicleBrand = nextVehicleBrand;
         safePayload.oemNumber = nextOemNumber;
         safePayload.manufacturerBrand = null;
+        safePayload.hlaapNo = null; // Clear HLAAP No for OEM products
       } else if (nextType === 'AFTERMARKET') {
         safePayload.manufacturerBrand = nextManufacturerBrand;
+        safePayload.hlaapNo = nextHlaapNo; // Preserve HLAAP No for AFTERMARKET products
         safePayload.vehicleBrand = null;
         safePayload.oemNumber = null;
       }
@@ -948,6 +951,87 @@ class ProductService {
       oem: oemWithImages,
       aftermarket: aftermarketWithImages
     };
+  }
+
+  async duplicateAsAftermarket(productId, user) {
+    if (!user || user.role !== ROLES.ADMIN) error('Forbidden', 403);
+
+    const sourceProduct = await repo.findById(productId);
+    if (!sourceProduct) error('Product not found', 404);
+
+    // Validate that source is OEM
+    const productType = sourceProduct.productType || sourceProduct.type || 'AFTERMARKET';
+    if (productType !== 'OEM') {
+      error('Only OEM products can be duplicated as Aftermarket', 400);
+    }
+
+    // Create a new slug for the duplicate
+    const baseSlug = slugify(sourceProduct.name, { lower: true, strict: true, trim: true });
+    let newSlug = `${baseSlug}-aftermarket`;
+    let counter = 1;
+    
+    // Ensure slug uniqueness
+    while (await repo.findAnyBySlug(newSlug)) {
+      newSlug = `${baseSlug}-aftermarket-${counter}`;
+      counter++;
+    }
+
+    // Prepare duplicate data
+    const duplicateData = {
+      name: sourceProduct.name,
+      slug: newSlug,
+      shortDescription: sourceProduct.shortDescription,
+      longDescription: sourceProduct.longDescription,
+      categoryId: sourceProduct.categoryId,
+      sku: `${sourceProduct.sku || ''}-AM`, // Add suffix to SKU
+      productType: 'AFTERMARKET',
+      manufacturerBrand: null, // Will be required, left null for user to fill
+      vehicleBrand: null, // Not needed for aftermarket
+      oemNumber: null, // Not needed for aftermarket
+      retailPrice: sourceProduct.retailPrice,
+      wholesalePrice: sourceProduct.wholesalePrice,
+      minWholesaleQty: sourceProduct.minWholesaleQty,
+      stockQty: 0, // Start with 0 stock
+      weight: sourceProduct.weight,
+      dimensions: sourceProduct.dimensions,
+      tags: sourceProduct.tags,
+      warrantyInfo: sourceProduct.warrantyInfo,
+      returnPolicy: sourceProduct.returnPolicy,
+      status: 'draft', // Set to draft as requested
+      isFeatured: false,
+      isDeleted: false,
+      listingFeeStatus: 'waived'
+    };
+
+    // Sanitize HTML fields
+    ['shortDescription', 'longDescription', 'returnPolicy', 'warrantyInfo'].forEach((field) => {
+      if (duplicateData[field]) duplicateData[field] = sanitize(duplicateData[field]);
+    });
+
+    // Create the duplicate product
+    const newProduct = await repo.create(duplicateData);
+
+    // Copy images
+    const sourceImages = await ProductImage.find({ 
+      productId: sourceProduct._id, 
+      isDeleted: false 
+    }).lean();
+
+    if (sourceImages.length) {
+      const newImages = sourceImages.map((img, index) => ({
+        productId: newProduct._id,
+        url: img.url,
+        altText: img.altText || newProduct.name,
+        isPrimary: index === 0,
+        sortOrder: index
+      }));
+      await ProductImage.insertMany(newImages);
+    }
+
+    await cache.invalidateLists();
+    await deletePatterns(['catalog:products:*']);
+
+    return newProduct;
   }
 }
 

@@ -107,7 +107,7 @@ class ProductRepository {
   }
 
   updateById(id, data, options = {}) {
-    return Product.findByIdAndUpdate(id, data, { new: true })
+    return Product.findByIdAndUpdate(id, { $set: data }, { new: true })
       .setOptions(options)
       .lean();
   }

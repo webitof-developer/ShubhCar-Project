@@ -70,6 +70,7 @@ exports.createProductSchema = Joi.object({
   status: Joi.string().valid('draft', 'active', 'inactive', 'blocked').optional(),
   isFeatured: Joi.boolean().optional(),
   listingFeeStatus: Joi.string().valid('pending', 'paid', 'waived').optional(),
+  hlaapNo: Joi.string().allow('', null).optional(),
 
   // system-managed fields
 }).options({ allowUnknown: false });
@@ -117,6 +118,7 @@ exports.updateProductSchema = Joi.object({
   isFeatured: Joi.boolean(),
   status: Joi.string().valid('draft', 'active', 'inactive', 'blocked'),
   listingFeeStatus: Joi.string().valid('pending', 'paid', 'waived'),
+  hlaapNo: Joi.string().allow('', null).optional(),
 
   primaryImageId: Joi.string(),
 }).options({ allowUnknown: false });

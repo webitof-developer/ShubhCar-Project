@@ -293,3 +293,15 @@ exports.adminBulkUpdateExport = asyncHandler(async (req, res) => {
   res.setHeader('Content-Disposition', `attachment; filename="${data.filename}"`);
   return res.send(data.buffer);
 });
+
+// ADMIN: duplicate OEM product as Aftermarket
+exports.adminDuplicateAsAftermarket = asyncHandler(async (req, res) => {
+  const data = await productService.duplicateAsAftermarket(req.params.productId, req.user);
+  audit.log({
+    actor: { id: req.user?.id, role: req.user?.role || 'unknown' },
+    action: 'product_duplicate_as_aftermarket',
+    target: { id: req.params.productId, newId: data._id },
+  });
+  return success(res, data, 'Product duplicated as Aftermarket draft');
+});
+

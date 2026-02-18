@@ -404,6 +404,37 @@ router.post(
 
 /**
  * @openapi
+ * /api/v1/products/admin/{productId}/duplicate-aftermarket:
+ *   post:
+ *     summary: Duplicate OEM product as Aftermarket draft (Admin)
+ *     tags: [Catalog]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Product duplicated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/GenericSuccess'
+ */
+router.post(
+  '/admin/:productId/duplicate-aftermarket',
+  adminLimiter,
+  auth([ROLES.ADMIN]),
+  validateId('productId'),
+  controller.adminDuplicateAsAftermarket,
+);
+
+
+/**
+ * @openapi
  * /api/v1/products/admin/{productId}:
  *   delete:
  *     summary: Force delete a product (Admin)
