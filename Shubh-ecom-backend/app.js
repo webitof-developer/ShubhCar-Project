@@ -37,7 +37,12 @@ app.use(
         'default-src': ["'self'"],
         'base-uri': ["'self'"],
         'frame-ancestors': ["'none'"],
-        'connect-src': ["'self'", env.FRONTEND_ORIGIN, env.ADMIN_ORIGIN ,"'http://localhost:3000'"],
+        'connect-src': [
+          "'self'",
+          env.FRONTEND_ORIGIN,
+          env.ADMIN_ORIGIN,
+          "'http://localhost:3000'",
+        ],
         'img-src': ["'self'", 'data:', 'blob:'],
         'script-src': ["'self'"],
         'style-src': ["'self'", "'unsafe-inline'"],
@@ -55,7 +60,12 @@ app.use(
 );
 app.use(
   cors({
-    origin: [env.FRONTEND_ORIGIN, env.ADMIN_ORIGIN, env.BACKEND_ORIGIN , "http://localhost:3000"],
+    origin: [
+      env.FRONTEND_ORIGIN,
+      env.ADMIN_ORIGIN,
+      env.BACKEND_ORIGIN,
+      'http://localhost:3000',
+    ],
     credentials: false, // JWT in headers/localStorage; no cookies => no credentialed requests needed
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: [
@@ -156,7 +166,6 @@ app.get('/health', async (req, res) => {
   }
 });
 
-
 /* =====================
    ROOT STATUS PAGE
 ===================== */
@@ -169,9 +178,16 @@ app.get('/', async (req, res) => {
     let statusColor = 'gray';
     let statusText = value.status;
 
-    if (statusText === 'Connected' || statusText === 'Configured') statusColor = '#22c55e'; // Green
-    else if (statusText === 'Disabled') statusColor = '#eab308'; // Yellow
-    else if (statusText === 'Missing' || statusText === 'Disconnected' || statusText === 'Error') statusColor = '#ef4444'; // Red
+    if (statusText === 'Connected' || statusText === 'Configured')
+      statusColor = '#22c55e'; // Green
+    else if (statusText === 'Disabled')
+      statusColor = '#eab308'; // Yellow
+    else if (
+      statusText === 'Missing' ||
+      statusText === 'Disconnected' ||
+      statusText === 'Error'
+    )
+      statusColor = '#ef4444'; // Red
     else if (statusText === 'Connecting') statusColor = '#3b82f6'; // Blue
 
     return `
@@ -198,7 +214,9 @@ app.get('/', async (req, res) => {
     `;
   };
 
-  const rows = Object.entries(status).map(([k, v]) => generateRow(k, v)).join('');
+  const rows = Object.entries(status)
+    .map(([k, v]) => generateRow(k, v))
+    .join('');
 
   const html = `
     <!DOCTYPE html>

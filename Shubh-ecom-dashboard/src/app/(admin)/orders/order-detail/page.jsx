@@ -11,6 +11,7 @@ import OrderTotals from './components/OrderTotals';
 import { Card, CardBody, Col, Placeholder, Row } from 'react-bootstrap';
 import PageTItle from '@/components/PageTItle';
 import { orderAPI } from '@/helpers/orderApi';
+import { API_BASE_URL } from '@/helpers/apiBase';
 import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from 'react-toastify';
 
@@ -186,7 +187,7 @@ const OrderDetailPage = () => {
       // Call the backend payments API to get payments for this order
       // For now, we'll use the admin list endpoint with a filter
       const paymentsResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api/v1'}/payments/admin/list`,
+        `${API_BASE_URL}/payments/admin/list`,
         {
           headers: {
             Authorization: `Bearer ${session.accessToken}`,

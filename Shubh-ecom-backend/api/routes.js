@@ -67,7 +67,7 @@ module.exports = function registerRoutes(app) {
   );
   app.use(
     '/v1/user-activity-logs',
-    require('../modules/productImages/productImages.routes'),
+    require('../modules/userActivityLogs/userActivityLogs.routes'),
   );
 
   /* =====================================================
@@ -95,6 +95,10 @@ module.exports = function registerRoutes(app) {
   app.use(
     '/v1/product-images',
     require('../modules/productImages/productImages.routes'),
+  );
+  app.use(
+    '/v1/product-variants',
+    require('../modules/productVariants/productVariant.routes'),
   );
 
   /* =====================================================

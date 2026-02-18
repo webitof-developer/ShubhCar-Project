@@ -38,7 +38,7 @@ const InvoicePage = () => {
       
       // Fetch public invoice settings
       try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/public/settings`);
+        const response = await fetch(`${API_BASE_URL}/settings/public`);
         if (response.ok) {
           const settingsData = await response.json();
           setSettings(settingsData.data || settingsData || {});

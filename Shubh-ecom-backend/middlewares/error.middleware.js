@@ -66,13 +66,22 @@ function errorMiddleware(err, req, res, next) {
     stack: process.env.NODE_ENV === 'production' ? undefined : err.stack,
   });
 
-  return res.fail(
+  const safeMessage =
     process.env.NODE_ENV === 'production'
       ? sanitizeMessage(statusCode, message)
-      : message,
-    statusCode,
-    code,
-  );
+      : message;
+
+  // Fallback for paths/middleware order where response helpers are unavailable.
+  if (typeof res.fail !== 'function') {
+    return res.status(statusCode).json({
+      success: false,
+      message: safeMessage,
+      code,
+      requestId,
+    });
+  }
+
+  return res.fail(safeMessage, statusCode, code);
 }
 
 function sanitizeMessage(statusCode, message) {

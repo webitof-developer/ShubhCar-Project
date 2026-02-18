@@ -1,9 +1,11 @@
 const express = require('express');
 const controller = require('./categories.controller');
+const auth = require('../../middlewares/auth.middleware');
 const validate = require('../../middlewares/validate.middleware');
 const validateId = require('../../middlewares/objectId.middleware');
 const { adminLimiter } = require('../../middlewares/rateLimiter.middleware');
 const cacheRead = require('../../middlewares/cacheRead');
+const ROLES = require('../../constants/roles');
 const {
   createCategorySchema,
   updateCategorySchema,
@@ -39,6 +41,7 @@ const router = express.Router();
 router.post(
   '/admin',
   adminLimiter,
+  auth([ROLES.ADMIN]),
   validate(createCategorySchema),
   controller.create,
 );
@@ -72,6 +75,7 @@ router.post(
 router.put(
   '/admin/:id',
   adminLimiter,
+  auth([ROLES.ADMIN]),
   validateId('id'),
   validate(updateCategorySchema),
   controller.update,
@@ -92,7 +96,13 @@ router.put(
  *     responses:
  *       200: { description: Deleted }
  */
-router.delete('/admin/:id', adminLimiter, validateId('id'), controller.remove);
+router.delete(
+  '/admin/:id',
+  adminLimiter,
+  auth([ROLES.ADMIN]),
+  validateId('id'),
+  controller.remove,
+);
 
 // Read-only hierarchy viewer (no cache, full tree)
 router.get('/hierarchy', controller.getHierarchy);

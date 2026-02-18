@@ -32,7 +32,7 @@ export const userAPI = {
      */
     list: async (params = {}, token) => {
         const queryString = new URLSearchParams(params).toString();
-        const url = `${API_BASE_URL}/users?${queryString}`;
+        const url = `${API_BASE_URL}/users/admin?${queryString}`;
         return fetchWithAuth(url, { headers: { Authorization: `Bearer ${token}` } });
     },
 
@@ -60,7 +60,7 @@ export const userAPI = {
      * Get user details
      */
     getById: async (id, token) => {
-        const url = `${API_BASE_URL}/users/${id}`;
+        const url = `${API_BASE_URL}/users/admin/${id}`;
         return fetchWithAuth(url, { headers: { Authorization: `Bearer ${token}` } });
     },
 
@@ -79,7 +79,7 @@ export const userAPI = {
      * Create a new user (admin only)
      */
     create: async (userData, token) => {
-        const url = `${API_BASE_URL}/users`;
+        const url = `${API_BASE_URL}/users/admin`;
         return fetchWithAuth(url, {
             method: 'POST',
             body: JSON.stringify(userData),
@@ -91,7 +91,7 @@ export const userAPI = {
      * Update user
      */
     update: async (id, userData, token) => {
-        const url = `${API_BASE_URL}/users/${id}`;
+        const url = `${API_BASE_URL}/users/admin/${id}`;
         return fetchWithAuth(url, {
             method: 'PATCH',
             body: JSON.stringify(userData),
@@ -103,7 +103,7 @@ export const userAPI = {
      * Delete user
      */
     delete: async (id, token) => {
-        const url = `${API_BASE_URL}/users/${id}`;
+        const url = `${API_BASE_URL}/users/admin/${id}`;
         return fetchWithAuth(url, {
             method: 'DELETE',
             headers: { Authorization: `Bearer ${token}` }
