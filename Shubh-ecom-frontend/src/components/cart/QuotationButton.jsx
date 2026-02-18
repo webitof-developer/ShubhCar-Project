@@ -19,7 +19,8 @@ const QuotationButton = ({ cartItems, summary, profile }) => {
       }
 
       // Dynamically import html2pdf
-      const html2pdf = (await import('html2pdf.js')).default;
+      const html2pdfModule = await import('html2pdf.js');
+      const html2pdf = html2pdfModule?.default || html2pdfModule;
       
       const element = componentRef.current;
       const filename = `Quotation-${new Date().toISOString().split('T')[0]}.pdf`;

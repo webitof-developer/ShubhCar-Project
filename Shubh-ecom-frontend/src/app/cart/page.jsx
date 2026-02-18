@@ -204,7 +204,9 @@ const Cart = () => {
 
   useEffect(() => {
     const loadSuggestions = async () => {
-      const cartProductIds = items.map(item => item.product._id || item.product.id);
+      const cartProductIds = items
+        .map((item) => item?.product?._id || item?.product?.id)
+        .filter(Boolean);
       const allProducts = await getProducts({ limit: 20 });
       const suggestions = allProducts
         .filter(p => !cartProductIds.includes(p._id || p.id))
@@ -336,18 +338,20 @@ const Cart = () => {
                 </div>
                 <div className="space-y-3 max-h-[calc(100vh-200px)] overflow-y-auto custom-scrollbar">
                   {suggestedProducts.slice(0, 6).map((product, index) => {
+                    if (!product) return null;
                     const displayPrice = getDisplayPrice(product, user);
+                    const productLink = product.slug ? `/product/${product.slug}` : '/products';
                     return (
                       <div key={product._id || product.id || index} className="group p-2 hover:bg-secondary/50 rounded-lg transition-colors">
-                        <Link href={`/product/${product.slug}`} className="flex gap-2">
+                        <Link href={productLink} className="flex gap-2">
                           <img
                             src={resolveProductImages(product.images || [])[0]}
-                            alt={product.name}
+                            alt={product.name || 'Product'}
                             className="w-16 h-16 object-cover rounded bg-secondary shrink-0"
                           />
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-medium line-clamp-2 group-hover:text-primary transition-colors mb-1">
-                              {product.name}
+                              {product.name || 'Unnamed product'}
                             </p>
                             <p className="text-sm font-semibold text-primary">
                               {formatPrice(displayPrice.price)}
@@ -375,18 +379,23 @@ const Cart = () => {
           {/* Cart Items - Middle Column */}
           <div className="space-y-4">
             {items.map((item, index) => {
-              const pricing = getDisplayPrice(item.product, user);
+              const product = item?.product;
+              if (!product) {
+                return null;
+              }
+
+              const pricing = getDisplayPrice(product, user);
               const { price: unitPrice, originalPrice, savingsPercent, type } = pricing;
-              const product = item.product;
+              const productLink = product.slug ? `/product/${product.slug}` : '/products';
 
               return (
-                <div key={item.id} className="bg-card rounded-xl border border-border/50 p-3 md:p-4 animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
+                <div key={item.id || item._id || index} className="bg-card rounded-xl border border-border/50 p-3 md:p-4 animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
                   <div className="flex gap-4">
                     {/* Image Container with Badges */}
-                    <Link href={`/product/${product.slug}`} className="w-24 h-24 md:w-32 md:h-32 bg-secondary rounded-lg overflow-hidden shrink-0 group relative block">
+                    <Link href={productLink} className="w-24 h-24 md:w-32 md:h-32 bg-secondary rounded-lg overflow-hidden shrink-0 group relative block">
                       <img
                         src={resolveProductImages(product.images || [])[0]}
-                        alt={product.name}
+                        alt={product.name || 'Product'}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
 
@@ -416,8 +425,8 @@ const Cart = () => {
                       <div>
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <Link href={`/product/${product.slug}`} className="font-semibold text-foreground hover:text-primary transition-colors line-clamp-2 text-sm md:text-base mb-1">
-                              {product.name}
+                            <Link href={productLink} className="font-semibold text-foreground hover:text-primary transition-colors line-clamp-2 text-sm md:text-base mb-1">
+                              {product.name || 'Unnamed product'}
                             </Link>
 
                             {/* Vehicle Brand / Brand - Value Only */}

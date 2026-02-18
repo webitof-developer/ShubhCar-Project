@@ -54,7 +54,7 @@ const QuotationTemplate = forwardRef(({ items = [], summary = {}, profile = {} }
   const logo = settings.invoice_logo_url || logoDark || logoLight;
 
   return (
-    <div ref={ref} className="bg-white text-sm leading-tight text-gray-900 p-8 print:p-8" id="quotation-template" style={{ transform: 'scale(1.1)' }}>
+    <div ref={ref} className="bg-white text-sm leading-tight text-gray-900 p-8 print:p-8" id="quotation-template">
       {/* Force HEX colors for html2canvas compatibility (fixes 'lab'/'oklch' error) */}
       <style>{`
         .bg-white { background-color: #ffffff !important; }
@@ -111,9 +111,9 @@ const QuotationTemplate = forwardRef(({ items = [], summary = {}, profile = {} }
       <div className="mb-8">
         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 border-b border-gray-100 pb-1">Quotation For</h3>
         <div className="text-xs leading-relaxed">
-          {profile.name || profile.fullName ? (
+          {profile?.name || profile?.fullName ? (
              <>
-                <p className="font-semibold text-gray-900 text-sm">{profile.name || profile.fullName}</p>
+                <p className="font-semibold text-gray-900 text-sm">{profile?.name || profile?.fullName}</p>
                 {profile.email && <p className="text-gray-600">{profile.email}</p>}
                 {profile.phone && <p className="text-gray-600">{profile.phone}</p>}
                 {(profile.address || profile.addresses?.[0]) && (
