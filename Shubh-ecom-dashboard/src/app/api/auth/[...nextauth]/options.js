@@ -21,6 +21,10 @@ export const options = {
         if (!credentials?.email || !credentials?.password) {
           throw new Error('Email and password are required')
         }
+        if (!API_BASE_URL) {
+          console.error('Missing NEXT_PUBLIC_API_URL in production environment')
+          throw new Error('Server configuration error')
+        }
 
         try {
           // Call backend login API

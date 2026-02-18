@@ -47,7 +47,7 @@ const useSignIn = () => {
           clearErrors('email')
           setError('password', { type: 'manual', message: 'Email is Ok but password is wrong' }, { shouldFocus: true })
         } else {
-          setError('password', { type: 'manual', message: 'Email is Ok but password is wrong' })
+          setError('password', { type: 'manual', message: errorMessage })
         }
         // showNotification({
         //   message: errorMessage,
