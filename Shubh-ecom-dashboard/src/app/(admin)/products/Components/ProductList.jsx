@@ -349,7 +349,7 @@ const ProductCard = ({ product, onDelete, onToggleFeatured, isSelected, onSelect
               >
                 <IconifyIcon icon="solar:pen-2-broken" className="align-middle fs-18" />
               </Link>
-              {productType === 'OEM' && (
+              {productType === 'OEM' && !product.aftermarketCopyId && (
                 <button
                   onClick={handleDuplicate}
                   className="btn btn-soft-info btn-sm"
@@ -385,6 +385,7 @@ const ProductCard = ({ product, onDelete, onToggleFeatured, isSelected, onSelect
 
 const ProductList = () => {
   const { data: session } = useSession()
+  const router = useRouter()
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -724,10 +725,13 @@ const ProductList = () => {
 
     try {
       const result = await productService.duplicateAsAftermarket(productId, token)
-      toast.success('Aftermarket copy created successfully!')
+      toast.success('Aftermarket copy created! Redirecting to edit page...')
       fetchProducts()
-      // Optionally redirect to edit page
-      // router.push(`/products/product-edit?id=${result.data._id}`)
+      // Redirect to the new aftermarket product's edit page
+      const newId = result?.data?._id || result?.data?.data?._id
+      if (newId) {
+        router.push(`/products/product-edit?id=${newId}`)
+      }
     } catch (err) {
       toast.error(err.message || 'Failed to duplicate product')
     }

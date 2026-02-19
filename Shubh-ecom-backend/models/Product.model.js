@@ -50,6 +50,7 @@ const productSchema = new mongoose.Schema(
     oemNumber: { type: String },
     manufacturerBrand: { type: String },
     hlaapNo: { type: String }, // HLAAP Number for Aftermarket products
+    aftermarketCopyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null }, // Tracks if OEM has been duplicated as Aftermarket
     tags: [{ type: String }], // Array of Tag names or IDs depending on use. Storing names/slugs is simpler for search.
 
 

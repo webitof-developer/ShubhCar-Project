@@ -562,7 +562,8 @@ class ProductService {
         'isFeatured',
         'status',
         'createdAt',
-        'isDeleted'
+        'isDeleted',
+        'aftermarketCopyId'
       ].join(' ')
       : null;
 
@@ -984,6 +985,7 @@ class ProductService {
       longDescription: sourceProduct.longDescription,
       categoryId: sourceProduct.categoryId,
       sku: `${sourceProduct.sku || ''}-AM`, // Add suffix to SKU
+      hsnCode: sourceProduct.hsnCode,
       productType: 'AFTERMARKET',
       manufacturerBrand: null, // Will be required, left null for user to fill
       vehicleBrand: null, // Not needed for aftermarket
@@ -991,9 +993,14 @@ class ProductService {
       retailPrice: sourceProduct.retailPrice,
       wholesalePrice: sourceProduct.wholesalePrice,
       minWholesaleQty: sourceProduct.minWholesaleQty,
-      stockQty: 0, // Start with 0 stock
+      stockQty: sourceProduct.stockQty || 0,
       weight: sourceProduct.weight,
-      dimensions: sourceProduct.dimensions,
+      length: sourceProduct.length,
+      width: sourceProduct.width,
+      height: sourceProduct.height,
+      taxRate: sourceProduct.taxRate,
+      taxClassKey: sourceProduct.taxClassKey,
+      taxSlabs: sourceProduct.taxSlabs,
       tags: sourceProduct.tags,
       warrantyInfo: sourceProduct.warrantyInfo,
       returnPolicy: sourceProduct.returnPolicy,
@@ -1027,6 +1034,9 @@ class ProductService {
       }));
       await ProductImage.insertMany(newImages);
     }
+
+    // Record the aftermarket copy ID on the source OEM product so we can hide the duplicate button
+    await repo.updateById(sourceProduct._id, { aftermarketCopyId: newProduct._id });
 
     await cache.invalidateLists();
     await deletePatterns(['catalog:products:*']);
