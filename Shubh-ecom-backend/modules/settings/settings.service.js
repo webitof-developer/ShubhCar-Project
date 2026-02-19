@@ -65,6 +65,7 @@ class SettingsService {
             'site_logo_light',
             'site_favicon',
             'tax_price_display_shop',
+            'tax_price_display_cart',
             'tax_price_display_suffix',
             'prices_include_tax',
             'tax_rate',

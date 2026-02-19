@@ -208,16 +208,21 @@ class OrderService {
       const orderItems = [];
       const calcItems = [];
 
+      // Fetch full user from DB to get customerType/verificationStatus
+      // (JWT middleware only provides { id, role })
+      const dbUser = await userRepo.findById(user.id);
+      const orderCustomerType =
+        dbUser?.customerType === 'wholesale' &&
+        dbUser?.verificationStatus === 'approved'
+          ? 'wholesale'
+          : 'retail';
+
       for (const item of cartItems) {
         const product = await productRepo.findById(item.productId);
         if (!product || product.status !== 'active')
           error('Product unavailable', 400);
 
-        const customerType =
-          user.customerType === 'wholesale' &&
-          user.verificationStatus === 'approved'
-            ? 'wholesale'
-            : 'retail';
+        const customerType = orderCustomerType;
         const unitPrice = pricingService.resolveUnitPrice({
           product,
           customerType,

@@ -100,8 +100,11 @@ const Cart = () => {
   const summaryDiscount = summary?.discountAmount ?? 0;
   const summaryTax = summary?.taxAmount ?? 0;
   const summaryTotal = summary?.grandTotal ?? contextSubtotal;
-  const cartTaxDisplay = summary?.settings?.taxPriceDisplayCart || 'including';
+  const cartTaxDisplay = summary?.settings?.taxPriceDisplayCart || summary?.settings?.taxPriceDisplayShop || 'excluding';
   const cartTaxLabel = getTaxSuffix(cartTaxDisplay);
+  const showIncludingTax = cartTaxDisplay === 'including';
+  // grandTotal from backend is now correct for both modes
+  // (including: subtotal + shipping, excluding: taxableAmount + tax + shipping)
 
   const formatCouponValue = (coupon) =>
     coupon?.discountType === 'percent'
@@ -738,46 +741,70 @@ const Cart = () => {
                     </div>
                   )}
                 </div>
-                <div className="space-y-3 pt-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Subtotal (excl. tax)</span>
-                    <span className="font-medium text-foreground">
-                      {formatPrice(summary?.taxableAmount || summarySubtotal)}
-                    </span>
-                  </div>
-                  {summaryDiscount > 0 && (
-                    <div className="flex justify-between text-sm animate-fade-in">
-                      <span className="text-success flex items-center gap-1.5"><Tag className="w-3.5 h-3.5" />Coupon Discount</span>
-                      <span className="font-medium text-success">-{formatPrice(summaryDiscount)}</span>
+                  <div className="space-y-3 pt-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        {showIncludingTax ? 'Subtotal (incl. tax)' : 'Subtotal (excl. tax)'}
+                      </span>
+                      <span className="font-medium text-foreground">
+                        {formatPrice(summarySubtotal)}
+                      </span>
                     </div>
-                  )}
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground flex items-center gap-1">
-                      Tax
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Info className="w-3.5 h-3.5 cursor-help" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <div className="text-xs space-y-1">
-                            {formatTaxBreakdown(summary?.taxBreakdown).map((component) => (
-                              <p key={component.key} className="uppercase">{component.label}: {component.formatted}</p>
-                            ))}
-                            {formatTaxBreakdown(summary?.taxBreakdown).length === 0 && <p>Calculated per tax settings</p>}
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    </span>
-                    <span className="font-medium text-foreground">
-                      {formatPrice(summaryTax)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Shipping</span>
-                    <span className="font-medium text-foreground">
-                      {summary?.shippingFee === 0 ? 'Free' : formatPrice(summary?.shippingFee || 0)}
-                    </span>
-                  </div>
+                    {summaryDiscount > 0 && (
+                      <div className="flex justify-between text-sm animate-fade-in">
+                        <span className="text-success flex items-center gap-1.5"><Tag className="w-3.5 h-3.5" />Coupon Discount</span>
+                        <span className="font-medium text-success">-{formatPrice(summaryDiscount)}</span>
+                      </div>
+                    )}
+                    {showIncludingTax ? (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground flex items-center gap-1">
+                          Tax
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Info className="w-3.5 h-3.5 cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="text-xs space-y-1">
+                                {formatTaxBreakdown(summary?.taxBreakdown).map((component) => (
+                                  <p key={component.key} className="uppercase">{component.label}: {component.formatted}</p>
+                                ))}
+                                {formatTaxBreakdown(summary?.taxBreakdown).length === 0 && <p>Calculated per tax settings</p>}
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </span>
+                        <span className="font-medium text-muted-foreground text-xs">{formatPrice(summaryTax)} (incl. in price)</span>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground flex items-center gap-1">
+                          Tax
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Info className="w-3.5 h-3.5 cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="text-xs space-y-1">
+                                {formatTaxBreakdown(summary?.taxBreakdown).map((component) => (
+                                  <p key={component.key} className="uppercase">{component.label}: {component.formatted}</p>
+                                ))}
+                                {formatTaxBreakdown(summary?.taxBreakdown).length === 0 && <p>Calculated per tax settings</p>}
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </span>
+                        <span className="font-medium text-foreground">
+                          {formatPrice(summaryTax)}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Shipping</span>
+                      <span className="font-medium text-foreground">
+                        {summary?.shippingFee === 0 ? 'Free' : formatPrice(summary?.shippingFee || 0)}
+                      </span>
+                    </div>
                   <div className="border-t border-border/50 pt-3">
                     <div className="flex justify-between items-baseline">
                       <span className="font-semibold text-foreground">Total</span>

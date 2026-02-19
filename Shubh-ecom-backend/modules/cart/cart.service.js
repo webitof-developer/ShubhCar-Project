@@ -3,6 +3,7 @@ const cartRepo = require('./cart.repo');
 const { addItemSchema, updateQtySchema } = require('./cart.validator');
 const Product = require('../../models/Product.model');
 const ProductImage = require('../../models/ProductImage.model');
+const User = require('../../models/User.model');
 const { error } = require('../../utils/apiResponse');
 const couponService = require('../coupons/coupons.service');
 const Cart = require('../../models/Cart.model');
@@ -10,6 +11,18 @@ const pricingService = require('../../services/pricing.service');
 const checkoutTotals = require('../../services/checkoutTotals.service');
 const addressRepo = require('../users/userAddress.repo');
 class CartService {
+  /**
+   * Fetch user's customerType from DB.
+   * Needed because JWT middleware only puts { id, role } in req.user,
+   * not customerType or verificationStatus.
+   */
+  async resolveCustomerType(userId) {
+    const dbUser = await User.findById(userId).select('customerType verificationStatus').lean();
+    const isWholesale =
+      dbUser?.customerType === 'wholesale' &&
+      dbUser?.verificationStatus === 'approved';
+    return isWholesale ? 'wholesale' : 'retail';
+  }
   async addItem({ user, sessionId, productId, quantity }) {
     const { error: err } = addItemSchema.validate({
       productId,
@@ -23,11 +36,8 @@ class CartService {
 
     if (quantity > (product.stockQty || 0)) error('Insufficient stock', 400);
 
-    const isWholesale =
-      user.customerType === 'wholesale' &&
-      user.verificationStatus === 'approved';
-
-    const priceType = isWholesale ? 'wholesale' : 'retail';
+    // Fetch real customerType from DB (JWT only has id + role)
+    const priceType = await this.resolveCustomerType(user.id || user._id);
     const priceAtTime = pricingService.resolveUnitPrice({
       product,
       customerType: priceType,
@@ -67,11 +77,8 @@ class CartService {
     if (!product || product.status !== 'active')
       error('Product unavailable', 404);
     if (quantity > (product.stockQty || 0)) error('Insufficient stock', 400);
-    const priceType =
-      user.customerType === 'wholesale' &&
-      user.verificationStatus === 'approved'
-        ? 'wholesale'
-        : 'retail';
+    // Fetch real customerType from DB (JWT only has id + role)
+    const priceType = await this.resolveCustomerType(user.id || user._id);
     const priceAtTime = pricingService.resolveUnitPrice({
       product,
       customerType: priceType,
@@ -125,12 +132,20 @@ class CartService {
       shippingAddress = address;
     }
 
+    // Fetch real customerType from DB (JWT only has id + role, no customerType/verificationStatus)
+    const customerType = await this.resolveCustomerType(user.id || user._id);
+
+    // Re-resolve price based on current user type from DB (resolveCustomerType fetches real customerType/verificationStatus).
+    // enrichedItems contains full product documents (including wholesalePrice/retailPrice), so resolveUnitPrice works correctly.
+    // Fall back to item.priceAtTime only if the product is missing (e.g., deleted product still in cart).
     const calcItems = enrichedItems.map((item) => {
       const product = item.product || {};
+      const resolvedPrice = pricingService.resolveUnitPrice({ product, customerType });
+      const unitPrice = resolvedPrice || item.priceAtTime || 0;
       return {
         productId: product._id || item.productId,
         quantity: item.quantity,
-        price: item.priceAtTime,
+        price: unitPrice,
         hsnCode: product.hsnCode,
         taxSlabs: product.taxSlabs || [],
         taxRate: product.taxRate,

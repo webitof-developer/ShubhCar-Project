@@ -51,8 +51,9 @@ const buildSettingsPayload = async () => {
 
   return {
     taxEnabled: map.tax_enabled ?? true,
-    taxPriceDisplayCart: map.tax_price_display_cart || 'including',
-    taxPriceDisplayShop: map.tax_price_display_shop || 'including',
+    taxPriceDisplayShop: map.tax_price_display_shop || 'excluding',
+    // If cart display not explicitly set, inherit from shop display
+    taxPriceDisplayCart: map.tax_price_display_cart || map.tax_price_display_shop || 'excluding',
     taxPriceDisplaySuffix: map.tax_price_display_suffix || '',
     taxDisplayTotals: map.tax_display_totals ?? true,
     pricesIncludeTax: map.prices_include_tax ?? false,
@@ -236,18 +237,25 @@ const calculateTotals = async ({
     })
     : 0;
 
-  const grandTotal = roundCurrency(totalTaxableAmount + taxAmountTotal + shippingFee);
+  // When "Display prices including tax" is selected:
+  //   grandTotal = subtotal (product price, tax already inside) - discount + shipping
+  // When "Display prices excluding tax":
+  //   grandTotal = taxableAmount (net base) + taxAmount (added on top) + shipping
+  const grandTotal =
+    settings.taxPriceDisplayCart === 'including'
+      ? roundCurrency(roundCurrency(subtotal) - roundCurrency(discount) + roundCurrency(shippingFee))
+      : roundCurrency(totalTaxableAmount + taxAmountTotal + shippingFee);
 
   return {
     settings,
-    subtotal: roundCurrency(subtotal), // Original subtotal (could be incl or excl)
+    subtotal: roundCurrency(subtotal), // Original subtotal (product price × qty)
     discountAmount: roundCurrency(discount),
     coupon,
     taxAmount: taxAmountTotal,
     taxBreakdown,
     shippingFee: roundCurrency(shippingFee),
     grandTotal,
-    taxableAmount: roundCurrency(totalTaxableAmount), // Real Net Total
+    taxableAmount: roundCurrency(totalTaxableAmount), // Net amount (excl. tax)
     items: calculatedItems,
   };
 };

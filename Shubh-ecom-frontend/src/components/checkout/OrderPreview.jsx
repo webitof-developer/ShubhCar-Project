@@ -29,13 +29,15 @@ export function OrderPreview({
 }) {
   const [resolvedAddress, setResolvedAddress] = useState(null);
   const { accessToken, user } = useAuth();
-  const subtotal = summary?.taxableAmount ?? summary?.subtotal ?? 0;
+  const subtotal = summary?.subtotal ?? 0;
   const discount = summary?.discountAmount ?? 0;
   const tax = summary?.taxAmount ?? 0;
   const shipping = summary?.shippingFee ?? 0;
-  const total = summary?.grandTotal ?? 0;
+  const total = summary?.grandTotal ?? 0;  // backend now computes this correctly for both modes
   const couponCode = summary?.couponCode || null;
-  const taxLabel = getTaxSuffix(summary?.settings?.taxPriceDisplayCart || 'including');
+  const taxDisplayMode = summary?.settings?.taxPriceDisplayCart || summary?.settings?.taxPriceDisplayShop || 'excluding';
+  const taxLabel = getTaxSuffix(taxDisplayMode);
+  const showIncludingTax = taxDisplayMode === 'including';
 
   const addressId = useMemo(() => {
     if (!address) return null;
@@ -150,7 +152,9 @@ export function OrderPreview({
             <div className="p-5 space-y-4">
               {/* Subtotal */}
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Subtotal</span>
+                <span className="text-muted-foreground">
+                  {showIncludingTax ? 'Subtotal (incl. tax)' : 'Subtotal (excl. tax)'}
+                </span>
                 <span className="font-medium">{summaryLoading ? '...' : formatPrice(subtotal)}</span>
               </div>
 
@@ -178,7 +182,7 @@ export function OrderPreview({
                 <div className="flex flex-col">
                   <span className="text-muted-foreground">Tax</span>
                   <span className="text-xs text-muted-foreground/70">
-                    {taxLabel}
+                    {showIncludingTax ? 'incl. in price' : taxLabel}
                   </span>
                 </div>
                 <span className="font-medium">{summaryLoading ? '...' : formatPrice(tax)}</span>

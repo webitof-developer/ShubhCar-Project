@@ -35,20 +35,24 @@ const QuotationTemplate = forwardRef(({ items = [], summary = {}, profile = {} }
     day: '2-digit', month: 'long', year: 'numeric'
   });
 
-  // Calculate Totals using logic consistent with Invoice/Checkout
-  // Note: summary might be partial if coming from CartContext, ensure defaults
-  // Calculate Totals using logic consistent with Invoice/Checkout
-  // Note: summary might be partial if coming from CartContext, ensure defaults
-  const subtotal = summary?.taxableAmount || summary?.subtotal || 0;
+  // Tax display mode from backend settings
+  const taxDisplayMode = settings.taxPriceDisplayCart || settings.taxPriceDisplayShop || 'excluding';
+  const showIncludingTax = taxDisplayMode === 'including';
+
+  // Summary values from backend (same source as cart page)
+  const subtotal = summary?.subtotal || 0;                       // product price × qty
   const discount = summary?.discountAmount || 0;
   const taxAmount = summary?.taxAmount || 0;
   const shippingFee = summary?.shippingFee || 0;
-  const grandTotal = summary?.total || summary?.grandTotal || 0;
-  const taxBreakdown = summary?.taxDetails || summary?.taxBreakdown || { cgst: 0, sgst: 0, igst: 0 };
+  const grandTotal = summary?.grandTotal || summary?.total || 0;
+  const taxBreakdown = summary?.taxBreakdown || summary?.taxDetails || {};
 
-  // Prioritize Net Subtotal calculation for display consistency
-  // If we have grandTotal, work backwards: Net = Total - Tax - Shipping
-  const displaySubtotal = grandTotal ? Math.max(0, grandTotal - taxAmount - shippingFee) : subtotal;
+  // When including tax: subtotal shown = product price, Total = subtotal + shipping (tax already inside)
+  // When excluding tax: subtotal shown = taxableAmount (net), Total = grandTotal (adds tax on top)
+  const displaySubtotal = showIncludingTax ? subtotal : (summary?.taxableAmount || subtotal);
+  const displayTotal = showIncludingTax
+    ? subtotal + shippingFee - discount
+    : grandTotal;
 
   // Logo
   const logo = settings.invoice_logo_url || logoDark || logoLight;
@@ -111,9 +115,14 @@ const QuotationTemplate = forwardRef(({ items = [], summary = {}, profile = {} }
       <div className="mb-8">
         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 border-b border-gray-100 pb-1">Quotation For</h3>
         <div className="text-xs leading-relaxed">
-          {profile?.name || profile?.fullName ? (
+          {(() => {
+            const displayName = profile?.name || profile?.fullName || 
+                                (profile?.firstName ? `${profile.firstName} ${profile?.lastName || ''}`.trim() : null) ||
+                                profile?.email || profile?.phone;
+            
+            return displayName ? (
              <>
-                <p className="font-semibold text-gray-900 text-sm">{profile?.name || profile?.fullName}</p>
+                <p className="font-semibold text-gray-900 text-sm">{displayName}</p>
                 {profile.email && <p className="text-gray-600">{profile.email}</p>}
                 {profile.phone && <p className="text-gray-600">{profile.phone}</p>}
                 {(profile.address || profile.addresses?.[0]) && (
@@ -123,9 +132,10 @@ const QuotationTemplate = forwardRef(({ items = [], summary = {}, profile = {} }
                     </div>
                 )}
              </>
-          ) : (
-            <p className="text-gray-500 italic">Guest User</p>
-          )}
+            ) : (
+                <p className="text-gray-500 italic">Guest User</p>
+            );
+          })()}
         </div>
       </div>
 
@@ -151,72 +161,52 @@ const QuotationTemplate = forwardRef(({ items = [], summary = {}, profile = {} }
             </tr>
           </thead>
           <tbody>
-            {items.map((item, index) => {
-                // 1. Get Base Pricing (Likely Inclusive in Context of E-com)
-                const pricing = getDisplayPrice(item.product || item, profile);
-                const rawPrice = pricing.price || item.price || 0;
-                const itemQty = item.quantity || 1;
+          {items.map((item, index) => {
+              const pricing = getDisplayPrice(item.product || item, profile);
+              const unitPrice = pricing.price || item.price || 0;
+              const itemQty = item.quantity || 1;
 
-                // 2. Resolve Tax Info
-                // Try item specific tax info first, fallback to summary inference if available
-                let taxRate = item.taxPercent;
-                // Use safe navigation for summary
-                const summaryTaxable = summary?.taxableAmount || 0;
-                const summaryTax = summary?.taxAmount || 0;
+              // Infer effective tax rate from summary if not explicit on item
+              let taxRate = item.taxPercent || 0;
+              const summaryTaxable = summary?.taxableAmount || 0;
+              const summaryTaxTotal = summary?.taxAmount || 0;
+              if (!taxRate && summaryTaxable > 0 && summaryTaxTotal > 0) {
+                taxRate = (summaryTaxTotal / summaryTaxable) * 100;
+              }
 
-                if ((!taxRate || taxRate === 0) && summaryTaxable > 0 && summaryTax > 0) {
-                    // Infer global rate from summary (approx)
-                    taxRate = (summaryTax / summaryTaxable) * 100;
-                }
-      
-                taxRate = taxRate || 0;
+              let displayUnitPrice, lineTax, lineTotal;
 
-                // 3. Calculate Components
-                // Assuming rawPrice is INCLUSIVE (Standard for E-com display) unless specified
-                // If taxAmount is explicitly provided, use it. Otherwise back-calculate.
-                let itemTaxAmount = item.taxAmount;
-                let unitPriceExcl = rawPrice;
+              if (showIncludingTax) {
+                // Price shown as-is (it's the product's selling price, tax conceptually inside)
+                displayUnitPrice = unitPrice;
+                lineTotal = unitPrice * itemQty;
+                // Tax shown informational — back-calculate from inclusive price
+                const netUnit = taxRate > 0 ? unitPrice / (1 + taxRate / 100) : unitPrice;
+                lineTax = (unitPrice - netUnit) * itemQty;
+              } else {
+                // Exclusive: unit price is base (net), tax added on top
+                displayUnitPrice = unitPrice;
+                lineTax = (unitPrice * taxRate / 100) * itemQty;
+                lineTotal = unitPrice * itemQty + lineTax;
+              }
 
-                if (!itemTaxAmount && taxRate > 0) {
-                     // Back-calculate from inclusive price
-                     // Price = Base * (1 + rate/100)  =>  Base = Price / (1 + rate/100)
-                     unitPriceExcl = rawPrice / (1 + (taxRate / 100));
-                     itemTaxAmount = (unitPriceExcl * taxRate) / 100;
-                     // Adjust unit price to be per item
-                     // Note: itemTaxAmount here is per UNIT if calculated from rawPrice (unit price)
-                     // But item.taxAmount usually is line tax. Let's stick to Unit logic first.
-                     // Actually rawPrice is Unit Price.
-                     itemTaxAmount = itemTaxAmount * itemQty; // Total tax for line
-                } else if (!itemTaxAmount) {
-                     itemTaxAmount = 0;
-                }
-
-                // If we used provided item.taxAmount, we can derive Excl Unit Price
-                // NetLine = TotalLine - TaxLine
-                // UnitNet = NetLine / Qty
-                const lineTotal = item.lineTotal || (rawPrice * itemQty); // This is usually inclusive total
-                // Recalculate robustly
-                const totalAmount = lineTotal; 
-                const netAmount = totalAmount - itemTaxAmount;
-                const unitNetPrice = netAmount / itemQty;
-
-               return (
-                  <tr key={index} className="border-b border-gray-100 last:border-0">
-                    <td className="py-3 px-3 text-xs text-gray-500">{index + 1}</td>
-                    <td className="py-3 px-3">
-                      <p className="text-xs font-medium text-gray-900">{item.product?.name || item.name || 'Product'}</p>
-                      {item.variant && <p className="text-[10px] text-gray-500">{item.variant.name}</p>}
-                    </td>
-                    <td className="py-3 px-3 text-center text-xs text-gray-600">{itemQty}</td>
-                    {/* Display Net Unit Price */}
-                    <td className="py-3 px-3 text-right text-xs text-gray-600 whitespace-nowrap">{formatPrice(unitNetPrice)}</td>
-                    <td className="py-3 px-3 text-right text-xs text-gray-600 whitespace-nowrap">
-                         {formatPrice(itemTaxAmount)}
-                    </td>
-                    <td className="py-3 px-3 text-right text-xs font-medium text-gray-900 whitespace-nowrap">{formatPrice(totalAmount)}</td>
-                  </tr>
-               );
-            })}
+             return (
+                <tr key={index} className="border-b border-gray-100 last:border-0">
+                  <td className="py-3 px-3 text-xs text-gray-500">{index + 1}</td>
+                  <td className="py-3 px-3">
+                    <p className="text-xs font-medium text-gray-900">{item.product?.name || item.name || 'Product'}</p>
+                    {item.variant && <p className="text-[10px] text-gray-500">{item.variant.name}</p>}
+                  </td>
+                  <td className="py-3 px-3 text-center text-xs text-gray-600">{itemQty}</td>
+                  <td className="py-3 px-3 text-right text-xs text-gray-600 whitespace-nowrap">{formatPrice(displayUnitPrice)}</td>
+                  <td className="py-3 px-3 text-right text-xs text-gray-600 whitespace-nowrap">
+                    {formatPrice(lineTax)}
+                    {showIncludingTax && <span className="text-[9px] block text-gray-400">incl.</span>}
+                  </td>
+                  <td className="py-3 px-3 text-right text-xs font-medium text-gray-900 whitespace-nowrap">{formatPrice(lineTotal)}</td>
+                </tr>
+             );
+          })}
           </tbody>
         </table>
       </div>
@@ -226,7 +216,9 @@ const QuotationTemplate = forwardRef(({ items = [], summary = {}, profile = {} }
         <div className="w-80 bg-gray-50 p-4 rounded-lg">
           <div className="space-y-2 text-xs">
             <div className="flex justify-between">
-              <span className="text-gray-600">Subtotal</span>
+              <span className="text-gray-600">
+                {showIncludingTax ? 'Subtotal (incl. tax)' : 'Subtotal (excl. tax)'}
+              </span>
               <span className="font-medium">{formatPrice(displaySubtotal)}</span>
             </div>
             {discount > 0 && (
@@ -236,19 +228,24 @@ const QuotationTemplate = forwardRef(({ items = [], summary = {}, profile = {} }
               </div>
             )}
             
-            {/* Tax Breakdown */}
-            {formatTaxBreakdown(taxBreakdown).map((component) => {
-              // Calculate effective rate for this component based on taxable amount
-              const effectiveRate = displaySubtotal > 0 ? (component.value / displaySubtotal) * 100 : 0;
-              const labelWithPercent = effectiveRate > 0 ? `${component.label} (${effectiveRate.toFixed(0)}%)` : component.label;
-
-              return (
-                <div key={component.key} className="flex justify-between text-gray-500">
-                  <span>{labelWithPercent}</span>
-                  <span>{component.formatted}</span>
-                </div>
-              );
-            })}
+            {/* Tax — separate line when excluding, informational when including */}
+            {showIncludingTax ? (
+              <div className="flex justify-between text-gray-500">
+                <span>Tax (incl. in price)</span>
+                <span>{formatPrice(taxAmount)}</span>
+              </div>
+            ) : (
+              formatTaxBreakdown(taxBreakdown).map((component) => {
+                const effectiveRate = displaySubtotal > 0 ? (component.value / displaySubtotal) * 100 : 0;
+                const labelWithPercent = effectiveRate > 0 ? `${component.label} (${effectiveRate.toFixed(0)}%)` : component.label;
+                return (
+                  <div key={component.key} className="flex justify-between text-gray-500">
+                    <span>{labelWithPercent}</span>
+                    <span>{component.formatted}</span>
+                  </div>
+                );
+              })
+            )}
 
             <div className="flex justify-between">
               <span className="text-gray-600">Shipping Estimate</span>
@@ -257,7 +254,7 @@ const QuotationTemplate = forwardRef(({ items = [], summary = {}, profile = {} }
             
             <div className="flex justify-between py-2 border-t border-gray-200 mt-2 text-base">
               <span className="font-bold text-gray-900">Total Estimate</span>
-              <span className="font-bold text-orange-600">{formatPrice(grandTotal)}</span>
+              <span className="font-bold text-orange-600">{formatPrice(displayTotal)}</span>
             </div>
           </div>
         </div>
