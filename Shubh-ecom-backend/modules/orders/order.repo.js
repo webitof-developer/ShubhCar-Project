@@ -101,7 +101,11 @@ class OrderRepository {
     }
 
     try {
-      const order = await Order.findById(orderId).session(session);
+      const orderQuery = Order.findById(orderId);
+      orderQuery.session(session);
+      // Force primary read preference inside transaction
+      orderQuery.read('primary');
+      const order = await orderQuery;
       if (!order) throw new Error('Order not found');
 
       const before = order.toObject();
@@ -166,7 +170,11 @@ class OrderRepository {
 
     try {
       const orderQuery = Order.findById(orderId);
-      if (txSession) orderQuery.session(txSession);
+      if (txSession) {
+        orderQuery.session(txSession);
+        // Force primary read preference inside transaction (fixes "Read preference in a transaction must be primary")
+        orderQuery.read('primary');
+      }
       const order = await orderQuery;
       if (!order) throw new Error('Order not found');
 
