@@ -3,7 +3,10 @@ const OrderVersion = require('../../models/OrderVersion.model');
 class OrderVersionRepo {
   async getLatestVersion(orderId, session) {
     const query = OrderVersion.findOne({ orderId }).sort({ version: -1 });
-    if (session) query.session(session);
+    if (session) {
+      query.session(session);
+      query.read('primary');
+    }
 
     const last = await query.lean();
     return last ? last.version : 0;
@@ -30,7 +33,10 @@ class OrderVersionRepo {
 
   async listByOrder(orderId, session) {
     const query = OrderVersion.find({ orderId }).sort({ version: 1 });
-    if (session) query.session(session);
+    if (session) {
+      query.session(session);
+      query.read('primary');
+    }
     return query.lean();
   }
 }
