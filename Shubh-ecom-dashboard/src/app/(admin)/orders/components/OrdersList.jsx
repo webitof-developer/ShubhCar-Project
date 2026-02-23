@@ -1584,6 +1584,9 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
           <Placeholder xs={5} />
         </td>
         <td className="py-3">
+          <Placeholder xs={5} />
+        </td>
+        <td className="py-3">
           <Placeholder xs={4} />
         </td>
         <td className="py-3">
@@ -1699,7 +1702,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
 
             <CardBody className="p-0">
               <div className="table-responsive">
-                <table className="table align-middle mb-0 table-hover table-centered" style={{ fontSize: '0.9rem' }}>
+                <table className="table align-middle mb-0 table-centered" style={{ fontSize: '0.9rem' }}>
                   <thead className="bg-light-subtle text-secondary text-uppercase fs-12">
                     <tr>
                       <th style={{ width: '40px' }} className="ps-3 py-3 rounded-start-3">
@@ -1711,6 +1714,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                         />
                       </th>
                       <th className="py-3">Order ID</th>
+                      <th className="py-3">Customer</th>
                       <th className="py-3">Date</th>
                       <th className="py-3">Status</th>
                       <th className="py-3">Payment</th>
@@ -1724,7 +1728,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                       renderRowSkeletons()
                     ) : ordersData.length === 0 ? (
                       <tr>
-                        <td colSpan="8" className="text-center py-5">
+                        <td colSpan="9" className="text-center py-5">
                           <div className="d-flex flex-column align-items-center justify-content-center opacity-50">
                             <div className="bg-light p-4 rounded-circle mb-3">
                               <IconifyIcon icon="solar:box-minimalistic-broken" width="48" height="48" className="text-secondary" />
@@ -1750,9 +1754,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                             key={order._id || idx}
                             onClick={() => handleRowClick(order._id)}
                             style={{ cursor: 'pointer' }}
-                            className="position-relative"
-                            onMouseEnter={() => setHoveredOrderId(order._id)}
-                            onMouseLeave={() => setHoveredOrderId(null)}>
+                            className="position-relative">
                             <td className="ps-3 py-3" onClick={(e) => e.stopPropagation()}>
                               <Form.Check
                                 type="checkbox"
@@ -1768,35 +1770,35 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                                   Txn: <span className="font-monospace">{gatewayPaymentId}</span>
                                 </div>
                               )}
-                              {hoveredOrderId === order._id && (
-                                <div className="d-flex align-items-center gap-2 text-muted small mt-2">
-                                  <div
-                                    className="avatar-sm bg-primary-subtle rounded-circle d-flex align-items-center justify-content-center text-primary fw-bold flex-shrink-0"
-                                    style={{ width: '32px', height: '32px' }}
-                                    onClick={(e) => handleCustomerClick(e, customerId)}>
-                                    {customerName ? customerName.charAt(0).toUpperCase() : 'G'}
-                                  </div>
-                                  <div className="d-flex flex-column">
+                            </td>
+                            {/* Customer column - always visible, click navigates to customer detail */}
+                            <td className="py-3" onClick={(e) => e.stopPropagation()}>
+                              <div className="d-flex align-items-center gap-2">
+                                <div
+                                  className="avatar-sm bg-primary-subtle rounded-circle d-flex align-items-center justify-content-center text-primary fw-bold flex-shrink-0"
+                                  style={{ width: '32px', height: '32px', cursor: customerId ? 'pointer' : 'default' }}
+                                  onClick={(e) => customerId && handleCustomerClick(e, customerId)}>
+                                  {customerName ? customerName.charAt(0).toUpperCase() : 'G'}
+                                </div>
+                                <div className="d-flex flex-column">
+                                  {customerId ? (
                                     <button
                                       type="button"
                                       className="btn btn-link p-0 text-start fw-medium text-dark"
+                                      style={{ fontSize: '0.85rem' }}
                                       onClick={(e) => handleCustomerClick(e, customerId)}>
                                       {customerName}
                                     </button>
-                                    {customerEmail && (
-                                      <button
-                                        type="button"
-                                        className="btn btn-link p-0 text-start text-muted"
-                                        style={{ fontSize: '0.75rem' }}
-                                        onClick={(e) => handleCustomerClick(e, customerId)}>
-                                        {customerEmail}
-                                      </button>
-                                    )}
-                                  </div>
+                                  ) : (
+                                    <span className="fw-medium text-dark" style={{ fontSize: '0.85rem' }}>{customerName}</span>
+                                  )}
+                                  {customerEmail && (
+                                    <span className="text-muted" style={{ fontSize: '0.72rem' }}>{customerEmail}</span>
+                                  )}
                                 </div>
-                              )}
+                              </div>
                             </td>
-                            <td className="text-muted py-3">
+                            <td className="w-50 text-muted py-3">
                               {order.createdAt
                                 ? new Date(order.createdAt).toLocaleDateString('en-IN', {
                                     day: 'numeric',

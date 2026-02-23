@@ -11,6 +11,7 @@ import {
   getPaymentStatusBadge,
 } from '@/constants/orderStatus'
 import { getStatusBadge } from '@/helpers/orderApi'
+import OrderTotals from './OrderTotals'
 
 const OrderActions = ({ order, onStatusUpdate, updatingStatus }) => {
   const [selectedStatus, setSelectedStatus] = useState(order.orderStatus || 'created')
@@ -92,7 +93,7 @@ const OrderActions = ({ order, onStatusUpdate, updatingStatus }) => {
 
 const SHIPMENT_STATUS_OPTIONS = ['pending', 'shipped', 'in_transit', 'delivered', 'cancelled', 'returned']
 
-const ShipmentTracking = ({ shipments = [], items = [], onUpsertShipment, savingShipment }) => {
+export const ShipmentTracking = ({ shipments = [], items = [], onUpsertShipment, savingShipment }) => {
   const [showModal, setShowModal] = useState(false)
   const [selectedItemId, setSelectedItemId] = useState('')
   const [shippingProviderId, setShippingProviderId] = useState('')
@@ -322,7 +323,7 @@ const OrderAttribution = ({ order }) => {
     </Card>
   )
 }
-export const OrderNotes = ({ notes = [], onAddNote, addingNote }) => {
+export const OrderNotes = ({ notes = [], onAddNote, addingNote, canManage = true }) => {
   const [noteContent, setNoteContent] = useState('')
   const [noteType, setNoteType] = useState('private')
 
@@ -368,27 +369,29 @@ export const OrderNotes = ({ notes = [], onAddNote, addingNote }) => {
           ))}
         </div>
 
-        <div className="mt-3">
-          <Form.Label className="fs-13 text-muted">Add Note</Form.Label>
-          <Form.Select className="mb-2" value={noteType} onChange={(event) => setNoteType(event.target.value)}>
-            <option value="private">Internal Note</option>
-            <option value="customer">Customer Visible</option>
-            <option value="system">System Note</option>
-          </Form.Select>
-          <Form.Control
-            as="textarea"
-            rows={3}
-            className="mb-2"
-            placeholder="Write a note for this order..."
-            value={noteContent}
-            onChange={(event) => setNoteContent(event.target.value)}
-          />
-          <div className="d-flex justify-content-end">
-            <Button variant="light" size="sm" className="border" disabled={addingNote || !noteContent.trim()} onClick={handleSubmit}>
-              {addingNote ? 'Saving...' : 'Add Note'}
-            </Button>
+        {canManage && (
+          <div className="mt-3">
+            <Form.Label className="fs-13 text-muted">Add Note</Form.Label>
+            <Form.Select className="mb-2" value={noteType} onChange={(event) => setNoteType(event.target.value)}>
+              <option value="private">Internal Note</option>
+              <option value="customer">Customer Visible</option>
+              <option value="system">System Note</option>
+            </Form.Select>
+            <Form.Control
+              as="textarea"
+              rows={3}
+              className="mb-2"
+              placeholder="Write a note for this order..."
+              value={noteContent}
+              onChange={(event) => setNoteContent(event.target.value)}
+            />
+            <div className="d-flex justify-content-end">
+              <Button variant="light" size="sm" className="border" disabled={addingNote || !noteContent.trim()} onClick={handleSubmit}>
+                {addingNote ? 'Saving...' : 'Add Note'}
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
       </CardBody>
     </Card>
   )
@@ -613,7 +616,7 @@ export const PaymentInformation = ({ order, onPaymentUpdate, updatingPayment, on
   )
 }
 
-const Documents = ({ onDownloadInvoice, invoiceDisabled }) => {
+export const Documents = ({ onDownloadInvoice, invoiceDisabled }) => {
   return (
     <Card className="mb-3 border-0 shadow-sm">
       <CardHeader className="bg-light-subtle border-bottom border-light">
@@ -636,15 +639,23 @@ const Documents = ({ onDownloadInvoice, invoiceDisabled }) => {
   )
 }
 
-const OrderDetails = ({ order, shipments, items, notes, onStatusUpdate, updatingStatus, onAddNote, addingNote, onDownloadInvoice, onUpsertShipment, savingShipment, canManage = true }) => {
+const OrderDetails = ({ order, shipments, items, notes, onStatusUpdate, updatingStatus, onAddNote, addingNote, onDownloadInvoice, onUpsertShipment, savingShipment, canManage = true, onPaymentUpdate, updatingPayment, onSyncPayment, syncingPayment }) => {
   if (!order) return null;
   return (
     <div>
       {canManage && <OrderActions order={order} onStatusUpdate={onStatusUpdate} updatingStatus={updatingStatus} />}
-      {canManage && <ShipmentTracking shipments={shipments} items={items} onUpsertShipment={onUpsertShipment} savingShipment={savingShipment} />}
-      <Documents onDownloadInvoice={onDownloadInvoice} invoiceDisabled={order.paymentStatus !== 'paid'} />
+      {canManage && (
+        <PaymentInformation
+          order={order}
+          onPaymentUpdate={onPaymentUpdate}
+          updatingPayment={updatingPayment}
+          onSyncPayment={onSyncPayment}
+          syncingPayment={syncingPayment}
+          canManage={canManage}
+        />
+      )}
+      <OrderTotals order={order} />
       <CustomerDetails user={order.userId} order={order} />
-      {canManage && <OrderNotes notes={notes} onAddNote={onAddNote} addingNote={addingNote} />}
     </div>
   )
 }

@@ -4,10 +4,11 @@ import { useSession } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 import ProductDataList from './components/ProductDataList';
 import OrderTimeline from './components/OrderTimeline';
-import OrderDetails, { PaymentInformation } from './components/OrderDetails';
+import OrderDetails from './components/OrderDetails';
 import BillingAddressCard from './components/BillingAddressCard';
 import ShippingAddressCard from './components/ShippingAddressCard';
 import OrderTotals from './components/OrderTotals';
+import { OrderNotes, ShipmentTracking, Documents } from './components/OrderDetails';
 import { Card, CardBody, Col, Placeholder, Row } from 'react-bootstrap';
 import PageTItle from '@/components/PageTItle';
 import { orderAPI } from '@/helpers/orderApi';
@@ -364,19 +365,24 @@ const OrderDetailPage = () => {
 
           <ProductDataList items={items} orderStatus={order.orderStatus} />
 
+          {/* Col 1: Shipment Tracking + Documents stacked | Col 2: Order Notes */}
           <Row className="mb-3">
-            <Col lg={6}>
-              <PaymentInformation
-                order={order}
-                onPaymentUpdate={handlePaymentUpdate}
-                updatingPayment={updatingPayment}
-                onSyncPayment={handleSyncPayment}
-                syncingPayment={syncingPayment}
-                canManage={canManageOrders}
+            <Col md={6} className="d-flex flex-column gap-3">
+              {canManageOrders && (
+                <ShipmentTracking
+                  shipments={shipments}
+                  items={items}
+                  onUpsertShipment={handleUpsertShipment}
+                  savingShipment={savingShipment}
+                />
+              )}
+              <Documents
+                onDownloadInvoice={handleDownloadInvoice}
+                invoiceDisabled={order.paymentStatus !== 'paid'}
               />
             </Col>
-            <Col lg={6}>
-              <OrderTotals order={order} />
+            <Col md={6}>
+              <OrderNotes notes={notes} onAddNote={handleAddNote} addingNote={addingNote} canManage={canManageOrders} />
             </Col>
           </Row>
         </Col>
@@ -396,6 +402,10 @@ const OrderDetailPage = () => {
             onUpsertShipment={handleUpsertShipment}
             savingShipment={savingShipment}
             canManage={canManageOrders}
+            onPaymentUpdate={handlePaymentUpdate}
+            updatingPayment={updatingPayment}
+            onSyncPayment={handleSyncPayment}
+            syncingPayment={syncingPayment}
           />
         </Col>
       </Row>
