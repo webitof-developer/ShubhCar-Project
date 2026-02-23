@@ -1091,6 +1091,86 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
             </Col>
           </Row>
 
+          
+
+          <div className="d-flex align-items-center justify-content-between mt-3 mb-2">
+            <h6 className="text-uppercase text-muted fs-12 mb-0">Items</h6>
+            <Button variant="outline-secondary" size="sm" onClick={addItemRow}>
+              Add item
+            </Button>
+          </div>
+          {createForm.items.map((item, index) => (
+            <Row className="g-2 align-items-end mb-2" key={`item-${index}`}>
+              <Col md={6}>
+                <div className="position-relative">
+                  <FloatingLabel controlId={`manual-product-${index}`} label={requiredLabel('Product')}>
+                    <Form.Control
+                      value={item.productSearch || ''}
+                      onChange={(e) => {
+                        const next = e.target.value
+                        if (item.productId && next.trim() !== (item.productName || '').trim()) {
+                          updateItemField(index, 'productId', '')
+                        }
+                        updateItemField(index, 'productSearch', next)
+                        if (!next.trim()) {
+                          handleSelectProductById(index, '')
+                          return
+                        }
+                        searchProducts(index, next)
+                      }}
+                      onFocus={() => {
+                        if (!item.productId || (item.productSearch || '').trim() !== (item.productName || '').trim()) {
+                          searchProducts(index, item.productSearch || '')
+                        }
+                      }}
+                      placeholder="Search product"
+                      required
+                    />
+                  </FloatingLabel>
+                  {(item.productSearch || '').trim().length > 0 && (item.productOptions || []).length > 0 && (
+                    <div
+                      className="border rounded-2 bg-white position-absolute start-0 end-0 mt-1 overflow-auto"
+                      style={{ zIndex: 2200, maxHeight: 220 }}>
+                      {(item.productOptions || []).map((product) => (
+                        <button
+                          key={product._id}
+                          type="button"
+                          className="btn btn-link text-start w-100 text-decoration-none border-bottom rounded-0 px-2 py-1"
+                          onClick={() => handleSelectProduct(index, product)}>
+                          {`${product.name}${product.sku ? ` (${product.sku})` : ''}`}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </Col>
+              <Col md={2}>
+                <FloatingLabel controlId={`manual-qty-${index}`} label={requiredLabel('Qty')}>
+                  <Form.Control
+                    type="number"
+                    min="1"
+                    value={item.quantity}
+                    onChange={(e) => updateItemField(index, 'quantity', e.target.value)}
+                    placeholder="1"
+                    required
+                  />
+                </FloatingLabel>
+              </Col>
+              <Col md={3}>
+                <FloatingLabel
+                  controlId={`manual-price-${index}`}
+                  label={`Unit Price (${selectedCustomerType === 'wholesale' ? 'Wholesale' : 'Retail'})`}>
+                  <Form.Control type="number" min="0" step="0.01" value={item.productPrice ?? 0} readOnly placeholder="0" />
+                </FloatingLabel>
+              </Col>
+              <Col md={1} className="d-flex justify-content-end">
+                <Button variant="outline-danger" size="sm" onClick={() => removeItemRow(index)} disabled={createForm.items.length === 1}>
+                  <IconifyIcon icon="bx:trash" />
+                </Button>
+              </Col>
+            </Row>
+          ))}
+
           <Row className="g-2 mt-2">
             {isSalesman ? (
               <Col md={4}>
@@ -1212,84 +1292,6 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
               </Col>
             )}
           </Row>
-
-          <div className="d-flex align-items-center justify-content-between mt-3 mb-2">
-            <h6 className="text-uppercase text-muted fs-12 mb-0">Items</h6>
-            <Button variant="outline-secondary" size="sm" onClick={addItemRow}>
-              Add item
-            </Button>
-          </div>
-          {createForm.items.map((item, index) => (
-            <Row className="g-2 align-items-end mb-2" key={`item-${index}`}>
-              <Col md={6}>
-                <div className="position-relative">
-                  <FloatingLabel controlId={`manual-product-${index}`} label={requiredLabel('Product')}>
-                    <Form.Control
-                      value={item.productSearch || ''}
-                      onChange={(e) => {
-                        const next = e.target.value
-                        if (item.productId && next.trim() !== (item.productName || '').trim()) {
-                          updateItemField(index, 'productId', '')
-                        }
-                        updateItemField(index, 'productSearch', next)
-                        if (!next.trim()) {
-                          handleSelectProductById(index, '')
-                          return
-                        }
-                        searchProducts(index, next)
-                      }}
-                      onFocus={() => {
-                        if (!item.productId || (item.productSearch || '').trim() !== (item.productName || '').trim()) {
-                          searchProducts(index, item.productSearch || '')
-                        }
-                      }}
-                      placeholder="Search product"
-                      required
-                    />
-                  </FloatingLabel>
-                  {(item.productSearch || '').trim().length > 0 && (item.productOptions || []).length > 0 && (
-                    <div
-                      className="border rounded-2 bg-white position-absolute start-0 end-0 mt-1 overflow-auto"
-                      style={{ zIndex: 2200, maxHeight: 220 }}>
-                      {(item.productOptions || []).map((product) => (
-                        <button
-                          key={product._id}
-                          type="button"
-                          className="btn btn-link text-start w-100 text-decoration-none border-bottom rounded-0 px-2 py-1"
-                          onClick={() => handleSelectProduct(index, product)}>
-                          {`${product.name}${product.sku ? ` (${product.sku})` : ''}`}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </Col>
-              <Col md={2}>
-                <FloatingLabel controlId={`manual-qty-${index}`} label={requiredLabel('Qty')}>
-                  <Form.Control
-                    type="number"
-                    min="1"
-                    value={item.quantity}
-                    onChange={(e) => updateItemField(index, 'quantity', e.target.value)}
-                    placeholder="1"
-                    required
-                  />
-                </FloatingLabel>
-              </Col>
-              <Col md={3}>
-                <FloatingLabel
-                  controlId={`manual-price-${index}`}
-                  label={`Unit Price (${selectedCustomerType === 'wholesale' ? 'Wholesale' : 'Retail'})`}>
-                  <Form.Control type="number" min="0" step="0.01" value={item.productPrice ?? 0} readOnly placeholder="0" />
-                </FloatingLabel>
-              </Col>
-              <Col md={1} className="d-flex justify-content-end">
-                <Button variant="outline-danger" size="sm" onClick={() => removeItemRow(index)} disabled={createForm.items.length === 1}>
-                  <IconifyIcon icon="bx:trash" />
-                </Button>
-              </Col>
-            </Row>
-          ))}
 
           <Row className="g-2 mt-3">
             <Col md={12}>
