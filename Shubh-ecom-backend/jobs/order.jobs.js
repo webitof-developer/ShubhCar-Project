@@ -23,7 +23,7 @@ const AUTO_CANCEL_MS = 20 * 60 * 1000; // 20 minutes
 const processAutoCancel = async (orderId) => {
   const session = await createSafeSession();
   if (!session._isStandalone) {
-    session.startTransaction();
+    session.startTransaction({ readPreference: 'primary' });
   }
 
   try {

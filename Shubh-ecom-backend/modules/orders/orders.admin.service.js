@@ -10,6 +10,9 @@ const mongoose = require('mongoose');
 const ProductImage = require('../../models/ProductImage.model');
 const userRepo = require('../users/user.repo');
 const Role = require('../../models/Role.model');
+// Security: Escape user input before constructing RegExp to prevent ReDoS.
+const { escapeRegex } = require('../../utils/escapeRegex');
+const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
 
 const isSalesmanActor = async (actor = {}) => {
   if (String(actor?.role || '').toLowerCase() === 'salesman') return true;
@@ -41,9 +44,8 @@ exports.adminList = async (query = {}, actor = {}) => {
     summary,
   } = query;
 
-  const safePage = Math.max(1, Number(page) || 1);
-  const safeLimit = Math.max(1, Number(limit) || 20);
-  const skip = (safePage - 1) * safeLimit;
+  const pagination = getOffsetPagination({ page, limit });
+  const skip = pagination.skip;
   const filter = { isDeleted: false };
   const isSalesman = await isSalesmanActor(actor);
 
@@ -61,9 +63,7 @@ exports.adminList = async (query = {}, actor = {}) => {
     if (to) filter.createdAt.$lte = new Date(to);
   }
 
-  const escapeRegex = (value = '') =>
-    value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const searchValue = typeof search === 'string' ? search.trim() : '';
+  const searchValue = search || '';
   const hasSearch = Boolean(searchValue);
   const searchRegex = hasSearch ? new RegExp(escapeRegex(searchValue), 'i') : null;
   const normalizedCustomerType = String(customerType || '')
@@ -192,7 +192,7 @@ exports.adminList = async (query = {}, actor = {}) => {
 
   pipeline.push({
     $facet: {
-      items: [{ $skip: skip }, { $limit: safeLimit }],
+      items: [{ $skip: skip }, { $limit: pagination.limit }],
       total: [{ $count: 'count' }],
     },
   });
@@ -200,14 +200,15 @@ exports.adminList = async (query = {}, actor = {}) => {
   const [result] = await Order.aggregate(pipeline);
   const items = (result?.items || []).map(attachPaymentSummary);
   const total = result?.total?.[0]?.count || 0;
-  const totalPages = Math.max(1, Math.ceil(total / safeLimit));
+  const totalPages = Math.max(1, Math.ceil(total / pagination.limit));
 
   return {
     items,
     total,
-    page: safePage,
-    limit: safeLimit,
+    page: pagination.page,
+    limit: pagination.limit,
     totalPages,
+    pagination: buildPaginationMeta({ ...pagination, total }),
   };
 };
 
@@ -263,7 +264,7 @@ exports.adminGetOrder = async (orderId, actor = {}) => {
 
   const [items, shipments, events] = await Promise.all([
     orderRepo.findItemsByOrderWithDetails(orderId),
-    shipmentRepo.list({ orderId }),
+    shipmentRepo.list({ orderId }, { page: 1, limit: 100 }),
     orderEventRepo.listByOrder(orderId),
   ]);
   const productIds = items

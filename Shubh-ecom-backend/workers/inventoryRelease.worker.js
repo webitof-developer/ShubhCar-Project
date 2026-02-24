@@ -1,8 +1,10 @@
 const { queuesEnabled } = require('../config/queue');
+const logger = require('../config/logger');
 
 if (!queuesEnabled) {
-  // eslint-disable-next-line no-console
-  console.warn('Worker disabled: REDIS_URL not set');
+  logger.warn('Worker disabled: REDIS_URL not set', {
+    worker: 'inventory-release',
+  });
   module.exports = { worker: null, disabled: true };
 } else {
   const { Worker } = require('bullmq');
@@ -10,13 +12,13 @@ if (!queuesEnabled) {
   const { connectRedis } = require('../config/redis');
   const orderRepo = require('../modules/orders/order.repo');
   const inventoryService = require('../modules/inventory/inventory.service');
-  const logger = require('../config/logger');
   const { logWorkerFailure } = require('../utils/workerLogger');
 
-  connectRedis().catch((err) =>
-    // eslint-disable-next-line no-console
-    console.error('Failed to connect Redis for inventory release worker', err),
-  );
+  connectRedis().catch((err) => {
+    logger.error('Failed to connect Redis for inventory release worker', {
+      error: err.message,
+    });
+  });
 
   let worker = null;
 

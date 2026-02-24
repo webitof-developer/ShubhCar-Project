@@ -28,6 +28,15 @@ const normalizeRoleId = (roleId) => {
   return ''
 }
 
+const extractItems = (payload) => {
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload?.items)) return payload.items
+  if (Array.isArray(payload?.data)) return payload.data
+  if (Array.isArray(payload?.users)) return payload.users
+  if (Array.isArray(payload?.roles)) return payload.roles
+  return []
+}
+
 const UsersPage = () => {
   const { data: session, status } = useSession()
   const { hasPermission } = usePermissions()
@@ -53,6 +62,17 @@ const UsersPage = () => {
   const canUpdateUsers = hasPermission('users.update')
   const canDeleteUsers = hasPermission('users.delete')
   const canManageRole = session?.user?.role === 'admin'
+  const safeUsers = Array.isArray(users) ? users : []
+  const safeRoles = Array.isArray(roles) ? roles : []
+  const roleOptions = (() => {
+    const options = [{ value: ADMIN_FULL_ACCESS_VALUE, label: 'Admin (Full Access)' }]
+    for (const role of safeRoles) {
+      if (!role || typeof role !== 'object') continue
+      if (!role._id) continue
+      options.push({ value: role._id, label: role.name || 'Unnamed Role' })
+    }
+    return options
+  })()
 
   // --- API Hooks ---
 
@@ -119,7 +139,7 @@ const UsersPage = () => {
       if (!response.ok) throw new Error('Failed to fetch users')
 
       const data = await response.json()
-      setUsers(data.data || [])
+      setUsers(extractItems(data?.data || data))
       setFetchError(null)
     } catch (err) {
       console.error(err)
@@ -135,7 +155,7 @@ const UsersPage = () => {
     if (!token) return
     try {
       const response = await rolesAPI.list(token)
-      setRoles(response.data || [])
+      setRoles(extractItems(response?.data || response))
     } catch (err) {
       console.error('Failed to fetch roles', err)
     }
@@ -156,12 +176,12 @@ const UsersPage = () => {
     if (open === 'create' && canCreateUsers) {
       handleOpenModal()
     } else if (open === 'edit' && id && canUpdateUsers) {
-      const target = users.find((u) => u._id === id)
+      const target = safeUsers.find((u) => u._id === id)
       if (target) {
         handleOpenModal(target)
       }
     }
-  }, [searchParams, users, canCreateUsers, canUpdateUsers])
+  }, [searchParams, safeUsers, canCreateUsers, canUpdateUsers])
 
   // --- Handlers ---
 
@@ -218,10 +238,7 @@ const UsersPage = () => {
     },
     { 
         name: 'roleId', label: 'User Role', type: 'select', 
-        options: [
-            { value: ADMIN_FULL_ACCESS_VALUE, label: 'Admin (Full Access)' },
-            ...roles.map(r => ({ value: r._id, label: r.name }))
-        ],
+        options: roleOptions,
         disabled: !canManageRole,
         helpText: !canManageRole ? 'Only admin can change role' : undefined,
     },
@@ -233,7 +250,7 @@ const UsersPage = () => {
 
   // --- Render ---
 
-  if (status === 'loading' || (usersLoading && !users.length)) {
+  if (status === 'loading' || (usersLoading && !safeUsers.length)) {
     return <div className="text-center py-5"><Spinner animation="border" variant="primary" /></div>
   }
 
@@ -271,7 +288,7 @@ const UsersPage = () => {
                     { key: 'checkbox', label: '', width: 20, render: () => <Form.Check /> },
                     { key: 'name', label: 'Name', render: (user) => (
                       <div className="d-flex align-items-center">
-                        <div className="avatar-sm bg-primary-subtle rounded-circle flex-centered me-2">
+                        <div className="avatar-sm bg-primary-subtle rounded-circle flex-centered flex-shrink-0 me-2">
                           <span className="text-primary fw-bold">{user.firstName?.[0]?.toUpperCase()}</span>
                         </div>
                         <div className="fw-medium">{user.firstName} {user.lastName}</div>
@@ -281,7 +298,7 @@ const UsersPage = () => {
                     { key: 'phone', label: 'Phone', render: (user) => user.phone || '-' },
                     { key: 'role', label: 'Role', render: (user) => {
                       const resolvedRoleId = normalizeRoleId(user.roleId)
-                      return roles.find((role) => String(role._id) === resolvedRoleId)?.name || 'Admin (Full Access)'
+                      return safeRoles.find((role) => String(role._id) === resolvedRoleId)?.name || 'Admin (Full Access)'
                     } },
                     { key: 'status', label: 'Status', render: (user) => (
                       <Badge bg={user.status === 'active' ? 'success' : user.status === 'inactive' ? 'warning' : 'danger'} className="badge-subtle">
@@ -303,7 +320,7 @@ const UsersPage = () => {
                       </div>
                     )}
                   ]}
-                  data={users}
+                  data={safeUsers}
                   loading={usersLoading}
                   emptyMessage="No admin users found"
                 />
@@ -316,7 +333,7 @@ const UsersPage = () => {
                   </li>
                   <li className="page-item active"><span className="page-link">{currentPage}</span></li>
                   <li className="page-item">
-                    <button className="page-link" onClick={() => setCurrentPage((p) => p + 1)} disabled={users.length < 20}>Next</button>
+                    <button className="page-link" onClick={() => setCurrentPage((p) => p + 1)} disabled={safeUsers.length < 20}>Next</button>
                   </li>
                 </ul>
               </nav>

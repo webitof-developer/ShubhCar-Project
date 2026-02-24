@@ -1,14 +1,13 @@
 // backend/workers/email.worker.js
 const { queuesEnabled } = require('../config/queue');
+const logger = require('../config/logger');
 
 if (!queuesEnabled) {
-  // eslint-disable-next-line no-console
-  console.warn('Worker disabled: REDIS_URL not set');
+  logger.warn('Worker disabled: REDIS_URL not set', { worker: 'email' });
   module.exports = { worker: null, disabled: true };
 } else {
   const { Worker } = require('bullmq');
   const { connection } = require('../config/queue');
-  const logger = require('../config/logger');
   const emailNotification = require('../services/emailNotification.service');
   const { logWorkerFailure } = require('../utils/workerLogger');
 

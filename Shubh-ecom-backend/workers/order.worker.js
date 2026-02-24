@@ -1,8 +1,8 @@
 const { queuesEnabled } = require('../config/queue');
+const logger = require('../config/logger');
 
 if (!queuesEnabled) {
-  // eslint-disable-next-line no-console
-  console.warn('Worker disabled: REDIS_URL not set');
+  logger.warn('Worker disabled: REDIS_URL not set', { worker: 'order' });
   module.exports = { worker: null, disabled: true };
 } else {
   const { Worker } = require('bullmq');
@@ -10,15 +10,15 @@ if (!queuesEnabled) {
   const { connectRedis } = require('../config/redis');
   const orderJobs = require('../jobs/order.jobs');
   const eventBus = require('../utils/eventBus');
-  const logger = require('../config/logger');
   const { logWorkerFailure } = require('../utils/workerLogger');
   const orderRepo = require('../modules/orders/order.repo');
   const shipmentService = require('../modules/shipments/shipment.service');
 
   // Ensure shared Redis client used by coupon locks is connected in the worker context.
   connectRedis().catch((err) => {
-    // eslint-disable-next-line no-console
-    console.error('Failed to connect Redis for order worker', err);
+    logger.error('Failed to connect Redis for order worker', {
+      error: err.message,
+    });
   });
 
   let worker = null;

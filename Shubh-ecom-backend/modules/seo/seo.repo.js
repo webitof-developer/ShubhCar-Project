@@ -1,4 +1,5 @@
 const Seo = require('../../models/Seo.model');
+const { getOffsetPagination } = require('../../utils/pagination');
 
 class SeoRepository {
   async upsert(filter, data) {
@@ -13,8 +14,17 @@ class SeoRepository {
     return Seo.findOne(filter).lean();
   }
 
-  list(filter = {}) {
-    return Seo.find(filter).sort({ updatedAt: -1 }).lean();
+  list(filter = {}, pagination = {}) {
+    const { limit, skip } = getOffsetPagination(pagination);
+    return Seo.find(filter)
+      .sort({ updatedAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+  }
+
+  count(filter = {}) {
+    return Seo.countDocuments(filter);
   }
 
   async deactivate(id) {

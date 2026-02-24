@@ -1,6 +1,7 @@
 const Coupon = require('../../models/Coupon.model');
 const CouponUsage = require('../../models/CouponUsage.model');
 const { redis } = require('../../config/redis');
+const { getOffsetPagination } = require('../../utils/pagination');
 
 class CouponRepository {
   cacheKey(code) {
@@ -56,8 +57,17 @@ class CouponRepository {
     return Coupon.findById(id).lean();
   }
 
-  list(filter = {}) {
-    return Coupon.find(filter).sort({ createdAt: -1 }).lean();
+  list(filter = {}, pagination = {}) {
+    const { limit, skip } = getOffsetPagination(pagination);
+    return Coupon.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+  }
+
+  count(filter = {}) {
+    return Coupon.countDocuments(filter);
   }
 
   create(data) {

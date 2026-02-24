@@ -7,11 +7,18 @@ const { adminLimiter } = require('../../middlewares/rateLimiter.middleware');
 const {
   createProductSchema,
   updateProductSchema,
+  listFeaturedQuerySchema,
+  listByCategoryQuerySchema,
+  listPublicQuerySchema,
+  adminListQuerySchema,
 } = require('./product.validator');
 const ROLES = require('../../constants/roles');
 const cacheRead = require('../../middlewares/cacheRead');
 const keys = require('../../lib/cache/keys');
-const { uploadProductImages } = require('../../middlewares/productImageUpload.middleware');
+const {
+  uploadProductImages,
+  validateUploadedProductImages,
+} = require('../../middlewares/productImageUpload.middleware');
 const multer = require('multer');
 
 const router = express.Router();
@@ -51,6 +58,7 @@ const bulkUpload = multer({
  */
 router.get(
   '/featured',
+  validate(listFeaturedQuerySchema, 'query'),
   cacheRead({
     key: (req) => keys.catalog.productsList({ ...req.query, featured: true }),
     ttl: 600,
@@ -96,6 +104,7 @@ router.get(
 router.get(
   '/category/:categoryId',
   validateId('categoryId'),
+  validate(listByCategoryQuerySchema, 'query'),
   cacheRead({
     key: (req) =>
       keys.catalog.productsByCategory(req.params.categoryId, req.query),
@@ -120,7 +129,7 @@ router.get(
  *     responses:
  *       200: { description: Products }
  */
-router.get('/', controller.listPublic);
+router.get('/', validate(listPublicQuerySchema, 'query'), controller.listPublic);
 
 /**
  * @openapi
@@ -207,7 +216,13 @@ router.get('/id/:productId/alternatives', validateId('productId'), controller.ge
  *                 success:
  *                   type: boolean
  */
-router.get('/admin/list', adminLimiter, auth([ROLES.ADMIN]), controller.adminList);
+router.get(
+  '/admin/list',
+  adminLimiter,
+  auth([ROLES.ADMIN]),
+  validate(adminListQuerySchema, 'query'),
+  controller.adminList,
+);
 
 /**
  * @openapi
@@ -608,6 +623,7 @@ router.post(
   auth([ROLES.ADMIN]),
   validateId('productId'),
   uploadProductImages.array('images', 5),
+  validateUploadedProductImages,
   controller.uploadImages,
 );
 /**

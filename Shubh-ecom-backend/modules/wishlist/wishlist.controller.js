@@ -3,7 +3,7 @@ const { success } = require('../../utils/apiResponse');
 const service = require('./wishlist.service');
 
 exports.list = asyncHandler(async (req, res) => {
-  const data = await service.list(req.user.id);
+  const data = await service.list(req.user.id, req.query);
   return success(res, data, 'Wishlist fetched');
 });
 

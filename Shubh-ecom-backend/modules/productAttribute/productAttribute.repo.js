@@ -1,10 +1,19 @@
 const ProductAttributeValue = require('../../models/ProductAttributeValue.model');
+const { getOffsetPagination } = require('../../utils/pagination');
 
 class ProductAttributeRepository {
-  getByProduct(productId) {
+  getByProduct(productId, pagination = {}) {
+    const { limit, skip } = getOffsetPagination(pagination);
     return ProductAttributeValue.find({ productId })
       .populate('attributeId')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
       .lean();
+  }
+
+  countByProduct(productId) {
+    return ProductAttributeValue.countDocuments({ productId });
   }
 
   getByProductAndAttr(productId, attributeId) {

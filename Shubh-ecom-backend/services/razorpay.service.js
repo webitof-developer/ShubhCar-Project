@@ -19,13 +19,20 @@ class RazorpayService {
     });
   }
 
-  verifyWebhook(signature, body, webhookSecret) {
+  verifyWebhook(signature, body) {
     const expected = crypto
-      .createHmac('sha256', webhookSecret || env.RAZORPAY_WEBHOOK_SECRET)
+      .createHmac('sha256', env.RAZORPAY_WEBHOOK_SECRET)
       .update(body)
       .digest('hex');
 
-    if (expected !== signature) {
+    const expectedBuffer = Buffer.from(expected, 'hex');
+    const receivedBuffer = Buffer.from(signature || '', 'hex');
+
+    // Security: Use timingSafeEqual to prevent timing attack on webhook signature verification.
+    if (
+      expectedBuffer.length !== receivedBuffer.length ||
+      !crypto.timingSafeEqual(expectedBuffer, receivedBuffer)
+    ) {
       throw new Error('Invalid Razorpay webhook signature');
     }
   }

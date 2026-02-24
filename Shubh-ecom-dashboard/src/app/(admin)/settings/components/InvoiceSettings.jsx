@@ -29,6 +29,7 @@ const defaultData = {
   invoice_company_phone: '',
   invoice_company_website: '',
   invoice_logo_url: '',
+  invoice_template_image_url: '',
   // Terms
   invoice_terms: '',
   invoice_notes: '',
@@ -176,6 +177,7 @@ const InvoiceSettings = () => {
         invoice_company_phone: formData.invoice_company_phone,
         invoice_company_website: formData.invoice_company_website,
         invoice_logo_url: formData.invoice_logo_url,
+        invoice_template_image_url: formData.invoice_template_image_url,
         // Terms
         invoice_terms: formData.invoice_terms,
         invoice_notes: formData.invoice_notes,
@@ -469,6 +471,17 @@ const InvoiceSettings = () => {
                         placeholder="/uploads/logo.png or full URL"
                       />
                       <small className="text-muted">Leave blank to use default site logo</small>
+                    </Col>
+                    <Col md={12}>
+                      <Form.Label>Designer Template Image URL (A4)</Form.Label>
+                      <Form.Control
+                        value={formData.invoice_template_image_url}
+                        onChange={(e) => setFormData(prev => ({ ...prev, invoice_template_image_url: e.target.value }))}
+                        placeholder="/uploads/invoice-template.png or full URL"
+                      />
+                      <small className="text-muted">
+                        Optional: background image used for invoice PDF downloads across dashboard and order pages.
+                      </small>
                     </Col>
                   </Row>
                 </Tab.Pane>

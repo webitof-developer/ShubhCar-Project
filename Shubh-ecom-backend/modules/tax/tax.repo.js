@@ -1,8 +1,18 @@
 const TaxSlab = require('../../models/TaxSlab.model');
+const { getOffsetPagination } = require('../../utils/pagination');
 
 class TaxRepo {
-  list(filter = {}) {
-    return TaxSlab.find(filter).sort({ hsnCode: 1, minAmount: 1 }).lean();
+  list(filter = {}, pagination = {}) {
+    const { limit, skip } = getOffsetPagination(pagination);
+    return TaxSlab.find(filter)
+      .sort({ hsnCode: 1, minAmount: 1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+  }
+
+  count(filter = {}) {
+    return TaxSlab.countDocuments(filter);
   }
 
   findByHsnCode(hsnCode) {

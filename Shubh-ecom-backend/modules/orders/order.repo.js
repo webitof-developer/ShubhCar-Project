@@ -97,7 +97,7 @@ class OrderRepository {
   async updateWithVersion({ orderId, mutate, reason, actor }) {
     const session = await createSafeSession();
     if (!session._isStandalone) {
-      session.startTransaction();
+      session.startTransaction({ readPreference: 'primary' });
     }
 
     try {
@@ -166,7 +166,9 @@ class OrderRepository {
       txSession &&
       (ownsSession || !txSession.inTransaction());
 
-    if (shouldManageTx) txSession.startTransaction();
+    if (shouldManageTx) {
+      txSession.startTransaction({ readPreference: 'primary' });
+    }
 
     try {
       const orderQuery = Order.findById(orderId);

@@ -3,6 +3,14 @@ const Joi = require('joi');
 
 dotenv.config();
 
+// Security: Do not use fallback JWT secrets. Application must fail if secret is missing.
+const requiredEnv = ['JWT_SECRET', 'JWT_REFRESH_SECRET', 'NEXTAUTH_SECRET'];
+requiredEnv.forEach((key) => {
+  if (!process.env[key]) {
+    throw new Error(`${key} environment variable is not defined`);
+  }
+});
+
 const schema = Joi.object({
   NODE_ENV: Joi.string()
     .valid('development', 'staging', 'production', 'test')
@@ -18,14 +26,15 @@ const schema = Joi.object({
   JWT_EXPIRES_IN: Joi.string().required(),
   JWT_REFRESH_SECRET: Joi.string().required(),
   JWT_REFRESH_EXPIRES_IN: Joi.string().required(),
+  NEXTAUTH_SECRET: Joi.string().required(),
 
   GOOGLE_CLIENT_ID: Joi.string().optional(),
 
   STRIPE_SECRET_KEY: Joi.string().required(),
-  STRIPE_WEBHOOK_SECRET: Joi.string().optional(),
+  STRIPE_WEBHOOK_SECRET: Joi.string().required(),
   RAZORPAY_KEY_ID: Joi.string().required(),
   RAZORPAY_KEY_SECRET: Joi.string().required(),
-  RAZORPAY_WEBHOOK_SECRET: Joi.string().optional(),
+  RAZORPAY_WEBHOOK_SECRET: Joi.string().required(),
 
   SMTP_HOST: Joi.string().required(),
   SMTP_PORT: Joi.number().required(),
@@ -49,13 +58,25 @@ const schema = Joi.object({
 const { value, error } = schema.validate(process.env);
 
 if (error) {
-  console.error('❌ ENV validation failed:', error.message);
-  process.exit(1);
+  throw new Error(`ENV validation failed: ${error.message}`);
 }
 
 if (!value.MONGO_URI && !value.MONGO_REPLICA_URI) {
-  console.error('❌ ENV validation failed: MONGO_URI or MONGO_REPLICA_URI is required');
-  process.exit(1);
+  throw new Error(
+    'ENV validation failed: MONGO_URI or MONGO_REPLICA_URI is required',
+  );
+}
+
+if (value.JWT_SECRET === value.JWT_REFRESH_SECRET) {
+  throw new Error(
+    'ENV validation failed: JWT_SECRET and JWT_REFRESH_SECRET must be different',
+  );
+}
+
+if (value.JWT_SECRET === value.NEXTAUTH_SECRET) {
+  throw new Error(
+    'ENV validation failed: JWT_SECRET and NEXTAUTH_SECRET must be different',
+  );
 }
 
 module.exports = value;

@@ -78,7 +78,22 @@ app.use(
   }),
 );
 app.set('trust proxy', 1);
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use(
+  '/uploads',
+  express.static(path.join(__dirname, 'uploads'), {
+    setHeaders: (res, filePath) => {
+      // Security: Uploaded files are untrusted content; prevent MIME sniffing.
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+
+      // Security: Force download for non-image files served from uploads.
+      const ext = path.extname(filePath).toLowerCase();
+      const inlineImageExtensions = new Set(['.jpg', '.jpeg', '.png', '.webp']);
+      if (!inlineImageExtensions.has(ext)) {
+        res.setHeader('Content-Disposition', 'attachment');
+      }
+    },
+  }),
+);
 
 const shouldEnableSwagger =
   env.NODE_ENV === 'development' ||

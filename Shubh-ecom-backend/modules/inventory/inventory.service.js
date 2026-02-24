@@ -30,7 +30,11 @@ class InventoryService {
     );
 
     if (res.modifiedCount === 0) {
-      error('Insufficient stock', 409);
+      error(
+        'Requested quantity exceeds available stock',
+        400,
+        'VALIDATION_ERROR',
+      );
     }
 
     await inventoryCache.del(productId);

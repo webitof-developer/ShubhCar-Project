@@ -323,7 +323,7 @@ describe('Payment Webhook Integration Tests', () => {
         },
       };
 
-      const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || 'test-secret';
+      const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
       const signature = crypto
         .createHmac('sha256', webhookSecret)
         .update(JSON.stringify(webhookPayload))
@@ -355,7 +355,7 @@ describe('Payment Webhook Integration Tests', () => {
         },
       };
 
-      const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || 'test-secret';
+      const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
       const signature = crypto
         .createHmac('sha256', webhookSecret)
         .update(JSON.stringify(webhookPayload))

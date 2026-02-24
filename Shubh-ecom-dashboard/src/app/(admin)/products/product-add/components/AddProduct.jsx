@@ -15,6 +15,17 @@ import MediaPickerModal from '@/components/media/MediaPickerModal'
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 const MAX_IMAGE_COUNT = 5
 
+const extractItems = (payload, aliases = []) => {
+  if (Array.isArray(payload)) return payload
+  if (!payload || typeof payload !== 'object') return []
+
+  for (const key of ['items', 'data', ...aliases]) {
+    if (Array.isArray(payload[key])) return payload[key]
+  }
+
+  return []
+}
+
 const AddProduct = () => {
   const { data: session } = useSession()
   const router = useRouter()
@@ -81,6 +92,7 @@ const AddProduct = () => {
   const [productReviews, setProductReviews] = useState([])
   const [reviewsLoading, setReviewsLoading] = useState(false)
   const [reviewsError, setReviewsError] = useState(null)
+  const safeExistingImages = Array.isArray(existingImages) ? existingImages : []
 
   const reviewStatusLabel = {
     published: 'Approved',
@@ -195,7 +207,7 @@ const AddProduct = () => {
             })
             if (subResponse.ok) {
               const subData = await subResponse.json()
-              setSubcategories(subData.data || [])
+              setSubcategories(extractItems(subData?.data || subData, ['categories']))
             }
           } catch (subErr) {
             console.error('Error fetching subcategories:', subErr)
@@ -213,10 +225,11 @@ const AddProduct = () => {
         })
         if (imgResponse.ok) {
           const imgData = await imgResponse.json()
-          const images = imgData.data || []
-          setExistingImages(images)
-          const primary = images.find((img) => img.isPrimary)
-          setFeaturedImageId(primary?._id || images[0]?._id || null)
+          const images = extractItems(imgData?.data || imgData, ['images'])
+          const safeImages = Array.isArray(images) ? images : []
+          setExistingImages(safeImages)
+          const primary = safeImages.find((img) => img.isPrimary)
+          setFeaturedImageId(primary?._id || safeImages[0]?._id || null)
         }
       } catch (imgErr) {
         console.error('Error fetching images:', imgErr)
@@ -260,7 +273,7 @@ const AddProduct = () => {
 
         if (response.ok) {
           const data = await response.json()
-          setCategories(data.data || [])
+          setCategories(extractItems(data?.data || data, ['categories']))
         }
       } catch (err) {
         console.error('Error fetching categories:', err)
@@ -358,7 +371,7 @@ const AddProduct = () => {
 
         if (response.ok) {
           const data = await response.json()
-          setSubcategories(data.data || [])
+          setSubcategories(extractItems(data?.data || data, ['categories']))
         }
       } catch (err) {
         console.error('Error fetching subcategories:', err)
@@ -458,7 +471,7 @@ const AddProduct = () => {
     }
 
     const validFiles = files.filter((file) => file.size <= MAX_IMAGE_BYTES)
-    const existingCount = existingImages.length + selectedImages.length
+    const existingCount = safeExistingImages.length + selectedImages.length
     const availableSlots = MAX_IMAGE_COUNT - existingCount
 
     if (availableSlots <= 0) {
@@ -642,10 +655,11 @@ const AddProduct = () => {
             })
             if (refreshed.ok) {
               const imgData = await refreshed.json()
-              const images = imgData.data || []
-              setExistingImages(images)
-              const primary = images.find((img) => img.isPrimary)
-              setFeaturedImageId(primary?._id || images[0]?._id || null)
+              const images = extractItems(imgData?.data || imgData, ['images'])
+              const safeImages = Array.isArray(images) ? images : []
+              setExistingImages(safeImages)
+              const primary = safeImages.find((img) => img.isPrimary)
+              setFeaturedImageId(primary?._id || safeImages[0]?._id || null)
               setSelectedImages([])
             }
           } catch (refreshError) {
@@ -752,7 +766,7 @@ const AddProduct = () => {
 
   const addMediaImages = async (items) => {
     if (!items?.length) return
-    const existingCount = existingImages.length + selectedImages.length
+    const existingCount = safeExistingImages.length + selectedImages.length
     const availableSlots = MAX_IMAGE_COUNT - existingCount
     if (availableSlots <= 0) {
       toast.error(`You can upload up to ${MAX_IMAGE_COUNT} images.`)
@@ -785,7 +799,7 @@ const AddProduct = () => {
   }
 
   const featuredExistingImage = featuredImageId
-    ? existingImages.find((img) => img._id === featuredImageId)
+    ? safeExistingImages.find((img) => img._id === featuredImageId)
     : null
   const featuredNewImage = selectedImages[featuredNewIndex]
 
@@ -1240,15 +1254,15 @@ const AddProduct = () => {
 
               <div className="d-flex align-items-center justify-content-between mb-2">
                 <span className="text-muted small">Gallery images</span>
-                <span className="text-muted small">{existingImages.length + selectedImages.length}/5</span>
+                <span className="text-muted small">{safeExistingImages.length + selectedImages.length}/5</span>
               </div>
 
               <div className="d-flex flex-wrap gap-2" style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                {existingImages.length === 0 && selectedImages.length === 0 && (
+                {safeExistingImages.length === 0 && selectedImages.length === 0 && (
                   <div className="text-muted small">No gallery images yet</div>
                 )}
 
-                {existingImages.map((image) => (
+                {safeExistingImages.map((image) => (
                   <div
                     key={image._id}
                     className={`product-image-thumb ${featuredImageId === image._id ? 'active' : ''}`}
@@ -1265,9 +1279,11 @@ const AddProduct = () => {
                       onClick={(e) => {
                         e.stopPropagation()
                         setImagesToDelete(prev => [...prev, image._id])
-                        setExistingImages(prev => prev.filter((img) => img._id !== image._id))
+                        setExistingImages(prev =>
+                          (Array.isArray(prev) ? prev : []).filter((img) => img._id !== image._id)
+                        )
                         if (featuredImageId === image._id) {
-                          const remaining = existingImages.filter((img) => img._id !== image._id)
+                          const remaining = safeExistingImages.filter((img) => img._id !== image._id)
                           setFeaturedImageId(remaining[0]?._id || null)
                         }
                       }}

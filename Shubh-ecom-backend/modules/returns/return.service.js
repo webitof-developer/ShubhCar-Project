@@ -8,6 +8,7 @@ const { error } = require('../../utils/apiResponse');
 const inventoryService = require('../inventory/inventory.service');
 const OrderItem = require('../../models/OrderItem.model');
 const ROLES = require('../../constants/roles');
+const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
 
 class ReturnService {
   async requestReturn({ user, payload }) {
@@ -54,7 +55,7 @@ class ReturnService {
   async complete({ admin, id, payload, context = {} }) {
     const session = await createSafeSession();
     if (!session._isStandalone) {
-      session.startTransaction();
+      session.startTransaction({ readPreference: 'primary' });
     }
 
     try {
@@ -105,8 +106,18 @@ class ReturnService {
     }
   }
 
-  list(filter = {}) {
-    return returnRepo.list(filter);
+  async list(query = {}) {
+    const { page, limit, ...filter } = query;
+    const pagination = getOffsetPagination({ page, limit });
+    const [data, total] = await Promise.all([
+      returnRepo.list(filter, pagination),
+      returnRepo.count(filter),
+    ]);
+    return {
+      returns: data,
+      data,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    };
   }
 
   async get(id, user) {

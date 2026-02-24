@@ -1,13 +1,38 @@
 const repo = require('./userAddresses.repo');
 const { error } = require('../../utils/apiResponse');
+const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
 
 class UserAddressesService {
-  list(userId) {
-    return repo.listByUser(userId);
+  async list(userId, query = {}) {
+    const pagination = getOffsetPagination({
+      page: query.page,
+      limit: query.limit,
+    });
+    const [data, total] = await Promise.all([
+      repo.listByUser(userId, pagination),
+      repo.countByUser(userId),
+    ]);
+    return {
+      addresses: data,
+      data,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    };
   }
 
-  adminListByUser(userId) {
-    return repo.listByUser(userId);
+  async adminListByUser(userId, query = {}) {
+    const pagination = getOffsetPagination({
+      page: query.page,
+      limit: query.limit,
+    });
+    const [data, total] = await Promise.all([
+      repo.listByUser(userId, pagination),
+      repo.countByUser(userId),
+    ]);
+    return {
+      addresses: data,
+      data,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    };
   }
 
   async get(id, userId) {

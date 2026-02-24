@@ -1,6 +1,7 @@
 const couponRepo = require('./coupon.repo');
 const couponUsageRepo = require('./couponUsage.repo');
 const { error } = require('../../utils/apiResponse');
+const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
 
 class CouponsService {
   async preview({ userId, code, orderSubtotal, session }) {
@@ -76,25 +77,57 @@ class CouponsService {
     return deleted;
   }
 
-  list() {
-    return couponRepo.list();
+  async list(query = {}) {
+    const { page, limit } = query;
+    const pagination = getOffsetPagination({ page, limit });
+    const filter = {};
+    const [data, total] = await Promise.all([
+      couponRepo.list(filter, pagination),
+      couponRepo.count(filter),
+    ]);
+    return {
+      coupons: data,
+      data,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    };
   }
 
-  listPublic() {
+  async listPublic(query = {}) {
+    const { page, limit } = query;
+    const pagination = getOffsetPagination({ page, limit });
     const now = new Date();
-    return couponRepo.list({
+    const filter = {
       isActive: true,
       validFrom: { $lte: now },
       validTo: { $gte: now },
-    });
+    };
+    const [data, total] = await Promise.all([
+      couponRepo.list(filter, pagination),
+      couponRepo.count(filter),
+    ]);
+    return {
+      coupons: data,
+      data,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    };
   }
 
   get(id) {
     return couponRepo.findById(id);
   }
 
-  async listUsage(filter = {}) {
-    return couponUsageRepo.list(filter);
+  async listUsage(query = {}) {
+    const { page, limit, ...filter } = query;
+    const pagination = getOffsetPagination({ page, limit });
+    const [data, total] = await Promise.all([
+      couponUsageRepo.list(filter, pagination),
+      couponUsageRepo.count(filter),
+    ]);
+    return {
+      usage: data,
+      data,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    };
   }
 
   async validate({ code, userId, orderAmount, session }) {

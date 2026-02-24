@@ -7,6 +7,7 @@ const VehicleYear = require('../models/VehicleYear.model');
 const VehicleAttributeValue = require('../models/VehicleAttributeValue.model');
 const Vehicle = require('../models/Vehicle.model');
 const { error } = require('../../../utils/apiResponse');
+const { getOffsetPagination, buildPaginationMeta } = require('../../../utils/pagination');
 
 const normalizeName = (value = '') => value.trim().toLowerCase();
 const normalizeVariantName = (value = '') => value.trim().toLowerCase();
@@ -127,12 +128,14 @@ class VehiclesService {
       }
     }
 
-    const page = Number(query.page || 1);
-    const limit = Number(query.limit || 50);
+    const pagination = getOffsetPagination({
+      page: query.page,
+      limit: query.limit,
+    });
 
     const [items, total] = await Promise.all([
       repo
-        .list(filter, { page, limit })
+        .list(filter, pagination)
         .populate('brandId', 'name logo status')
         .populate('modelId', 'name image status')
         .populate('yearId', 'year status')
@@ -150,8 +153,9 @@ class VehiclesService {
     return {
       items: items.map(mapVehicle),
       total,
-      page,
-      limit,
+      page: pagination.page,
+      limit: pagination.limit,
+      pagination: buildPaginationMeta({ ...pagination, total }),
     };
   }
 

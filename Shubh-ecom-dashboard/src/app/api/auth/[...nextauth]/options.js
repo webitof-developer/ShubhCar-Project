@@ -2,6 +2,11 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import { randomBytes } from 'crypto'
 import { API_BASE_URL } from '@/helpers/apiBase'
 
+// Security: Do not use fallback JWT secrets. Application must fail if secret is missing.
+if (!process.env.NEXTAUTH_SECRET) {
+  throw new Error('NEXTAUTH_SECRET environment variable is not defined')
+}
+
 export const options = {
   providers: [
     CredentialsProvider({
@@ -68,7 +73,7 @@ export const options = {
       },
     }),
   ],
-  secret: process.env.NEXTAUTH_SECRET || 'kvwLrfri/MBznUCofIoRH9+NvGu6GqvVdqO3mor1GuA=',
+  secret: process.env.NEXTAUTH_SECRET,
   pages: {
     signIn: '/auth/sign-in',
   },

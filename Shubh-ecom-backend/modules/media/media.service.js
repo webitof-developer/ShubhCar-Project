@@ -4,14 +4,19 @@ const s3 = require('../../utils/s3');
 const ROLES = require('../../constants/roles');
 const { getStorageSettings } = require('../../utils/storageSettings');
 const fs = require('fs/promises');
+const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
+
+const ALLOWED_MEDIA_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 class MediaService {
   async presign({ mimeType, folder }, user) {
     if (!user || user.role !== ROLES.ADMIN) error('Forbidden', 403);
     if (!mimeType) error('mimeType required', 400);
 
-    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
-    if (!allowed.includes(mimeType)) error('Unsupported file type', 400);
+    // Security: Block SVG to prevent stored XSS via embedded scripts.
+    if (!ALLOWED_MEDIA_MIME_TYPES.includes(mimeType)) {
+      error('Unsupported file type', 400);
+    }
 
     const storage = await getStorageSettings();
     if (storage.driver !== 's3') {
@@ -40,6 +45,9 @@ class MediaService {
     required.forEach((f) => {
       if (!payload[f]) error(`${f} is required`, 400);
     });
+    if (!ALLOWED_MEDIA_MIME_TYPES.includes(payload.mimeType)) {
+      error('Unsupported file type', 400);
+    }
 
     const storage = await getStorageSettings();
     const s3Config = storage.s3 || {};
@@ -62,6 +70,9 @@ class MediaService {
   async createFromUpload(files = [], user, { usedIn } = {}) {
     if (!user || user.role !== ROLES.ADMIN) error('Forbidden', 403);
     if (!files.length) error('No media uploaded', 400);
+    files.forEach((file) => {
+      if (!file.detectedMimeType) error('Invalid uploaded file type', 400);
+    });
 
     const usedInList = usedIn ? [usedIn] : [];
 
@@ -75,11 +86,14 @@ class MediaService {
 
       const created = [];
       for (const file of files) {
-        const key = s3.generateKey('media', file.mimetype || 'image/jpeg');
+        const mimeType = file.detectedMimeType;
+        if (!mimeType) error('Invalid uploaded file type', 400);
+
+        const key = s3.generateKey('media', mimeType);
         await s3.uploadFile({
           filePath: file.path,
           key,
-          mimeType: file.mimetype || 'image/jpeg',
+          mimeType,
           config: s3Config,
         });
         await fs.unlink(file.path).catch(() => null);
@@ -88,7 +102,7 @@ class MediaService {
           key,
           bucket: s3Config.bucket,
           url: s3.getPublicUrl(key, s3Config),
-          mimeType: file.mimetype || 'image/jpeg',
+          mimeType,
           size: file.size || 0,
           usedIn: usedInList,
           createdBy: user._id,
@@ -100,10 +114,10 @@ class MediaService {
 
     const created = await mediaRepo.createMany(
       files.map((file) => ({
+        mimeType: file.detectedMimeType,
         key: `media/${file.filename}`,
         bucket: 'local',
         url: `/uploads/media/${file.filename}`,
-        mimeType: file.mimetype || 'image/jpeg',
         size: file.size || 0,
         usedIn: usedInList,
         createdBy: user._id,
@@ -117,10 +131,17 @@ class MediaService {
     const { usedIn, limit, page } = query;
     const filter = {};
     if (usedIn) filter.usedIn = usedIn;
+    const pagination = getOffsetPagination({ page, limit });
 
-    const data = await mediaRepo.list(filter, { limit, page });
+    const data = await mediaRepo.list(filter, pagination);
     const total = await mediaRepo.count(filter);
-    return { data, total };
+    return {
+      data,
+      total,
+      page: pagination.page,
+      limit: pagination.limit,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    };
   }
 
   async get(id) {

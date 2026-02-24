@@ -5,7 +5,10 @@ const validateId = require('../../middlewares/objectId.middleware');
 const { adminLimiter } = require('../../middlewares/rateLimiter.middleware');
 const controller = require('./media.controller');
 const ROLES = require('../../constants/roles');
-const { uploadMedia } = require('../../middlewares/mediaUpload.middleware');
+const {
+  uploadMedia,
+  validateUploadedMediaFiles,
+} = require('../../middlewares/mediaUpload.middleware');
 const {
   presignSchema,
   createMediaSchema,
@@ -52,7 +55,14 @@ router.post(
  *     responses:
  *       201: { description: Uploaded media }
  */
-router.post('/upload', adminLimiter, auth([ROLES.ADMIN]), uploadMedia.array('files', 10), controller.upload);
+router.post(
+  '/upload',
+  adminLimiter,
+  auth([ROLES.ADMIN]),
+  uploadMedia.array('files', 10),
+  validateUploadedMediaFiles,
+  controller.upload,
+);
 
 /**
  * @openapi

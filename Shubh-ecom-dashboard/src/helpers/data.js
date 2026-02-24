@@ -2,6 +2,16 @@
 
 import { sleep } from '@/utils/promise'
 import * as yup from 'yup'
+
+const extractItems = (payload) => {
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload?.items)) return payload.items
+  if (Array.isArray(payload?.data)) return payload.data
+  if (Array.isArray(payload?.users)) return payload.users
+  if (Array.isArray(payload?.reviews)) return payload.reviews
+  if (Array.isArray(payload?.transactions)) return payload.transactions
+  return []
+}
 export const getNotifications = async () => {
   return []
 }
@@ -19,7 +29,7 @@ export const getAllUsers = async (token) => {
   try {
     const { userAPI } = require('@/helpers/userApi')
     const response = await userAPI.list({}, token)
-    return response.data || []
+    return extractItems(response?.data || response)
   } catch (error) {
     console.error('Error fetching users:', error)
     return []
@@ -30,7 +40,7 @@ export const getAllTransactions = async (token) => {
   try {
     const { paymentAPI } = require('@/helpers/paymentApi')
     const response = await paymentAPI.list({}, token)
-    return response.data || []
+    return extractItems(response?.data || response)
   } catch (error) {
     console.error('Error fetching transactions:', error)
     return []
@@ -65,7 +75,7 @@ export const getAllReviews = async (token) => {
   try {
     const { reviewAPI } = require('@/helpers/reviewApi')
     const response = await reviewAPI.list({}, token)
-    return response.data || []
+    return extractItems(response?.data || response)
   } catch (error) {
     console.error('Error fetching reviews:', error)
     return []

@@ -10,6 +10,7 @@ import { useSession } from 'next-auth/react'
 import { Card, CardBody, CardHeader, CardTitle, Col, Row, Spinner, Table, Button, Form } from 'react-bootstrap'
 
 const formatDate = (date) => date.toISOString().split('T')[0]
+const toArray = (value) => (Array.isArray(value) ? value : [])
 const toStartOfDay = (value) => {
   const d = new Date(value)
   d.setHours(0, 0, 0, 0)
@@ -73,6 +74,8 @@ const AnalyticsPage = () => {
     totalStockQty: 0,
     deadStock: [],
   })
+  const paymentSplit = Array.isArray(revenue?.paymentSplit) ? revenue.paymentSplit : []
+  const deadStock = Array.isArray(inventoryTurnover?.deadStock) ? inventoryTurnover.deadStock : []
 
   const rangeParams = useMemo(() => {
     const now = new Date()
@@ -145,20 +148,20 @@ const AnalyticsPage = () => {
           analyticsAPI.inventoryTurnover({ limit: 6, ...queryParams }, session.accessToken),
         ])
 
-        setRevenue(revenueResponse.data || {})
-        setUsers(usersResponse.data || {})
-        setReviews(reviewsResponse.data || {})
-        setTopProducts(topProductsResponse.data || [])
-        setLowStock(inventoryResponse.data || [])
-        setChartData(chartResponse.data || { labels: [], revenue: [], orders: [] })
-        setRepeatSummary(repeatResponse.data || {})
-        setFulfillment(fulfillmentResponse.data || {})
-        setFunnel(funnelResponse.data || {})
-        setSalesByState(salesStateResponse.data || [])
-        setSalesByCity(salesCityResponse.data || [])
-        setTopCategories(topCategoriesResponse.data || [])
-        setTopBrands(topBrandsResponse.data || [])
-        setInventoryTurnover(inventoryTurnoverResponse.data || {})
+        setRevenue(revenueResponse || {})
+        setUsers(usersResponse || {})
+        setReviews(reviewsResponse || {})
+        setTopProducts(toArray(topProductsResponse))
+        setLowStock(toArray(inventoryResponse))
+        setChartData(chartResponse || { labels: [], revenue: [], orders: [] })
+        setRepeatSummary(repeatResponse || {})
+        setFulfillment(fulfillmentResponse || {})
+        setFunnel(funnelResponse || {})
+        setSalesByState(toArray(salesStateResponse))
+        setSalesByCity(toArray(salesCityResponse))
+        setTopCategories(toArray(topCategoriesResponse))
+        setTopBrands(toArray(topBrandsResponse))
+        setInventoryTurnover(inventoryTurnoverResponse || {})
       } catch (error) {
         console.error('Failed to fetch analytics', error)
       } finally {
@@ -370,14 +373,14 @@ const AnalyticsPage = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {(revenue.paymentSplit || []).map((row, idx) => (
+                    {paymentSplit.map((row, idx) => (
                       <tr key={`${row._id}-${idx}`}>
                         <td>{row._id || 'Unknown'}</td>
                         <td className="text-end">{Number(row.orders || 0).toLocaleString()}</td>
                         <td className="text-end">{currency}{Number(row.revenue || 0).toLocaleString()}</td>
                       </tr>
                     ))}
-                    {(!revenue.paymentSplit || revenue.paymentSplit.length === 0) && (
+                    {paymentSplit.length === 0 && (
                       <tr>
                         <td colSpan="3" className="text-center py-3">No payment data</td>
                       </tr>
@@ -636,14 +639,14 @@ const AnalyticsPage = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {(inventoryTurnover.deadStock || []).map((item) => (
+                    {deadStock.map((item) => (
                       <tr key={item._id}>
                         <td>{item.name}</td>
                         <td>{item.sku || '-'}</td>
                         <td className="text-end">{Number(item.stockQty || 0).toLocaleString()}</td>
                       </tr>
                     ))}
-                    {(!inventoryTurnover.deadStock || inventoryTurnover.deadStock.length === 0) && (
+                    {deadStock.length === 0 && (
                       <tr>
                         <td colSpan="3" className="text-center py-3">No dead stock</td>
                       </tr>

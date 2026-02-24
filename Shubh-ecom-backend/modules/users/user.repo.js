@@ -1,4 +1,5 @@
 const User = require('../../models/User.model');
+const { getOffsetPagination } = require('../../utils/pagination');
 
 /**
  * USER REPOSITORY
@@ -39,13 +40,23 @@ class UserRepository {
     }).lean();
   }
 
-  findPendingWholesale() {
+  findPendingWholesale(pagination = {}) {
+    const { limit, skip } = getOffsetPagination(pagination);
     return User.find({
       customerType: 'wholesale',
       verificationStatus: 'pending',
     })
       .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
       .lean();
+  }
+
+  countPendingWholesale() {
+    return User.countDocuments({
+      customerType: 'wholesale',
+      verificationStatus: 'pending',
+    });
   }
 
   /* =======================
@@ -80,18 +91,22 @@ class UserRepository {
   }
 
   list(filter = {}, { limit = 20, page = 1 } = {}) {
-    const safeLimit = Math.min(Number(limit) || 20, 100);
-    const safePage = Math.max(Number(page) || 1, 1);
+    const { limit: safeLimit, skip } = getOffsetPagination({ page, limit });
 
     return User.find(filter)
       .sort({ createdAt: -1 })
       .limit(safeLimit)
-      .skip((safePage - 1) * safeLimit)
+      .skip(skip)
       .lean();
   }
 
-  listAll(filter = {}) {
-    return User.find(filter).sort({ createdAt: -1 }).lean();
+  listAll(filter = {}, pagination = {}) {
+    const { limit, skip } = getOffsetPagination(pagination);
+    return User.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
   }
 
   count(filter = {}) {

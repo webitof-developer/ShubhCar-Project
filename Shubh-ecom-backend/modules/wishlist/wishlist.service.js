@@ -3,16 +3,43 @@ const { error } = require('../../utils/apiResponse');
 const wishlistCache = require('../../cache/wishlist.cache');
 const Product = require('../../models/Product.model');
 const ProductImage = require('../../models/ProductImage.model');
+const {
+  DEFAULT_LIMIT,
+  getOffsetPagination,
+  buildPaginationMeta,
+} = require('../../utils/pagination');
 
 class WishlistService {
-  async list(userId) {
-    const cached = await wishlistCache.get(wishlistCache.key.user(userId));
-    if (cached) return cached;
+  async list(userId, query = {}) {
+    const pagination = getOffsetPagination({
+      page: query.page,
+      limit: query.limit,
+    });
+    const useCache =
+      pagination.page === 1 && pagination.limit === DEFAULT_LIMIT;
+    const cacheKey = wishlistCache.key.user(userId);
 
-    const items = await repo.findByUser(userId);
+    if (useCache) {
+      const cached = await wishlistCache.get(cacheKey);
+      if (cached) return cached;
+    }
+
+    const [items, total] = await Promise.all([
+      repo.findByUser(userId, pagination),
+      repo.countByUser(userId),
+    ]);
     const enriched = await this.enrichItems(items);
-    await wishlistCache.set(wishlistCache.key.user(userId), enriched);
-    return enriched;
+    const response = {
+      items: enriched,
+      data: enriched,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    };
+
+    if (useCache) {
+      await wishlistCache.set(cacheKey, response);
+    }
+
+    return response;
   }
 
   async add(userId, productId) {

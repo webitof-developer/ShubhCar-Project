@@ -1,6 +1,20 @@
 // API helper functions for analytics endpoints
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'
 
+const extractResponseData = (payload) => {
+  if (!payload || typeof payload !== 'object') return null
+  if (!Object.prototype.hasOwnProperty.call(payload, 'data')) return null
+  const envelopeData = payload.data
+  if (
+    envelopeData &&
+    typeof envelopeData === 'object' &&
+    Object.prototype.hasOwnProperty.call(envelopeData, 'data')
+  ) {
+    return envelopeData.data
+  }
+  return envelopeData
+}
+
 const fetchWithAuth = async (url, options = {}) => {
   const headers = {
     'Content-Type': 'application/json',
@@ -12,7 +26,8 @@ const fetchWithAuth = async (url, options = {}) => {
     const error = await response.json().catch(() => ({}))
     throw new Error(error.message || `API Error: ${response.statusText}`)
   }
-  return response.json()
+  const payload = await response.json()
+  return extractResponseData(payload)
 }
 
 export const analyticsAPI = {

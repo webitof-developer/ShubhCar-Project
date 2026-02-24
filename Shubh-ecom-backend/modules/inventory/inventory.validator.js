@@ -1,12 +1,12 @@
 const Joi = require('joi');
+const { paginationQuerySchema } = require('../../utils/paginationQuery.validator');
 
 const summaryQuerySchema = Joi.object({
   threshold: Joi.number().integer().min(0).max(100000).default(5),
 });
 
 const listProductsQuerySchema = Joi.object({
-  page: Joi.number().integer().min(1).default(1),
-  limit: Joi.number().integer().min(1).max(100).default(20),
+  ...paginationQuerySchema,
   search: Joi.string().trim().max(120).allow(''),
   status: Joi.string().valid('active', 'inactive', 'draft', 'archived'),
   threshold: Joi.number().integer().min(0).max(100000),

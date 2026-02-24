@@ -1,4 +1,5 @@
 const ReturnRequest = require('../../models/ReturnRequest.model');
+const { getOffsetPagination } = require('../../utils/pagination');
 
 class ReturnRepo {
   create(data, session) {
@@ -11,10 +12,19 @@ class ReturnRepo {
     return query.lean();
   }
 
-  list(filter = {}, session) {
-    const query = ReturnRequest.find(filter).sort({ createdAt: -1 });
+  list(filter = {}, options = {}) {
+    const { session } = options;
+    const { limit, skip } = getOffsetPagination(options);
+    const query = ReturnRequest.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
     if (session) query.session(session);
     return query.lean();
+  }
+
+  count(filter = {}) {
+    return ReturnRequest.countDocuments(filter);
   }
 
   update(id, update, options = {}) {

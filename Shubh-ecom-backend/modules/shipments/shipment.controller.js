@@ -72,6 +72,6 @@ exports.calculate = asyncHandler(async (req, res) => {
   });
 });
 exports.adminListByOrder = asyncHandler(async (req, res) => {
-  const data = await shipmentService.adminListByOrder(req.params.orderId);
+  const data = await shipmentService.adminListByOrder(req.params.orderId, req.query);
   return success(res, data, 'Shipments fetched');
 });

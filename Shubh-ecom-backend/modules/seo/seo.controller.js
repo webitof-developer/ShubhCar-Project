@@ -12,7 +12,7 @@ exports.upsert = asyncHandler(async (req, res) => {
 });
 
 exports.list = asyncHandler(async (req, res) => {
-  const data = await seoService.listSeo();
+  const data = await seoService.listSeo(req.query);
   return success(res, data, 'SEO records fetched');
 });
 

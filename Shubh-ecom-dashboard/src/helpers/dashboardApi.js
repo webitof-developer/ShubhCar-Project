@@ -11,6 +11,16 @@ const getAuthToken = () => {
   return ''
 }
 
+const extractResponseData = (payload) => {
+  if (!payload || typeof payload !== 'object') return payload
+  if (!Object.prototype.hasOwnProperty.call(payload, 'data')) return payload
+  const rootData = payload.data
+  if (rootData && typeof rootData === 'object' && Object.prototype.hasOwnProperty.call(rootData, 'data')) {
+    return rootData.data
+  }
+  return rootData
+}
+
 /**
  * Make authenticated API request
  */
@@ -33,7 +43,8 @@ const fetchWithAuth = async (url, options = {}) => {
     throw new Error(error.message || `API Error: ${response.statusText}`)
   }
 
-  return response.json()
+  const payload = await response.json()
+  return extractResponseData(payload)
 }
 
 export const dashboardAPI = {

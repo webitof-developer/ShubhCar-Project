@@ -8,6 +8,13 @@ import Flatpickr from 'react-flatpickr'
 import { useSession } from 'next-auth/react'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 
+const extractItems = (payload) => {
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload?.items)) return payload.items
+  if (Array.isArray(payload?.data)) return payload.data
+  return []
+}
+
 const SalespersonFilter = ({ filters, onChange, onReset }) => {
   const { data: session } = useSession()
   const [salesmen, setSalesmen] = useState([])
@@ -19,8 +26,8 @@ const SalespersonFilter = ({ filters, onChange, onReset }) => {
       try {
         setLoading(true)
         const response = await userAPI.adminList({ role: 'salesman', limit: 100 }, session.accessToken)
-        const data = response.data || response.items || []
-        const options = data.map((user) => ({
+        const data = extractItems(response?.data || response)
+        const options = (Array.isArray(data) ? data : []).map((user) => ({
           value: user._id,
           label: `${user.firstName || ''} ${user.lastName || ''} (${user.email})`.trim(),
         }))

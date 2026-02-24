@@ -1,5 +1,6 @@
 const Payment = require('../../models/Payment.model');
 const { PAYMENT_RECORD_STATUS } = require('../../constants/paymentStatus');
+const { getOffsetPagination } = require('../../utils/pagination');
 
 /**
  * PAYMENT REPOSITORY
@@ -249,14 +250,17 @@ class PaymentRepository {
      LIST
   ====================== */
   list(filter = {}, { limit = 20, page = 1 } = {}) {
-    const safeLimit = Math.min(Number(limit) || 20, 100);
-    const safePage = Math.max(Number(page) || 1, 1);
+    const { limit: safeLimit, skip } = getOffsetPagination({ page, limit });
 
     return Payment.find(filter)
       .sort({ createdAt: -1 })
       .limit(safeLimit)
-      .skip((safePage - 1) * safeLimit)
+      .skip(skip)
       .lean();
+  }
+
+  count(filter = {}) {
+    return Payment.countDocuments(filter);
   }
 }
 

@@ -5,7 +5,8 @@ const User = require('../../models/User.model');
 const Product = require('../../models/Product.model');
 const Review = require('../../models/ProductReview.model');
 const Role = require('../../models/Role.model');
-const { error } = require('../../utils/apiResponse');
+
+const MAX_ANALYTICS_LIMIT = 100;
 
 class AnalyticsService {
   async _resolveSalesmanActor(user = {}) {
@@ -51,14 +52,28 @@ class AnalyticsService {
     return match;
   }
 
+  _toSafePositiveInt(value, fallback, min = 1, max = MAX_ANALYTICS_LIMIT) {
+    const parsed = Number.parseInt(value, 10);
+    if (!Number.isFinite(parsed)) return fallback;
+    return Math.min(max, Math.max(min, parsed));
+  }
+
+  _toSafeDate(value) {
+    if (!value) return null;
+    const parsed = value instanceof Date ? value : new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
   _dateFilter(from, to) {
-    const filter = {};
-    if (from || to) {
-      filter.createdAt = {};
-      if (from) filter.createdAt.$gte = new Date(from);
-      if (to) filter.createdAt.$lte = new Date(to);
-    }
-    return filter;
+    const safeFrom = this._toSafeDate(from);
+    const safeTo = this._toSafeDate(to);
+
+    if (!safeFrom && !safeTo) return {};
+
+    const createdAt = {};
+    if (safeFrom) createdAt.$gte = safeFrom;
+    if (safeTo) createdAt.$lte = safeTo;
+    return { createdAt };
   }
 
   /* =======================
@@ -281,6 +296,7 @@ class AnalyticsService {
   }
 
   async topCategories({ from, to, limit = 6 } = {}) {
+    const safeLimit = this._toSafePositiveInt(limit, 6);
     const match = {
       ...this._dateFilter(from, to),
       paymentStatus: 'paid',
@@ -335,7 +351,7 @@ class AnalyticsService {
       },
       { $unwind: '$category' },
       { $sort: { quantitySold: -1 } },
-      { $limit: Number(limit) },
+      { $limit: safeLimit },
       {
         $project: {
           _id: 0,
@@ -348,6 +364,7 @@ class AnalyticsService {
   }
 
   async topBrands({ from, to, limit = 6 } = {}) {
+    const safeLimit = this._toSafePositiveInt(limit, 6);
     const match = {
       ...this._dateFilter(from, to),
       paymentStatus: 'paid',
@@ -396,12 +413,13 @@ class AnalyticsService {
       },
       { $match: { _id: { $ne: null } } },
       { $sort: { quantitySold: -1 } },
-      { $limit: Number(limit) },
+      { $limit: safeLimit },
       { $project: { _id: 0, name: '$_id', quantitySold: 1 } },
     ]);
   }
 
   async inventoryTurnover({ from, to, limit = 6 } = {}) {
+    const safeLimit = this._toSafePositiveInt(limit, 6);
     const match = {
       ...this._dateFilter(from, to),
       paymentStatus: 'paid',
@@ -464,7 +482,7 @@ class AnalyticsService {
       _id: { $nin: soldProductIds },
     })
       .select('name sku stockQty')
-      .limit(Number(limit))
+      .limit(safeLimit)
       .lean();
 
     return {
@@ -476,15 +494,12 @@ class AnalyticsService {
   }
 
   async salesByCity({ from, to, limit = 6 } = {}) {
+    const safeLimit = this._toSafePositiveInt(limit, 6);
     const match = {
+      ...this._dateFilter(from, to),
       isDeleted: false,
       paymentStatus: 'paid',
     };
-    if (from || to) {
-      match.createdAt = {};
-      if (from) match.createdAt.$gte = new Date(from);
-      if (to) match.createdAt.$lte = new Date(to);
-    }
 
     const data = await Order.aggregate([
       { $match: match },
@@ -507,7 +522,7 @@ class AnalyticsService {
         },
       },
       { $sort: { revenue: -1 } },
-      { $limit: Number(limit) },
+      { $limit: safeLimit },
       {
         $project: {
           _id: 0,
@@ -525,6 +540,7 @@ class AnalyticsService {
      TOP PRODUCTS
   ======================== */
   async topProducts({ limit = 10 }) {
+    const safeLimit = this._toSafePositiveInt(limit, 10);
     return OrderItem.aggregate([
       {
         $lookup: {
@@ -554,7 +570,7 @@ class AnalyticsService {
         },
       },
       { $sort: { quantitySold: -1 } },
-      { $limit: Number(limit) },
+      { $limit: safeLimit },
       {
         $lookup: {
           from: 'products',
@@ -579,11 +595,12 @@ class AnalyticsService {
      INVENTORY ALERTS
   ======================== */
   async lowStock({ threshold = 5 }) {
+    const safeThreshold = this._toSafePositiveInt(threshold, 5, 0, 100000);
     const products = await Product.aggregate([
       { $match: { isDeleted: false, status: 'active' } },
       {
         $match: {
-          stockQty: { $lte: Number(threshold) },
+          stockQty: { $lte: safeThreshold },
         },
       },
       {
@@ -792,8 +809,17 @@ class AnalyticsService {
     let points = 0;
 
     if (range === 'custom' && from && to) {
-      startDate = new Date(from);
-      endDate = new Date(to);
+      const safeFrom = this._toSafeDate(from);
+      const safeTo = this._toSafeDate(to);
+      if (!safeFrom || !safeTo) {
+        range = 'month';
+      } else {
+        startDate = safeFrom;
+        endDate = safeTo;
+      }
+    }
+
+    if (range === 'custom') {
       const diffMs = endDate.getTime() - startDate.getTime();
       const diffDays = Math.max(0, Math.ceil(diffMs / 86400000));
       points = diffDays + 1;
@@ -930,15 +956,12 @@ class AnalyticsService {
   }
 
   async salesByState({ limit = 6, from, to } = {}) {
+    const safeLimit = this._toSafePositiveInt(limit, 6);
     const match = {
+      ...this._dateFilter(from, to),
       isDeleted: false,
       paymentStatus: 'paid',
     };
-    if (from || to) {
-      match.createdAt = {};
-      if (from) match.createdAt.$gte = new Date(from);
-      if (to) match.createdAt.$lte = new Date(to);
-    }
 
     const data = await Order.aggregate([
       { $match: match },
@@ -961,7 +984,7 @@ class AnalyticsService {
         },
       },
       { $sort: { revenue: -1 } },
-      { $limit: Number(limit) },
+      { $limit: safeLimit },
       {
         $project: {
           _id: 0,

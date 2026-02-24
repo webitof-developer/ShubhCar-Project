@@ -56,12 +56,12 @@ exports.remove = asyncHandler(async (req, res) => {
 });
 
 exports.list = asyncHandler(async (req, res) => {
-  const data = await service.list();
+  const data = await service.list(req.query);
   return success(res, data, 'Coupons fetched');
 });
 
 exports.listPublic = asyncHandler(async (req, res) => {
-  const data = await service.listPublic();
+  const data = await service.listPublic(req.query);
   return success(res, data, 'Coupons fetched');
 });
 
@@ -72,6 +72,6 @@ exports.get = asyncHandler(async (req, res) => {
 });
 
 exports.listUsage = asyncHandler(async (req, res) => {
-  const data = await service.listUsage();
+  const data = await service.listUsage(req.query);
   return success(res, data, 'Coupon usage fetched');
 });

@@ -44,6 +44,7 @@ check_env_vars() {
     STRIPE_SECRET_KEY
     RAZORPAY_KEY_ID
     RAZORPAY_KEY_SECRET
+    RAZORPAY_WEBHOOK_SECRET
   )
 
   if [[ -z "${MONGO_URI:-}" && -z "${MONGO_REPLICA_URI:-}" ]]; then
@@ -150,6 +151,7 @@ docker_gate() {
     --env STRIPE_SECRET_KEY="${STRIPE_SECRET_KEY}"
     --env RAZORPAY_KEY_ID="${RAZORPAY_KEY_ID}"
     --env RAZORPAY_KEY_SECRET="${RAZORPAY_KEY_SECRET}"
+    --env RAZORPAY_WEBHOOK_SECRET="${RAZORPAY_WEBHOOK_SECRET}"
   )
 
   if [[ -n "${MONGO_URI:-}" ]]; then

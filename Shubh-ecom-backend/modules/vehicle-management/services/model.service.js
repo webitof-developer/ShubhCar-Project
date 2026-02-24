@@ -3,6 +3,9 @@ const Brand = require('../../../models/Brand.model');
 const VehicleModelYear = require('../models/VehicleModelYear.model');
 const Vehicle = require('../models/Vehicle.model');
 const { error } = require('../../../utils/apiResponse');
+// Security: Escape user input before constructing RegExp to prevent ReDoS.
+const { escapeRegex } = require('../../../utils/escapeRegex');
+const { getOffsetPagination, buildPaginationMeta } = require('../../../utils/pagination');
 
 class VehicleModelsService {
   async list(query = {}) {
@@ -10,18 +13,26 @@ class VehicleModelsService {
     if (query.brandId) filter.brandId = query.brandId;
     if (query.status) filter.status = query.status;
     if (query.search) {
-      filter.name = { $regex: query.search, $options: 'i' };
+      filter.name = { $regex: escapeRegex(query.search), $options: 'i' };
     }
 
-    const page = Number(query.page || 1);
-    const limit = Number(query.limit || 50);
+    const pagination = getOffsetPagination({
+      page: query.page,
+      limit: query.limit,
+    });
 
     const [items, total] = await Promise.all([
-      vehicleModelsRepo.list(filter, { page, limit }),
+      vehicleModelsRepo.list(filter, pagination),
       vehicleModelsRepo.count(filter),
     ]);
 
-    return { items, total, page, limit };
+    return {
+      items,
+      total,
+      page: pagination.page,
+      limit: pagination.limit,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    };
   }
 
   async create(payload) {

@@ -1,12 +1,27 @@
 const repo = require('./shippingRules.repo');
 const { error } = require('../../utils/apiResponse');
+const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
 
 class ShippingRulesService {
-  list(query = {}) {
+  async list(query = {}) {
     const filter = {};
     if (query.status) filter.status = query.status;
     if (query.country) filter.country = query.country;
-    return repo.list(filter);
+
+    const pagination = getOffsetPagination({
+      page: query.page,
+      limit: query.limit,
+    });
+
+    const [data, total] = await Promise.all([
+      repo.list(filter, pagination),
+      repo.count(filter),
+    ]);
+
+    return {
+      data,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    };
   }
 
   create(payload) {

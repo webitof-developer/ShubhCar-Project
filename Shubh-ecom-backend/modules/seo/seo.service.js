@@ -1,6 +1,7 @@
 const seoRepo = require('./seo.repo');
 const { error } = require('../../utils/apiResponse');
 const ROLES = require('../../constants/roles');
+const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
 
 class SeoService {
   /* =======================
@@ -32,8 +33,23 @@ class SeoService {
     );
   }
 
-  async listSeo() {
-    return seoRepo.list({ isActive: true });
+  async listSeo(query = {}) {
+    const pagination = getOffsetPagination({
+      page: query.page,
+      limit: query.limit,
+    });
+    const filter = { isActive: true };
+
+    const [data, total] = await Promise.all([
+      seoRepo.list(filter, pagination),
+      seoRepo.count(filter),
+    ]);
+
+    return {
+      records: data,
+      data,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    };
   }
 
   async deactivateSeo(id, user) {

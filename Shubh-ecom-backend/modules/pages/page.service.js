@@ -4,6 +4,7 @@ const sanitize = require('../../utils/sanitizeHtml');
 const ROLES = require('../../constants/roles');
 const { deletePatterns } = require('../../lib/cache/invalidate');
 const keys = require('../../lib/cache/keys');
+const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
 
 class PageService {
   /* =======================
@@ -80,8 +81,18 @@ class PageService {
     return updated;
   }
 
-  async list(filters = {}) {
-    return pageRepo.list(filters);
+  async list(query = {}) {
+    const { page, limit, ...filters } = query;
+    const pagination = getOffsetPagination({ page, limit });
+    const [data, total] = await Promise.all([
+      pageRepo.list(filters, pagination),
+      pageRepo.count(filters),
+    ]);
+    return {
+      pages: data,
+      data,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    };
   }
 
   async get(id) {

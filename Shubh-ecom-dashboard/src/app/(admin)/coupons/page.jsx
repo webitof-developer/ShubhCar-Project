@@ -7,6 +7,14 @@ import CouponsBoxs from './components/CouponsBoxs'
 import CouponsDataList from './components/CouponsDataList'
 import couponService from '@/services/couponService'
 
+const extractItems = (payload) => {
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload?.items)) return payload.items
+  if (Array.isArray(payload?.data)) return payload.data
+  if (Array.isArray(payload?.coupons)) return payload.coupons
+  return []
+}
+
 const CouponsListPage = () => {
   const { data: session } = useSession()
   const [coupons, setCoupons] = useState([])
@@ -23,7 +31,7 @@ const CouponsListPage = () => {
     try {
       setLoading(true)
       const response = await couponService.getCoupons(session.accessToken)
-      setCoupons(response.data || [])
+      setCoupons(extractItems(response?.data || response))
     } catch (err) {
       console.error('Error fetching coupons:', err)
     } finally {

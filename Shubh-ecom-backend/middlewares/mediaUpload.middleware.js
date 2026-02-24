@@ -1,6 +1,10 @@
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
+const {
+  validateUploadedImageFiles,
+  cleanupUploadedFiles,
+} = require('../utils/uploadFileValidation');
 
 const uploadRoot = path.join(__dirname, '..', 'uploads', 'media');
 
@@ -25,6 +29,7 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
+  // Hint-only gate; final file trust comes from magic-byte validation post-upload.
   if (!file.mimetype || !file.mimetype.startsWith('image/')) {
     return cb(new Error('Only image uploads are allowed'));
   }
@@ -37,6 +42,20 @@ const uploadMedia = multer({
   limits: { files: 10, fileSize: 8 * 1024 * 1024 },
 });
 
+const validateUploadedMediaFiles = async (req, res, next) => {
+  const files = Array.isArray(req.files) ? req.files : [];
+  if (!files.length) return next();
+
+  try {
+    await validateUploadedImageFiles(files);
+    return next();
+  } catch (err) {
+    await cleanupUploadedFiles(files);
+    return next(err);
+  }
+};
+
 module.exports = {
   uploadMedia,
+  validateUploadedMediaFiles,
 };

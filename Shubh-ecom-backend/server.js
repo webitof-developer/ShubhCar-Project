@@ -1,6 +1,5 @@
 const dotenv = require('dotenv');
 dotenv.config();
-console.log('DEBUG: ENABLE_REDIS =', process.env.ENABLE_REDIS, typeof process.env.ENABLE_REDIS);
 const app = require('./app');
 const env = require('./config/env');
 const logger = require('./config/logger');
@@ -19,6 +18,7 @@ const {
 const {
   migrateVariantNameAttribute,
 } = require('./modules/vehicle-management/migrations/vehicle-management.migration');
+const paymentWebhookWorker = require('./workers/payment-webhook.worker');
 
 const start = async () => {
   try {
@@ -33,6 +33,10 @@ const start = async () => {
   startKeepAlive();
   await ensureVehicleAttributeDefaults();
   await migrateVariantNameAttribute();
+
+  logger.info('payment_webhook_worker_status', {
+    disabled: Boolean(paymentWebhookWorker?.disabled),
+  });
 
   const server = app.listen(env.PORT, () => {
     logger.info('server_started', { event: 'server_started', port: env.PORT });
@@ -71,4 +75,3 @@ const start = async () => {
 };
 
 start();
-// Forced restart to load new env vars

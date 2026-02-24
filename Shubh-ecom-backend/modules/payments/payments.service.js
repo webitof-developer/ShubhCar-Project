@@ -9,6 +9,7 @@ const paymentGatewayService = require('./payment.gateway.service');
 const logger = require('../../config/logger');
 const { getPaymentSettings } = require('../../utils/paymentSettings');
 const orderService = require('../orders/orders.service');
+const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
 
 const {
   PAYMENT_RECORD_STATUS,
@@ -33,7 +34,7 @@ class PaymentsService {
     });
     const session = await createSafeSession();
     if (!session._isStandalone) {
-      session.startTransaction();
+      session.startTransaction({ readPreference: 'primary' });
     }
 
     try {
@@ -101,14 +102,10 @@ class PaymentsService {
           error('Razorpay credentials are missing (DB or Env)', 500);
         }
 
-        console.log(
-          'Using Razorpay Key:',
-          keyId ? `...${keyId.slice(-4)}` : 'MISSING',
-        );
-        console.log(
-          'Using Razorpay Secret:',
-          keySecret ? `...${keySecret.slice(-4)}` : 'MISSING',
-        );
+        logger.info('razorpay_credentials_resolved', {
+          keyIdTail: keyId ? keyId.slice(-4) : 'MISSING',
+          keySecretTail: keySecret ? keySecret.slice(-4) : 'MISSING',
+        });
 
         gatewayResponse = await razorpayService.createOrder({
           amount: order.grandTotal,
@@ -284,9 +281,17 @@ class PaymentsService {
     const { status, limit, page } = query;
     const filter = {};
     if (status) filter.status = status;
+    const pagination = getOffsetPagination({ page, limit });
+    const [data, total] = await Promise.all([
+      paymentRepo.list(filter, pagination),
+      paymentRepo.count(filter),
+    ]);
 
-    const payments = await paymentRepo.list(filter, { limit, page });
-    return payments;
+    return {
+      payments: data,
+      data,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    };
   }
 
   async confirmPayment(paymentId, user, transactionId = null) {
@@ -307,25 +312,26 @@ class PaymentsService {
 
     // If transactionId is provided and payment doesn't have one, update it
     if (transactionId && !payment.transactionId) {
-      console.log('[CONFIRM_PAYMENT] Updating transactionId:', transactionId);
+      logger.info('confirm_payment_updating_transaction_id', { transactionId });
       await paymentRepo.updateTransactionId(payment._id, transactionId);
       // Refresh payment object with new transactionId
       payment.transactionId = transactionId;
     }
 
-    console.log(
-      '[CONFIRM_PAYMENT] Fetching status from gateway for payment:',
-      payment._id,
-      'transactionId:',
-      payment.transactionId,
-    );
+    logger.info('confirm_payment_fetching_gateway_status', {
+      paymentId: payment._id,
+      transactionId: payment.transactionId,
+    });
 
     const gatewayStatus = await paymentGatewayService.fetchStatus(payment);
-    console.log('[CONFIRM_PAYMENT] Gateway status response:', gatewayStatus);
+    logger.info('confirm_payment_gateway_status_response', {
+      paymentId: payment._id,
+      gatewayStatus,
+    });
     if (!gatewayStatus) {
-      console.log(
-        '[CONFIRM_PAYMENT] No gateway status returned, exiting early',
-      );
+      logger.warn('confirm_payment_gateway_status_missing', {
+        paymentId: payment._id,
+      });
       return {
         paymentId: payment._id,
         status: payment.status,
@@ -335,7 +341,10 @@ class PaymentsService {
     }
 
     const normalized = gatewayStatus.status;
-    console.log('[CONFIRM_PAYMENT] Normalized status:', normalized);
+    logger.info('confirm_payment_status_normalized', {
+      paymentId: payment._id,
+      normalizedStatus: normalized,
+    });
 
     if (normalized === 'success') {
       if (payment.status !== PAYMENT_RECORD_STATUS.SUCCESS) {

@@ -3,8 +3,7 @@ const redisUrl = process.env.REDIS_URL;
 // Worker disabled due to vendor module removal
 /*
 if (!redisUrl) {
-  // eslint-disable-next-line no-console
-  console.warn('Worker disabled: REDIS_URL not set');
+  logger.warn('Worker disabled: REDIS_URL not set');
   module.exports = { worker: null, disabled: true };
 } else {
   const { Worker } = require('bullmq');
@@ -16,8 +15,7 @@ if (!redisUrl) {
   const { logWorkerFailure } = require('../utils/workerLogger');
 
   connectRedis().catch((err) =>
-    // eslint-disable-next-line no-console
-    console.error('Failed to connect Redis for payout worker', err),
+    logger.error('Failed to connect Redis for payout worker', { error: err.message }),
   );
 
   let worker = null;

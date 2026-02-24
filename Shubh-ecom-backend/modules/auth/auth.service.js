@@ -9,6 +9,7 @@ const {
 } = require('../../utils/jwt');
 const { error } = require('../../utils/apiResponse');
 const env = require('../../config/env');
+const logger = require('../../config/logger');
 const { hashPassword, comparePassword } = require('../../utils/password');
 const { decideVerificationFlow } = require('../../utils/verificationFlow');
 const cache = require('../../cache/user.cache');
@@ -40,6 +41,8 @@ const googleClient = env.GOOGLE_CLIENT_ID
   : null;
 
 const randomOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
+const DUMMY_PASSWORD_HASH =
+  '$2b$10$8YKgCGjMln2L5PKu8Qj5UefIhQ8h1bS8Y7rN8Tg9fTg9Q8J6m1Q2W';
 
 class AuthService {
   /* =======================
@@ -270,14 +273,20 @@ class AuthService {
       try {
         await sendEmailVerification(user);
       } catch (emailError) {
-        console.error('[AUTH] Email verification send failed:', emailError.message);
+        logger.error('Email verification send failed', {
+          error: emailError.message,
+          userId: user?._id,
+        });
         // Continue registration even if email fails
       }
     } else if (verificationFlow === 'sms') {
       try {
         await sendSMSOtp(user);
       } catch (smsError) {
-        console.error('[AUTH] SMS verification send failed:', smsError.message);
+        logger.error('SMS verification send failed', {
+          error: smsError.message,
+          userId: user?._id,
+        });
         // Continue registration even if SMS fails
       }
     }
@@ -303,30 +312,26 @@ class AuthService {
       ? await userRepo.findDocByEmail(identifier)
       : await userRepo.findDocByPhone(identifier);
 
-    if (!user) error(isEmailIdentifier ? 'Email is wrong' : 'Invalid credentials', 401);
-
-    if (user.authProvider && user.authProvider !== 'password') {
-      error('Use OTP or Google login for this account', 400);
+    if (!user) {
+      await comparePassword(password, DUMMY_PASSWORD_HASH);
+      error('Invalid credentials', 401);
     }
 
-    if (user.status !== 'active') {
-      error('Account disabled', 403);
-    }
+    const isPasswordProvider = !user.authProvider || user.authProvider === 'password';
+    const isActive = user.status === 'active';
+    const isLocked = user.lockUntil && user.lockUntil > Date.now();
+    const ok = await comparePassword(password, user.passwordHash || DUMMY_PASSWORD_HASH);
 
-    if (user.lockUntil && user.lockUntil > Date.now()) {
-      error('Account temporarily locked. Try again later.', 423);
-    }
-
-    const ok = await comparePassword(password, user.passwordHash || '');
-    if (!ok) {
-      user.loginAttempts = (user.loginAttempts || 0) + 1;
-
-      if (user.loginAttempts >= 5) {
-        user.lockUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 min
+    if (!isPasswordProvider || !isActive || isLocked || !ok) {
+      // Preserve lockout behavior for bad passwords on password accounts.
+      if (isPasswordProvider && isActive && !isLocked && !ok) {
+        user.loginAttempts = (user.loginAttempts || 0) + 1;
+        if (user.loginAttempts >= 5) {
+          user.lockUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 min
+        }
+        await user.save();
       }
-
-      await user.save();
-      error(isEmailIdentifier ? 'Email is Ok but password is wrong' : 'Invalid credentials', 401);
+      error('Invalid credentials', 401);
     }
 
     user.loginAttempts = 0;

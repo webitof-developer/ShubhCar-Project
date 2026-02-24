@@ -133,12 +133,12 @@ describe('AuthService.login', () => {
     ).rejects.toMatchObject({ message: 'Invalid credentials', statusCode: 401 });
   });
 
-  test('rejects disabled account', async () => {
+  test('rejects inactive account with generic credentials error', async () => {
     const user = { status: 'inactive' };
     userRepo.findDocByEmail.mockResolvedValue(user);
     await expect(
       authService.login({ identifier: 'a@test.com', password: 'invalid' }),
-    ).rejects.toMatchObject({ message: 'Account disabled', statusCode: 403 });
+    ).rejects.toMatchObject({ message: 'Invalid credentials', statusCode: 401 });
   });
 
   test('locks after failed attempts', async () => {

@@ -1,9 +1,19 @@
 const repo = require('./productAttributeValues.repo');
 const { error } = require('../../utils/apiResponse');
+const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
 
 class ProductAttributeValuesService {
-  list(filter = {}) {
-    return repo.list(filter);
+  async list(query = {}) {
+    const { page, limit, ...filter } = query;
+    const pagination = getOffsetPagination({ page, limit });
+    const [data, total] = await Promise.all([
+      repo.list(filter, pagination),
+      repo.count(filter),
+    ]);
+    return {
+      data,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    };
   }
 
   async get(id) {

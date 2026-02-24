@@ -1,18 +1,29 @@
 const Brand = require('../../models/Brand.model');
 const slugify = require('slugify');
+// Security: Escape user input before constructing RegExp to prevent ReDoS.
+const { escapeRegex } = require('../../utils/escapeRegex');
+const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
 
 class BrandService {
-    async list({ limit = 100, page = 1, search, type }) {
+    async list({ limit, page, search, type }) {
         const filter = {};
-        if (search) filter.name = { $regex: search, $options: 'i' };
+        if (search) filter.name = { $regex: escapeRegex(search), $options: 'i' };
         if (type) filter.type = type;
+        const pagination = getOffsetPagination({ page, limit });
 
         const brands = await Brand.find(filter)
             .sort({ name: 1 })
-            .skip((page - 1) * limit)
-            .limit(parseInt(limit));
+            .skip(pagination.skip)
+            .limit(pagination.limit);
         const total = await Brand.countDocuments(filter);
-        return { brands, total };
+        return {
+            brands,
+            total,
+            page: pagination.page,
+            limit: pagination.limit,
+            data: brands,
+            pagination: buildPaginationMeta({ ...pagination, total }),
+        };
     }
 
     async create(data) {

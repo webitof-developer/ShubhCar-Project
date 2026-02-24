@@ -3,7 +3,7 @@ const adminService = require('./admin.service');
 const { success } = require('../../utils/apiResponse');
 
 exports.listPendingWholesale = asyncHandler(async (req, res) => {
-  const data = await adminService.listPendingWholesale();
+  const data = await adminService.listPendingWholesale(req.query);
   return success(res, data);
 });
 

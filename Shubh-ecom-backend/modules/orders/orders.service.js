@@ -50,6 +50,7 @@ const { error } = require('../../utils/apiResponse');
 const ROLES = require('../../constants/roles');
 const { generateOrderNumber } = require('../../utils/numbering');
 const { ADMIN_STATUS_UPDATES } = require('../../constants/orderStatus');
+const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
 
 const roundCurrency = (value) => Math.round((Number(value) || 0) * 100) / 100;
 const normalizeOrderStatus = (status) =>
@@ -150,6 +151,23 @@ function assertOrderIsPaid(order) {
   }
 }
 
+function assertRequestedQuantityWithinStock(product, requestedQuantity) {
+  const quantity = Number(requestedQuantity);
+  const availableStock = Number(product?.stockQty ?? product?.stock ?? 0);
+
+  if (!Number.isFinite(quantity) || quantity <= 0) {
+    error('Invalid quantity', 400, 'VALIDATION_ERROR');
+  }
+
+  if (quantity > availableStock) {
+    error(
+      'Requested quantity exceeds available stock',
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+}
+
 class OrderService {
   async placeOrder({ user, sessionId, payload, context = {} }) {
     const log = logger.withContext({
@@ -199,7 +217,7 @@ class OrderService {
       }
 
       if (!session._isStandalone) {
-        session.startTransaction();
+        session.startTransaction({ readPreference: 'primary' });
         transactionStarted = true;
       }
 
@@ -218,9 +236,10 @@ class OrderService {
           : 'retail';
 
       for (const item of cartItems) {
-        const product = await productRepo.findById(item.productId);
+        const product = await productRepo.findById(item.productId, session);
         if (!product || product.status !== 'active')
           error('Product unavailable', 400);
+        assertRequestedQuantityWithinStock(product, item.quantity);
 
         const customerType = orderCustomerType;
         const unitPrice = pricingService.resolveUnitPrice({
@@ -410,7 +429,7 @@ class OrderService {
   async confirmOrder(orderId) {
     const session = await createSafeSession();
     if (!session._isStandalone) {
-      session.startTransaction();
+      session.startTransaction({ readPreference: 'primary' });
     }
 
     try {
@@ -484,7 +503,7 @@ class OrderService {
   async failOrder(orderId, context = {}) {
     const session = await createSafeSession();
     if (!session._isStandalone) {
-      session.startTransaction();
+      session.startTransaction({ readPreference: 'primary' });
     }
 
     try {
@@ -559,7 +578,7 @@ class OrderService {
   async markRefunded(orderId, isFullRefund, context = {}) {
     const session = await createSafeSession();
     if (!session._isStandalone) {
-      session.startTransaction();
+      session.startTransaction({ readPreference: 'primary' });
     }
 
     try {
@@ -690,17 +709,24 @@ class OrderService {
     return updatedOrder;
   }
 
-  async getUserOrders(userId, { status, limit = 20, page = 1, includeItems }) {
+  async getUserOrders(userId, { status, limit, page, includeItems }) {
     const filter = { userId };
     if (status) filter.orderStatus = status;
+    const pagination = getOffsetPagination({ page, limit });
 
     const orders = await Order.find(filter)
       .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
+      .skip(pagination.skip)
+      .limit(pagination.limit)
       .lean();
 
-    if (!includeItems) return orders.map(attachPaymentSummary);
+    if (!includeItems) {
+      const total = await Order.countDocuments(filter);
+      return {
+        data: orders.map(attachPaymentSummary),
+        pagination: buildPaginationMeta({ ...pagination, total }),
+      };
+    }
 
     const orderIds = orders.map((o) => o._id);
     const items = await OrderItem.find({ orderId: { $in: orderIds } })
@@ -740,12 +766,17 @@ class OrderService {
       });
     });
 
-    return orders.map((order) =>
+    const data = orders.map((order) =>
       attachPaymentSummary({
         ...order,
         items: itemsByOrder.get(String(order._id)) || [],
       }),
     );
+    const total = await Order.countDocuments(filter);
+    return {
+      data,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    };
   }
 
   async getOrderDetail(user, orderId) {
@@ -787,9 +818,12 @@ class OrderService {
           : null,
       };
     });
-    const shipments = await shipmentRepo.list({
-      orderItemId: { $in: items.map((i) => i._id) },
-    });
+    const shipments = await shipmentRepo.list(
+      {
+        orderItemId: { $in: items.map((i) => i._id) },
+      },
+      { page: 1, limit: 100 },
+    );
     const events = await orderEventRepo.listByOrder(orderId);
     const notes = (events || []).filter(
       (event) => event.noteType === 'customer',
@@ -803,7 +837,7 @@ class OrderService {
     };
   }
 
-  async adminList({ status, paymentStatus, from, to, page = 1, limit = 20 }) {
+  async adminList({ status, paymentStatus, from, to, page, limit }) {
     const filter = {};
     if (status) filter.orderStatus = status;
     if (paymentStatus) filter.paymentStatus = paymentStatus;
@@ -813,13 +847,19 @@ class OrderService {
       if (to) filter.createdAt.$lte = new Date(to);
     }
 
+    const pagination = getOffsetPagination({ page, limit });
+
     const orders = await Order.find(filter)
       .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
+      .skip(pagination.skip)
+      .limit(pagination.limit)
       .lean();
 
-    return orders.map(attachPaymentSummary);
+    const total = await Order.countDocuments(filter);
+    return {
+      data: orders.map(attachPaymentSummary),
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    };
   }
 
   async adminGetOrder(orderId) {
@@ -827,9 +867,12 @@ class OrderService {
     if (!order) error('Order not found', 404);
 
     const items = await orderItemRepo.findByOrder(orderId);
-    const shipments = await shipmentRepo.list({
-      orderItemId: { $in: items.map((i) => i._id) },
-    });
+    const shipments = await shipmentRepo.list(
+      {
+        orderItemId: { $in: items.map((i) => i._id) },
+      },
+      { page: 1, limit: 100 },
+    );
 
     const versions = await orderVersionRepo.listByOrder(orderId);
     const events = await orderEventRepo.listByOrder(orderId);
@@ -1075,7 +1118,7 @@ class OrderService {
 
     const session = await createSafeSession();
     if (!session._isStandalone) {
-      session.startTransaction();
+      session.startTransaction({ readPreference: 'primary' });
     }
 
     try {
@@ -1130,10 +1173,11 @@ class OrderService {
       const taxMetaByItem = new Map();
 
       for (const item of payload.items || []) {
-        const product = await productRepo.findById(item.productId);
+        const product = await productRepo.findById(item.productId, session);
 
         if (!product || product.status !== 'active')
           error('Product unavailable', 400);
+        assertRequestedQuantityWithinStock(product, item.quantity);
 
         const customerType =
           user.customerType === 'wholesale' &&

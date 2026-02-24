@@ -1,4 +1,5 @@
 const Shipment = require('../../models/Shipment.model');
+const { getOffsetPagination } = require('../../utils/pagination');
 
 class ShipmentRepository {
   create(data) {
@@ -16,8 +17,17 @@ class ShipmentRepository {
     return Shipment.findById(id).lean();
   }
 
-  list(filter = {}) {
-    return Shipment.find(filter).sort({ createdAt: -1 }).lean();
+  list(filter = {}, pagination = {}) {
+    const { limit, skip } = getOffsetPagination(pagination);
+    return Shipment.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+  }
+
+  count(filter = {}) {
+    return Shipment.countDocuments(filter);
   }
 
   remove(id) {

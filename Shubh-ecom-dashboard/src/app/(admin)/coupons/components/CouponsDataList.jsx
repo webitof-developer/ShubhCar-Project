@@ -13,6 +13,7 @@ import StatusToggle from '@/components/shared/StatusToggle'
 
 const CouponsDataList = ({ coupons = [], setCoupons, loading = false }) => {
   const { data: session } = useSession()
+  const safeCoupons = Array.isArray(coupons) ? coupons : []
   const [deleting, setDeleting] = useState(null)
   const [error, setError] = useState(null)
   const [selectedCoupons, setSelectedCoupons] = useState([])
@@ -22,7 +23,7 @@ const CouponsDataList = ({ coupons = [], setCoupons, loading = false }) => {
   // Select all handler
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      setSelectedCoupons(coupons.map(c => c._id))
+      setSelectedCoupons(safeCoupons.map(c => c._id))
     } else {
       setSelectedCoupons([])
     }
@@ -52,7 +53,7 @@ const CouponsDataList = ({ coupons = [], setCoupons, loading = false }) => {
       await couponService.deleteCoupon(couponToDelete._id, session.accessToken)
       
       // Remove from UI
-      setCoupons(coupons.filter(c => c._id !== couponToDelete._id))
+      setCoupons(safeCoupons.filter(c => c._id !== couponToDelete._id))
       setShowDeleteModal(false)
       setCouponToDelete(null)
       toast.success('Coupon deleted successfully')
@@ -66,7 +67,7 @@ const CouponsDataList = ({ coupons = [], setCoupons, loading = false }) => {
   const handleStatusToggle = async (couponId, currentStatus) => {
     try {
       // Find the full coupon data to preserve all fields
-      const coupon = coupons.find(c => c._id === couponId)
+      const coupon = safeCoupons.find(c => c._id === couponId)
       if (!coupon) return
 
       // Update only the isActive field while preserving others
@@ -91,7 +92,7 @@ const CouponsDataList = ({ coupons = [], setCoupons, loading = false }) => {
       )
       
       // Update UI - this will also update the stats in CouponsBoxs
-      setCoupons(coupons.map(c => 
+      setCoupons(safeCoupons.map(c =>
         c._id === couponId ? { ...c, isActive: !currentStatus } : c
       ))
       toast.success('Status updated successfully')
@@ -159,7 +160,7 @@ const CouponsDataList = ({ coupons = [], setCoupons, loading = false }) => {
                     <th style={{ width: 20 }}>
                       <Form.Check 
                         id="select-all-coupons"
-                        checked={coupons.length > 0 && selectedCoupons.length === coupons.length}
+                        checked={safeCoupons.length > 0 && selectedCoupons.length === safeCoupons.length}
                         onChange={handleSelectAll}
                       />
                     </th>
@@ -175,7 +176,7 @@ const CouponsDataList = ({ coupons = [], setCoupons, loading = false }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {coupons.length === 0 ? (
+                  {safeCoupons.length === 0 ? (
                     <tr>
                       <td colSpan="9" className="text-center py-4">
                         <p className="text-muted">No coupons found</p>
@@ -185,7 +186,7 @@ const CouponsDataList = ({ coupons = [], setCoupons, loading = false }) => {
                       </td>
                     </tr>
                   ) : (
-                    coupons.map((coupon) => (
+                    safeCoupons.map((coupon) => (
                       <tr key={coupon._id}>
                         <td>
                           <Form.Check 

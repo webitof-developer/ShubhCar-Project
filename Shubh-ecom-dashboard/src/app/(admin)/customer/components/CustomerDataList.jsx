@@ -26,6 +26,13 @@ import FormErrorModal from '@/components/forms/FormErrorModal'
 import DataTable from '@/components/shared/DataTable'
 import StatusToggle from '@/components/shared/StatusToggle'
 
+const extractItems = (payload) => {
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload?.items)) return payload.items
+  if (Array.isArray(payload?.data)) return payload.data
+  if (Array.isArray(payload?.users)) return payload.users
+  return []
+}
 
 const CustomerDataList = ({ defaultFilter = 'all' }) => {
   const { data: session, status } = useSession()
@@ -73,11 +80,12 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
   const [touchedFields, setTouchedFields] = useState({})
   const [showErrorModal, setShowErrorModal] = useState(false)
   const [selectedCustomers, setSelectedCustomers] = useState([])
+  const safeCustomers = Array.isArray(customers) ? customers : []
 
   // Select all handler
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      setSelectedCustomers(customers.map(c => c._id))
+      setSelectedCustomers(safeCustomers.map((c) => c._id))
     } else {
       setSelectedCustomers([])
     }
@@ -121,7 +129,7 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
       if (!response.ok) throw new Error('Failed to fetch customers')
 
       const data = await response.json()
-      setCustomers(data.data || [])
+      setCustomers(extractItems(data?.data || data))
       setError(null)
     } catch (err) {
       console.error(err)
@@ -477,7 +485,7 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
       const data = await response.json()
       const updated = data?.data || {}
 
-      setCustomers(prev => prev.map((item) => (
+      setCustomers((prev) => (Array.isArray(prev) ? prev : []).map((item) => (
         item._id === customer._id
           ? {
             ...item,
@@ -519,7 +527,7 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
       }
 
       // Update local state
-      setCustomers(prev => prev.map(item => 
+      setCustomers((prev) => (Array.isArray(prev) ? prev : []).map((item) =>
         item._id === customer._id ? { ...item, status: newStatus } : item
       ))
       setSuccessMessage(`Customer status updated to ${newStatus}`)
@@ -532,7 +540,7 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
     }
   }
 
-  const showSkeleton = status === 'loading' || (loading && !customers.length)
+  const showSkeleton = status === 'loading' || (loading && !safeCustomers.length)
 
   const renderRowSkeletons = (count = 8) =>
     Array.from({ length: count }).map((_, idx) => (
@@ -542,7 +550,7 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
         </td>
         <td>
           <div className="d-flex align-items-center">
-            <div className="avatar-sm bg-primary-subtle rounded-circle flex-centered me-2">
+            <div className="avatar-sm bg-primary-subtle rounded-circle flex-centered flex-shrink-0 me-2">
               <Placeholder style={{ width: 28, height: 28, borderRadius: '50%' }} />
             </div>
             <div className="flex-grow-1">
@@ -707,7 +715,7 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
                             type="checkbox" 
                             className="form-check-input" 
                             id="customCheckAll"
-                            checked={customers.length > 0 && selectedCustomers.length === customers.length}
+                            checked={safeCustomers.length > 0 && selectedCustomers.length === safeCustomers.length}
                             onChange={handleSelectAll}
                           />
                           <label className="form-check-label" htmlFor="customCheckAll" />
@@ -725,7 +733,7 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {customers.map((customer) => (
+                    {safeCustomers.map((customer) => (
                       <tr key={customer._id}>
                         <td>
                           <div className="form-check">
@@ -743,7 +751,7 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
                         </td>
                         <td>
                           <div className="d-flex align-items-center">
-                            <div className="avatar-sm bg-primary-subtle rounded-circle flex-centered me-2">
+                            <div className="avatar-sm bg-primary-subtle rounded-circle flex-centered flex-shrink-0 me-2">
                               <span className="text-primary fw-bold">
                                 {customer.firstName?.[0]?.toUpperCase()}
                               </span>
@@ -859,7 +867,7 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
                   </div>
                 )}
 
-                {!loading && customers.length === 0 && (
+                {!loading && safeCustomers.length === 0 && (
                   <div className="text-center py-4 text-muted">
                     No customers found
                   </div>
@@ -885,7 +893,7 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
                     <button
                       className="page-link"
                       onClick={() => setCurrentPage((p) => p + 1)}
-                      disabled={customers.length < 20}
+                      disabled={safeCustomers.length < 20}
                     >
                       Next
                     </button>

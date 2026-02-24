@@ -1,12 +1,26 @@
 const repo = require('./tax.repo');
 const { error } = require('../../utils/apiResponse');
+const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
 
 class TaxService {
-  list(query = {}) {
+  async list(query = {}) {
     const filter = {};
     if (query.hsnCode) filter.hsnCode = query.hsnCode;
     if (query.status) filter.status = query.status;
-    return repo.list(filter);
+
+    const pagination = getOffsetPagination({
+      page: query.page,
+      limit: query.limit,
+    });
+    const [data, total] = await Promise.all([
+      repo.list(filter, pagination),
+      repo.count(filter),
+    ]);
+
+    return {
+      data,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    };
   }
 
   async create(payload) {

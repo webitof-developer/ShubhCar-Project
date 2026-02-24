@@ -1,7 +1,10 @@
 const Entry = require('../../models/Entry.model');
+// Security: Escape user input before constructing RegExp to prevent ReDoS.
+const { escapeRegex } = require('../../utils/escapeRegex');
+const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
 
 class EntriesService {
-    async list({ limit = 10, page = 1, status, startDate, endDate, search }) {
+    async list({ limit, page, status, startDate, endDate, search }) {
         const filter = {};
         if (status) filter.status = status;
 
@@ -12,26 +15,32 @@ class EntriesService {
         }
 
         if (search) {
+            const safeSearch = escapeRegex(search);
             filter.$or = [
-                { name: { $regex: search, $options: 'i' } },
-                { email: { $regex: search, $options: 'i' } },
-                { subject: { $regex: search, $options: 'i' } }
+                { name: { $regex: safeSearch, $options: 'i' } },
+                { email: { $regex: safeSearch, $options: 'i' } },
+                { subject: { $regex: safeSearch, $options: 'i' } }
             ];
         }
 
-        const skip = (page - 1) * limit;
+        const pagination = getOffsetPagination({ page, limit });
 
-        // If limit is 'all', return all docs (useful for export)
-        let query = Entry.find(filter).sort({ createdAt: -1 });
-
-        if (limit !== 'all') {
-            query = query.skip(skip).limit(parseInt(limit));
-        }
+        const query = Entry.find(filter)
+            .sort({ createdAt: -1 })
+            .skip(pagination.skip)
+            .limit(pagination.limit);
 
         const entries = await query.populate('user', 'name email phone');
         const total = await Entry.countDocuments(filter);
 
-        return { entries, total, page, limit };
+        return {
+            entries,
+            total,
+            page: pagination.page,
+            limit: pagination.limit,
+            data: entries,
+            pagination: buildPaginationMeta({ ...pagination, total }),
+        };
     }
 
     async create(data) {

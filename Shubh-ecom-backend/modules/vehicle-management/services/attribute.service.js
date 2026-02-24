@@ -2,6 +2,9 @@ const repo = require('../repositories/attribute.repository');
 const VehicleAttributeValue = require('../models/VehicleAttributeValue.model');
 const Vehicle = require('../models/Vehicle.model');
 const { error } = require('../../../utils/apiResponse');
+// Security: Escape user input before constructing RegExp to prevent ReDoS.
+const { escapeRegex } = require('../../../utils/escapeRegex');
+const { getOffsetPagination, buildPaginationMeta } = require('../../../utils/pagination');
 
 const VALID_TYPES = ['dropdown', 'text'];
 const VARIANT_NAME_KEY = 'variant name';
@@ -14,23 +17,32 @@ class VehicleAttributesService {
     const nameExclusion = { $not: /^variant name$/i };
     if (query.status) filter.status = query.status;
     if (query.search) {
+      const safeSearch = escapeRegex(query.search);
       filter.$and = [
         { name: nameExclusion },
-        { name: { $regex: query.search, $options: 'i' } },
+        { name: { $regex: safeSearch, $options: 'i' } },
       ];
     } else {
       filter.name = nameExclusion;
     }
 
-    const page = Number(query.page || 1);
-    const limit = Number(query.limit || 50);
+    const pagination = getOffsetPagination({
+      page: query.page,
+      limit: query.limit,
+    });
 
     const [items, total] = await Promise.all([
-      repo.list(filter, { page, limit }),
+      repo.list(filter, pagination),
       repo.count(filter),
     ]);
 
-    return { items, total, page, limit };
+    return {
+      items,
+      total,
+      page: pagination.page,
+      limit: pagination.limit,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    };
   }
 
   async create(payload) {

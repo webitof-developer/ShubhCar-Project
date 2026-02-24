@@ -1,4 +1,7 @@
 const Joi = require('joi');
+const { ORDER_STATUS_LIST } = require('../../constants/orderStatus');
+const { PAYMENT_STATUS } = require('../../constants/paymentStatus');
+const { paginationQuerySchema } = require('../../utils/paginationQuery.validator');
 
 const placeOrderSchema = Joi.object({
   paymentMethod: Joi.string().required(),
@@ -62,4 +65,34 @@ const adminCreateOrderSchema = Joi.object({
     .required(),
 });
 
-module.exports = { placeOrderSchema, adminCreateOrderSchema };
+const myOrdersQuerySchema = Joi.object({
+  ...paginationQuerySchema,
+  status: Joi.string()
+    .valid(...ORDER_STATUS_LIST)
+    .optional(),
+  includeItems: Joi.boolean().default(false),
+});
+
+const adminListOrdersQuerySchema = Joi.object({
+  ...paginationQuerySchema,
+  status: Joi.string()
+    .valid(...ORDER_STATUS_LIST)
+    .optional(),
+  paymentStatus: Joi.string()
+    .valid(...Object.values(PAYMENT_STATUS))
+    .optional(),
+  customerType: Joi.string().trim().optional(),
+  productType: Joi.string().trim().optional(),
+  from: Joi.date().iso().optional(),
+  to: Joi.date().iso().optional(),
+  userId: Joi.string().trim().optional(),
+  search: Joi.string().trim().max(100).allow('').optional(),
+  summary: Joi.boolean().optional(),
+});
+
+module.exports = {
+  placeOrderSchema,
+  adminCreateOrderSchema,
+  myOrdersQuerySchema,
+  adminListOrdersQuerySchema,
+};

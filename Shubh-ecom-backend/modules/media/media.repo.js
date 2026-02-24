@@ -1,4 +1,5 @@
 const Media = require('../../models/Media.model');
+const { getOffsetPagination } = require('../../utils/pagination');
 
 class MediaRepository {
   async create(data) {
@@ -17,13 +18,12 @@ class MediaRepository {
   }
 
   list(filter = {}, { limit = 20, page = 1 } = {}) {
-    const safeLimit = Math.min(Number(limit) || 20, 100);
-    const safePage = Math.max(Number(page) || 1, 1);
+    const { limit: safeLimit, skip } = getOffsetPagination({ page, limit });
 
     return Media.find({ ...filter, isDeleted: false })
       .sort({ createdAt: -1 })
       .limit(safeLimit)
-      .skip((safePage - 1) * safeLimit)
+      .skip(skip)
       .lean();
   }
 

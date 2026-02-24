@@ -9,6 +9,13 @@ const ROLES = require('../../constants/roles');
 const ExcelJS = require('exceljs');
 const { Readable } = require('stream');
 const crypto = require('crypto');
+// Security: Escape user input before constructing RegExp to prevent ReDoS.
+const { escapeRegex } = require('../../utils/escapeRegex');
+const {
+  getOffsetPagination,
+  buildPaginationMeta,
+  MAX_LIMIT,
+} = require('../../utils/pagination');
 
 /* =======================
    USERS SERVICE
@@ -120,8 +127,8 @@ class UsersService {
       customerType,
       verificationStatus,
       search,
-      limit = 20,
-      page = 1,
+      limit,
+      page,
     } = query;
 
     const clauses = [];
@@ -163,7 +170,7 @@ class UsersService {
     if (search) {
       const term = String(search).trim();
       if (term) {
-        const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const escapedTerm = escapeRegex(term);
         clauses.push({
           $or: [
             { firstName: { $regex: escapedTerm, $options: 'i' } },
@@ -215,12 +222,18 @@ class UsersService {
 
     const filter = clauses.length ? { $and: clauses } : {};
 
-    const users = await userRepo.list(filter, {
-      limit: Number(limit),
-      page: Number(page),
-    });
+    const pagination = getOffsetPagination({ page, limit });
+    const [users, total] = await Promise.all([
+      userRepo.list(filter, pagination),
+      userRepo.count(filter),
+    ]);
+    const sanitizedUsers = users.map((u) => this._sanitize(u));
 
-    return users.map((u) => this._sanitize(u));
+    return {
+      users: sanitizedUsers,
+      data: sanitizedUsers,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    };
   }
 
   async adminExportCustomers(actor, query = {}) {
@@ -241,7 +254,7 @@ class UsersService {
     if (search) {
       const term = String(search).trim();
       if (term) {
-        const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const escapedTerm = escapeRegex(term);
         filter.$or = [
           { firstName: { $regex: escapedTerm, $options: 'i' } },
           { lastName: { $regex: escapedTerm, $options: 'i' } },
@@ -289,7 +302,18 @@ class UsersService {
       }
     }
 
-    const customers = await userRepo.listAll(filter);
+    const customers = [];
+    let pageCursor = 1;
+    while (true) {
+      const batch = await userRepo.listAll(filter, {
+        page: pageCursor,
+        limit: MAX_LIMIT,
+      });
+      if (!batch.length) break;
+      customers.push(...batch);
+      if (batch.length < MAX_LIMIT) break;
+      pageCursor += 1;
+    }
     const rows = customers.map((customer) => ({
       name: `${customer.firstName || ''} ${customer.lastName || ''}`.trim(),
       email: customer.email || '',

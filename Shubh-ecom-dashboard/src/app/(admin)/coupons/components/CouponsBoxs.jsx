@@ -4,14 +4,15 @@ import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import { Card, CardBody, Col, Row, Spinner } from 'react-bootstrap'
 
 const CouponsBoxs = ({ coupons = [], loading = false }) => {
+  const safeCoupons = Array.isArray(coupons) ? coupons : []
   // Calculate stats from props
   const now = new Date()
   const stats = {
-    total: coupons.length,
-    active: coupons.filter(c => c.isActive && new Date(c.validTo) >= now).length,
-    expired: coupons.filter(c => new Date(c.validTo) < now).length,
+    total: safeCoupons.length,
+    active: safeCoupons.filter(c => c.isActive && new Date(c.validTo) >= now).length,
+    expired: safeCoupons.filter(c => new Date(c.validTo) < now).length,
     // Only count as inactive if NOT expired (expired takes priority)
-    inactive: coupons.filter(c => !c.isActive && new Date(c.validTo) >= now).length,
+    inactive: safeCoupons.filter(c => !c.isActive && new Date(c.validTo) >= now).length,
   }
 
   const statCards = [

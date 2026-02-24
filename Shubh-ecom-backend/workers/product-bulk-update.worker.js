@@ -1,14 +1,15 @@
 const { queuesEnabled } = require('../config/queue');
+const logger = require('../config/logger');
 
 if (!queuesEnabled) {
-  // eslint-disable-next-line no-console
-  console.warn('Worker disabled: REDIS_URL not set');
+  logger.warn('Worker disabled: REDIS_URL not set', {
+    worker: 'product-bulk-update',
+  });
   module.exports = { worker: null, disabled: true };
 } else {
   const { Worker } = require('bullmq');
   const { connection } = require('../config/queue');
   const { connectRedis, redis } = require('../config/redis');
-  const logger = require('../config/logger');
   const { logWorkerFailure } = require('../utils/workerLogger');
   const Product = require('../models/Product.model');
   const mongoose = require('mongoose');
@@ -17,8 +18,9 @@ if (!queuesEnabled) {
   const RESULT_TTL_SECONDS = 60 * 60 * 24; // 24 hours
 
   connectRedis().catch((err) => {
-    // eslint-disable-next-line no-console
-    console.error('Failed to connect Redis for bulk update worker', err);
+    logger.error('Failed to connect Redis for bulk update worker', {
+      error: err.message,
+    });
   });
 
   let worker = null;

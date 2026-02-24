@@ -1,8 +1,8 @@
 const { queuesEnabled } = require('../config/queue');
+const logger = require('../config/logger');
 
 if (!queuesEnabled) {
-  // eslint-disable-next-line no-console
-  console.warn('Worker disabled: REDIS_URL not set');
+  logger.warn('Worker disabled: REDIS_URL not set', { worker: 'payment-retry' });
   module.exports = { worker: null, disabled: true };
 } else {
   const { Worker } = require('bullmq');
@@ -10,7 +10,6 @@ if (!queuesEnabled) {
 
   const paymentRepo = require('../modules/payments/payment.repo');
   const orderRepo = require('../modules/orders/order.repo');
-  const logger = require('../config/logger');
   const { logWorkerFailure } = require('../utils/workerLogger');
 
   const {

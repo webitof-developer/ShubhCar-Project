@@ -1,8 +1,30 @@
 const Setting = require('../../models/Setting.model');
 const taxService = require('../../services/tax.service');
 const ROLES = require('../../constants/roles');
+const { getOffsetPagination, MAX_LIMIT } = require('../../utils/pagination');
 
 class SettingsService {
+    async _listBounded(filter = {}) {
+        const rows = [];
+        let page = 1;
+
+        while (true) {
+            const pagination = getOffsetPagination({ page, limit: MAX_LIMIT });
+            const batch = await Setting.find(filter)
+                .sort({ _id: 1 })
+                .skip(pagination.skip)
+                .limit(pagination.limit);
+
+            if (!batch.length) break;
+            rows.push(...batch);
+
+            if (batch.length < pagination.limit) break;
+            page += 1;
+        }
+
+        return rows;
+    }
+
     /**
      * Get all settings, optionally filtered by group
      */
@@ -33,7 +55,7 @@ class SettingsService {
         }
 
         // Return key-value pair object for easy frontend consumption
-        const settings = await Setting.find(filter);
+        const settings = await this._listBounded(filter);
         const result = {};
 
         // Group by 'group' or return flat if filtered? 
@@ -84,6 +106,7 @@ class SettingsService {
             'invoice_company_phone',
             'invoice_company_website',
             'invoice_logo_url',
+            'invoice_template_image_url',
         ]);
         const groupMap = {
             site_logo_dark: 'store',
@@ -126,6 +149,7 @@ class SettingsService {
             invoice_company_phone: 'invoice',
             invoice_company_website: 'invoice',
             invoice_logo_url: 'invoice',
+            invoice_template_image_url: 'invoice',
             invoice_terms: 'invoice',
             invoice_notes: 'invoice',
             storage_driver: 'storage',
@@ -177,7 +201,7 @@ class SettingsService {
     }
 
     async listPublic() {
-        const settings = await Setting.find({ isPublic: true }).lean();
+        const settings = await this._listBounded({ isPublic: true });
         const result = {};
         settings.forEach(s => {
             result[s.key] = s.value;
@@ -205,6 +229,7 @@ class SettingsService {
             invoice_company_phone: '+91 1800-000-0000',
             invoice_company_website: 'www.example.com',
             invoice_logo_url: allSettings.site_logo_dark || allSettings.site_logo_light || null,
+            invoice_template_image_url: null,
             invoice_terms: 'Goods once sold will not be taken back or exchanged. All disputes are subject to local jurisdiction.',
             invoice_notes: 'This is a computer generated invoice.',
         };

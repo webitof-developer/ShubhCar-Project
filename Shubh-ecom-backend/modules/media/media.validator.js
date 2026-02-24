@@ -2,7 +2,7 @@ const Joi = require('joi');
 
 const presignSchema = Joi.object({
   mimeType: Joi.string()
-    .valid('image/jpeg', 'image/png', 'image/webp', 'image/svg+xml')
+    .valid('image/jpeg', 'image/png', 'image/webp')
     .required(),
   folder: Joi.string().trim().max(80).default('misc'),
 });
@@ -11,7 +11,9 @@ const createMediaSchema = Joi.object({
   key: Joi.string().trim().max(300).required(),
   bucket: Joi.string().trim().max(120).required(),
   url: Joi.string().trim().max(1000),
-  mimeType: Joi.string().trim().max(120).required(),
+  mimeType: Joi.string()
+    .valid('image/jpeg', 'image/png', 'image/webp')
+    .required(),
   size: Joi.number().integer().min(1).required(),
   width: Joi.number().integer().min(1),
   height: Joi.number().integer().min(1),

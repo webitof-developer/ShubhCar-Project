@@ -3,14 +3,24 @@ const Order = require('../../models/Order.model');
 const OrderItem = require('../../models/OrderItem.model');
 
 const SalesReport = require('../../models/SalesReport.model');
+const { getOffsetPagination } = require('../../utils/pagination');
 
 class SalesReportsRepo {
   create(data) {
     return SalesReport.create(data);
   }
 
-  list(filter = {}) {
-    return SalesReport.find(filter).sort({ date: -1 }).lean();
+  list(filter = {}, pagination = {}) {
+    const { limit, skip } = getOffsetPagination(pagination);
+    return SalesReport.find(filter)
+      .sort({ date: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+  }
+
+  count(filter = {}) {
+    return SalesReport.countDocuments(filter);
   }
 
   findById(id) {

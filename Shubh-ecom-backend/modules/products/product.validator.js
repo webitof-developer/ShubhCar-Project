@@ -1,4 +1,5 @@
 const Joi = require('joi');
+const { paginationQuerySchema } = require('../../utils/paginationQuery.validator');
 
 const priceSchema = Joi.object({
   mrp: Joi.number().positive().required(),
@@ -122,3 +123,42 @@ exports.updateProductSchema = Joi.object({
 
   primaryImageId: Joi.string(),
 }).options({ allowUnknown: false });
+
+const searchQuerySchema = Joi.string().trim().max(100).allow('');
+
+exports.listFeaturedQuerySchema = Joi.object({
+  ...paginationQuerySchema,
+  cursor: Joi.string().trim().optional(),
+});
+
+exports.listByCategoryQuerySchema = Joi.object({
+  ...paginationQuerySchema,
+  cursor: Joi.string().trim().optional(),
+});
+
+exports.listPublicQuerySchema = Joi.object({
+  ...paginationQuerySchema,
+  search: searchQuerySchema.optional(),
+  categoryId: Joi.string().trim().optional(),
+  manufacturerBrand: Joi.string().trim().optional(),
+  productType: Joi.string().trim().optional(),
+  minPrice: Joi.number().min(0).optional(),
+  maxPrice: Joi.number().min(0).optional(),
+  sort: Joi.string()
+    .valid('created_desc', 'created_asc', 'price_asc', 'price_desc')
+    .default('created_desc'),
+});
+
+exports.adminListQuerySchema = Joi.object({
+  ...paginationQuerySchema,
+  status: Joi.string()
+    .valid('published', 'draft', 'trashed', 'all')
+    .optional(),
+  categoryId: Joi.string().trim().optional(),
+  manufacturerBrand: Joi.string().trim().optional(),
+  productType: Joi.string().trim().optional(),
+  stockStatus: Joi.string().valid('instock', 'outstock').optional(),
+  isFeatured: Joi.boolean().optional(),
+  search: searchQuerySchema.optional(),
+  summary: Joi.boolean().optional(),
+});

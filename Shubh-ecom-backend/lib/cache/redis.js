@@ -20,7 +20,6 @@ const ensureClient = async () => {
     await client.connect();
     return client;
   } catch (err) {
-    console.log('DEBUG: LIB REDIS CONNECT FAILED', err.message);
     logger.warn('Redis connect failed (cache disabled)', { error: err.message });
     client = null;
     return null;

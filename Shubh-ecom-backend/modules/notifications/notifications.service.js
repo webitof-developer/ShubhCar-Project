@@ -2,6 +2,11 @@ const repo = require('./notifications.repo');
 const { error } = require('../../utils/apiResponse');
 const notificationCache = require('../../cache/notification.cache');
 const ROLES = require('../../constants/roles');
+const {
+  DEFAULT_LIMIT,
+  getOffsetPagination,
+  buildPaginationMeta,
+} = require('../../utils/pagination');
 
 class NotificationsService {
   visibleFilter(user, filter = {}) {
@@ -20,15 +25,48 @@ class NotificationsService {
   }
 
   async list({ user, filter = {} }) {
-    if (user.role === ROLES.ADMIN) return repo.list(filter);
+    const { page, limit, ...queryFilter } = filter || {};
+    const pagination = getOffsetPagination({ page, limit });
 
-    const baseFilter = this.visibleFilter(user, filter);
+    if (user.role === ROLES.ADMIN) {
+      const [data, total] = await Promise.all([
+        repo.list(queryFilter, pagination),
+        repo.count(queryFilter),
+      ]);
+      return {
+        items: data,
+        data,
+        pagination: buildPaginationMeta({ ...pagination, total }),
+      };
+    }
+
+    const baseFilter = this.visibleFilter(user, queryFilter);
+    const useCache =
+      !Object.keys(queryFilter).length &&
+      pagination.page === 1 &&
+      pagination.limit === DEFAULT_LIMIT;
     const cacheKey = notificationCache.key.user(user.id, user.role);
-    const cached = await notificationCache.get(cacheKey);
-    if (cached) return cached;
-    const list = await repo.list(baseFilter);
-    await notificationCache.set(cacheKey, list);
-    return list;
+
+    if (useCache) {
+      const cached = await notificationCache.get(cacheKey);
+      if (cached) return cached;
+    }
+
+    const [data, total] = await Promise.all([
+      repo.list(baseFilter, pagination),
+      repo.count(baseFilter),
+    ]);
+    const response = {
+      items: data,
+      data,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    };
+
+    if (useCache) {
+      await notificationCache.set(cacheKey, response);
+    }
+
+    return response;
   }
 
   async get(id, user) {

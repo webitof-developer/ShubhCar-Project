@@ -1,4 +1,5 @@
 const Notification = require('../../models/Notification.model');
+const { getOffsetPagination } = require('../../utils/pagination');
 
 class NotificationsRepo {
   create(data) {
@@ -9,8 +10,17 @@ class NotificationsRepo {
     return Notification.findById(id).lean();
   }
 
-  list(filter = {}) {
-    return Notification.find(filter).sort({ createdAt: -1 }).lean();
+  list(filter = {}, pagination = {}) {
+    const { limit, skip } = getOffsetPagination(pagination);
+    return Notification.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+  }
+
+  count(filter = {}) {
+    return Notification.countDocuments(filter);
   }
 
   update(id, data) {

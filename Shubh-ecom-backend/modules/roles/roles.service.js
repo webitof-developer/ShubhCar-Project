@@ -1,5 +1,10 @@
 const rolesRepo = require('./roles.repo');
 const { error } = require('../../utils/apiResponse');
+const {
+  MAX_LIMIT,
+  getOffsetPagination,
+  buildPaginationMeta,
+} = require('../../utils/pagination');
 
 const DEFAULT_ROLES = [
   {
@@ -64,8 +69,21 @@ const normalizeSlug = (value) =>
     .replace(/^-+|-+$/g, '');
 
 class RolesService {
+  async _listAllRoles(filter = {}) {
+    const all = [];
+    let page = 1;
+    while (true) {
+      const batch = await rolesRepo.list(filter, { page, limit: MAX_LIMIT });
+      if (!batch.length) break;
+      all.push(...batch);
+      if (batch.length < MAX_LIMIT) break;
+      page += 1;
+    }
+    return all;
+  }
+
   async ensureDefaults() {
-    const existing = await rolesRepo.list();
+    const existing = await this._listAllRoles();
     const existingSlugs = new Set(existing.map((role) => role.slug));
 
     const missing = DEFAULT_ROLES.filter((role) => !existingSlugs.has(role.slug));
@@ -96,9 +114,21 @@ class RolesService {
     }
   }
 
-  async list() {
+  async list(query = {}) {
     await this.ensureDefaults();
-    return rolesRepo.list();
+    const pagination = getOffsetPagination({
+      page: query.page,
+      limit: query.limit,
+    });
+    const [data, total] = await Promise.all([
+      rolesRepo.list({}, pagination),
+      rolesRepo.count({}),
+    ]);
+    return {
+      roles: data,
+      data,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    };
   }
 
   async get(id) {

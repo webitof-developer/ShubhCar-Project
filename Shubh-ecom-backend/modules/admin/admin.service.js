@@ -3,6 +3,7 @@ const userRepo = require('../users/user.repo');
 const { error } = require('../../utils/apiResponse');
 const ROLES = require('../../constants/roles');
 const { approveWholesaleSchema } = require('./admin.validation');
+const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
 
 class AdminService {
   async reviewWholesaleUser(adminUser, userId, payload) {
@@ -40,8 +41,22 @@ class AdminService {
     return userRepo.updateById(userId, update);
   }
 
-  async listPendingWholesale() {
-    return userRepo.findPendingWholesale();
+  async listPendingWholesale(query = {}) {
+    const pagination = getOffsetPagination({
+      page: query.page,
+      limit: query.limit,
+    });
+
+    const data = await userRepo.findPendingWholesale(pagination);
+    const total = typeof userRepo.countPendingWholesale === 'function'
+      ? await userRepo.countPendingWholesale()
+      : data.length;
+
+    return {
+      users: data,
+      data,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    };
   }
 }
 

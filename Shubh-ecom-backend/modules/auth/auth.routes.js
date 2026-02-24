@@ -2,7 +2,12 @@ const express = require('express');
 const controller = require('./auth.controller');
 const auth = require('../../middlewares/auth.middleware');
 const validate = require('../../middlewares/validate.middleware');
-const { authLimiter } = require('../../middlewares/rateLimiter.middleware');
+const {
+  authLimiter,
+  loginLimiter,
+  registerLimiter,
+  passwordResetLimiter,
+} = require('../../middlewares/rateLimiter.middleware');
 
 const {
   registerSchema,
@@ -69,7 +74,7 @@ const router = express.Router();
 // Register
 router.post(
   '/register',
-  authLimiter,
+  registerLimiter,
   validate(registerSchema),
   controller.register,
 );
@@ -117,7 +122,7 @@ router.post(
  */
 // Login
 // Login
-router.post('/login', controller.login);
+router.post('/login', loginLimiter, controller.login);
 // router.post('/login', authLimiter, validate(loginSchema), controller.login);
 
 /**
@@ -377,7 +382,6 @@ router.post(
 // Refresh (VERY sensitive)
 router.post(
   '/refresh',
-  authLimiter,
   validate(refreshSchema),
   controller.refresh,
 );
@@ -416,7 +420,7 @@ router.post(
 // Forgot password
 router.post(
   '/forgot-password',
-  authLimiter,
+  passwordResetLimiter,
   validate(forgotPasswordSchema),
   controller.forgotPassword,
 );
@@ -457,7 +461,7 @@ router.post(
 // Reset password
 router.post(
   '/reset-password',
-  authLimiter,
+  passwordResetLimiter,
   validate(resetPasswordSchema),
   controller.resetPassword,
 );

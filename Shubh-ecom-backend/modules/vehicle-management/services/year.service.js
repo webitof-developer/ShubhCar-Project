@@ -1,6 +1,7 @@
 const repo = require('../repositories/year.repository');
 const Vehicle = require('../models/Vehicle.model');
 const { error } = require('../../../utils/apiResponse');
+const { getOffsetPagination, buildPaginationMeta } = require('../../../utils/pagination');
 
 const MIN_YEAR = 1886;
 
@@ -22,15 +23,23 @@ class VehicleYearsService {
       filter.year = Number(query.search);
     }
 
-    const page = Number(query.page || 1);
-    const limit = Number(query.limit || 50);
+    const pagination = getOffsetPagination({
+      page: query.page,
+      limit: query.limit,
+    });
 
     const [items, total] = await Promise.all([
-      repo.list(filter, { page, limit }),
+      repo.list(filter, pagination),
       repo.count(filter),
     ]);
 
-    return { items, total, page, limit };
+    return {
+      items,
+      total,
+      page: pagination.page,
+      limit: pagination.limit,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    };
   }
 
   async create(payload) {

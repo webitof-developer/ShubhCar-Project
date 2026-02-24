@@ -1,8 +1,13 @@
 const Product = require('../../models/Product.model');
+// Security: Escape user input before constructing RegExp to prevent ReDoS.
+const { escapeRegex } = require('../../utils/escapeRegex');
+const { getOffsetPagination } = require('../../utils/pagination');
 
 class ProductRepository {
-  findById(id) {
-    return Product.findById(id).lean();
+  findById(id, session) {
+    const query = Product.findById(id);
+    if (session) query.session(session);
+    return query.lean();
   }
 
   // IMPORTANT: for uniqueness check, do NOT filter by status
@@ -21,13 +26,15 @@ class ProductRepository {
   listByCategory(categoryId, { limit = 20, cursor }) {
     const query = { categoryId, status: 'active' };
     if (cursor) query._id = { $lt: cursor };
-    return Product.find(query).sort({ _id: -1 }).limit(limit).lean();
+    const { limit: safeLimit } = getOffsetPagination({ limit });
+    return Product.find(query).sort({ _id: -1 }).limit(safeLimit).lean();
   }
 
   listFeatured({ limit = 20, cursor }) {
     const query = { isFeatured: true, status: 'active' };
     if (cursor) query._id = { $lt: cursor };
-    return Product.find(query).sort({ _id: -1 }).limit(limit).lean();
+    const { limit: safeLimit } = getOffsetPagination({ limit });
+    return Product.find(query).sort({ _id: -1 }).limit(safeLimit).lean();
   }
 
   async listPublic({
@@ -53,12 +60,13 @@ class ProductRepository {
       if (types.length) filter.productType = { $in: types };
     }
     if (search) {
+      const safeSearch = escapeRegex(search);
       filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { manufacturerBrand: { $regex: search, $options: 'i' } },
-        { vehicleBrand: { $regex: search, $options: 'i' } },
-        { oemNumber: { $regex: search, $options: 'i' } },
-        { tags: { $in: [new RegExp(search, 'i')] } },
+        { name: { $regex: safeSearch, $options: 'i' } },
+        { manufacturerBrand: { $regex: safeSearch, $options: 'i' } },
+        { vehicleBrand: { $regex: safeSearch, $options: 'i' } },
+        { oemNumber: { $regex: safeSearch, $options: 'i' } },
+        { tags: { $in: [new RegExp(safeSearch, 'i')] } },
       ];
     }
     if (minPrice != null || maxPrice != null) {
@@ -90,16 +98,18 @@ class ProductRepository {
       price_desc: { 'retailPrice.mrp': -1 },
     };
 
+    const { limit: safeLimit, skip } = getOffsetPagination({ page, limit });
+
     const [items, total] = await Promise.all([
       Product.find(filter)
         .sort(sortMap[sort] || sortMap.created_desc)
-        .limit(limit)
-        .skip((page - 1) * limit)
+        .limit(safeLimit)
+        .skip(skip)
         .lean(),
       Product.countDocuments(filter),
     ]);
 
-    return { items, total };
+    return { items, total, page: skip / safeLimit + 1, limit: safeLimit };
   }
 
   create(data) {
@@ -112,17 +122,21 @@ class ProductRepository {
       .lean();
   }
   async adminList({ filter = {}, limit = 20, page = 1, includeDeleted = false, projection = null }) {
+    const { limit: safeLimit, page: safePage, skip } = getOffsetPagination({
+      page,
+      limit,
+    });
     const [products, total] = await Promise.all([
       Product.find(filter)
         .select(projection || undefined)
         .setOptions({ includeDeleted })
         .sort({ createdAt: -1 })
-        .limit(limit)
-        .skip((page - 1) * limit)
+        .limit(safeLimit)
+        .skip(skip)
         .lean(),
       Product.countDocuments(filter).setOptions({ includeDeleted }),
     ]);
-    return { products, total };
+    return { products, total, page: safePage, limit: safeLimit };
   }
 
   async getStatusCounts() {

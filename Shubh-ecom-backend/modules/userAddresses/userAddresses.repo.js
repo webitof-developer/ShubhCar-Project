@@ -1,12 +1,22 @@
 const UserAddress = require('../../models/UserAddress.model');
+const { getOffsetPagination } = require('../../utils/pagination');
 
 class UserAddressesRepo {
   create(data) {
     return UserAddress.create(data);
   }
 
-  listByUser(userId) {
-    return UserAddress.find({ userId }).sort({ createdAt: -1 }).lean();
+  listByUser(userId, pagination = {}) {
+    const { limit, skip } = getOffsetPagination(pagination);
+    return UserAddress.find({ userId })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+  }
+
+  countByUser(userId) {
+    return UserAddress.countDocuments({ userId });
   }
 
   findById(id) {

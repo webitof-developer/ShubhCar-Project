@@ -1,4 +1,5 @@
 const repo = require('./salesReports.repo');
+const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
 
 class SalesReportsService {
   summary(params) {
@@ -9,8 +10,18 @@ class SalesReportsService {
     return repo.salesmanPerformance(params);
   }
 
-  list(filter = {}) {
-    return repo.list(filter);
+  async list(query = {}) {
+    const { page, limit, ...filter } = query;
+    const pagination = getOffsetPagination({ page, limit });
+    const [data, total] = await Promise.all([
+      repo.list(filter, pagination),
+      repo.count(filter),
+    ]);
+    return {
+      reports: data,
+      data,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    };
   }
 
   async get(id) {

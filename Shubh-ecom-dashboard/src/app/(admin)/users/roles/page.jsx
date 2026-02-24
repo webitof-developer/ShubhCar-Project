@@ -23,6 +23,14 @@ import { toast } from 'react-toastify'
 import { usePermissions } from '@/hooks/usePermissions'
 import DeleteConfirmModal from '@/components/shared/DeleteConfirmModal'
 
+const extractItems = (payload) => {
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload?.items)) return payload.items
+  if (Array.isArray(payload?.data)) return payload.data
+  if (Array.isArray(payload?.roles)) return payload.roles
+  return []
+}
+
 const RolesPage = () => {
   const { data: session, status } = useSession()
   const { hasPermission } = usePermissions()
@@ -37,6 +45,7 @@ const RolesPage = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [roleToDelete, setRoleToDelete] = useState(null)
   const [deleting, setDeleting] = useState(false)
+  const safeRoles = Array.isArray(roles) ? roles : []
 
   const canViewRoles = hasPermission('roles.view')
   const canCreateRoles = hasPermission('roles.create')
@@ -65,7 +74,7 @@ const RolesPage = () => {
     try {
       setLoading(true)
       const response = await rolesAPI.list(token)
-      setRoles(response.data || [])
+      setRoles(extractItems(response?.data || response))
       setError(null)
     } catch (err) {
       console.error(err)
@@ -205,7 +214,7 @@ const RolesPage = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {roles.map((role) => (
+                      {safeRoles.map((role) => (
                         <tr key={role._id}>
                           <td>{role.name}</td>
                           <td>
@@ -247,7 +256,7 @@ const RolesPage = () => {
                           </td>
                         </tr>
                       ))}
-                      {!roles.length && (
+                      {!safeRoles.length && (
                         <tr><td colSpan={4} className="text-center text-muted">No roles found</td></tr>
                       )}
                     </tbody>

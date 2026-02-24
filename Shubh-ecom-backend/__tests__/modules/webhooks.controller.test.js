@@ -11,6 +11,11 @@ jest.mock('../../services/razorpay.service', () => ({
 jest.mock('../../queues/paymentWebhook.queue', () => ({
   paymentWebhookQueue: { add: jest.fn() },
 }));
+jest.mock('../../config/queue', () => ({
+  queuesEnabled: true,
+  connection: {},
+  createQueue: () => ({ add: jest.fn() }),
+}));
 jest.mock('../../config/redis', () => {
   const store = new Map();
   return {
@@ -77,7 +82,10 @@ describe('Payment webhooks idempotency', () => {
     expect(badRes.status).toBe(400);
 
     razorpayService.verifyWebhook.mockReturnValue(true);
-    const payload = { payload: { payment: { entity: { id: 'pay_1' } } } };
+    const payload = {
+      event: 'payment.captured',
+      payload: { payment: { entity: { id: 'pay_1' } } },
+    };
 
     const okRes = await request(app)
       .post('/api/v1/payments/webhook/razorpay')

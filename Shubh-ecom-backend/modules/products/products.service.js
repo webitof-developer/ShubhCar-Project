@@ -12,10 +12,13 @@ const ROLES = require('../../constants/roles');
 const Category = require('../../models/Category.model');
 const Brand = require('../../models/Brand.model');
 const Product = require('../../models/Product.model');
+const logger = require('../../config/logger');
 const { getStorageSettings } = require('../../utils/storageSettings');
 const s3 = require('../../utils/s3');
 const fs = require('fs/promises');
 const { generateProductCode } = require('../../utils/numbering');
+// Security: Escape user input before constructing RegExp to prevent ReDoS.
+const { escapeRegex } = require('../../utils/escapeRegex');
 
 const PRODUCT_CODE_REGEX = /^PRO-\d{6}$/;
 
@@ -175,10 +178,10 @@ class ProductService {
 
   async listPublic(query = {}, user) {
     const { page = 1, limit = 20, search, categoryId, manufacturerBrand, productType, minPrice, maxPrice, sort } = query;
-    const { items, total } = await repo.listPublic({
-      page: Number(page),
-      limit: Number(limit),
-      search,
+    const { items, total, page: safePage, limit: safeLimit } = await repo.listPublic({
+      page,
+      limit,
+      search: search || undefined,
       categoryId,
       manufacturerBrand,
       productType,
@@ -193,9 +196,9 @@ class ProductService {
     return {
       items: this.applyPricingList(withImages, user),
       total,
-      page: Number(page),
-      limit: Number(limit),
-      totalPages: Math.ceil(total / Number(limit)),
+      page: safePage,
+      limit: safeLimit,
+      totalPages: Math.ceil(total / safeLimit),
     };
   }
 
@@ -492,9 +495,9 @@ class ProductService {
 
   async adminList(query = {}) {
     const { limit = 20, page = 1, status, categoryId, manufacturerBrand, productType, stockStatus, isFeatured, search } = query;
+    const searchValue = search || '';
 
-    console.log('[adminList] Received query:', query);
-    console.log('[adminList] Status param:', status);
+    logger.info('admin_list_query_received', { query, status });
 
     const filter = {};
     let includeDeleted = false;
@@ -529,21 +532,23 @@ class ProductService {
     }
     if (stockStatus === 'instock') filter.stockQty = { $gt: 0 };
     if (stockStatus === 'outstock') filter.stockQty = { $lte: 0 };
-    if (isFeatured !== undefined && isFeatured !== '') {
-      filter.isFeatured = isFeatured === 'true';
+    if (typeof isFeatured === 'boolean') {
+      filter.isFeatured = isFeatured;
+    } else if (isFeatured !== undefined && isFeatured !== '') {
+      filter.isFeatured = String(isFeatured).toLowerCase() === 'true';
     }
-    if (search) {
+    if (searchValue) {
+      const safeSearch = escapeRegex(searchValue);
       filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { sku: { $regex: search, $options: 'i' } },
-        { manufacturerBrand: { $regex: search, $options: 'i' } },
-        { vehicleBrand: { $regex: search, $options: 'i' } },
-        { oemNumber: { $regex: search, $options: 'i' } },
+        { name: { $regex: safeSearch, $options: 'i' } },
+        { sku: { $regex: safeSearch, $options: 'i' } },
+        { manufacturerBrand: { $regex: safeSearch, $options: 'i' } },
+        { vehicleBrand: { $regex: safeSearch, $options: 'i' } },
+        { oemNumber: { $regex: safeSearch, $options: 'i' } },
       ];
     }
 
-    console.log('[adminList] Final filter:', filter);
-    console.log('[adminList] includeDeleted:', includeDeleted);
+    logger.info('admin_list_filter_built', { filter, includeDeleted });
 
     const summary = String(query.summary || '').toLowerCase() === 'true';
     const projection = summary
@@ -570,16 +575,18 @@ class ProductService {
     const [listData, counts] = await Promise.all([
       repo.adminList({
         filter,
-        limit: Number(limit),
-        page: Number(page),
+        limit,
+        page,
         includeDeleted,
         projection
       }),
       repo.getStatusCounts()
     ]);
 
-    console.log('[adminList] Products found:', listData.products.length);
-    console.log('[adminList] Counts:', counts);
+    logger.info('admin_list_result_ready', {
+      productsFound: listData.products.length,
+      counts,
+    });
 
     await ensureListProductCodes(listData.products);
 
@@ -617,9 +624,9 @@ class ProductService {
     return {
       data: enrichedProducts,
       total: listData.total,
-      totalPages: Math.ceil(listData.total / limit),
-      page: Number(page),
-      limit: Number(limit),
+      totalPages: Math.ceil(listData.total / listData.limit),
+      page: listData.page,
+      limit: listData.limit,
       counts
     };
   }
@@ -666,6 +673,9 @@ class ProductService {
   async addImages(productId, files, user) {
     if (!user || user.role !== ROLES.ADMIN) error('Forbidden', 403);
     if (!files.length) error('No images uploaded', 400);
+    files.forEach((file) => {
+      if (!file.detectedMimeType) error('Invalid uploaded file type', 400);
+    });
 
     const product = await repo.findById(productId);
     if (!product) error('Product not found', 404);
@@ -692,11 +702,13 @@ class ProductService {
       const mediaItems = [];
 
       for (const [index, file] of files.entries()) {
-        const key = s3.generateKey('products', file.mimetype || 'image/jpeg');
+        const mimeType = file.detectedMimeType;
+
+        const key = s3.generateKey('products', mimeType);
         await s3.uploadFile({
           filePath: file.path,
           key,
-          mimeType: file.mimetype || 'image/jpeg',
+          mimeType,
           config: s3Config,
         });
         await fs.unlink(file.path).catch(() => null);
@@ -714,7 +726,7 @@ class ProductService {
           key,
           bucket: s3Config.bucket,
           url,
-          mimeType: file.mimetype || 'image/jpeg',
+          mimeType,
           size: file.size || 0,
           usedIn: ['product'],
           createdBy: user._id,
@@ -748,7 +760,7 @@ class ProductService {
         key: `products/${file.filename}`,
         bucket: 'local',
         url: `/uploads/products/${file.filename}`,
-        mimeType: file.mimetype || 'image/jpeg',
+        mimeType: file.detectedMimeType,
         size: file.size || 0,
         usedIn: ['product'],
         createdBy: user._id,
@@ -787,8 +799,9 @@ class ProductService {
     try {
       // Try to find manufacturer brand by exact or case-insensitive name
       // We prioritize 'manufacturer' type if distinction exists, but simply name match is robust
+      const safeManufacturerBrand = escapeRegex(product.manufacturerBrand.trim());
       const brand = await Brand.findOne({
-        name: { $regex: new RegExp(`^${product.manufacturerBrand.trim()}$`, 'i') },
+        name: { $regex: new RegExp(`^${safeManufacturerBrand}$`, 'i') },
         // Optional: filter by type if needed, but generic match is safer for now
         // type: 'manufacturer' 
       }).select('logo name').lean();
@@ -802,7 +815,7 @@ class ProductService {
         };
       }
     } catch (err) {
-      console.error('Failed to attach brand details:', err);
+      logger.error('Failed to attach brand details', { error: err.message });
     }
     return product;
   }
@@ -851,7 +864,7 @@ class ProductService {
         };
       }
     } catch (err) {
-      console.error('Failed to attach category hierarchy', err);
+      logger.error('Failed to attach category hierarchy', { error: err.message });
       return product;
     }
   }

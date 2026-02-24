@@ -2,6 +2,9 @@ const Product = require('../../models/Product.model');
 const InventoryLog = require('../../models/InventoryLog.model');
 const { error } = require('../../utils/apiResponse');
 const inventoryCache = require('../../cache/inventory.cache');
+// Security: Escape user input before constructing RegExp to prevent ReDoS.
+const { escapeRegex } = require('../../utils/escapeRegex');
+const { getOffsetPagination } = require('../../utils/pagination');
 
 class InventoryAdminService {
   async summary({ threshold = 5 } = {}) {
@@ -41,9 +44,9 @@ class InventoryAdminService {
   }
 
   async listProducts({ page = 1, limit = 20, search, status, threshold } = {}) {
-    const pageNum = Number(page) || 1;
-    const limitNum = Number(limit) || 20;
+    const pagination = getOffsetPagination({ page, limit });
     const thresholdValue = threshold != null ? Number(threshold) : null;
+    const safeSearch = search ? escapeRegex(search) : '';
 
     const match = { isDeleted: false };
     if (status) match.status = status;
@@ -59,9 +62,9 @@ class InventoryAdminService {
       pipeline.push({
         $match: {
           $or: [
-            { sku: { $regex: search, $options: 'i' } },
-            { name: { $regex: search, $options: 'i' } },
-            { productId: { $regex: search, $options: 'i' } },
+            { sku: { $regex: safeSearch, $options: 'i' } },
+            { name: { $regex: safeSearch, $options: 'i' } },
+            { productId: { $regex: safeSearch, $options: 'i' } },
           ],
         },
       });
@@ -69,8 +72,8 @@ class InventoryAdminService {
 
     pipeline.push(
       { $sort: { stockQty: 1 } },
-      { $skip: (pageNum - 1) * limitNum },
-      { $limit: limitNum },
+      { $skip: pagination.skip },
+      { $limit: pagination.limit },
       {
         $project: {
           _id: 1,
@@ -92,9 +95,9 @@ class InventoryAdminService {
               {
                 $match: {
                   $or: [
-                    { sku: { $regex: search, $options: 'i' } },
-                    { name: { $regex: search, $options: 'i' } },
-                    { productId: { $regex: search, $options: 'i' } },
+                    { sku: { $regex: safeSearch, $options: 'i' } },
+                    { name: { $regex: safeSearch, $options: 'i' } },
+                    { productId: { $regex: safeSearch, $options: 'i' } },
                   ],
                 },
               },
@@ -109,9 +112,9 @@ class InventoryAdminService {
     return {
       items,
       total,
-      page: pageNum,
-      limit: limitNum,
-      totalPages: Math.ceil(total / limitNum),
+      page: pagination.page,
+      limit: pagination.limit,
+      totalPages: Math.ceil(total / pagination.limit),
     };
   }
 

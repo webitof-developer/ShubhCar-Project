@@ -1,11 +1,13 @@
 const VehicleAttributeValue = require('../models/VehicleAttributeValue.model');
+const { getOffsetPagination } = require('../../../utils/pagination');
 
 class VehicleAttributeValuesRepo {
   list(filter, { page = 1, limit = 50 } = {}) {
+    const pagination = getOffsetPagination({ page, limit });
     return VehicleAttributeValue.find(filter)
       .sort({ value: 1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
+      .skip(pagination.skip)
+      .limit(pagination.limit)
       .lean();
   }
 

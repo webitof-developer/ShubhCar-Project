@@ -4,6 +4,7 @@ const categoryAttrRepo = require('../categoryAttribute/categoryAttribute.repo');
 const repo = require('./productAttribute.repo');
 const { error } = require('../../utils/apiResponse');
 const ROLES = require('../../constants/roles');
+const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
 
 /* =====================
    HELPERS
@@ -42,13 +43,25 @@ class ProductAttributeService {
   /* =====================
      LIST
   ====================== */
-  async list(productId, user) {
+  async list(productId, user, query = {}) {
     const product = await Product.findById(productId).lean();
     if (!product) error('Product not found', 404);
 
     if (user.role !== ROLES.ADMIN) error('Forbidden', 403);
 
-    return repo.getByProduct(productId);
+    const pagination = getOffsetPagination({
+      page: query.page,
+      limit: query.limit,
+    });
+    const [data, total] = await Promise.all([
+      repo.getByProduct(productId, pagination),
+      repo.countByProduct(productId),
+    ]);
+
+    return {
+      data,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    };
   }
 
   /* =====================

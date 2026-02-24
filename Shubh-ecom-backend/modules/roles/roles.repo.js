@@ -1,8 +1,18 @@
 const Role = require('../../models/Role.model');
+const { getOffsetPagination } = require('../../utils/pagination');
 
 class RolesRepo {
-  list() {
-    return Role.find({}).sort({ createdAt: -1 }).lean();
+  list(filter = {}, pagination = {}) {
+    const { limit, skip } = getOffsetPagination(pagination);
+    return Role.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+  }
+
+  count(filter = {}) {
+    return Role.countDocuments(filter);
   }
 
   findById(id) {

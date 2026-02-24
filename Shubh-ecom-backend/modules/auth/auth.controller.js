@@ -7,21 +7,10 @@ exports.register = asyncHandler(async (req, res) => {
   return success(res, result, 'Registration successful');
 });
 
-exports.login = async (req, res) => {
-  console.log('LOGIN CONTROLLER HIT');
-  try {
-    const result = await authService.login(req.body);
-    return success(res, result, 'Login successful');
-  } catch (error) {
-    console.error('Login error stack:', error.stack);
-    
-    return res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Internal Server Error',
-      code: error.code || 'INTERNAL_ERROR'
-    });
-  }
-};
+exports.login = asyncHandler(async (req, res) => {
+  const result = await authService.login(req.body);
+  return success(res, result, 'Login successful');
+});
 
 exports.sendPhoneOtp = asyncHandler(async (req, res) => {
   await authService.sendPhoneOtp(req.body.phone);

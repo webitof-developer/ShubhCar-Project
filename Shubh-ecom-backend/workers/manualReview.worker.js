@@ -1,14 +1,13 @@
 const { queuesEnabled } = require('../config/queue');
+const logger = require('../config/logger');
 
 if (!queuesEnabled) {
-  // eslint-disable-next-line no-console
-  console.warn('Worker disabled: REDIS_URL not set');
+  logger.warn('Worker disabled: REDIS_URL not set', { worker: 'manual-review' });
   module.exports = { worker: null, disabled: true };
 } else {
   const { Worker } = require('bullmq');
   const { connection } = require('../config/queue');
   const ManualReview = require('../models/ManualReview.model');
-  const logger = require('../config/logger');
   const { logWorkerFailure } = require('../utils/workerLogger');
 
   let worker = null;

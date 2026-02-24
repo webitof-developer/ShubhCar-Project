@@ -5,6 +5,7 @@ const orderJobs = require('../../jobs/order.jobs');
 const orderRepo = require('../orders/order.repo');
 const { PAYMENT_STATUS } = require('../../constants/paymentStatus');
 const orderItemsRepo = require('../orderItems/orderItems.repo');
+const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
 
 const ROLES = require('../../constants/roles');
 
@@ -173,8 +174,18 @@ class ShipmentService {
     return updatedShipment;
   }
 
-  list(filter = {}) {
-    return shipmentRepo.list(filter);
+  async list(query = {}) {
+    const { page, limit, ...filter } = query;
+    const pagination = getOffsetPagination({ page, limit });
+    const [data, total] = await Promise.all([
+      shipmentRepo.list(filter, pagination),
+      shipmentRepo.count(filter),
+    ]);
+    return {
+      shipments: data,
+      data,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    };
   }
 
   async get(id) {
@@ -220,15 +231,36 @@ class ShipmentService {
     };
   }
 
-  async adminListByOrder(orderId) {
+  async adminListByOrder(orderId, query = {}) {
     const orderItems = await orderItemsRepo.findByOrderId(orderId);
     if (!orderItems || !orderItems.length) {
-      return [];
+      const pagination = getOffsetPagination({
+        page: query.page,
+        limit: query.limit,
+      });
+      return {
+        shipments: [],
+        data: [],
+        pagination: buildPaginationMeta({ ...pagination, total: 0 }),
+      };
     }
 
-    return shipmentRepo.list({
+    const filter = {
       orderItemId: { $in: orderItems.map((i) => i._id) },
+    };
+    const pagination = getOffsetPagination({
+      page: query.page,
+      limit: query.limit,
     });
+    const [data, total] = await Promise.all([
+      shipmentRepo.list(filter, pagination),
+      shipmentRepo.count(filter),
+    ]);
+    return {
+      shipments: data,
+      data,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    };
   }
 
 

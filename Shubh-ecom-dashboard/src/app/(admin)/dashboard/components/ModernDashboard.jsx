@@ -21,6 +21,30 @@ const ReactApexChart = dynamic(() => import('react-apexcharts'), {
   loading: () => <div className="chart-skeleton" />,
 })
 
+const toArray = (value) => (Array.isArray(value) ? value : [])
+const unwrapData = (payload) => {
+  if (!payload || typeof payload !== 'object') return payload
+  if (!Object.prototype.hasOwnProperty.call(payload, 'data')) return payload
+  const rootData = payload.data
+  if (
+    rootData &&
+    typeof rootData === 'object' &&
+    Object.prototype.hasOwnProperty.call(rootData, 'data')
+  ) {
+    return rootData.data
+  }
+  return rootData
+}
+const extractItems = (payload, aliases = []) => {
+  const source = unwrapData(payload)
+  if (Array.isArray(source)) return source
+  if (!source || typeof source !== 'object') return []
+  for (const key of ['items', 'data', ...aliases]) {
+    if (Array.isArray(source[key])) return source[key]
+  }
+  return []
+}
+
 const ModernDashboard = () => {
   const { data: session } = useSession()
   const { hasPermission, loading: permissionsLoading } = usePermissions()
@@ -75,8 +99,8 @@ const ModernDashboard = () => {
           dashboardAPI.getStats(token),
           orderAPI.getStatusCounts(token),
         ])
-        setStats(statsResponse.data || {})
-        setStatusCounts(statusResponse.data || {})
+        setStats((unwrapData(statsResponse) || {}))
+        setStatusCounts((unwrapData(statusResponse) || {}))
       } catch (error) {
         console.error('Failed to load dashboard', error)
       } finally {
@@ -89,8 +113,7 @@ const ModernDashboard = () => {
         const ordersResponsePromise = orderAPI.list({ limit: 5, summary: true }, token)
         if (isSalesman) {
           const ordersResponse = await ordersResponsePromise
-          const ordersPayload = ordersResponse.data || []
-          setOrders(Array.isArray(ordersPayload) ? ordersPayload : (ordersPayload.items || []))
+          setOrders(extractItems(ordersResponse))
           setTopProducts([])
           setSalesByState([])
           setSalesBySalesman([])
@@ -104,12 +127,12 @@ const ModernDashboard = () => {
           salesReportsAPI.summary({}, token),
           settingsAPI.list('orders', token),
         ])
-        setTopProducts(productsResponse.data || [])
-        const ordersPayload = ordersResponse.data || []
-        setOrders(Array.isArray(ordersPayload) ? ordersPayload : (ordersPayload.items || []))
-        setSalesByState(stateResponse.data || [])
-        setSalesBySalesman(reportsResponse?.data?.salesBySalesman || [])
-        const settingsData = settingsResponse?.data || {}
+        setTopProducts(toArray(productsResponse))
+        setOrders(extractItems(ordersResponse))
+        setSalesByState(toArray(stateResponse))
+        const reportsData = unwrapData(reportsResponse) || {}
+        setSalesBySalesman(Array.isArray(reportsData?.salesBySalesman) ? reportsData.salesBySalesman : [])
+        const settingsData = unwrapData(settingsResponse) || {}
         setSalesmanPolicy({
           maxSalesmanDiscountPercent: Number(settingsData.maxSalesmanDiscountPercent || 0),
           salesmanCommissionPercent: Number(settingsData.salesmanCommissionPercent || 0),
@@ -137,7 +160,7 @@ const ModernDashboard = () => {
       setLoading((prev) => ({ ...prev, chart: true }))
       try {
         const chartResponse = await dashboardAPI.getRevenueChart(token, { range: chartRange })
-        setChartData(chartResponse.data || { labels: [], revenue: [], orders: [] })
+        setChartData(chartResponse || { labels: [], revenue: [], orders: [] })
       } catch (error) {
         console.error('Failed to load chart data', error)
       } finally {

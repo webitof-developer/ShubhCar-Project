@@ -63,7 +63,8 @@ function errorMiddleware(err, req, res, next) {
       req.params?.id ||
       null,
     durationMs: durationMs ? Math.round(durationMs) : undefined,
-    stack: process.env.NODE_ENV === 'production' ? undefined : err.stack,
+    // Security: keep full error context in internal logs while sanitizing client responses.
+    stack: err.stack,
   });
 
   const safeMessage =

@@ -101,7 +101,7 @@ class ProductVariantService {
 
     const session = await createSafeSession();
     if (!session._isStandalone) {
-      session.startTransaction();
+      session.startTransaction({ readPreference: 'primary' });
     }
 
     try {

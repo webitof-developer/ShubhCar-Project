@@ -39,7 +39,7 @@ exports.listByCategory = asyncHandler(async (req, res) => {
 
   const data = await productService.listByCategory(
     req.params.categoryId,
-    { cursor, limit: Number(limit) || 20 },
+    { cursor, limit },
     req.user || null,
   );
 
@@ -50,7 +50,7 @@ exports.listFeatured = asyncHandler(async (req, res) => {
   const { cursor, limit } = req.query;
 
   const data = await productService.listFeatured(
-    { cursor, limit: Number(limit) || 20 },
+    { cursor, limit },
     req.user || null,
   );
 

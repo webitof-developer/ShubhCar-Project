@@ -34,7 +34,7 @@ const SalespersonDashboard = ({ data, loading: reportLoading, salesmanId }) => {
       setChartLoading(true)
       try {
         const chartResponse = await dashboardAPI.getRevenueChart(token, { range: chartRange, salesmanId })
-        setChartData(chartResponse.data || { labels: [], revenue: [], orders: [] })
+        setChartData(chartResponse || { labels: [], revenue: [], orders: [] })
       } catch (error) {
         console.error('Failed to load chart data', error)
       } finally {

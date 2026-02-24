@@ -17,8 +17,8 @@ exports.update = asyncHandler(async (req, res) => {
 });
 
 exports.list = asyncHandler(async (req, res) => {
-  const { slug, status } = req.query;
-  const filters = {};
+  const { slug, status, page, limit } = req.query;
+  const filters = { page, limit };
   if (slug) filters.slug = slug;
   if (status) filters.status = status;
   

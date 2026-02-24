@@ -96,7 +96,8 @@ async function withTransaction(callback, options = {}) {
 
   try {
     if (!isStandalone) {
-      session.startTransaction();
+      // Security/compat: MongoDB transactions must use primary read preference.
+      session.startTransaction({ readPreference: 'primary' });
       transactionStarted = true;
 
       logger.debug('Transaction started', {
@@ -172,7 +173,8 @@ async function withSession(callback) {
 
   const startTx = async () => {
     if (!isStandalone) {
-      session.startTransaction();
+      // Security/compat: MongoDB transactions must use primary read preference.
+      session.startTransaction({ readPreference: 'primary' });
     }
   };
 

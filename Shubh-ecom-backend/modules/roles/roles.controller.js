@@ -3,7 +3,7 @@ const rolesService = require('./roles.service');
 const { success } = require('../../utils/apiResponse');
 
 exports.list = asyncHandler(async (req, res) => {
-  const data = await rolesService.list();
+  const data = await rolesService.list(req.query);
   return success(res, data);
 });
 

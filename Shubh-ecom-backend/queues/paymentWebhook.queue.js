@@ -1,6 +1,5 @@
-const { Queue } = require('bullmq');
-const { connection } = require('../config/queue');
+const { createQueue } = require('../config/queue');
 
-const paymentWebhookQueue = new Queue('payment-webhook', { connection });
+const paymentWebhookQueue = createQueue('payment-webhook');
 
 module.exports = { paymentWebhookQueue };

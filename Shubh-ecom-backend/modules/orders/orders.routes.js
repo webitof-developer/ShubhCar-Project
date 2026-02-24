@@ -9,7 +9,12 @@ const ROLES = require('../../constants/roles');
 const cacheRead = require('../../middlewares/cacheRead');
 const cacheKeys = require('../../lib/cache/keys');
 
-const { placeOrderSchema, adminCreateOrderSchema } = require('./order.validator');
+const {
+  placeOrderSchema,
+  adminCreateOrderSchema,
+  myOrdersQuerySchema,
+  adminListOrdersQuerySchema,
+} = require('./order.validator');
 const {
   cancelOrderSchema,
   adminStatusUpdateSchema,
@@ -135,7 +140,7 @@ router.post(
  *                 success:
  *                   type: boolean
  */
-router.get('/my', auth(), controller.myOrders);
+router.get('/my', auth(), validate(myOrdersQuerySchema, 'query'), controller.myOrders);
 
 /* =======================
    ADMIN CMS ROUTES
@@ -285,7 +290,13 @@ router.post(
  *                 success:
  *                   type: boolean
  */
-router.get('/', adminLimiter, auth([ROLES.ADMIN, ROLES.SALESMAN]), controller.adminList);
+router.get(
+  '/',
+  adminLimiter,
+  auth([ROLES.ADMIN, ROLES.SALESMAN]),
+  validate(adminListOrdersQuerySchema, 'query'),
+  controller.adminList,
+);
 
 /**
  * @openapi

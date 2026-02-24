@@ -5,6 +5,7 @@ const OrderItem = require('../../models/OrderItem.model');
 const Product = require('../../models/Product.model');
 const ROLES = require('../../constants/roles');
 const { ORDER_STATUS } = require('../../constants/orderStatus');
+const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
 
 class ReviewsService {
   async listByProduct(productId) {
@@ -135,17 +136,24 @@ class ReviewsService {
   }
 
   async adminList(query = {}) {
-    const { status, productId, rating, limit = 20, page = 1 } = query;
+    const { status, productId, rating, limit, page } = query;
 
     const filter = {};
     if (status) filter.status = status;
     if (productId) filter.productId = productId;
     if (rating) filter.rating = Number(rating);
+    const pagination = getOffsetPagination({ page, limit });
 
-    return repo.adminList(filter, {
-      limit: Number(limit),
-      page: Number(page),
-    });
+    const [data, total] = await Promise.all([
+      repo.adminList(filter, pagination),
+      repo.adminCount(filter),
+    ]);
+
+    return {
+      items: data,
+      data,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    };
   }
 
   async adminGet(reviewId) {

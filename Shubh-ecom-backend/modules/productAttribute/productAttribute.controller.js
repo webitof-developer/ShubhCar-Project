@@ -3,7 +3,7 @@ const asyncHandler = require('../../utils/asyncHandler');
 const service = require('./productAttribute.service');
 
 exports.list = asyncHandler(async (req, res) => {
-  const data = await service.list(req.params.productId, req.user);
+  const data = await service.list(req.params.productId, req.user, req.query);
   return success(res, data);
 });
 

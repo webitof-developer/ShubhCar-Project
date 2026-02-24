@@ -6,7 +6,10 @@ const express = require('express');
 const auth = require('../../middlewares/auth.middleware');
 const validate = require('../../middlewares/validate.middleware');
 const validateId = require('../../middlewares/objectId.middleware');
-const { adminLimiter } = require('../../middlewares/rateLimiter.middleware');
+const {
+  adminLimiter,
+  registerLimiter,
+} = require('../../middlewares/rateLimiter.middleware');
 const controller = require('./users.controller');
 const {
   registerUserSchema,
@@ -67,7 +70,12 @@ const importUpload = multer({
  *             schema:
  *               $ref: '#/components/schemas/GenericSuccess'
  */
-router.post('/register', validate(registerUserSchema), controller.register);
+router.post(
+  '/register',
+  registerLimiter,
+  validate(registerUserSchema),
+  controller.register,
+);
 
 /**
  * @openapi

@@ -1,5 +1,4 @@
 const bodyParser = require('body-parser');
-const { webhookRateLimiter } = require('../config/rateLimiter');
 
 /**
  * API ROUTE REGISTRY
@@ -29,16 +28,14 @@ module.exports = function registerRoutes(app) {
   // STRIPE (RAW BODY REQUIRED)
   app.post(
     '/v1/payments/webhook/stripe',
-    webhookRateLimiter,
     bodyParser.raw({ type: 'application/json' }),
     require('../modules/payments/webhook.routes').stripe,
   );
 
-  // RAZORPAY (JSON BODY)
+  // RAZORPAY (RAW BODY REQUIRED FOR SIGNATURE VERIFICATION)
   app.post(
     '/v1/payments/webhook/razorpay',
-    webhookRateLimiter,
-    bodyParser.json(),
+    bodyParser.raw({ type: 'application/json' }),
     require('../modules/payments/webhook.routes').razorpay,
   );
 

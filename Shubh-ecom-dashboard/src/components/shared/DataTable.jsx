@@ -38,6 +38,7 @@ const DataTable = ({
   className = '',
   getRowKey = (row) => row._id || row.id
 }) => {
+  const safeData = Array.isArray(data) ? data : []
   const tableClasses = [
     'table',
     'align-middle',
@@ -94,14 +95,14 @@ const DataTable = ({
                 <p className="mt-2 mb-0 text-muted">Loading...</p>
               </td>
             </tr>
-          ) : data.length === 0 ? (
+          ) : safeData.length === 0 ? (
             <tr>
               <td colSpan={columns.length} className="text-center py-4 text-muted">
                 {emptyMessage}
               </td>
             </tr>
           ) : (
-            data.map((row, index) => rowRenderer(row, index))
+            safeData.map((row, index) => rowRenderer(row, index))
           )}
         </tbody>
       </Table>

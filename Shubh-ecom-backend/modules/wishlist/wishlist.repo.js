@@ -1,8 +1,18 @@
 const Wishlist = require('../../models/Wishlist.model');
+const { getOffsetPagination } = require('../../utils/pagination');
 
 class WishlistRepo {
-  findByUser(userId) {
-    return Wishlist.find({ userId }).lean();
+  findByUser(userId, pagination = {}) {
+    const { limit, skip } = getOffsetPagination(pagination);
+    return Wishlist.find({ userId })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+  }
+
+  countByUser(userId) {
+    return Wishlist.countDocuments({ userId });
   }
 
   findOne(userId, productId) {

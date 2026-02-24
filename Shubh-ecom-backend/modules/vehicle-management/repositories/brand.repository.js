@@ -1,12 +1,14 @@
 const mongoose = require('mongoose');
 const Brand = require('../../../models/Brand.model');
+const { getOffsetPagination } = require('../../../utils/pagination');
 
 class VehicleBrandsRepo {
   list(filter, { page = 1, limit = 50 } = {}) {
+    const pagination = getOffsetPagination({ page, limit });
     return Brand.find(filter)
       .sort({ name: 1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
+      .skip(pagination.skip)
+      .limit(pagination.limit)
       .lean();
   }
 

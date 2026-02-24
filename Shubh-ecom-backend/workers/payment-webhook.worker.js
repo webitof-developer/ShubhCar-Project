@@ -1,13 +1,12 @@
 const { queuesEnabled } = require('../config/queue');
+const logger = require('../config/logger');
 
 if (!queuesEnabled) {
-  // eslint-disable-next-line no-console
-  console.warn('Worker disabled: REDIS_URL not set');
+  logger.warn('Worker disabled: REDIS_URL not set', { worker: 'payment-webhook' });
   module.exports = { worker: null, disabled: true };
 } else {
   const { Worker } = require('bullmq');
   const { connection } = require('../config/queue');
-  const logger = require('../config/logger');
   const { logWorkerFailure } = require('../utils/workerLogger');
 
   const paymentRepo = require('../modules/payments/payment.repo');
@@ -31,16 +30,17 @@ if (!queuesEnabled) {
       const updatedPayment = await paymentRepo.markSuccess(payment._id, {
         transactionId: object?.id,
       });
+      const snapshotPayment = updatedPayment || payment;
       await orderRepo.updateById(payment.orderId, {
         paymentSnapshot: {
           paymentId: payment._id,
-          gateway: updatedPayment.paymentGateway,
-          gatewayOrderId: updatedPayment.gatewayOrderId || null,
-          transactionId: updatedPayment.transactionId || object?.id || null,
+          gateway: snapshotPayment.paymentGateway,
+          gatewayOrderId: snapshotPayment.gatewayOrderId || null,
+          transactionId: snapshotPayment.transactionId || object?.id || null,
           status: PAYMENT_RECORD_STATUS.SUCCESS,
-          amount: updatedPayment.amount,
-          currency: updatedPayment.currency || 'INR',
-          createdAt: updatedPayment.createdAt || new Date(),
+          amount: snapshotPayment.amount,
+          currency: snapshotPayment.currency || 'INR',
+          createdAt: snapshotPayment.createdAt || new Date(),
           updatedAt: new Date(),
         },
       });
@@ -60,16 +60,17 @@ if (!queuesEnabled) {
       const isFullRefund = refundedAmount >= (payment.amount || 0);
       const order = await orderRepo.findById(orderId);
       const updatedPayment = await paymentRepo.finalizeRefund(payment._id, isFullRefund);
+      const snapshotPayment = updatedPayment || payment;
       await orderRepo.updateById(payment.orderId, {
         paymentSnapshot: {
           paymentId: payment._id,
-          gateway: updatedPayment.paymentGateway,
-          gatewayOrderId: updatedPayment.gatewayOrderId || null,
-          transactionId: updatedPayment.transactionId || object?.id || null,
+          gateway: snapshotPayment.paymentGateway,
+          gatewayOrderId: snapshotPayment.gatewayOrderId || null,
+          transactionId: snapshotPayment.transactionId || object?.id || null,
           status: PAYMENT_RECORD_STATUS.REFUNDED,
-          amount: updatedPayment.amount,
-          currency: updatedPayment.currency || 'INR',
-          createdAt: updatedPayment.createdAt || new Date(),
+          amount: snapshotPayment.amount,
+          currency: snapshotPayment.currency || 'INR',
+          createdAt: snapshotPayment.createdAt || new Date(),
           updatedAt: new Date(),
         },
       });
@@ -87,33 +88,61 @@ if (!queuesEnabled) {
       const paymentEntity = payload?.payload?.payment?.entity;
       const paymentId = paymentEntity?.id;
       const gatewayOrderId = paymentEntity?.order_id;
+
+      logger.info('razorpay_webhook_event_received', {
+        event,
+        razorpayPaymentId: paymentId || null,
+        razorpayOrderId: gatewayOrderId || null,
+      });
+
       let payment = null;
-      if (paymentId) {
-        payment = await paymentRepo.findByGatewayPaymentIdLean(paymentId);
-      }
-      if (!payment && gatewayOrderId) {
+      if (gatewayOrderId) {
         payment = await paymentRepo.findByGatewayOrderIdLean(gatewayOrderId);
       }
+      if (paymentId) {
+        payment =
+          payment || (await paymentRepo.findByGatewayPaymentIdLean(paymentId));
+      }
+
+      logger.info('razorpay_webhook_payment_lookup', {
+        event,
+        razorpayPaymentId: paymentId || null,
+        razorpayOrderId: gatewayOrderId || null,
+        paymentFound: Boolean(payment),
+        localOrderId: payment?.orderId ? String(payment.orderId) : null,
+      });
+
       if (!payment) return;
       if (payment.status === PAYMENT_RECORD_STATUS.SUCCESS) return;
+
       const updatedPayment = await paymentRepo.markSuccess(payment._id, {
         transactionId: paymentId || payment.transactionId,
         gatewayResponse: paymentEntity,
       });
+      const snapshotPayment = updatedPayment || payment;
+
       await orderRepo.updateById(payment.orderId, {
         paymentSnapshot: {
           paymentId: payment._id,
-          gateway: updatedPayment.paymentGateway,
-          gatewayOrderId: updatedPayment.gatewayOrderId || null,
-          transactionId: updatedPayment.transactionId || paymentId || null,
+          gateway: snapshotPayment.paymentGateway,
+          gatewayOrderId: snapshotPayment.gatewayOrderId || null,
+          transactionId: snapshotPayment.transactionId || paymentId || null,
           status: PAYMENT_RECORD_STATUS.SUCCESS,
-          amount: updatedPayment.amount,
-          currency: updatedPayment.currency || 'INR',
-          createdAt: updatedPayment.createdAt || new Date(),
+          amount: snapshotPayment.amount,
+          currency: snapshotPayment.currency || 'INR',
+          createdAt: snapshotPayment.createdAt || new Date(),
           updatedAt: new Date(),
         },
       });
+
       const order = await orderRepo.findById(payment.orderId);
+      logger.info('razorpay_webhook_order_lookup', {
+        event,
+        razorpayOrderId: gatewayOrderId || null,
+        localOrderId: payment?.orderId ? String(payment.orderId) : null,
+        orderFound: Boolean(order),
+      });
+
       if (order) {
         await orderService.confirmOrder(payment.orderId);
         await invoiceService.generateFromOrder(order);
@@ -132,16 +161,17 @@ if (!queuesEnabled) {
       const isFullRefund = refundAmount >= (payment.amount || 0);
       const order = await orderRepo.findById(payment.orderId);
       const updatedPayment = await paymentRepo.finalizeRefund(payment._id, isFullRefund);
+      const snapshotPayment = updatedPayment || payment;
       await orderRepo.updateById(payment.orderId, {
         paymentSnapshot: {
           paymentId: payment._id,
-          gateway: updatedPayment.paymentGateway,
-          gatewayOrderId: updatedPayment.gatewayOrderId || null,
-          transactionId: updatedPayment.transactionId || paymentId || null,
+          gateway: snapshotPayment.paymentGateway,
+          gatewayOrderId: snapshotPayment.gatewayOrderId || null,
+          transactionId: snapshotPayment.transactionId || paymentId || null,
           status: PAYMENT_RECORD_STATUS.REFUNDED,
-          amount: updatedPayment.amount,
-          currency: updatedPayment.currency || 'INR',
-          createdAt: updatedPayment.createdAt || new Date(),
+          amount: snapshotPayment.amount,
+          currency: snapshotPayment.currency || 'INR',
+          createdAt: snapshotPayment.createdAt || new Date(),
           updatedAt: new Date(),
         },
       });
@@ -155,30 +185,51 @@ if (!queuesEnabled) {
     if (event === 'payment.failed') {
       const paymentId = payload?.payload?.payment?.entity?.id;
       const gatewayOrderId = payload?.payload?.payment?.entity?.order_id;
+      logger.info('razorpay_webhook_event_received', {
+        event,
+        razorpayPaymentId: paymentId || null,
+        razorpayOrderId: gatewayOrderId || null,
+      });
+
       let payment = null;
-      if (paymentId) {
-        payment = await paymentRepo.findByGatewayPaymentIdLean(paymentId);
-      }
-      if (!payment && gatewayOrderId) {
+      if (gatewayOrderId) {
         payment = await paymentRepo.findByGatewayOrderIdLean(gatewayOrderId);
       }
+      if (paymentId) {
+        payment =
+          payment || (await paymentRepo.findByGatewayPaymentIdLean(paymentId));
+      }
+
+      logger.info('razorpay_webhook_payment_lookup', {
+        event,
+        razorpayPaymentId: paymentId || null,
+        razorpayOrderId: gatewayOrderId || null,
+        paymentFound: Boolean(payment),
+        localOrderId: payment?.orderId ? String(payment.orderId) : null,
+      });
+
       if (!payment) return;
       const updatedPayment = await paymentRepo.markFailed(payment._id, { reason: 'gateway_failure' });
+      const snapshotPayment = updatedPayment || payment;
       await orderRepo.updateById(payment.orderId, {
         paymentSnapshot: {
           paymentId: payment._id,
-          gateway: updatedPayment.paymentGateway,
-          gatewayOrderId: updatedPayment.gatewayOrderId || null,
-          transactionId: updatedPayment.transactionId || paymentId || null,
+          gateway: snapshotPayment.paymentGateway,
+          gatewayOrderId: snapshotPayment.gatewayOrderId || null,
+          transactionId: snapshotPayment.transactionId || paymentId || null,
           status: PAYMENT_RECORD_STATUS.FAILED,
-          amount: updatedPayment.amount,
-          currency: updatedPayment.currency || 'INR',
-          createdAt: updatedPayment.createdAt || new Date(),
+          amount: snapshotPayment.amount,
+          currency: snapshotPayment.currency || 'INR',
+          createdAt: snapshotPayment.createdAt || new Date(),
           updatedAt: new Date(),
         },
       });
+
       await orderService.failOrder(payment.orderId);
+      return;
     }
+
+    logger.info('razorpay_webhook_event_unhandled', { event: event || null });
   };
 
   let worker = null;

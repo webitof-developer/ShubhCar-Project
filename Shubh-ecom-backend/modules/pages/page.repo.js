@@ -1,4 +1,5 @@
 const Page = require('../../models/Page.model');
+const { getOffsetPagination } = require('../../utils/pagination');
 
 class PageRepository {
   async create(data) {
@@ -16,8 +17,17 @@ class PageRepository {
     return Page.findOne(filter).lean();
   }
 
-  list(filter = {}) {
-    return Page.find(filter).sort({ updatedAt: -1 }).lean();
+  list(filter = {}, pagination = {}) {
+    const { limit, skip } = getOffsetPagination(pagination);
+    return Page.find(filter)
+      .sort({ updatedAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+  }
+
+  count(filter = {}) {
+    return Page.countDocuments(filter);
   }
 
   async update(id, data) {

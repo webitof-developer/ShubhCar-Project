@@ -1,4 +1,5 @@
 const ProductReview = require('../../models/ProductReview.model');
+const { getOffsetPagination } = require('../../utils/pagination');
 
 class ReviewsRepo {
   findByProduct(productId) {
@@ -58,13 +59,12 @@ class ReviewsRepo {
   }
 
   adminList(filter = {}, { limit = 20, page = 1 } = {}) {
-    const safeLimit = Math.min(Number(limit) || 20, 100);
-    const safePage = Math.max(Number(page) || 1, 1);
+    const { limit: safeLimit, skip } = getOffsetPagination({ page, limit });
 
     return ProductReview.find(filter)
       .sort({ createdAt: -1 })
       .limit(safeLimit)
-      .skip((safePage - 1) * safeLimit)
+      .skip(skip)
       .populate('userId', 'firstName lastName email phone')
       .populate('productId', 'name sku slug ratingAvg ratingCount')
       .lean();
