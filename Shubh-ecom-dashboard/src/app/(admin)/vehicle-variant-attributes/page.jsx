@@ -16,10 +16,12 @@ const VehicleVariantAttributesPage = () => {
   const [showAttributeModal, setShowAttributeModal] = useState(false)
   const [editingAttribute, setEditingAttribute] = useState(null)
   const [attributeForm, setAttributeForm] = useState({ name: '', type: 'dropdown', status: 'active' })
+  const [attributeFormSnapshot, setAttributeFormSnapshot] = useState(null)
 
   const [showValueModal, setShowValueModal] = useState(false)
   const [editingValue, setEditingValue] = useState(null)
   const [valueForm, setValueForm] = useState({ attributeId: '', value: '', status: 'active' })
+  const [valueFormSnapshot, setValueFormSnapshot] = useState(null)
 
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState({ type: '', id: '' })
@@ -72,10 +74,13 @@ const VehicleVariantAttributesPage = () => {
   const openAttributeModal = (item = null) => {
     if (item) {
       setEditingAttribute(item)
-      setAttributeForm({ name: item.name, type: item.type || 'dropdown', status: item.status || 'active' })
+      const snap = { name: item.name, type: item.type || 'dropdown', status: item.status || 'active' }
+      setAttributeForm(snap)
+      setAttributeFormSnapshot(snap)
     } else {
       setEditingAttribute(null)
       setAttributeForm({ name: '', type: 'dropdown', status: 'active' })
+      setAttributeFormSnapshot(null)
     }
     setShowAttributeModal(true)
   }
@@ -83,10 +88,13 @@ const VehicleVariantAttributesPage = () => {
   const openValueModal = (item = null) => {
     if (item) {
       setEditingValue(item)
-      setValueForm({ attributeId: item.attributeId, value: item.value, status: item.status || 'active' })
+      const snap = { attributeId: item.attributeId, value: item.value, status: item.status || 'active' }
+      setValueForm(snap)
+      setValueFormSnapshot(snap)
     } else {
       setEditingValue(null)
       setValueForm({ attributeId: '', value: '', status: 'active' })
+      setValueFormSnapshot(null)
     }
     setShowValueModal(true)
   }
@@ -97,6 +105,18 @@ const VehicleVariantAttributesPage = () => {
       toast.error('Please enter attribute name')
       return
     }
+
+    // In edit mode, skip API call if nothing changed
+    if (editingAttribute && attributeFormSnapshot) {
+      const unchanged = Object.keys(attributeFormSnapshot).every(
+        key => String(attributeForm[key] ?? '') === String(attributeFormSnapshot[key] ?? '')
+      )
+      if (unchanged) {
+        setShowAttributeModal(false)
+        return
+      }
+    }
+
     const url = editingAttribute
       ? `${API_BASE_URL}/vehicle-attributes/${editingAttribute._id}`
       : `${API_BASE_URL}/vehicle-attributes`
@@ -128,6 +148,18 @@ const VehicleVariantAttributesPage = () => {
       toast.error('Please select an attribute and enter value')
       return
     }
+
+    // In edit mode, skip API call if nothing changed
+    if (editingValue && valueFormSnapshot) {
+      const unchanged = Object.keys(valueFormSnapshot).every(
+        key => String(valueForm[key] ?? '') === String(valueFormSnapshot[key] ?? '')
+      )
+      if (unchanged) {
+        setShowValueModal(false)
+        return
+      }
+    }
+
     const url = editingValue
       ? `${API_BASE_URL}/vehicle-attribute-values/${editingValue._id}`
       : `${API_BASE_URL}/vehicle-attribute-values`

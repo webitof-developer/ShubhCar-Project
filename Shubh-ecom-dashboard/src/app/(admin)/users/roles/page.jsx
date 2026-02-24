@@ -41,6 +41,7 @@ const RolesPage = () => {
   const [editRoleId, setEditRoleId] = useState(null)
   const [formData, setFormData] = useState({ name: '', permissions: [] })
   const [originalPermissions, setOriginalPermissions] = useState([])
+  const [originalName, setOriginalName] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [roleToDelete, setRoleToDelete] = useState(null)
@@ -92,6 +93,7 @@ const RolesPage = () => {
     setEditRoleId(null)
     setFormData({ name: '', permissions: [] })
     setOriginalPermissions([])
+    setOriginalName('')
     setShowModal(true)
   }
 
@@ -103,6 +105,7 @@ const RolesPage = () => {
       permissions: perms,
     })
     setOriginalPermissions(perms)
+    setOriginalName(role.name || '')
     setShowModal(true)
   }
 
@@ -128,6 +131,20 @@ const RolesPage = () => {
     if (!formData.name.trim()) {
       toast.error('Role name is required')
       return
+    }
+
+    // In edit mode, if nothing changed just close without calling API
+    if (editRoleId) {
+      const nameSame = formData.name.trim() === originalName.trim()
+      const currentPerms = [...formData.permissions].sort()
+      const origPerms = [...originalPermissions].sort()
+      const permsSame =
+        currentPerms.length === origPerms.length &&
+        currentPerms.every((p, i) => p === origPerms[i])
+      if (nameSame && permsSame) {
+        handleClose()
+        return
+      }
     }
     try {
       setSubmitting(true)

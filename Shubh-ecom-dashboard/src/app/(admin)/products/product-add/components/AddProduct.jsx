@@ -92,6 +92,10 @@ const AddProduct = () => {
   const [productReviews, setProductReviews] = useState([])
   const [reviewsLoading, setReviewsLoading] = useState(false)
   const [reviewsError, setReviewsError] = useState(null)
+  // Snapshot for dirty-state detection in edit mode
+  const [formDataSnapshot, setFormDataSnapshot] = useState(null)
+  const [categorySnapshot, setCategorySnapshot] = useState(null)
+  const [compatSnapshot, setCompatSnapshot] = useState(null)
   const safeExistingImages = Array.isArray(existingImages) ? existingImages : []
 
   const reviewStatusLabel = {
@@ -244,11 +248,54 @@ const AddProduct = () => {
         if (compatResponse.ok) {
           const compatData = await compatResponse.json()
           const ids = compatData?.data?.vehicleIds || []
-          setCompatibilityVehicleIds(Array.isArray(ids) ? ids : [])
+          const compatIds = Array.isArray(ids) ? ids : []
+          setCompatibilityVehicleIds(compatIds)
+          // Save snapshot after all data is loaded
+          setCompatSnapshot([...compatIds])
         }
       } catch (compatErr) {
         console.error('Error fetching compatibility:', compatErr)
       }
+
+      // Store form snapshot for dirty detection (set after all setFormData calls above)
+      setFormDataSnapshot({
+        name: product.name || '',
+        shortDescription: product.shortDescription || '',
+        longDescription: product.longDescription || '',
+        productType: product.productType || product.type || 'AFTERMARKET',
+        manufacturerBrand: product.manufacturerBrand || product.brand || '',
+        vehicleBrand: product.vehicleBrand || '',
+        sku: product.sku || '',
+        hsnCode: product.hsnCode || '',
+        oemNumber: product.oemNumber || product.oemPartNumber || '',
+        taxClassKey: product.taxClassKey || '',
+        taxRate: product.taxRate !== undefined && product.taxRate !== null ? String(product.taxRate) : '',
+        hlaapNo: product.hlaapNo || '',
+        stockQty: product.stockQty !== undefined && product.stockQty !== null ? String(product.stockQty) : '',
+        weight: product.weight !== undefined && product.weight !== null ? String(product.weight) : '',
+        length: product.length !== undefined && product.length !== null ? String(product.length) : '',
+        width: product.width !== undefined && product.width !== null ? String(product.width) : '',
+        height: product.height !== undefined && product.height !== null ? String(product.height) : '',
+        minOrderQty: product.minOrderQty || 1,
+        minWholesaleQty: product.minWholesaleQty || '',
+        retailPrice: {
+          mrp: product.retailPrice?.mrp || '',
+          salePrice: product.retailPrice?.salePrice || ''
+        },
+        wholesalePrice: {
+          mrp: product.wholesalePrice?.mrp || '',
+          salePrice: product.wholesalePrice?.salePrice || ''
+        },
+        status: product.status || 'active'
+      })
+      setCategorySnapshot({
+        category: product.categoryMeta?.parentId
+          ? product.categoryMeta.parentId
+          : (product.categoryId?._id || product.categoryId || ''),
+        subcategory: product.categoryMeta?.parentId
+          ? (product.categoryId?._id || product.categoryId || '')
+          : ''
+      })
     } catch (err) {
       console.error('Error fetching product:', err)
       setError(err.message || 'Failed to load product')
@@ -557,6 +604,23 @@ const AddProduct = () => {
     if (!token) {
       setError(isEditMode ? 'You must be logged in to update products' : 'You must be logged in to create products')
       return
+    }
+
+    // In edit mode, skip API call if nothing has changed
+    if (isEditMode && formDataSnapshot && categorySnapshot && compatSnapshot) {
+      const formSame = JSON.stringify(formData) === JSON.stringify(formDataSnapshot)
+      const catSame =
+        selectedCategory === categorySnapshot.category &&
+        selectedSubcategory === categorySnapshot.subcategory
+      const compatSame =
+        JSON.stringify([...compatibilityVehicleIds].sort()) ===
+        JSON.stringify([...compatSnapshot].sort())
+      const noNewImages = selectedImages.length === 0
+      const noDeletedImages = imagesToDelete.length === 0
+      if (formSame && catSame && compatSame && noNewImages && noDeletedImages) {
+        router.push('/products')
+        return
+      }
     }
 
     try {

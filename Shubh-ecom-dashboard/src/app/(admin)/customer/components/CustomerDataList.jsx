@@ -80,6 +80,7 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
   const [touchedFields, setTouchedFields] = useState({})
   const [showErrorModal, setShowErrorModal] = useState(false)
   const [selectedCustomers, setSelectedCustomers] = useState([])
+  const [initialFormSnapshot, setInitialFormSnapshot] = useState(null)
   const safeCustomers = Array.isArray(customers) ? customers : []
 
   // Select all handler
@@ -291,7 +292,7 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
   const handleOpenEditModal = (customer) => {
     setEditMode(true)
     setEditingCustomerId(customer._id)
-    setFormData({
+    const snapshot = {
       firstName: customer.firstName || '',
       lastName: customer.lastName || '',
       email: customer.email || '',
@@ -299,7 +300,9 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
       password: '',
       customerType: customer.customerType || 'retail',
       status: customer.status || 'active'
-    })
+    }
+    setFormData(snapshot)
+    setInitialFormSnapshot(snapshot)
     setModalError(null)
     setValidationErrors({})
     setTouchedFields({})
@@ -313,6 +316,7 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
     setTouchedFields({})
     setEditMode(false)
     setEditingCustomerId(null)
+    setInitialFormSnapshot(null)
   }
 
   const validateForm = () => {
@@ -345,6 +349,18 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    // In edit mode, if nothing changed just close without calling API
+    if (editMode && initialFormSnapshot) {
+      const keys = Object.keys(initialFormSnapshot)
+      const dirty = keys.some(
+        key => String(formData[key] ?? '') !== String(initialFormSnapshot[key] ?? '')
+      )
+      if (!dirty) {
+        handleCloseModal()
+        return
+      }
+    }
 
     // Validate form
     const errors = validateForm()

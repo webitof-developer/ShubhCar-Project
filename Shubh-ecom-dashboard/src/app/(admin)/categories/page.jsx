@@ -69,6 +69,7 @@ const CategoriesPage = () => {
   const [touchedFields, setTouchedFields] = useState({})
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [categoryToDelete, setCategoryToDelete] = useState(null)
+  const [formDataSnapshot, setFormDataSnapshot] = useState(null)
 
   const fetchCategories = async () => {
     if (status !== 'authenticated') return
@@ -123,12 +124,14 @@ const CategoriesPage = () => {
   const handleOpenEditModal = (cat) => {
     setEditMode(true)
     setEditingId(cat._id)
-    setFormData({
+    const snap = {
       parentId: cat.parentId || '',
       name: cat.name || '',
       slug: cat.slug || '',
       isActive: !!cat.isActive,
-    })
+    }
+    setFormData(snap)
+    setFormDataSnapshot(snap)
     setShowModal(true)
     setSuccessMessage(null)
     setError(null)
@@ -138,6 +141,7 @@ const CategoriesPage = () => {
     setShowModal(false)
     setEditMode(false)
     setEditingId(null)
+    setFormDataSnapshot(null)
   }
 
   const handleSubmit = async (e) => {
@@ -160,6 +164,19 @@ const CategoriesPage = () => {
       setValidationErrors(errors)
       setShowErrorModal(true)
       return
+    }
+
+    // In edit mode, skip API call if nothing changed
+    if (editMode && formDataSnapshot) {
+      const unchanged =
+        formData.name === formDataSnapshot.name &&
+        formData.slug === formDataSnapshot.slug &&
+        formData.parentId === formDataSnapshot.parentId &&
+        formData.isActive === formDataSnapshot.isActive
+      if (unchanged) {
+        handleCloseModal()
+        return
+      }
     }
 
     try {

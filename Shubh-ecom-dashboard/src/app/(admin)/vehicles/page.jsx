@@ -33,6 +33,8 @@ const VehiclesPage = () => {
     status: 'active',
   })
   const [attributeSelections, setAttributeSelections] = useState({})
+  const [vehicleFormSnapshot, setVehicleFormSnapshot] = useState(null)
+  const [attributeSelectionsSnapshot, setAttributeSelectionsSnapshot] = useState(null)
 
   const totalPages = Math.max(1, Math.ceil(total / limit))
 
@@ -140,23 +142,28 @@ const VehiclesPage = () => {
   const handleOpenModal = (item = null) => {
     if (item) {
       setEditingVehicle(item)
-      setVehicleForm({
+      const form = {
         brandId: item.brandId,
         modelId: item.modelId,
         yearId: item.yearId,
         variantName: item.variantName || item.display?.variantName || '',
         status: item.status || 'active',
-      })
+      }
+      setVehicleForm(form)
+      setVehicleFormSnapshot(form)
       const selection = {}
       item.attributes?.forEach((attr) => {
         selection[String(attr.attributeId)] = String(attr.valueId)
       })
       setAttributeSelections(selection)
+      setAttributeSelectionsSnapshot({ ...selection })
       fetchModels(item.brandId)
     } else {
       setEditingVehicle(null)
       setVehicleForm({ brandId: '', modelId: '', yearId: '', variantName: '', status: 'active' })
       setAttributeSelections({})
+      setVehicleFormSnapshot(null)
+      setAttributeSelectionsSnapshot(null)
     }
     setShowModal(true)
   }
@@ -183,6 +190,20 @@ const VehiclesPage = () => {
     if (!attributeValueIds.length) {
       toast.error('Please select at least one variant attribute value')
       return
+    }
+
+    // In edit mode, skip API call if nothing changed
+    if (editingVehicle && vehicleFormSnapshot && attributeSelectionsSnapshot) {
+      const formSame = Object.keys(vehicleFormSnapshot).every(
+        key => String(vehicleForm[key] ?? '') === String(vehicleFormSnapshot[key] ?? '')
+      )
+      const selectionSame =
+        JSON.stringify(Object.entries(attributeSelections).sort()) ===
+        JSON.stringify(Object.entries(attributeSelectionsSnapshot).sort())
+      if (formSame && selectionSame) {
+        setShowModal(false)
+        return
+      }
     }
 
     const payload = {

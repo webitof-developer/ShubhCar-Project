@@ -148,6 +148,7 @@ const VehicleYearsPage = () => {
                 show={showModal}
                 onHide={() => setShowModal(false)}
                 title={`${editingItem ? 'Edit' : 'Add'} Model Year`}
+                editMode={!!editingItem}
                 fields={[
                     { name: 'year', label: 'Year', type: 'number', placeholder: 'e.g., 2022', required: true },
                     { 

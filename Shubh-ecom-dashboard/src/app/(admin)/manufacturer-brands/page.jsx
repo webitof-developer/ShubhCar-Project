@@ -21,6 +21,7 @@ const ManufacturerBrandsPage = () => {
     const [showModal, setShowModal] = useState(false)
     const [editingBrand, setEditingBrand] = useState(null)
     const [newItem, setNewItem] = useState({ name: '', description: '', logo: '', type: 'manufacturer', status: 'active' })
+    const [brandSnapshot, setBrandSnapshot] = useState(null)
     const [uploading, setUploading] = useState(false)
     const [showMediaPicker, setShowMediaPicker] = useState(false)
 
@@ -61,16 +62,19 @@ const ManufacturerBrandsPage = () => {
     const handleOpenModal = (brand = null) => {
         if (brand) {
             setEditingBrand(brand)
-            setNewItem({
+            const snapshot = {
                 name: brand.name,
                 description: brand.description || '',
                 logo: brand.logo || '',
                 type: 'manufacturer',
                 status: brand.status || 'active'
-            })
+            }
+            setNewItem(snapshot)
+            setBrandSnapshot(snapshot)
         } else {
             setEditingBrand(null)
             setNewItem({ name: '', description: '', logo: '', type: 'manufacturer', status: 'active' })
+            setBrandSnapshot(null)
         }
         setShowModal(true)
     }
@@ -97,6 +101,17 @@ const ManufacturerBrandsPage = () => {
         if (!newItem.name) {
             toast.error('Please enter a name')
             return
+        }
+
+        // In edit mode, skip API call if nothing changed
+        if (editingBrand && brandSnapshot) {
+            const unchanged = Object.keys(brandSnapshot).every(
+                key => String(newItem[key] ?? '') === String(brandSnapshot[key] ?? '')
+            )
+            if (unchanged) {
+                setShowModal(false)
+                return
+            }
         }
         try {
             const url = editingBrand

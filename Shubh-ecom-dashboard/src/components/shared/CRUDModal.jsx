@@ -1,5 +1,5 @@
 import { Modal, Button, Form, Alert, Spinner } from 'react-bootstrap'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 
 /**
@@ -50,6 +50,7 @@ const CRUDModal = ({
 }) => {
   const [formData, setFormData] = useState({})
   const [validationErrors, setValidationErrors] = useState({})
+  const initialSnapshotRef = useRef({})
 
   // Initialize form data
   useEffect(() => {
@@ -61,8 +62,10 @@ const CRUDModal = ({
       })
       setFormData(initialValues)
       setValidationErrors({})
+      // Save snapshot for dirty-check in edit mode
+      initialSnapshotRef.current = editMode ? { ...initialValues } : {}
     }
-  }, [show, initialData, fields])
+  }, [show, initialData, fields, editMode])
 
   const handleChange = (fieldName, value) => {
     setFormData(prev => ({ ...prev, [fieldName]: value }))
@@ -116,8 +119,23 @@ const CRUDModal = ({
     return errors
   }
 
+  // Check if any field differs from the initial snapshot
+  const isDirty = () => {
+    if (!editMode) return true
+    const snapshot = initialSnapshotRef.current
+    return Object.keys(snapshot).some(
+      key => String(formData[key] ?? '') !== String(snapshot[key] ?? '')
+    )
+  }
+
   const handleSubmit = (e) => {
     e.preventDefault()
+
+    // In edit mode, if nothing changed just close without calling API
+    if (editMode && !isDirty()) {
+      onHide()
+      return
+    }
     
     // Validate
     const errors = validate()
