@@ -1,0 +1,26 @@
+// Compatibility re-exports from module-local type source of truth.
+export type {
+  QueryScalar,
+  UsersParams,
+  UsersQuery,
+  UsersBody,
+  UsersRequestContext,
+  UsersRequestShape,
+  UsersRequest,
+  UsersEntity,
+  UsersServiceInput,
+  UsersServiceResult,
+  UsersRepoFilter,
+  UsersRepoUpdate,
+  UsersValidatorInput,
+  // Domain types
+  UserRole,
+  UserStatus,
+  CustomerType,
+  VerificationStatus,
+  AuthProvider,
+  WholesaleInfo,
+  UserRecord,
+  CreateUserInput,
+  UpdateUserInput,
+} from '../../modules/users/users.types';

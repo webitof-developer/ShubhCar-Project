@@ -1,0 +1,121 @@
+import type { VehicleManagementRequestShape } from '../vehicle-management.types';
+const repo = require('../repositories/attribute.repository');
+const VehicleAttributeValue = require('../models/VehicleAttributeValue.model');
+const Vehicle = require('../models/Vehicle.model');
+const { error } = require('../../../utils/apiResponse');
+// Security: Escape user input before constructing RegExp to prevent ReDoS.
+const { escapeRegex } = require('../../../utils/escapeRegex');
+const { getOffsetPagination, buildPaginationMeta } = require('../../../utils/pagination');
+
+const VALID_TYPES: any[] = ['dropdown', 'text'];
+const VARIANT_NAME_KEY = 'variant name';
+const isVariantName = (name) =>
+  String(name || '').trim().toLowerCase() === VARIANT_NAME_KEY;
+
+class VehicleAttributesService {
+  async list(query: any = {}) {
+    const filter: any = { isDeleted: false };
+    const nameExclusion: any = { $not: /^variant name$/i };
+    if (query.status) filter.status = query.status;
+    if (query.search) {
+      const safeSearch = escapeRegex(query.search);
+      filter.$and = [
+        { name: nameExclusion },
+        { name: { $regex: safeSearch, $options: 'i' } },
+      ];
+    } else {
+      filter.name = nameExclusion;
+    }
+
+    const pagination = getOffsetPagination({
+      page: query.page,
+      limit: query.limit,
+    });
+
+    const [items, total] = await Promise.all([
+      repo.list(filter, pagination),
+      repo.count(filter),
+    ]);
+
+    return {
+      items,
+      total,
+      page: pagination.page,
+      limit: pagination.limit,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    };
+  }
+
+  async create(payload) {
+    if (!payload.name) error('name is required', 400);
+    if (isVariantName(payload.name)) {
+      error('Variant Name is managed on vehicles and cannot be created as an attribute', 400);
+    }
+    if (payload.type && !VALID_TYPES.includes(payload.type)) {
+      error('type must be dropdown or text', 400);
+    }
+
+    const existing = await repo.findByName(payload.name.trim());
+    if (existing) error('attribute already exists', 409);
+
+    return repo.create({
+      name: payload.name.trim(),
+      type: payload.type || 'dropdown',
+      status: payload.status || 'active',
+    });
+  }
+
+  async get(id) {
+    const item = await repo.findById(id);
+    if (!item) error('Vehicle attribute not found', 404);
+    return item;
+  }
+
+  async update(id, payload) {
+    if (payload.type && !VALID_TYPES.includes(payload.type)) {
+      error('type must be dropdown or text', 400);
+    }
+    if (payload.name) {
+      if (isVariantName(payload.name)) {
+        error('Variant Name is managed on vehicles and cannot be used as an attribute', 400);
+      }
+      const existing = await repo.findByName(payload.name.trim());
+      if (existing && String(existing._id) !== String(id)) {
+        error('attribute already exists', 409);
+      }
+      payload.name = payload.name.trim();
+    }
+
+    const item = await repo.update(id, payload);
+    if (!item) error('Vehicle attribute not found', 404);
+    return item;
+  }
+
+  async remove(id) {
+    // Cascading soft delete for associated values
+    await VehicleAttributeValue.updateMany(
+      { attributeId: id },
+      { $set: { isDeleted: true } }
+    );
+
+    const linkedVehicle = await Vehicle.findOne({
+      attributeValueIds: { $exists: true, $ne: [] as any[] },
+    })
+      .populate({
+        path: 'attributeValueIds',
+        match: { attributeId: id },
+        select: '_id',
+      })
+      .lean();
+
+    if (linkedVehicle?.attributeValueIds?.length) {
+      error('Cannot delete attribute linked to vehicles', 400);
+    }
+
+    const item = await repo.softDelete(id);
+    if (!item) error('Vehicle attribute not found', 404);
+    return item;
+  }
+}
+
+module.exports = new VehicleAttributesService();

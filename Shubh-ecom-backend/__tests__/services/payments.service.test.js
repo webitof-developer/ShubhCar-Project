@@ -21,9 +21,16 @@ jest.mock('../../services/razorpay.service', () => ({
 jest.mock('../../queues/paymentRetry.queue', () => ({
   paymentRetryQueue: { add: jest.fn() },
 }));
-jest.mock('mongoose', () => ({
-  startSession: jest.fn(),
+jest.mock('../../utils/paymentSettings', () => ({
+  getPaymentSettings: jest.fn(),
 }));
+jest.mock('mongoose', () => {
+  const actualMongoose = jest.requireActual('mongoose');
+  return {
+    ...actualMongoose,
+    startSession: jest.fn(),
+  };
+});
 
 const mongoose = require('mongoose');
 const paymentRepo = require('../../modules/payments/payment.repo');
@@ -31,12 +38,25 @@ const orderRepo = require('../../modules/orders/order.repo');
 const stripeService = require('../../services/stripe.service');
 const razorpayService = require('../../services/razorpay.service');
 const { paymentRetryQueue } = require('../../queues/paymentRetry.queue');
+const { getPaymentSettings } = require('../../utils/paymentSettings');
 const paymentsService = require('../../modules/payments/payments.service');
 const { AppError } = require('../../utils/apiResponse');
 
 const mockSession = () => {
+  mongoose.connection = {
+    client: {
+      topology: {
+        description: {
+          type: 'ReplicaSetWithPrimary',
+        },
+      },
+    },
+  };
   const session = {
+    _isStandalone: false,
     startTransaction: jest.fn(),
+    inTransaction: jest.fn(() => true),
+    withTransaction: async (fn) => await fn(),
     commitTransaction: jest.fn(),
     abortTransaction: jest.fn(),
     endSession: jest.fn(),
@@ -47,10 +67,12 @@ const mockSession = () => {
 
 const mockOrder = (overrides = {}) => ({
   _id: 'order-1',
+  userId: 'user-1',
   orderNumber: 'ORD-123',
   grandTotal: 500,
   orderStatus: 'created',
   paymentStatus: 'pending',
+  save: jest.fn().mockResolvedValue(undefined),
   session: jest.fn().mockResolvedValue({
     ...overrides,
   }),
@@ -60,6 +82,12 @@ const mockOrder = (overrides = {}) => ({
 describe('PaymentsService.initiatePayment', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    getPaymentSettings.mockResolvedValue({
+      codEnabled: true,
+      razorpayEnabled: true,
+      razorpayKeyId: 'rzp_key',
+      razorpayKeySecret: 'rzp_secret',
+    });
   });
 
   it('creates a new payment intent when none exists and commits transaction', async () => {
@@ -70,30 +98,31 @@ describe('PaymentsService.initiatePayment', () => {
     });
     paymentRepo.findOpenByOrderAndGateway.mockResolvedValue(null);
     paymentRepo.failOpenPayments.mockResolvedValue();
-    stripeService.createIntent.mockResolvedValue({
-      id: 'pi_123',
-      client_secret: 'cs_test',
+    razorpayService.createOrder.mockResolvedValue({
+      id: 'rzp_123',
+      receipt: 'ORD-123',
     });
     paymentRepo.create.mockResolvedValue({
       _id: 'pay-1',
-      gatewayResponse: { id: 'pi_123' },
+      gatewayResponse: { id: 'rzp_123', receipt: 'ORD-123' },
     });
 
     const result = await paymentsService.initiatePayment({
       orderId: 'order-1',
-      gateway: 'stripe',
+      gateway: 'razorpay',
+      context: { userId: 'user-1' },
     });
 
     expect(paymentRepo.failOpenPayments).toHaveBeenCalledWith(
       'order-1',
-      'stripe',
+      'razorpay',
       'new_initiation',
     );
     expect(paymentRepo.create).toHaveBeenCalledWith(
       expect.objectContaining({
         orderId: 'order-1',
-        paymentGateway: 'stripe',
-        gatewayOrderId: 'pi_123',
+        paymentGateway: 'razorpay',
+        gatewayOrderId: 'rzp_123',
         amount: 500,
       }),
       session,
@@ -101,7 +130,7 @@ describe('PaymentsService.initiatePayment', () => {
     expect(session.commitTransaction).toHaveBeenCalled();
     expect(result).toEqual({
       paymentId: 'pay-1',
-      gatewayPayload: { id: 'pi_123', client_secret: 'cs_test' },
+      gatewayPayload: { id: 'rzp_123', receipt: 'ORD-123' },
     });
   });
 
@@ -118,7 +147,8 @@ describe('PaymentsService.initiatePayment', () => {
 
     const result = await paymentsService.initiatePayment({
       orderId: 'order-1',
-      gateway: 'stripe',
+      gateway: 'razorpay',
+      context: { userId: 'user-1' },
     });
 
     expect(paymentRepo.failOpenPayments).not.toHaveBeenCalled();
@@ -150,6 +180,7 @@ describe('PaymentsService.initiatePayment', () => {
     const result = await paymentsService.initiatePayment({
       orderId: 'order-1',
       gateway: 'razorpay',
+      context: { userId: 'user-1' },
     });
 
     expect(result).toEqual({
@@ -166,26 +197,41 @@ describe('PaymentsService.initiatePayment', () => {
     });
 
     await expect(
-      paymentsService.initiatePayment({ orderId: 'order-1', gateway: 'stripe' }),
+      paymentsService.initiatePayment({
+        orderId: 'order-1',
+        gateway: 'razorpay',
+        context: { userId: 'user-1' },
+      }),
     ).rejects.toBeInstanceOf(AppError);
   });
 });
 
 describe('PaymentsService.retryPayment', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    getPaymentSettings.mockResolvedValue({
+      codEnabled: true,
+      razorpayEnabled: true,
+      razorpayKeyId: 'rzp_key',
+      razorpayKeySecret: 'rzp_secret',
+    });
+  });
+
   it('enqueues retry when order is unpaid', async () => {
     orderRepo.findById.mockResolvedValue({
       _id: 'order-1',
+      userId: 'user-1',
       paymentStatus: 'pending',
     });
 
     const result = await paymentsService.retryPayment({
       orderId: 'order-1',
-      gateway: 'stripe',
+      gateway: 'razorpay',
     });
 
     expect(paymentRetryQueue.add).toHaveBeenCalledWith(
       'retry',
-      { orderId: 'order-1', gateway: 'stripe' },
+      { orderId: 'order-1', gateway: 'razorpay' },
       expect.objectContaining({
         attempts: 3,
         backoff: expect.any(Object),
@@ -201,17 +247,21 @@ describe('PaymentsService.retryPayment', () => {
     });
 
     await expect(
-      paymentsService.retryPayment({ orderId: 'order-1', gateway: 'stripe' }),
+      paymentsService.retryPayment({ orderId: 'order-1', gateway: 'razorpay' }),
     ).rejects.toBeInstanceOf(AppError);
   });
 });
 
 describe('PaymentsService.getStatus', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('returns lean payment summary for dashboards', async () => {
     paymentRepo.findByIdLean.mockResolvedValue({
       _id: 'pay-123',
       orderId: 'ord-1',
-      paymentGateway: 'stripe',
+      paymentGateway: 'razorpay',
       status: 'success',
       amount: 200,
       currency: 'INR',
@@ -219,13 +269,14 @@ describe('PaymentsService.getStatus', () => {
       createdAt: new Date('2023-01-01T00:00:00Z'),
       updatedAt: new Date('2023-01-01T00:01:00Z'),
     });
+    orderRepo.findById.mockResolvedValue({ _id: 'ord-1', userId: 'user-1' });
 
-    const res = await paymentsService.getStatus('pay-123');
+    const res = await paymentsService.getStatus('pay-123', 'user-1');
 
     expect(res).toMatchObject({
       paymentId: 'pay-123',
       orderId: 'ord-1',
-      gateway: 'stripe',
+      gateway: 'razorpay',
       status: 'success',
       amount: 200,
       currency: 'INR',
@@ -237,7 +288,7 @@ describe('PaymentsService.getStatus', () => {
   it('throws when payment is missing to avoid leaking status', async () => {
     paymentRepo.findByIdLean.mockResolvedValue(null);
 
-    await expect(paymentsService.getStatus('missing')).rejects.toBeInstanceOf(
+    await expect(paymentsService.getStatus('missing', 'user-1')).rejects.toBeInstanceOf(
       AppError,
     );
   });

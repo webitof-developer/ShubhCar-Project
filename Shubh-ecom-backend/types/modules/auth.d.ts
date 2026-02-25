@@ -1,0 +1,27 @@
+// Compatibility re-exports from module-local type source of truth.
+export type {
+  QueryScalar,
+  AuthParams,
+  AuthQuery,
+  AuthBody,
+  AuthRequestContext,
+  AuthRequestShape,
+  AuthRequest,
+  AuthEntity,
+  AuthServiceInput,
+  AuthServiceResult,
+  AuthRepoFilter,
+  AuthRepoUpdate,
+  AuthValidatorInput,
+  // Domain types
+  LoginInput,
+  RegisterInput,
+  OtpRequest,
+  OtpVerifyInput,
+  AuthTokenPayload,
+  AuthTokens,
+  RefreshTokenInput,
+  GoogleAuthInput,
+  ForgotPasswordInput,
+  ResetPasswordInput,
+} from '../../modules/auth/auth.types';

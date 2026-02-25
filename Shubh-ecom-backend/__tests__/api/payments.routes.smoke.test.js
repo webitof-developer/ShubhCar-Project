@@ -24,7 +24,7 @@ describe('Payments routes smoke', () => {
     const res = await request(app)
       .post('/api/v1/payments/initiate')
       .set('Authorization', 'Bearer token')
-      .send({ orderId: 'order1', gateway: 'stripe' });
+      .send({ orderId: 'order1', gateway: 'razorpay' });
 
     expect(res.status).toBe(200);
     expect(controller.initiate).toHaveBeenCalled();
@@ -37,7 +37,7 @@ describe('Payments routes smoke', () => {
 
     const res = await request(app)
       .post('/api/v1/payments/initiate')
-      .send({ orderId: 'order1', gateway: 'stripe' });
+      .send({ orderId: 'order1', gateway: 'razorpay' });
 
     expect(res.status).toBe(401);
     expect(res.body.success).toBe(false);

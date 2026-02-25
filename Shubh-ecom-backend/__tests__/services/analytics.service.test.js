@@ -48,6 +48,7 @@ describe('AnalyticsService', () => {
         paymentMethod: 'card',
         paymentStatus: 'paid',
         orderStatus: 'confirmed',
+        isDeleted: false,
         createdAt: new Date('2024-05-01'),
       },
       {
@@ -64,6 +65,7 @@ describe('AnalyticsService', () => {
         paymentMethod: 'card',
         paymentStatus: 'paid',
         orderStatus: 'delivered',
+        isDeleted: false,
         createdAt: new Date('2024-05-02'),
       },
       {
@@ -81,6 +83,7 @@ describe('AnalyticsService', () => {
         paymentMethod: 'card',
         paymentStatus: 'paid',
         orderStatus: 'confirmed',
+        isDeleted: false,
         createdAt: new Date('2024-06-15'),
       },
       {
@@ -98,6 +101,7 @@ describe('AnalyticsService', () => {
         paymentMethod: 'card',
         paymentStatus: 'pending',
         orderStatus: 'created',
+        isDeleted: false,
         createdAt: new Date('2024-05-03'),
       },
     ]);
@@ -107,9 +111,11 @@ describe('AnalyticsService', () => {
       to: '2024-05-31',
     });
 
-    expect(summary).toEqual({
+    expect(summary).toMatchObject({
       totalRevenue: 600, // 250 + 350
-      totalOrders: 2,
+      totalOrders: 3,
+      paidOrders: 2,
+      pendingOrders: 1,
       avgOrderValue: 300,
     });
   });
@@ -230,45 +236,41 @@ describe('AnalyticsService', () => {
     ]);
   });
 
-  it('returns low stock variants based on available quantity (stockQty - reservedQty)', async () => {
+  it('returns low stock products based on stockQty threshold', async () => {
     const vendorId = new mongoose.Types.ObjectId();
     const categoryId = new mongoose.Types.ObjectId();
-    const product = await Product.create({
-      name: 'Brake Pad',
-      price: 100,
-      slug: 'brake-pad',
+    await Product.create({
+      name: 'Brake Pad Standard',
+      sku: 'BP-STD',
+      retailPrice: { mrp: 100, salePrice: 100 },
+      slug: 'brake-pad-standard',
       vendorId,
       categoryId,
-    });
-
-    const variant1 = await ProductVariant.create({
-      productId: product._id,
-      variantName: 'Standard',
-      sku: 'BP-STD',
-      price: 100,
       stockQty: 3,
-      reservedQty: 0,
       status: 'active',
+      isDeleted: false,
     });
-
-    const variant2 = await ProductVariant.create({
-      productId: product._id,
-      variantName: 'Premium',
+    await Product.create({
+      name: 'Brake Pad Premium',
       sku: 'BP-PREM',
-      price: 150,
-      stockQty: 10,
-      reservedQty: 8, // availableQty = 2
+      retailPrice: { mrp: 150, salePrice: 150 },
+      slug: 'brake-pad-premium',
+      vendorId,
+      categoryId,
+      stockQty: 2,
       status: 'active',
+      isDeleted: false,
     });
-
-    const variant3 = await ProductVariant.create({
-      productId: product._id,
-      variantName: 'Deluxe',
+    await Product.create({
+      name: 'Brake Pad Deluxe',
       sku: 'BP-DLX',
-      price: 200,
+      retailPrice: { mrp: 200, salePrice: 200 },
+      slug: 'brake-pad-deluxe',
+      vendorId,
+      categoryId,
       stockQty: 100,
-      reservedQty: 0,
       status: 'active',
+      isDeleted: false,
     });
 
     const res = await analyticsService.lowStock({ threshold: 5 });
@@ -277,17 +279,17 @@ describe('AnalyticsService', () => {
     expect(res.map(v => v.sku).sort()).toEqual(['BP-PREM', 'BP-STD']);
     expect(res.find(v => v.sku === 'BP-STD')).toMatchObject({
       availableQty: 3,
-      productName: 'Brake Pad',
+      name: 'Brake Pad Standard',
     });
     expect(res.find(v => v.sku === 'BP-PREM')).toMatchObject({
       availableQty: 2,
-      productName: 'Brake Pad',
+      name: 'Brake Pad Premium',
     });
   });
 
   it('handles empty datasets gracefully in revenueSummary', async () => {
     const summary = await analyticsService.revenueSummary({});
-    expect(summary).toEqual({
+    expect(summary).toMatchObject({
       totalRevenue: 0,
       totalOrders: 0,
       avgOrderValue: 0,

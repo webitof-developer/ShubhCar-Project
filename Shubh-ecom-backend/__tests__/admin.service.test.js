@@ -116,6 +116,14 @@ describe('AdminService.listPendingWholesale', () => {
     const result = await adminService.listPendingWholesale();
 
     expect(userRepo.findPendingWholesale).toHaveBeenCalled();
-    expect(result).toEqual(pending);
+    expect(result).toMatchObject({
+      users: pending,
+      data: pending,
+      pagination: {
+        page: 1,
+        limit: 20,
+        total: 2,
+      },
+    });
   });
 });

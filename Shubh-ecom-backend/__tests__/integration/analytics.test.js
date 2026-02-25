@@ -12,8 +12,8 @@ const {
   createOrder,
 } = require('./helpers/factories');
 const Order = require('../../models/Order.model');
-const OrderItem = require('../../models/OrderItem.model');
-const ProductVariant = require('../../models/ProductVariant.model');
+const User = require('../../models/User.model');
+const { signAccessToken } = require('../../utils/jwt');
 
 let app;
 let adminToken;
@@ -22,42 +22,42 @@ describe('Analytics Integration Tests', () => {
   beforeAll(async () => {
     const setup = await setupIntegrationTests();
     app = setup.app;
-
-    // Create admin user and get token
-    const adminEmail = 'admin@example.com';
-    const adminPassword = 'AdminPassword123!';
-
-    await request(app)
-      .post('/api/auth/register')
-      .send({
-        firstName: 'Admin',
-        lastName: 'User',
-        email: adminEmail,
-        password: adminPassword,
-        phone: '1111111111',
-      });
-
-    // Manually set role to admin
-    const User = require('../../models/User.model');
-    await User.findOneAndUpdate({ email: adminEmail }, { role: 'admin' });
-
-    const loginResponse = await request(app)
-      .post('/api/auth/login')
-      .send({ email: adminEmail, password: adminPassword });
-
-    adminToken = loginResponse.body.data.token;
   });
 
   beforeEach(async () => {
     await clearDatabase();
     await createShippingConfig();
+    adminToken = await createAdminToken();
   });
 
   afterAll(async () => {
     await teardownIntegrationTests();
   });
 
-  describe('GET /api/analytics/revenue - Revenue Summary', () => {
+  async function createAdminToken() {
+    const adminEmail = `admin_${Date.now()}_${Math.floor(Math.random() * 1000)}@example.com`;
+    const adminPassword = 'AdminPassword123!';
+
+    await request(app)
+      .post('/api/v1/auth/register')
+      .send({
+        firstName: 'Admin',
+        lastName: 'User',
+        email: adminEmail,
+        password: adminPassword,
+        phone: `9${String(Date.now()).slice(-9)}`,
+      })
+      .expect(200);
+
+    await User.findOneAndUpdate({ email: adminEmail }, { role: 'admin' });
+    const adminUser = await User.findOne({ email: adminEmail }).lean();
+    return signAccessToken({
+      userId: adminUser._id.toString(),
+      role: 'admin',
+    });
+  }
+
+  describe('GET /api/v1/analytics/revenue - Revenue Summary', () => {
     it('CRITICAL: should only sum grandTotal for paid orders', async () => {
       const user = await createUser();
       const address = await createAddress(user._id);
@@ -121,13 +121,13 @@ describe('Analytics Integration Tests', () => {
       });
 
       const response = await request(app)
-        .get('/api/analytics/revenue')
+        .get('/api/v1/analytics/revenue')
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
 
       expect(response.body.success).toBe(true);
       expect(response.body.data.totalRevenue).toBe(300); // Only paid order
-      expect(response.body.data.totalOrders).toBe(1);
+      expect(response.body.data.totalOrders).toBe(3);
     });
 
     it('should use grandTotal field, not totalAmount', async () => {
@@ -156,7 +156,7 @@ describe('Analytics Integration Tests', () => {
       });
 
       const response = await request(app)
-        .get('/api/analytics/revenue')
+        .get('/api/v1/analytics/revenue')
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
 
@@ -194,13 +194,13 @@ describe('Analytics Integration Tests', () => {
       }
 
       const response = await request(app)
-        .get('/api/analytics/revenue')
+        .get('/api/v1/analytics/revenue')
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
 
       // Only "paid" orders: 100 + 250 + 175 = 525
       expect(response.body.data.totalRevenue).toBe(525);
-      expect(response.body.data.totalOrders).toBe(3);
+      expect(response.body.data.totalOrders).toBe(6);
     });
 
     it('should filter by date range', async () => {
@@ -209,10 +209,11 @@ describe('Analytics Integration Tests', () => {
       const { product, variants } = await createProduct({ stockQty: 100 });
 
       // Order in range
-      const orderInRange = await createOrder({
+      await createOrder({
         userId: user._id,
         shippingAddressId: address._id,
         billingAddressId: address._id,
+        createdAt: new Date('2024-05-15'),
         items: [
           {
             productId: product._id,
@@ -227,15 +228,12 @@ describe('Analytics Integration Tests', () => {
         grandTotal: 100,
       });
 
-      await Order.findByIdAndUpdate(orderInRange.order._id, {
-        createdAt: new Date('2024-05-15'),
-      });
-
       // Order out of range
-      const orderOutOfRange = await createOrder({
+      await createOrder({
         userId: user._id,
         shippingAddressId: address._id,
         billingAddressId: address._id,
+        createdAt: new Date('2024-06-15'),
         items: [
           {
             productId: product._id,
@@ -250,12 +248,8 @@ describe('Analytics Integration Tests', () => {
         grandTotal: 200,
       });
 
-      await Order.findByIdAndUpdate(orderOutOfRange.order._id, {
-        createdAt: new Date('2024-06-15'),
-      });
-
       const response = await request(app)
-        .get('/api/analytics/revenue')
+        .get('/api/v1/analytics/revenue')
         .query({ from: '2024-05-01', to: '2024-05-31' })
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
@@ -265,7 +259,7 @@ describe('Analytics Integration Tests', () => {
     });
   });
 
-  describe('GET /api/analytics/products/top - Top Products', () => {
+  describe('GET /api/v1/analytics/products/top - Top Products', () => {
     it('CRITICAL: should compute from OrderItem collection, not embedded items', async () => {
       const user = await createUser();
       const address = await createAddress(user._id);
@@ -317,7 +311,7 @@ describe('Analytics Integration Tests', () => {
       });
 
       const response = await request(app)
-        .get('/api/analytics/products/top')
+        .get('/api/v1/analytics/top-products')
         .query({ limit: 10 })
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
@@ -374,7 +368,7 @@ describe('Analytics Integration Tests', () => {
       });
 
       const response = await request(app)
-        .get('/api/analytics/products/top')
+        .get('/api/v1/analytics/top-products')
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
 
@@ -383,25 +377,29 @@ describe('Analytics Integration Tests', () => {
     });
   });
 
-  describe('GET /api/analytics/inventory/low-stock - Low Stock Alerts', () => {
-    it('CRITICAL: should trigger based on availableQty (stockQty - reservedQty)', async () => {
-      const { product, variants: [variant1] } = await createProduct({
-        stockQty: 10,
-        reservedQty: 7, // availableQty = 3
+  describe('GET /api/v1/analytics/inventory/low-stock - Low Stock Alerts', () => {
+    it('CRITICAL: should trigger based on Product.stockQty threshold', async () => {
+      const product1Sku = `SKU-LS1-${Date.now()}`;
+      const product2Sku = `SKU-LS2-${Date.now()}`;
+      const product3Sku = `SKU-LS3-${Date.now()}`;
+
+      const { product: product1 } = await createProduct({
+        stockQty: 3,
+        sku: product1Sku,
       });
 
-      const { variants: [variant2] } = await createProduct({
+      const { product: product2 } = await createProduct({
         stockQty: 20,
-        reservedQty: 0, // availableQty = 20
+        sku: product2Sku,
       });
 
-      const { variants: [variant3] } = await createProduct({
-        stockQty: 8,
-        reservedQty: 6, // availableQty = 2
+      const { product: product3 } = await createProduct({
+        stockQty: 2,
+        sku: product3Sku,
       });
 
       const response = await request(app)
-        .get('/api/analytics/inventory/low-stock')
+        .get('/api/v1/analytics/inventory')
         .query({ threshold: 5 })
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
@@ -410,22 +408,23 @@ describe('Analytics Integration Tests', () => {
       
       const lowStockSkus = response.body.data.map((v) => v.sku);
       
-      // variant1 (availableQty=3) and variant3 (availableQty=2) should be included
-      expect(lowStockSkus).toContain(variant1.sku);
-      expect(lowStockSkus).toContain(variant3.sku);
+      // product1 (3) and product3 (2) should be included
+      expect(lowStockSkus).toContain(product1.sku);
+      expect(lowStockSkus).toContain(product3.sku);
       
-      // variant2 (availableQty=20) should NOT be included
-      expect(lowStockSkus).not.toContain(variant2.sku);
+      // product2 (20) should NOT be included
+      expect(lowStockSkus).not.toContain(product2.sku);
     });
 
-    it('should use ProductVariant collection, not Inventory', async () => {
-      const { variants } = await createProduct({
+    it('should use Product collection low stock response shape', async () => {
+      const productSku = `SKU-LS4-${Date.now()}`;
+      await createProduct({
         stockQty: 4,
-        reservedQty: 0,
+        sku: productSku,
       });
 
       const response = await request(app)
-        .get('/api/analytics/inventory/low-stock')
+        .get('/api/v1/analytics/inventory')
         .query({ threshold: 5 })
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
@@ -443,16 +442,16 @@ describe('Analytics Integration Tests', () => {
 
       // Threshold 10: should include variants with availableQty <= 10
       const response1 = await request(app)
-        .get('/api/analytics/inventory/low-stock')
+        .get('/api/v1/analytics/inventory')
         .query({ threshold: 10 })
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
 
-      expect(response1.body.data.length).toBeGreaterThanOrEqual(2);
+      expect(response1.body.data).toHaveLength(2);
 
       // Threshold 3: should include only variants with availableQty <= 3
       const response2 = await request(app)
-        .get('/api/analytics/inventory/low-stock')
+        .get('/api/v1/analytics/inventory')
         .query({ threshold: 3 })
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);

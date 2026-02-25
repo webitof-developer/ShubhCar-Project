@@ -43,7 +43,10 @@ async function createOrderItem(orderId, overrides = {}) {
     orderId,
     vendorId: objectId(),
     productId: objectId(),
-    productVariantId: objectId(),
+    productName: 'Shipment Product',
+    productSlug: 'shipment-product',
+    productImage: null,
+    productDescription: 'Shipment test product',
     sku: 'SKU-1',
     quantity: 1,
     price: 100,
@@ -162,7 +165,14 @@ describe('ShipmentService', () => {
     });
 
     const list = await shipmentService.adminListByOrder(order._id);
-    expect(list).toHaveLength(2);
-    expect(list.map((s) => s.trackingNumber).sort()).toEqual(['TRK6', 'TRK7']);
+    expect(list).toMatchObject({
+      pagination: {
+        page: 1,
+        limit: 20,
+        total: 2,
+      },
+    });
+    expect(list.shipments).toHaveLength(2);
+    expect(list.shipments.map((s) => s.trackingNumber).sort()).toEqual(['TRK6', 'TRK7']);
   });
 });

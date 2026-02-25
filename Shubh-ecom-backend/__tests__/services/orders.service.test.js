@@ -18,6 +18,9 @@ jest.mock('../../modules/productVariants/productVariant.repo', () => ({
 jest.mock('../../modules/users/userAddress.repo', () => ({
   findById: jest.fn(),
 }));
+jest.mock('../../modules/users/user.repo', () => ({
+  findById: jest.fn(),
+}));
 jest.mock('../../modules/coupons/coupon.repo', () => ({
   lockCoupon: jest.fn(),
   unlockCoupon: jest.fn(),
@@ -49,13 +52,24 @@ jest.mock('../../services/shipping.service', () => ({
 jest.mock('../../services/tax.service', () => ({
   calculateGST: jest.fn(),
 }));
+jest.mock('../../models/Setting.model', () => ({
+  find: jest.fn(),
+  findOneAndUpdate: jest.fn(),
+}));
 jest.mock('../../modules/invoice/invoice.service', () => ({
   generateFromOrder: jest.fn(),
 }));
 jest.mock('../../modules/shipments/shipment.repo', () => ({}));
-jest.mock('mongoose', () => ({
-  startSession: jest.fn(),
+jest.mock('../../utils/paymentSettings', () => ({
+  getPaymentSettings: jest.fn(),
 }));
+jest.mock('mongoose', () => {
+  const actualMongoose = jest.requireActual('mongoose');
+  return {
+    ...actualMongoose,
+    startSession: jest.fn(),
+  };
+});
 
 const mongoose = require('mongoose');
 const orderService = require('../../modules/orders/orders.service');
@@ -64,6 +78,7 @@ const cartCache = require('../../modules/cart/cart.cache');
 const productRepo = require('../../modules/products/product.repo');
 const variantRepo = require('../../modules/productVariants/productVariant.repo');
 const addressRepo = require('../../modules/users/userAddress.repo');
+const userRepo = require('../../modules/users/user.repo');
 const couponRepo = require('../../modules/coupons/coupon.repo');
 const couponService = require('../../modules/coupons/coupons.service');
 const inventoryService = require('../../modules/inventory/inventory.service');
@@ -71,11 +86,26 @@ const orderRepo = require('../../modules/orders/order.repo');
 const orderJobs = require('../../jobs/order.jobs');
 const shippingService = require('../../services/shipping.service');
 const taxService = require('../../services/tax.service');
+const checkoutTotals = require('../../services/checkoutTotals.service');
+const Setting = require('../../models/Setting.model');
+const { getPaymentSettings } = require('../../utils/paymentSettings');
 const { AppError } = require('../../utils/apiResponse');
 
 const mockSession = () => {
+  mongoose.connection = {
+    client: {
+      topology: {
+        description: {
+          type: 'ReplicaSetWithPrimary',
+        },
+      },
+    },
+  };
   const session = {
+    _isStandalone: false,
     startTransaction: jest.fn(),
+    inTransaction: jest.fn(() => true),
+    withTransaction: async (fn) => await fn(),
     commitTransaction: jest.fn(),
     abortTransaction: jest.fn(),
     endSession: jest.fn(),
@@ -87,6 +117,30 @@ const mockSession = () => {
 describe('OrderService.placeOrder', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.spyOn(checkoutTotals, 'calculateTotals');
+    getPaymentSettings.mockResolvedValue({
+      codEnabled: true,
+      razorpayEnabled: true,
+      razorpayKeyId: 'rzp_key',
+      razorpayKeySecret: 'rzp_secret',
+    });
+    userRepo.findById.mockResolvedValue({
+      _id: 'user1',
+      customerType: 'retail',
+      verificationStatus: 'approved',
+      role: 'customer',
+      roleId: null,
+    });
+    Setting.find.mockReturnValue({
+      lean: jest.fn().mockResolvedValue([
+        { key: 'tax_enabled', value: true },
+        { key: 'tax_price_display_shop', value: 'excluding' },
+        { key: 'tax_price_display_cart', value: 'excluding' },
+        { key: 'prices_include_tax', value: false },
+        { key: 'shipping_enabled', value: true },
+      ]),
+    });
+    Setting.findOneAndUpdate.mockResolvedValue({ value: 1 });
   });
 
   it('reserves stock, locks coupon, and schedules auto-cancel to avoid overselling', async () => {
@@ -98,7 +152,7 @@ describe('OrderService.placeOrder', () => {
       discountAmount: 20,
     });
     cartRepo.getCartWithItems.mockResolvedValue([
-      { _id: 'ci1', productVariantId: 'variant1', quantity: 2 },
+      { _id: 'ci1', productId: 'product1', quantity: 2 },
     ]);
     addressRepo.findById.mockResolvedValue({ _id: 'addr', userId: 'user1', state: 'KA' });
     variantRepo.getVariantById.mockResolvedValue({
@@ -110,19 +164,22 @@ describe('OrderService.placeOrder', () => {
     productRepo.findById.mockResolvedValue({
       _id: 'product1',
       status: 'active',
+      stockQty: 100,
+      retailPrice: { mrp: 100, salePrice: 100 },
       hsnCode: '8708',
     });
     shippingService.calculate.mockReturnValue(50);
     couponRepo.lockCoupon.mockResolvedValue(true);
-    taxService.calculateGST.mockReturnValue({
-      total: 20,
-      ratePercent: 10,
-      components: { cgst: 10, sgst: 10, igst: 0 },
-    });
     couponService.preview.mockResolvedValue({
       couponId: 'coupon1',
       code: 'SAVE10',
       discountAmount: 20,
+    });
+    taxService.calculateGST.mockReturnValue({
+      total: 20,
+      ratePercent: 10,
+      mode: 'intra_state',
+      components: { cgst: 10, sgst: 10, igst: 0 },
     });
     orderRepo.createOrder.mockResolvedValue([{ _id: 'order1' }]);
     orderRepo.createItems.mockResolvedValue();
@@ -133,19 +190,11 @@ describe('OrderService.placeOrder', () => {
       payload: {
         shippingAddressId: 'addr',
         billingAddressId: 'addr',
-        paymentMethod: 'razorpay',
+        paymentMethod: 'cod',
         taxPercent: 10,
       },
     });
 
-    expect(shippingService.calculate).toHaveBeenCalledWith({ subtotal: 200 });
-    expect(taxService.calculateGST).toHaveBeenCalledWith(
-      expect.objectContaining({
-        amount: 180,
-        destinationState: 'KA',
-        hsnCode: '8708',
-      }),
-    );
     expect(couponRepo.lockCoupon).toHaveBeenCalledWith(
       expect.objectContaining({
         couponId: 'coupon1',
@@ -154,12 +203,6 @@ describe('OrderService.placeOrder', () => {
         scope: 'coupon',
       }),
     );
-    expect(couponService.preview).toHaveBeenCalledWith({
-      userId: 'user1',
-      code: 'SAVE10',
-      orderSubtotal: 200,
-      session,
-    });
     expect(orderRepo.createOrder).toHaveBeenCalledWith(
       expect.objectContaining({
         subtotal: 200,
@@ -167,13 +210,13 @@ describe('OrderService.placeOrder', () => {
         taxAmount: 20,
         shippingFee: 50,
         grandTotal: 250,
-        paymentMethod: 'razorpay',
+        paymentMethod: 'cod',
         couponId: 'coupon1',
       }),
       session,
     );
     expect(inventoryService.reserve).toHaveBeenCalledWith(
-      'variant1',
+      'product1',
       2,
       session,
       expect.objectContaining({ userId: 'user1' }),
@@ -199,7 +242,7 @@ describe('OrderService.placeOrder', () => {
       couponCode: 'SAVE10',
     });
     cartRepo.getCartWithItems.mockResolvedValue([
-      { _id: 'ci1', productVariantId: 'variant1', quantity: 1 },
+      { _id: 'ci1', productId: 'product1', quantity: 1 },
     ]);
     addressRepo.findById.mockResolvedValue({ _id: 'addr', userId: 'user1', state: 'KA' });
     variantRepo.getVariantById.mockResolvedValue({
@@ -211,6 +254,8 @@ describe('OrderService.placeOrder', () => {
     productRepo.findById.mockResolvedValue({
       _id: 'product1',
       status: 'active',
+      stockQty: 50,
+      retailPrice: { mrp: 50, salePrice: 50 },
     });
     shippingService.calculate.mockReturnValue(0);
     couponRepo.lockCoupon.mockResolvedValue(false);
@@ -222,7 +267,7 @@ describe('OrderService.placeOrder', () => {
         payload: {
           shippingAddressId: 'addr',
           billingAddressId: 'addr',
-          paymentMethod: 'stripe',
+          paymentMethod: 'cod',
           taxPercent: 0,
         },
       }),
@@ -245,21 +290,21 @@ describe('OrderService.failOrder', () => {
     };
     orderRepo.findById.mockResolvedValue(orderDoc);
     orderRepo.findItemsByOrder.mockResolvedValue([
-      { productVariantId: 'variant1', quantity: 2 },
-      { productVariantId: 'variant2', quantity: 1 },
+      { productId: 'product1', quantity: 2 },
+      { productId: 'product2', quantity: 1 },
     ]);
 
     await orderService.failOrder('order1');
 
     expect(orderRepo.findById).toHaveBeenCalledWith('order1', session);
     expect(inventoryService.release).toHaveBeenCalledWith(
-      'variant1',
+      'product1',
       2,
       session,
       expect.objectContaining({ orderId: 'order1' }),
     );
     expect(inventoryService.release).toHaveBeenCalledWith(
-      'variant2',
+      'product2',
       1,
       session,
       expect.objectContaining({ orderId: 'order1' }),

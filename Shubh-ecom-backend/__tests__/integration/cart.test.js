@@ -10,6 +10,7 @@ const {
 } = require('./helpers/factories');
 const ProductVariant = require('../../models/ProductVariant.model');
 const CartItem = require('../../models/CartItem.model');
+const { signAccessToken } = require('../../utils/jwt');
 
 let app;
 
@@ -31,40 +32,28 @@ describe('Cart + Inventory Safety Integration Tests', () => {
   let user;
 
   beforeEach(async () => {
-    // Create and authenticate user
-    const email = 'cart@example.com';
-    const password = 'Password123!';
-
-    await request(app)
-      .post('/api/auth/register')
-      .send({
-        firstName: 'Cart',
-        lastName: 'Test',
-        email,
-        password,
-        phone: '1234567890',
-      });
-
-    const loginResponse = await request(app)
-      .post('/api/auth/login')
-      .send({ email, password });
-
-    token = loginResponse.body.data.token;
-    user = loginResponse.body.data.user;
+    // Create user and issue auth token directly to avoid auth route rate-limits in this suite.
+    const dbUser = await createUser({
+      email: `cart_${Date.now()}_${Math.floor(Math.random() * 100000)}@example.com`,
+      firstName: 'Cart',
+      lastName: 'Test',
+    });
+    token = signAccessToken({ userId: dbUser._id.toString(), role: dbUser.role });
+    user = { id: dbUser._id.toString(), role: dbUser.role };
   });
 
-  describe('POST /api/cart/items - Add Item', () => {
+  describe('POST /api/v1/cart/items - Add Item', () => {
     it('should add item to cart when sufficient stock available', async () => {
-      const { variants } = await createProduct({
+      const { product, variants } = await createProduct({
         stockQty: 10,
         reservedQty: 0,
       });
 
       const response = await request(app)
-        .post('/api/cart/items')
+        .post('/api/v1/cart/items')
         .set('Authorization', `Bearer ${token}`)
         .send({
-          productVariantId: variants[0]._id.toString(),
+          productId: product._id.toString(),
           quantity: 5,
         })
         .expect(200);
@@ -80,16 +69,15 @@ describe('Cart + Inventory Safety Integration Tests', () => {
     });
 
     it('CRITICAL: should prevent adding items beyond available stock (stockQty - reservedQty)', async () => {
-      const { variants } = await createProduct({
-        stockQty: 10,
-        reservedQty: 7, // availableQty = 3
+      const { product, variants } = await createProduct({
+        stockQty: 3,
       });
 
       const response = await request(app)
-        .post('/api/cart/items')
+        .post('/api/v1/cart/items')
         .set('Authorization', `Bearer ${token}`)
         .send({
-          productVariantId: variants[0]._id.toString(),
+          productId: product._id.toString(),
           quantity: 5, // Trying to add more than available
         })
         .expect(400);
@@ -103,16 +91,15 @@ describe('Cart + Inventory Safety Integration Tests', () => {
     });
 
     it('should allow adding exactly the available quantity', async () => {
-      const { variants } = await createProduct({
-        stockQty: 10,
-        reservedQty: 7, // availableQty = 3
+      const { product, variants } = await createProduct({
+        stockQty: 3,
       });
 
       const response = await request(app)
-        .post('/api/cart/items')
+        .post('/api/v1/cart/items')
         .set('Authorization', `Bearer ${token}`)
         .send({
-          productVariantId: variants[0]._id.toString(),
+          productId: product._id.toString(),
           quantity: 3, // Exact available quantity
         })
         .expect(200);
@@ -122,16 +109,15 @@ describe('Cart + Inventory Safety Integration Tests', () => {
     });
 
     it('should reject adding item when all stock is reserved', async () => {
-      const { variants } = await createProduct({
-        stockQty: 10,
-        reservedQty: 10, // availableQty = 0
+      const { product, variants } = await createProduct({
+        stockQty: 0,
       });
 
       const response = await request(app)
-        .post('/api/cart/items')
+        .post('/api/v1/cart/items')
         .set('Authorization', `Bearer ${token}`)
         .send({
-          productVariantId: variants[0]._id.toString(),
+          productId: product._id.toString(),
           quantity: 1,
         })
         .expect(400);
@@ -141,19 +127,19 @@ describe('Cart + Inventory Safety Integration Tests', () => {
     });
   });
 
-  describe('PATCH /api/cart/items/:itemId - Update Quantity', () => {
+  describe('PATCH /api/v1/cart/items/:itemId - Update Quantity', () => {
     it('should update quantity within available stock limits', async () => {
-      const { variants } = await createProduct({
+      const { product, variants } = await createProduct({
         stockQty: 20,
         reservedQty: 5, // availableQty = 15
       });
 
       // Add item first
       const addResponse = await request(app)
-        .post('/api/cart/items')
+        .post('/api/v1/cart/items')
         .set('Authorization', `Bearer ${token}`)
         .send({
-          productVariantId: variants[0]._id.toString(),
+          productId: product._id.toString(),
           quantity: 5,
         });
 
@@ -161,7 +147,7 @@ describe('Cart + Inventory Safety Integration Tests', () => {
 
       // Update quantity
       const response = await request(app)
-        .patch(`/api/cart/items/${itemId}`)
+        .patch(`/api/v1/cart/items/${itemId}`)
         .set('Authorization', `Bearer ${token}`)
         .send({
           quantity: 10, // Still within availableQty
@@ -173,17 +159,16 @@ describe('Cart + Inventory Safety Integration Tests', () => {
     });
 
     it('CRITICAL: should prevent updating quantity beyond available stock', async () => {
-      const { variants } = await createProduct({
-        stockQty: 20,
-        reservedQty: 15, // availableQty = 5
+      const { product, variants } = await createProduct({
+        stockQty: 5,
       });
 
       // Add item first
       const addResponse = await request(app)
-        .post('/api/cart/items')
+        .post('/api/v1/cart/items')
         .set('Authorization', `Bearer ${token}`)
         .send({
-          productVariantId: variants[0]._id.toString(),
+          productId: product._id.toString(),
           quantity: 2,
         });
 
@@ -191,7 +176,7 @@ describe('Cart + Inventory Safety Integration Tests', () => {
 
       // Try to update beyond available
       const response = await request(app)
-        .patch(`/api/cart/items/${itemId}`)
+        .patch(`/api/v1/cart/items/${itemId}`)
         .set('Authorization', `Bearer ${token}`)
         .send({
           quantity: 10, // Exceeds availableQty
@@ -207,16 +192,15 @@ describe('Cart + Inventory Safety Integration Tests', () => {
     });
 
     it('should respect reserved quantities when updating', async () => {
-      const { variants } = await createProduct({
-        stockQty: 50,
-        reservedQty: 45, // availableQty = 5
+      const { product, variants } = await createProduct({
+        stockQty: 5,
       });
 
       const addResponse = await request(app)
-        .post('/api/cart/items')
+        .post('/api/v1/cart/items')
         .set('Authorization', `Bearer ${token}`)
         .send({
-          productVariantId: variants[0]._id.toString(),
+          productId: product._id.toString(),
           quantity: 3,
         });
 
@@ -224,14 +208,14 @@ describe('Cart + Inventory Safety Integration Tests', () => {
 
       // Can update to 5 (available)
       await request(app)
-        .patch(`/api/cart/items/${itemId}`)
+        .patch(`/api/v1/cart/items/${itemId}`)
         .set('Authorization', `Bearer ${token}`)
         .send({ quantity: 5 })
         .expect(200);
 
       // Cannot update to 6 (exceeds available)
       const failResponse = await request(app)
-        .patch(`/api/cart/items/${itemId}`)
+        .patch(`/api/v1/cart/items/${itemId}`)
         .set('Authorization', `Bearer ${token}`)
         .send({ quantity: 6 })
         .expect(400);
@@ -242,23 +226,23 @@ describe('Cart + Inventory Safety Integration Tests', () => {
 
   describe('Cart Persistence', () => {
     it('should persist cart items per user across sessions', async () => {
-      const { variants } = await createProduct({
+      const { product, variants } = await createProduct({
         stockQty: 100,
         reservedQty: 0,
       });
 
       // Add item to cart
       await request(app)
-        .post('/api/cart/items')
+        .post('/api/v1/cart/items')
         .set('Authorization', `Bearer ${token}`)
         .send({
-          productVariantId: variants[0]._id.toString(),
+          productId: product._id.toString(),
           quantity: 5,
         });
 
       // Get cart again (simulating new session)
       const response = await request(app)
-        .get('/api/cart')
+        .get('/api/v1/cart')
         .set('Authorization', `Bearer ${token}`)
         .expect(200);
 
@@ -267,41 +251,35 @@ describe('Cart + Inventory Safety Integration Tests', () => {
     });
 
     it('should isolate carts between different users', async () => {
-      const { variants } = await createProduct({
+      const { product, variants } = await createProduct({
         stockQty: 100,
         reservedQty: 0,
       });
 
       // User 1 adds to cart
       await request(app)
-        .post('/api/cart/items')
+        .post('/api/v1/cart/items')
         .set('Authorization', `Bearer ${token}`)
         .send({
-          productVariantId: variants[0]._id.toString(),
+          productId: product._id.toString(),
           quantity: 5,
         });
 
       // Create User 2
-      const email2 = 'cart2@example.com';
-      await request(app)
-        .post('/api/auth/register')
-        .send({
-          firstName: 'Cart2',
-          lastName: 'Test',
-          email: email2,
-          password: 'Password123!',
-          phone: '9876543210',
-        });
-
-      const loginResponse2 = await request(app)
-        .post('/api/auth/login')
-        .send({ email: email2, password: 'Password123!' });
-
-      const token2 = loginResponse2.body.data.token;
+      const email2 = `cart2_${Date.now()}_${Math.floor(Math.random() * 100000)}@example.com`;
+      const dbUser2 = await createUser({
+        firstName: 'Cart2',
+        lastName: 'Test',
+        email: email2,
+      });
+      const token2 = signAccessToken({
+        userId: dbUser2._id.toString(),
+        role: dbUser2.role,
+      });
 
       // User 2's cart should be empty
       const response2 = await request(app)
-        .get('/api/cart')
+        .get('/api/v1/cart')
         .set('Authorization', `Bearer ${token2}`)
         .expect(200);
 
@@ -311,16 +289,15 @@ describe('Cart + Inventory Safety Integration Tests', () => {
 
   describe('Error Messages', () => {
     it('should provide clear error message on insufficient stock', async () => {
-      const { variants } = await createProduct({
-        stockQty: 5,
-        reservedQty: 5, // No stock available
+      const { product, variants } = await createProduct({
+        stockQty: 0,
       });
 
       const response = await request(app)
-        .post('/api/cart/items')
+        .post('/api/v1/cart/items')
         .set('Authorization', `Bearer ${token}`)
         .send({
-          productVariantId: variants[0]._id.toString(),
+          productId: product._id.toString(),
           quantity: 1,
         })
         .expect(400);

@@ -1,0 +1,25 @@
+// Compatibility re-exports from module-local type source of truth.
+export type {
+  QueryScalar,
+  OrdersParams,
+  OrdersQuery,
+  OrdersBody,
+  OrdersRequestContext,
+  OrdersRequestShape,
+  OrdersRequest,
+  OrdersEntity,
+  OrdersServiceInput,
+  OrdersServiceResult,
+  OrdersRepoFilter,
+  OrdersRepoUpdate,
+  OrdersValidatorInput,
+  // Domain types
+  OrderStatus,
+  PaymentStatus,
+  PaymentMethod,
+  OrderAddress,
+  OrderRecord,
+  PlaceOrderInput,
+  UpdateOrderStatusInput,
+  OrderServiceContext,
+} from '../../modules/orders/orders.types';

@@ -31,7 +31,7 @@ describe('Cart routes smoke', () => {
     const res = await request(app)
       .post('/api/v1/cart/items')
       .set('Authorization', 'Bearer t')
-      .send({ productVariantId: '64b000000000000000000001', quantity: 1 });
+      .send({ productId: '64b000000000000000000001', quantity: 1 });
 
     expect(res.status).toBe(200);
     expect(controller.addItem).toHaveBeenCalled();

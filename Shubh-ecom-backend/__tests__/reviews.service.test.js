@@ -1,4 +1,21 @@
 const reviewsService = require('../modules/reviews/reviews.service');
+jest.mock('../models/Product.model', () => ({
+  findByIdAndUpdate: jest.fn().mockResolvedValue({}),
+}));
+jest.mock('../models/OrderItem.model', () => ({
+  find: jest.fn(() => ({
+    populate: jest.fn(() => ({
+      select: jest.fn(() => ({
+        lean: jest.fn().mockResolvedValue([
+          {
+            status: 'delivered',
+            orderId: { _id: '507f1f77bcf86cd799439012', orderStatus: 'delivered' },
+          },
+        ]),
+      })),
+    })),
+  })),
+}));
 
 jest.mock('../modules/reviews/reviews.repo', () => ({
   findByProduct: jest.fn(),
@@ -15,19 +32,23 @@ const repo = require('../modules/reviews/reviews.repo');
 describe('ReviewsService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    repo.getAggregate.mockResolvedValue([]);
   });
 
   test('creates review when none exists', async () => {
     repo.findByUserProduct.mockResolvedValue(null);
-    const created = { _id: '1', productId: 'p1' };
+    const created = { _id: '1', productId: '507f1f77bcf86cd799439011' };
     repo.create.mockResolvedValue(created);
 
     const res = await reviewsService.create({
-      user: { id: 'u1' },
-      payload: { productId: 'p1', rating: 5 },
+      user: { id: '507f1f77bcf86cd799439021' },
+      payload: { productId: '507f1f77bcf86cd799439011', rating: 5 },
     });
 
-    expect(repo.findByUserProduct).toHaveBeenCalledWith('u1', 'p1');
+    expect(repo.findByUserProduct).toHaveBeenCalledWith(
+      '507f1f77bcf86cd799439021',
+      '507f1f77bcf86cd799439011',
+    );
     expect(res).toEqual(created);
   });
 
@@ -35,8 +56,8 @@ describe('ReviewsService', () => {
     repo.findByUserProduct.mockResolvedValue({ _id: 'existing' });
     await expect(
       reviewsService.create({
-        user: { id: 'u1' },
-        payload: { productId: 'p1', rating: 4 },
+        user: { id: '507f1f77bcf86cd799439021' },
+        payload: { productId: '507f1f77bcf86cd799439011', rating: 4 },
       }),
     ).rejects.toThrow('You have already reviewed this product');
   });

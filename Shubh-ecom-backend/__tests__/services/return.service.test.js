@@ -1,6 +1,10 @@
-jest.mock('mongoose', () => ({
-  startSession: jest.fn(),
-}));
+jest.mock('mongoose', () => {
+  const actualMongoose = jest.requireActual('mongoose');
+  return {
+    ...actualMongoose,
+    startSession: jest.fn(),
+  };
+});
 
 jest.mock('../../modules/returns/return.repo', () => ({
   create: jest.fn(),
@@ -30,8 +34,20 @@ const inventoryService = require('../../modules/inventory/inventory.service');
 const OrderItemModel = require('../../models/OrderItem.model');
 
 const mockSession = () => {
+  mongoose.connection = {
+    client: {
+      topology: {
+        description: {
+          type: 'ReplicaSetWithPrimary',
+        },
+      },
+    },
+  };
   const session = {
+    _isStandalone: false,
     startTransaction: jest.fn(),
+    inTransaction: jest.fn(() => true),
+    withTransaction: async (fn) => await fn(),
     commitTransaction: jest.fn(),
     abortTransaction: jest.fn(),
     endSession: jest.fn(),
@@ -109,7 +125,7 @@ describe('ReturnService', () => {
       items: [{ orderItemId: 'oi1', quantity: 1 }],
     });
     orderItemsRepo.findByOrderId.mockResolvedValue([
-      { _id: 'oi1', productVariantId: 'pv1' },
+      { _id: 'oi1', productId: 'p1' },
     ]);
     returnRepo.update.mockResolvedValue({ _id: 'ret1', status: 'completed' });
 
@@ -120,7 +136,7 @@ describe('ReturnService', () => {
     });
 
     expect(inventoryService.release).toHaveBeenCalledWith(
-      'pv1',
+      'p1',
       1,
       session,
       expect.objectContaining({ orderId: 'order1' }),

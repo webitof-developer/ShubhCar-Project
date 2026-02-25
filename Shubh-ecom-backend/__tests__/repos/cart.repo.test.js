@@ -33,10 +33,11 @@ describe('CartRepository', () => {
 
   it('upserts cart items and updates quantity', async () => {
     const cart = await Cart.create({ sessionId: 's1' });
+    const productId = new mongoose.Types.ObjectId('64b000000000000000000001');
     await cartRepo.addItem({
       cartId: cart._id,
       item: {
-        productVariantId: new mongoose.Types.ObjectId(),
+        productId,
         sku: 'SKU1',
         quantity: 1,
         priceType: 'retail',
@@ -48,7 +49,7 @@ describe('CartRepository', () => {
     const item = await cartRepo.addItem({
       cartId: cart._id,
       item: {
-        productVariantId: new mongoose.Types.ObjectId('64b000000000000000000001'),
+        productId,
         sku: 'SKU1',
         quantity: 2,
         priceType: 'retail',
@@ -65,7 +66,7 @@ describe('CartRepository', () => {
     const cart = await Cart.create({ userId: new mongoose.Types.ObjectId() });
     const item = await CartItem.create({
       cartId: cart._id,
-      productVariantId: new mongoose.Types.ObjectId(),
+      productId: new mongoose.Types.ObjectId(),
       sku: 'SKU2',
       quantity: 1,
       priceType: 'retail',

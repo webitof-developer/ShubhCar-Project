@@ -10,7 +10,7 @@ jest.mock('bullmq', () => {
   Worker.__handlers = handlers;
   return { Worker };
 });
-jest.mock('../../config/queue', () => ({ connection: {} }));
+jest.mock('../../config/queue', () => ({ connection: {}, queuesEnabled: true }));
 jest.mock('../../config/logger', () => ({
   info: jest.fn(),
   warn: jest.fn(),

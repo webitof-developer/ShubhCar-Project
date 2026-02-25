@@ -107,6 +107,14 @@ describe('AdminService.listPendingWholesale', () => {
     userRepo.findPendingWholesale.mockResolvedValue([{ _id: 'u6' }]);
     const res = await adminService.listPendingWholesale();
     expect(userRepo.findPendingWholesale).toHaveBeenCalled();
-    expect(res).toEqual([{ _id: 'u6' }]);
+    expect(res).toMatchObject({
+      users: [{ _id: 'u6' }],
+      data: [{ _id: 'u6' }],
+      pagination: {
+        page: 1,
+        limit: 20,
+        total: 1,
+      },
+    });
   });
 });

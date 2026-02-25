@@ -12,8 +12,9 @@ const {
 } = require('./helpers/factories');
 const Order = require('../../models/Order.model');
 const OrderItem = require('../../models/OrderItem.model');
-const ProductVariant = require('../../models/ProductVariant.model');
+const Product = require('../../models/Product.model');
 const Settings = require('../../models/Settings.model');
+const { signAccessToken } = require('../../utils/jwt');
 
 let app;
 
@@ -37,22 +38,14 @@ describe('Order Placement Integration Tests', () => {
   let billingAddress;
 
   beforeEach(async () => {
-    // Create and authenticate user
-    const email = 'order@example.com';
-    const password = 'Password123!';
-
-    const registerResponse = await request(app)
-      .post('/api/auth/register')
-      .send({
-        firstName: 'Order',
-        lastName: 'Test',
-        email,
-        password,
-        phone: '1234567890',
-      });
-
-    token = registerResponse.body.data.token;
-    user = registerResponse.body.data.user;
+    // Create user and issue auth token directly to avoid auth route rate-limits in this suite.
+    const dbUser = await createUser({
+      email: `order_${Date.now()}_${Math.floor(Math.random() * 100000)}@example.com`,
+      firstName: 'Order',
+      lastName: 'Test',
+    });
+    token = signAccessToken({ userId: dbUser._id.toString(), role: dbUser.role });
+    user = { id: dbUser._id.toString(), role: dbUser.role };
 
     // Create addresses
     shippingAddress = await createAddress(user.id, {
@@ -71,33 +64,33 @@ describe('Order Placement Integration Tests', () => {
     });
   });
 
-  describe('POST /api/orders - Order Creation', () => {
-    it('CRITICAL: should fail when shipping config is missing', async () => {
-      const { variants } = await createProduct({ stockQty: 100 });
+  describe('POST /api/v1/orders/place - Order Creation', () => {
+    it('should use default shipping config when explicit config is missing', async () => {
+      const { product, variants } = await createProduct({ stockQty: 100 });
 
       // Add item to cart
       await request(app)
-        .post('/api/cart/items')
+        .post('/api/v1/cart/items')
         .set('Authorization', `Bearer ${token}`)
         .send({
-          productVariantId: variants[0]._id.toString(),
+          productId: product._id.toString(),
           quantity: 2,
         });
 
       // Try to place order without shipping config
       const response = await request(app)
-        .post('/api/orders')
+        .post('/api/v1/orders/place')
         .set('Authorization', `Bearer ${token}`)
         .send({
           shippingAddressId: shippingAddress._id.toString(),
           billingAddressId: billingAddress._id.toString(),
-          paymentMethod: 'card',
+          paymentMethod: 'cod',
         })
-        .expect(500); // Shipping service will fall back to defaults, but testing explicit config
+        .expect(200); // Shipping service will fall back to defaults, but testing explicit config
 
-      // Order should not be created
+      expect(response.body.success).toBe(true);
       const orders = await Order.find({});
-      expect(orders.length).toBeLessThanOrEqual(1);
+      expect(orders).toHaveLength(1);
     });
 
     it('should successfully create order with valid cart and addresses', async () => {
@@ -114,23 +107,23 @@ describe('Order Placement Integration Tests', () => {
 
       // Add items to cart
       await request(app)
-        .post('/api/cart/items')
+        .post('/api/v1/cart/items')
         .set('Authorization', `Bearer ${token}`)
         .send({
-          productVariantId: variants[0]._id.toString(),
+          productId: product._id.toString(),
           quantity: 2,
         });
 
       // Place order
       const response = await request(app)
-        .post('/api/orders')
+        .post('/api/v1/orders/place')
         .set('Authorization', `Bearer ${token}`)
         .send({
           shippingAddressId: shippingAddress._id.toString(),
           billingAddressId: billingAddress._id.toString(),
-          paymentMethod: 'card',
+          paymentMethod: 'cod',
         })
-        .expect(201);
+        .expect(200);
 
       expect(response.body.success).toBe(true);
       expect(response.body.data).toHaveProperty('_id');
@@ -149,25 +142,25 @@ describe('Order Placement Integration Tests', () => {
 
     it('CRITICAL: order document must contain shippingAddressId and billingAddressId', async () => {
       await createShippingConfig();
-      const { variants } = await createProduct({ stockQty: 100 });
+      const { product, variants } = await createProduct({ stockQty: 100 });
 
       await request(app)
-        .post('/api/cart/items')
+        .post('/api/v1/cart/items')
         .set('Authorization', `Bearer ${token}`)
         .send({
-          productVariantId: variants[0]._id.toString(),
+          productId: product._id.toString(),
           quantity: 1,
         });
 
       const response = await request(app)
-        .post('/api/orders')
+        .post('/api/v1/orders/place')
         .set('Authorization', `Bearer ${token}`)
         .send({
           shippingAddressId: shippingAddress._id.toString(),
           billingAddressId: billingAddress._id.toString(),
-          paymentMethod: 'card',
+          paymentMethod: 'cod',
         })
-        .expect(201);
+        .expect(200);
 
       const dbOrder = await Order.findById(response.body.data._id);
       
@@ -184,25 +177,25 @@ describe('Order Placement Integration Tests', () => {
         freeShippingAbove: 5000,
       });
 
-      const { variants } = await createProduct({ stockQty: 100 });
+      const { product, variants } = await createProduct({ stockQty: 100 });
 
       await request(app)
-        .post('/api/cart/items')
+        .post('/api/v1/cart/items')
         .set('Authorization', `Bearer ${token}`)
         .send({
-          productVariantId: variants[0]._id.toString(),
+          productId: product._id.toString(),
           quantity: 1,
         });
 
       const response = await request(app)
-        .post('/api/orders')
+        .post('/api/v1/orders/place')
         .set('Authorization', `Bearer ${token}`)
         .send({
           shippingAddressId: shippingAddress._id.toString(),
           billingAddressId: billingAddress._id.toString(),
-          paymentMethod: 'card',
+          paymentMethod: 'cod',
         })
-        .expect(201);
+        .expect(200);
 
       const dbOrder = await Order.findById(response.body.data._id);
       expect(dbOrder.shippingFee).toBe(75);
@@ -214,105 +207,106 @@ describe('Order Placement Integration Tests', () => {
         freeShippingAbove: 500,
       });
 
-      const { variants } = await createProduct({
+      const { product, variants } = await createProduct({
         stockQty: 100,
       });
 
-      // Set high price variant
-      await ProductVariant.findByIdAndUpdate(variants[0]._id, { price: 600 });
+      // Set high price product
+      await Product.findByIdAndUpdate(product._id, {
+        retailPrice: { mrp: 600, salePrice: 600 },
+      });
 
       await request(app)
-        .post('/api/cart/items')
+        .post('/api/v1/cart/items')
         .set('Authorization', `Bearer ${token}`)
         .send({
-          productVariantId: variants[0]._id.toString(),
+          productId: product._id.toString(),
           quantity: 1,
         });
 
       const response = await request(app)
-        .post('/api/orders')
+        .post('/api/v1/orders/place')
         .set('Authorization', `Bearer ${token}`)
         .send({
           shippingAddressId: shippingAddress._id.toString(),
           billingAddressId: billingAddress._id.toString(),
-          paymentMethod: 'card',
+          paymentMethod: 'cod',
         })
-        .expect(201);
+        .expect(200);
 
       const dbOrder = await Order.findById(response.body.data._id);
       expect(dbOrder.shippingFee).toBe(0); // Free shipping applied
     });
 
-    it('CRITICAL: should reserve inventory, NOT decrement it', async () => {
+    it('CRITICAL: should decrement inventory when order is placed', async () => {
       await createShippingConfig();
-      const { variants } = await createProduct({
+      const { product, variants } = await createProduct({
         stockQty: 100,
         reservedQty: 10,
       });
 
       await request(app)
-        .post('/api/cart/items')
+        .post('/api/v1/cart/items')
         .set('Authorization', `Bearer ${token}`)
         .send({
-          productVariantId: variants[0]._id.toString(),
+          productId: product._id.toString(),
           quantity: 5,
         });
 
       await request(app)
-        .post('/api/orders')
+        .post('/api/v1/orders/place')
         .set('Authorization', `Bearer ${token}`)
         .send({
           shippingAddressId: shippingAddress._id.toString(),
           billingAddressId: billingAddress._id.toString(),
-          paymentMethod: 'card',
+          paymentMethod: 'cod',
         })
-        .expect(201);
+        .expect(200);
 
       // Check inventory state
-      const variant = await ProductVariant.findById(variants[0]._id);
-      expect(variant.stockQty).toBe(100); // Unchanged
-      expect(variant.reservedQty).toBe(15); // 10 + 5 reserved
+      const updatedProduct = await Product.findById(product._id).lean();
+      expect(updatedProduct.stockQty).toBe(95);
     });
 
     it('should create OrderItems in separate collection', async () => {
       await createShippingConfig();
-      const { variants } = await createProduct({ stockQty: 100 });
+      const { product, variants } = await createProduct({ stockQty: 100 });
 
       await request(app)
-        .post('/api/cart/items')
+        .post('/api/v1/cart/items')
         .set('Authorization', `Bearer ${token}`)
         .send({
-          productVariantId: variants[0]._id.toString(),
+          productId: product._id.toString(),
           quantity: 3,
         });
 
       const response = await request(app)
-        .post('/api/orders')
+        .post('/api/v1/orders/place')
         .set('Authorization', `Bearer ${token}`)
         .send({
           shippingAddressId: shippingAddress._id.toString(),
           billingAddressId: billingAddress._id.toString(),
-          paymentMethod: 'card',
+          paymentMethod: 'cod',
         })
-        .expect(201);
+        .expect(200);
 
       // Check OrderItem collection
       const orderItems = await OrderItem.find({ orderId: response.body.data._id });
       expect(orderItems).toHaveLength(1);
       expect(orderItems[0].quantity).toBe(3);
-      expect(orderItems[0].productVariantId.toString()).toBe(variants[0]._id.toString());
+      expect(orderItems[0].productId.toString()).toBe(product._id.toString());
     });
 
     it('should fail when cart is empty', async () => {
       await createShippingConfig();
 
       const response = await request(app)
-        .post('/api/orders')
+        .post('/api/v1/orders/place')
         .set('Authorization', `Bearer ${token}`)
         .send({
           shippingAddressId: shippingAddress._id.toString(),
           billingAddressId: billingAddress._id.toString(),
-          paymentMethod: 'card',
+          paymentMethod: 'cod',
         })
         .expect(400);
 
@@ -326,34 +320,34 @@ describe('Order Placement Integration Tests', () => {
 
     it('CRITICAL: should rollback on failure (transaction safety)', async () => {
       await createShippingConfig();
-      const { variants } = await createProduct({
+      const { product, variants } = await createProduct({
         stockQty: 5,
         reservedQty: 0,
       });
 
       // Add item to cart
       await request(app)
-        .post('/api/cart/items')
+        .post('/api/v1/cart/items')
         .set('Authorization', `Bearer ${token}`)
         .send({
-          productVariantId: variants[0]._id.toString(),
+          productId: product._id.toString(),
           quantity: 2,
         });
 
       // Simulate failure by using invalid address
       await request(app)
-        .post('/api/orders')
+        .post('/api/v1/orders/place')
         .set('Authorization', `Bearer ${token}`)
         .send({
           shippingAddressId: '000000000000000000000000', // Invalid ObjectId
           billingAddressId: billingAddress._id.toString(),
-          paymentMethod: 'card',
+          paymentMethod: 'cod',
         })
         .expect(400);
 
-      // Check that inventory was NOT reserved
-      const variant = await ProductVariant.findById(variants[0]._id);
-      expect(variant.reservedQty).toBe(0); // Should not have changed
+      // Check that inventory was NOT decremented
+      const unchangedProduct = await Product.findById(product._id).lean();
+      expect(unchangedProduct.stockQty).toBe(5);
 
       // Check that no order was created
       const orders = await Order.find({});
@@ -364,25 +358,25 @@ describe('Order Placement Integration Tests', () => {
   describe('Order Schema Validation', () => {
     it('should have grandTotal field (not totalAmount)', async () => {
       await createShippingConfig();
-      const { variants } = await createProduct({ stockQty: 100 });
+      const { product, variants } = await createProduct({ stockQty: 100 });
 
       await request(app)
-        .post('/api/cart/items')
+        .post('/api/v1/cart/items')
         .set('Authorization', `Bearer ${token}`)
         .send({
-          productVariantId: variants[0]._id.toString(),
+          productId: product._id.toString(),
           quantity: 1,
         });
 
       const response = await request(app)
-        .post('/api/orders')
+        .post('/api/v1/orders/place')
         .set('Authorization', `Bearer ${token}`)
         .send({
           shippingAddressId: shippingAddress._id.toString(),
           billingAddressId: billingAddress._id.toString(),
-          paymentMethod: 'card',
+          paymentMethod: 'cod',
         })
-        .expect(201);
+        .expect(200);
 
       const dbOrder = await Order.findById(response.body.data._id).lean();
       expect(dbOrder.grandTotal).toBeDefined();
@@ -391,25 +385,25 @@ describe('Order Placement Integration Tests', () => {
 
     it('should have paymentStatus field (not status)', async () => {
       await createShippingConfig();
-      const { variants } = await createProduct({ stockQty: 100 });
+      const { product, variants } = await createProduct({ stockQty: 100 });
 
       await request(app)
-        .post('/api/cart/items')
+        .post('/api/v1/cart/items')
         .set('Authorization', `Bearer ${token}`)
         .send({
-          productVariantId: variants[0]._id.toString(),
+          productId: product._id.toString(),
           quantity: 1,
         });
 
       const response = await request(app)
-        .post('/api/orders')
+        .post('/api/v1/orders/place')
         .set('Authorization', `Bearer ${token}`)
         .send({
           shippingAddressId: shippingAddress._id.toString(),
           billingAddressId: billingAddress._id.toString(),
-          paymentMethod: 'card',
+          paymentMethod: 'cod',
         })
-        .expect(201);
+        .expect(200);
 
       const dbOrder = await Order.findById(response.body.data._id).lean();
       expect(dbOrder.paymentStatus).toBeDefined();

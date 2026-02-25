@@ -1,6 +1,5 @@
 /**
- * Inventory service controls oversell prevention and low-stock alerts.
- * These tests use real Mongo (in-memory) to verify atomicity of stock moves.
+ * Inventory service tests for product-level stock transitions.
  */
 jest.mock('../../cache/inventory.cache', () => ({
   del: jest.fn(),
@@ -8,10 +7,14 @@ jest.mock('../../cache/inventory.cache', () => ({
 jest.mock('../../queues/email.queue', () => ({
   enqueueEmail: jest.fn(),
 }));
+jest.mock('../../config/env', () => ({
+  LOW_STOCK_THRESHOLD: '5',
+  STOCK_ALERT_EMAIL: 'ops@example.com',
+}));
 
 const mongoose = require('mongoose');
 const inventoryService = require('../../modules/inventory/inventory.service');
-const ProductVariant = require('../../models/ProductVariant.model');
+const Product = require('../../models/Product.model');
 const inventoryCache = require('../../cache/inventory.cache');
 const { enqueueEmail } = require('../../queues/email.queue');
 const { AppError } = require('../../utils/apiResponse');
@@ -36,53 +39,55 @@ describe('InventoryService', () => {
   });
 
   it('reserves stock when available and invalidates cache', async () => {
-    const variant = await ProductVariant.create({
-      productId: new mongoose.Types.ObjectId(),
-      variantName: 'Red / L',
-      sku: 'SKU-1',
-      price: 100,
+    const product = await Product.create({
+      name: 'P1',
+      slug: 'p1',
+      categoryId: new mongoose.Types.ObjectId(),
+      status: 'active',
       stockQty: 10,
-      reservedQty: 2,
+      retailPrice: { mrp: 100, salePrice: 100 },
+      isDeleted: false,
     });
 
-    await inventoryService.reserve(variant._id, 3);
+    await inventoryService.reserve(product._id, 3);
 
-    const updated = await ProductVariant.findById(variant._id).lean();
-    expect(updated.reservedQty).toBe(5); // 2 existing + 3 reserved
-    expect(inventoryCache.del).toHaveBeenCalledWith(variant._id);
+    const updated = await Product.findById(product._id).lean();
+    expect(updated.stockQty).toBe(7);
+    expect(inventoryCache.del).toHaveBeenCalledWith(product._id);
   });
 
-  it('throws when reserving more than available stock to prevent oversell', async () => {
-    const variant = await ProductVariant.create({
-      productId: new mongoose.Types.ObjectId(),
-      variantName: 'Blue / M',
-      sku: 'SKU-2',
-      price: 80,
+  it('throws when reserving more than available stock', async () => {
+    const product = await Product.create({
+      name: 'P2',
+      slug: 'p2',
+      categoryId: new mongoose.Types.ObjectId(),
+      status: 'active',
       stockQty: 2,
-      reservedQty: 0,
+      retailPrice: { mrp: 80, salePrice: 80 },
+      isDeleted: false,
     });
 
     await expect(
-      inventoryService.reserve(variant._id, 5),
+      inventoryService.reserve(product._id, 5),
     ).rejects.toBeInstanceOf(AppError);
   });
 
-  it('commits reserved stock and sends low-stock alert when below threshold', async () => {
-    process.env.LOW_STOCK_THRESHOLD = '5';
-    const variant = await ProductVariant.create({
-      productId: new mongoose.Types.ObjectId(),
-      variantName: 'Green / S',
+  it('commit keeps stock and triggers low-stock alert', async () => {
+    const product = await Product.create({
+      name: 'P3',
+      slug: 'p3',
+      categoryId: new mongoose.Types.ObjectId(),
+      status: 'active',
+      stockQty: 4,
       sku: 'SKU-3',
-      price: 120,
-      stockQty: 6,
-      reservedQty: 2,
+      retailPrice: { mrp: 120, salePrice: 120 },
+      isDeleted: false,
     });
 
-    const committed = await inventoryService.commit(variant._id, 2);
+    const committed = await inventoryService.commit(product._id, 1);
 
-    expect(committed.stockQty).toBe(4); // dropped below threshold
-    expect(committed.reservedQty).toBe(0);
-    expect(inventoryCache.del).toHaveBeenCalledWith(variant._id);
+    expect(committed.stockQty).toBe(4);
+    expect(inventoryCache.del).toHaveBeenCalledWith(product._id);
     expect(enqueueEmail).toHaveBeenCalledWith(
       expect.objectContaining({
         templateName: 'inventory_low_stock',
@@ -90,19 +95,20 @@ describe('InventoryService', () => {
     );
   });
 
-  it('releases reserved stock on cancel/failure', async () => {
-    const variant = await ProductVariant.create({
-      productId: new mongoose.Types.ObjectId(),
-      variantName: 'Black / XL',
-      sku: 'SKU-4',
-      price: 150,
+  it('releases stock on cancel/failure', async () => {
+    const product = await Product.create({
+      name: 'P4',
+      slug: 'p4',
+      categoryId: new mongoose.Types.ObjectId(),
+      status: 'active',
       stockQty: 5,
-      reservedQty: 3,
+      retailPrice: { mrp: 150, salePrice: 150 },
+      isDeleted: false,
     });
 
-    const released = await inventoryService.release(variant._id, 2);
+    const released = await inventoryService.release(product._id, 2);
 
-    expect(released.reservedQty).toBe(1);
-    expect(inventoryCache.del).toHaveBeenCalledWith(variant._id);
+    expect(released.stockQty).toBe(7);
+    expect(inventoryCache.del).toHaveBeenCalledWith(product._id);
   });
 });

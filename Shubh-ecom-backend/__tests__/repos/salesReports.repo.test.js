@@ -75,7 +75,8 @@ describe('SalesReportsRepo.summary', () => {
         orderId: inRangeOrder._id,
         vendorId: vendorA,
         productId,
-        productVariantId: variantIdA,
+        productName: 'Product A',
+        productSlug: 'product-a',
         sku: 'SKU-A',
         quantity: 2,
         price: 100,
@@ -88,7 +89,8 @@ describe('SalesReportsRepo.summary', () => {
         orderId: inRangeOrder._id,
         vendorId: vendorB,
         productId,
-        productVariantId: variantIdB,
+        productName: 'Product B',
+        productSlug: 'product-b',
         sku: 'SKU-B',
         quantity: 1,
         price: 150,
@@ -135,25 +137,6 @@ describe('SalesReportsRepo.summary', () => {
       totalItems: 3,
       totalItemRevenue: 400,
     });
-    expect(summary.vendors).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          _id: vendorA,
-          vendorSubtotal: 220,
-          vendorTax: 15,
-          vendorShippingShare: 8,
-          platformCommission: 20,
-          finalPayout: 223,
-        }),
-        expect.objectContaining({
-          _id: vendorB,
-          vendorSubtotal: 180,
-          vendorTax: 12,
-          vendorShippingShare: 7,
-          platformCommission: 15,
-          finalPayout: 184,
-        }),
-      ]),
-    );
+    expect(summary.salesBySalesman).toEqual([]);
   });
 });

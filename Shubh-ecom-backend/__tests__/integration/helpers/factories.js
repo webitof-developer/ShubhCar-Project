@@ -19,8 +19,8 @@ async function createUser(overrides = {}) {
     firstName: 'Test',
     lastName: 'User',
     email: `test${Date.now()}@example.com`,
-    password: await bcrypt.hash('Password123!', 10),
-    phone: '1234567890',
+    passwordHash: await bcrypt.hash('Password123!', 10),
+    phone: `9${String(Date.now()).slice(-9)}`,
     role: 'customer',
     customerType: 'retail',
     verificationStatus: 'approved',
@@ -63,7 +63,8 @@ async function createProduct(options = {}) {
   const defaultProduct = {
     name: `Product ${Date.now()}`,
     slug: `product-${Date.now()}`,
-    price: 100,
+    retailPrice: { mrp: 100, salePrice: 100 },
+    stockQty,
     categoryId: category,
     status: 'active',
     isDeleted: false,
@@ -141,8 +142,8 @@ async function createCart(userId, items = []) {
   for (const item of items) {
     const cartItem = await CartItem.create({
       cartId: cart._id,
-      productVariantId: item.variantId,
-      sku: item.sku || `SKU-${item.variantId}`,
+      productId: item.productId || item.variantId,
+      sku: item.sku || `SKU-${item.productId || item.variantId}`,
       quantity: item.quantity,
       priceType: item.priceType || 'retail',
       priceAtTime: item.price || 100,
@@ -180,7 +181,7 @@ async function createOrder(options = {}) {
     grandTotal: 0,
     paymentStatus,
     orderStatus,
-    paymentMethod: 'card',
+    paymentMethod: 'cod',
   };
 
   // Calculate totals
@@ -200,11 +201,15 @@ async function createOrder(options = {}) {
     const orderItem = await OrderItem.create({
       orderId: order._id,
       productId: item.productId,
-      productVariantId: item.variantId,
-      sku: item.sku || `SKU-${item.variantId}`,
+      productName: item.productName || `Product-${String(item.productId).slice(-6)}`,
+      productSlug: item.productSlug || null,
+      productImage: item.productImage || null,
+      productDescription: item.productDescription || null,
+      sku: item.sku || `SKU-${item.productId || item.variantId}`,
       quantity: item.quantity,
       price: item.price,
       taxAmount: 0,
+      taxComponents: { cgst: 0, sgst: 0, igst: 0 },
       total: item.price * item.quantity,
     });
     orderItems.push(orderItem);

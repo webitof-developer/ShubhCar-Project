@@ -2,7 +2,7 @@
 
 /**
  * Product Service - Config-Driven Architecture
- * 
+ *
  * DATA SOURCE:
  * - Reads APP_CONFIG.dataSource.products via getDataSourceConfig()
  * - 'demo' = Use mock data from /data/products
@@ -10,7 +10,10 @@
  * - Supports fallback modes: 'demo' | 'empty' | 'error'
  */
 
-import APP_CONFIG, { getDataSourceConfig, logDataSource } from '@/config/app.config';
+import APP_CONFIG, {
+  getDataSourceConfig,
+  logDataSource,
+} from '@/config/app.config';
 import { products as demoProducts } from '@/data/products';
 import { resolveProductImages } from '@/utils/media';
 import { getCategoryBySlug } from './categoryService';
@@ -18,13 +21,41 @@ import { getCategoryBySlug } from './categoryService';
 const baseUrl = APP_CONFIG.api.baseUrl;
 const isProd = process.env.NODE_ENV === 'production';
 
+// Map frontend-friendly sort aliases → backend enum values
+// Backend accepts: created_desc | created_asc | price_asc | price_desc
+const SORT_MAP = {
+  newest: 'created_desc',
+  oldest: 'created_asc',
+  'price-asc': 'price_asc',
+  'price-desc': 'price_desc',
+  price_asc: 'price_asc',
+  price_desc: 'price_desc',
+  created_desc: 'created_desc',
+  created_asc: 'created_asc',
+};
+
+/** Resolve a sort string to the backend-accepted enum value, or undefined if unknown. */
+const resolveSort = (sort) =>
+  sort ? (SORT_MAP[sort] ?? undefined) : undefined;
+
 // ==================== PRIVATE HELPERS ====================
 
 const getJson = async (url, options = {}) => {
-  const response = await fetch(url, options);
+  let response;
+  try {
+    response = await fetch(url, options);
+  } catch (networkErr) {
+    // Attach extra context so SSR catch blocks can log a meaningful object
+    networkErr.url = url;
+    networkErr.cause = networkErr.cause
+      ? String(networkErr.cause)
+      : networkErr.message;
+    throw networkErr;
+  }
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    const message = error.message || `Request failed: ${response.statusText}`;
+    const errorBody = await response.json().catch(() => ({}));
+    const message =
+      errorBody.message || `Request failed: ${response.statusText}`;
     const err = new Error(message);
     err.url = url;
     err.status = response.status;
@@ -50,7 +81,9 @@ const normalizeProductList = (products = []) =>
 const applyFallback = (fallback, demoData, domain, source) => {
   if (source === 'demo') {
     logDataSource(domain, 'DEMO', 'explicit demo mode');
-    return Array.isArray(demoData) ? normalizeProductList(demoData) : normalizeProduct(demoData);
+    return Array.isArray(demoData)
+      ? normalizeProductList(demoData)
+      : normalizeProduct(demoData);
   }
 
   if (fallback === 'empty' && !isProd) {
@@ -63,7 +96,19 @@ const applyFallback = (fallback, demoData, domain, source) => {
 
 // ==================== PUBLIC API ====================
 
-export const getProducts = async ({ page = 1, limit = 12, search, sort, vehicleIds, productType, manufacturerBrand, isOnSale, isFeatured, isBestSeller, fetchOptions } = {}) => {
+export const getProducts = async ({
+  page = 1,
+  limit = 12,
+  search,
+  sort,
+  vehicleIds,
+  productType,
+  manufacturerBrand,
+  isOnSale,
+  isFeatured,
+  isBestSeller,
+  fetchOptions,
+} = {}) => {
   const config = getDataSourceConfig('products');
   const hasVehicleFilter = Array.isArray(vehicleIds) && vehicleIds.length > 0;
   const onSale = isOnSale === 'true' || isOnSale === true;
@@ -78,46 +123,66 @@ export const getProducts = async ({ page = 1, limit = 12, search, sort, vehicleI
     let filtered = [...demoProducts];
 
     if (productType) {
-      const types = String(productType).split(',').map(t => t.trim());
-      filtered = filtered.filter(p => types.includes(p.productType));
+      const types = String(productType)
+        .split(',')
+        .map((t) => t.trim());
+      filtered = filtered.filter((p) => types.includes(p.productType));
     }
 
     if (manufacturerBrand) {
-      filtered = filtered.filter(p => p.manufacturerBrand?.toLowerCase() === manufacturerBrand.toLowerCase());
+      filtered = filtered.filter(
+        (p) =>
+          p.manufacturerBrand?.toLowerCase() ===
+          manufacturerBrand.toLowerCase(),
+      );
     }
 
     if (onSale) {
-      filtered = filtered.filter(p =>
-        p.retailPrice?.salePrice &&
-        p.retailPrice?.mrp &&
-        p.retailPrice.salePrice < p.retailPrice.mrp
+      filtered = filtered.filter(
+        (p) =>
+          p.retailPrice?.salePrice &&
+          p.retailPrice?.mrp &&
+          p.retailPrice.salePrice < p.retailPrice.mrp,
       );
     }
 
     if (featured) {
-      filtered = filtered.filter(p => p.isFeatured);
+      filtered = filtered.filter((p) => p.isFeatured);
     }
 
     if (bestSeller) {
       // Fallback: Use isBestSeller flag or productType=OEM as proxy if flag missing in demo data
-      filtered = filtered.filter(p => p.isBestSeller || p.productType === 'OEM');
+      filtered = filtered.filter(
+        (p) => p.isBestSeller || p.productType === 'OEM',
+      );
     }
 
     // Apply search filter
     if (search) {
       const query = search.toLowerCase();
-      filtered = filtered.filter(p =>
-        p.name?.toLowerCase().includes(query) ||
-        p.manufacturerBrand?.toLowerCase().includes(query) ||
-        p.oemNumber?.toLowerCase().includes(query)
+      filtered = filtered.filter(
+        (p) =>
+          p.name?.toLowerCase().includes(query) ||
+          p.manufacturerBrand?.toLowerCase().includes(query) ||
+          p.oemNumber?.toLowerCase().includes(query),
       );
     }
 
     // Apply sorting
-    if (sort === 'price-asc') filtered.sort((a, b) => (a.vendor?.retailPrice || 0) - (b.vendor?.retailPrice || 0));
-    if (sort === 'price-desc') filtered.sort((a, b) => (b.vendor?.retailPrice || 0) - (a.vendor?.retailPrice || 0));
-    if (sort === 'name-asc') filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-    if (sort === 'newest') filtered.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    if (sort === 'price-asc')
+      filtered.sort(
+        (a, b) => (a.vendor?.retailPrice || 0) - (b.vendor?.retailPrice || 0),
+      );
+    if (sort === 'price-desc')
+      filtered.sort(
+        (a, b) => (b.vendor?.retailPrice || 0) - (a.vendor?.retailPrice || 0),
+      );
+    if (sort === 'name-asc')
+      filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    if (sort === 'newest')
+      filtered.sort(
+        (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0),
+      );
 
     // Apply pagination
     const start = (page - 1) * limit;
@@ -133,7 +198,8 @@ export const getProducts = async ({ page = 1, limit = 12, search, sort, vehicleI
     params.set('page', String(page));
     params.set('limit', String(limit));
     if (search) params.set('search', search);
-    if (sort) params.set('sort', sort);
+    const resolvedSort = resolveSort(sort);
+    if (resolvedSort) params.set('sort', resolvedSort);
     if (hasVehicleFilter) params.set('vehicle_id', vehicleIds.join(','));
     if (productType) params.set('productType', productType);
     if (manufacturerBrand) params.set('manufacturerBrand', manufacturerBrand);
@@ -145,20 +211,32 @@ export const getProducts = async ({ page = 1, limit = 12, search, sort, vehicleI
     const data = await getJson(url, fetchOptions);
     return normalizeProductList(data?.data?.items || []);
   } catch (error) {
-    const params = new URLSearchParams();
-    params.set('page', String(page));
-    params.set('limit', String(limit));
-    if (search) params.set('search', search);
-    if (sort) params.set('sort', sort);
-    if (hasVehicleFilter) params.set('vehicle_id', vehicleIds.join(','));
-    if (productType) params.set('productType', productType);
-    if (manufacturerBrand) params.set('manufacturerBrand', manufacturerBrand);
-    if (onSale) params.set('isOnSale', 'true');
-    if (featured) params.set('isFeatured', 'true');
-    if (bestSeller) params.set('isBestSeller', 'true');
-    const url = `${baseUrl}/products?${params.toString()}`;
-    console.error('[PRODUCT_SERVICE] getProducts failed:', { url, message: error.message });
-    return applyFallback(config.fallback, demoProducts, 'PRODUCTS', config.source);
+    const catchParams = new URLSearchParams();
+    catchParams.set('page', String(page));
+    catchParams.set('limit', String(limit));
+    if (search) catchParams.set('search', search);
+    const resolvedSortCatch = resolveSort(sort);
+    if (resolvedSortCatch) catchParams.set('sort', resolvedSortCatch);
+    if (hasVehicleFilter) catchParams.set('vehicle_id', vehicleIds.join(','));
+    if (productType) catchParams.set('productType', productType);
+    if (manufacturerBrand)
+      catchParams.set('manufacturerBrand', manufacturerBrand);
+    if (onSale) catchParams.set('isOnSale', 'true');
+    if (featured) catchParams.set('isFeatured', 'true');
+    if (bestSeller) catchParams.set('isBestSeller', 'true');
+    const catchUrl = `${baseUrl}/products?${catchParams.toString()}`;
+    console.error('[PRODUCT_SERVICE] getProducts failed:', {
+      url: catchUrl,
+      status: error.status,
+      message: error.message || String(error),
+      stack: error.stack,
+    });
+    return applyFallback(
+      config.fallback,
+      demoProducts,
+      'PRODUCTS',
+      config.source,
+    );
   }
 };
 
@@ -166,7 +244,8 @@ export const getProductsByCategory = async (categorySlug, options = {}) => {
   if (!categorySlug) return [];
 
   const config = getDataSourceConfig('products');
-  const hasVehicleFilter = Array.isArray(options.vehicleIds) && options.vehicleIds.length > 0;
+  const hasVehicleFilter =
+    Array.isArray(options.vehicleIds) && options.vehicleIds.length > 0;
   let requestUrl = '';
 
   if (config.source === 'demo') {
@@ -176,11 +255,13 @@ export const getProductsByCategory = async (categorySlug, options = {}) => {
     }
 
     // Filter demo products by category
-    let filtered = demoProducts.filter(p => p.categorySlug === categorySlug);
+    let filtered = demoProducts.filter((p) => p.categorySlug === categorySlug);
 
     if (options.productType) {
-      const types = String(options.productType).split(',').map(t => t.trim());
-      filtered = filtered.filter(p => types.includes(p.productType));
+      const types = String(options.productType)
+        .split(',')
+        .map((t) => t.trim());
+      filtered = filtered.filter((p) => types.includes(p.productType));
     }
 
     // Apply pagination
@@ -202,7 +283,8 @@ export const getProductsByCategory = async (categorySlug, options = {}) => {
     params.set('page', String(options.page || 1));
     params.set('limit', String(options.limit || 12));
     params.set('categoryId', category._id);
-    if (hasVehicleFilter) params.set('vehicle_id', options.vehicleIds.join(','));
+    if (hasVehicleFilter)
+      params.set('vehicle_id', options.vehicleIds.join(','));
     if (options.productType) params.set('productType', options.productType);
 
     const url = `${baseUrl}/products?${params.toString()}`;
@@ -210,9 +292,19 @@ export const getProductsByCategory = async (categorySlug, options = {}) => {
     const data = await getJson(url, options.fetchOptions);
     return normalizeProductList(data?.data?.items || []);
   } catch (error) {
-    const url = requestUrl || `${baseUrl}/products?categorySlug=${encodeURIComponent(categorySlug)}`;
-    console.error('[PRODUCT_SERVICE] getProductsByCategory failed:', { url, message: error.message });
-    return applyFallback(config.fallback, demoProducts.filter(p => p.categorySlug === categorySlug), 'PRODUCTS', config.source);
+    const url =
+      requestUrl ||
+      `${baseUrl}/products?categorySlug=${encodeURIComponent(categorySlug)}`;
+    console.error('[PRODUCT_SERVICE] getProductsByCategory failed:', {
+      url,
+      message: error.message,
+    });
+    return applyFallback(
+      config.fallback,
+      demoProducts.filter((p) => p.categorySlug === categorySlug),
+      'PRODUCTS',
+      config.source,
+    );
   }
 };
 
@@ -220,7 +312,8 @@ export const searchProducts = async (query, options = {}) => {
   if (!query) return [];
 
   const config = getDataSourceConfig('products');
-  const hasVehicleFilter = Array.isArray(options.vehicleIds) && options.vehicleIds.length > 0;
+  const hasVehicleFilter =
+    Array.isArray(options.vehicleIds) && options.vehicleIds.length > 0;
 
   if (config.source === 'demo') {
     logDataSource('PRODUCTS', 'DEMO');
@@ -228,14 +321,17 @@ export const searchProducts = async (query, options = {}) => {
       return [];
     }
     const lowerQuery = query.toLowerCase();
-    let filtered = demoProducts.filter(p =>
-      p.name?.toLowerCase().includes(lowerQuery) ||
-      p.manufacturerBrand?.toLowerCase().includes(lowerQuery) ||
-      p.oemNumber?.toLowerCase().includes(lowerQuery)
+    let filtered = demoProducts.filter(
+      (p) =>
+        p.name?.toLowerCase().includes(lowerQuery) ||
+        p.manufacturerBrand?.toLowerCase().includes(lowerQuery) ||
+        p.oemNumber?.toLowerCase().includes(lowerQuery),
     );
     if (options.productType) {
-      const types = String(options.productType).split(',').map(t => t.trim());
-      filtered = filtered.filter(p => types.includes(p.productType));
+      const types = String(options.productType)
+        .split(',')
+        .map((t) => t.trim());
+      filtered = filtered.filter((p) => types.includes(p.productType));
     }
 
     return normalizeProductList(filtered);
@@ -250,7 +346,8 @@ export const searchProducts = async (query, options = {}) => {
     params.set('limit', String(options.limit || 12));
     params.set('search', query);
 
-    if (hasVehicleFilter) params.set('vehicle_id', options.vehicleIds.join(','));
+    if (hasVehicleFilter)
+      params.set('vehicle_id', options.vehicleIds.join(','));
     if (options.productType) params.set('productType', options.productType);
 
     const url = `${baseUrl}/products?${params.toString()}`;
@@ -261,20 +358,34 @@ export const searchProducts = async (query, options = {}) => {
     params.set('page', String(options.page || 1));
     params.set('limit', String(options.limit || 12));
     params.set('search', query);
-    if (hasVehicleFilter) params.set('vehicle_id', options.vehicleIds.join(','));
+    if (hasVehicleFilter)
+      params.set('vehicle_id', options.vehicleIds.join(','));
     if (options.productType) params.set('productType', options.productType);
     const url = `${baseUrl}/products?${params.toString()}`;
-    console.error('[PRODUCT_SERVICE] searchProducts failed:', { url, message: error.message });
+    console.error('[PRODUCT_SERVICE] searchProducts failed:', {
+      url,
+      message: error.message,
+    });
     const lowerQuery = query.toLowerCase();
-    const demoResults = demoProducts.filter(p =>
-      p.name?.toLowerCase().includes(lowerQuery) ||
-      p.manufacturerBrand?.toLowerCase().includes(lowerQuery)
+    const demoResults = demoProducts.filter(
+      (p) =>
+        p.name?.toLowerCase().includes(lowerQuery) ||
+        p.manufacturerBrand?.toLowerCase().includes(lowerQuery),
     );
-    return applyFallback(config.fallback, demoResults, 'PRODUCTS', config.source);
+    return applyFallback(
+      config.fallback,
+      demoResults,
+      'PRODUCTS',
+      config.source,
+    );
   }
 };
 
-export const getRelatedProducts = async (productId, limit = 4, fetchOptions) => {
+export const getRelatedProducts = async (
+  productId,
+  limit = 4,
+  fetchOptions,
+) => {
   if (!productId) return [];
 
   const config = getDataSourceConfig('products');
@@ -282,12 +393,13 @@ export const getRelatedProducts = async (productId, limit = 4, fetchOptions) => 
 
   if (config.source === 'demo') {
     logDataSource('PRODUCTS', 'DEMO');
-    const product = demoProducts.find(p => (p._id || p.id) === productId);
+    const product = demoProducts.find((p) => (p._id || p.id) === productId);
     if (!product) return [];
 
-    const related = demoProducts.filter(p =>
-      p.categorySlug === product.categorySlug &&
-      (p._id || p.id) !== productId
+    const related = demoProducts.filter(
+      (p) =>
+        p.categorySlug === product.categorySlug &&
+        (p._id || p.id) !== productId,
     );
 
     return normalizeProductList(related.slice(0, limit));
@@ -313,7 +425,10 @@ export const getRelatedProducts = async (productId, limit = 4, fetchOptions) => 
     return normalizeProductList(filtered);
   } catch (error) {
     const url = requestUrl || `${baseUrl}/products`;
-    console.error('[PRODUCT_SERVICE] getRelatedProducts failed:', { url, message: error.message });
+    console.error('[PRODUCT_SERVICE] getRelatedProducts failed:', {
+      url,
+      message: error.message,
+    });
     return applyFallback(config.fallback, [], 'PRODUCTS', config.source);
   }
 };
@@ -338,8 +453,16 @@ export const getFeaturedProducts = async (limit = 8, fetchOptions) => {
     return normalizeProductList(data?.data || []);
   } catch (error) {
     const url = `${baseUrl}/product/featured?${params.toString()}`;
-    console.error('[PRODUCT_SERVICE] getFeaturedProducts failed:', { url, message: error.message });
-    return applyFallback(config.fallback, demoProducts.slice(0, limit), 'PRODUCTS', config.source);
+    console.error('[PRODUCT_SERVICE] getFeaturedProducts failed:', {
+      url,
+      message: error.message,
+    });
+    return applyFallback(
+      config.fallback,
+      demoProducts.slice(0, limit),
+      'PRODUCTS',
+      config.source,
+    );
   }
 };
 
@@ -350,7 +473,7 @@ export const getProductBySlug = async (slug, fetchOptions) => {
 
   if (config.source === 'demo') {
     logDataSource('PRODUCTS', 'DEMO');
-    const product = demoProducts.find(p => p.slug === slug);
+    const product = demoProducts.find((p) => p.slug === slug);
     return normalizeProduct(product || null);
   }
 
@@ -362,9 +485,17 @@ export const getProductBySlug = async (slug, fetchOptions) => {
     return normalizeProduct(data?.data || null);
   } catch (error) {
     const url = `${baseUrl}/products/${slug}`;
-    console.error('[PRODUCT_SERVICE] getProductBySlug failed:', { url, message: error.message });
-    const demoProduct = demoProducts.find(p => p.slug === slug);
-    return applyFallback(config.fallback, demoProduct || null, 'PRODUCTS', config.source);
+    console.error('[PRODUCT_SERVICE] getProductBySlug failed:', {
+      url,
+      message: error.message,
+    });
+    const demoProduct = demoProducts.find((p) => p.slug === slug);
+    return applyFallback(
+      config.fallback,
+      demoProduct || null,
+      'PRODUCTS',
+      config.source,
+    );
   }
 };
 
@@ -377,14 +508,14 @@ export const getProductById = async (id, fetchOptions) => {
 
   if (config.source === 'demo') {
     logDataSource('PRODUCTS', 'DEMO');
-    const product = demoProducts.find(p => (p._id || p.id) === id);
+    const product = demoProducts.find((p) => (p._id || p.id) === id);
     return normalizeProduct(product || null);
   }
 
   // Real mode
   try {
     if (!isValidObjectId) {
-      const demoProduct = demoProducts.find(p => (p._id || p.id) === id);
+      const demoProduct = demoProducts.find((p) => (p._id || p.id) === id);
       if (demoProduct) return normalizeProduct(demoProduct);
       return config.fallback === 'empty' ? null : null;
     }
@@ -395,9 +526,12 @@ export const getProductById = async (id, fetchOptions) => {
   } catch (error) {
     const url = `${baseUrl}/products/id/${id}`;
     if (!silent) {
-      console.error('[PRODUCT_SERVICE] getProductById failed:', { url, message: error.message });
+      console.error('[PRODUCT_SERVICE] getProductById failed:', {
+        url,
+        message: error.message,
+      });
     }
-    const demoProduct = demoProducts.find(p => (p._id || p.id) === id);
+    const demoProduct = demoProducts.find((p) => (p._id || p.id) === id);
     if (demoProduct) return normalizeProduct(demoProduct);
     return null;
   }
@@ -411,7 +545,10 @@ export const getProductCompatibility = async (productId, fetchOptions) => {
     return data?.data || {};
   } catch (error) {
     const url = `${baseUrl}/products/id/${productId}/compatibility`;
-    console.error('[PRODUCT_SERVICE] getProductCompatibility failed:', { url, message: error.message });
+    console.error('[PRODUCT_SERVICE] getProductCompatibility failed:', {
+      url,
+      message: error.message,
+    });
     if (isProd) throw error;
     return {};
   }
@@ -424,11 +561,14 @@ export const getProductAlternatives = async (productId, fetchOptions) => {
     const data = await getJson(url, fetchOptions);
     return {
       oem: normalizeProductList(data?.data?.oem),
-      aftermarket: normalizeProductList(data?.data?.aftermarket)
+      aftermarket: normalizeProductList(data?.data?.aftermarket),
     };
   } catch (error) {
     const url = `${baseUrl}/products/id/${productId}/alternatives`;
-    console.error('[PRODUCT_SERVICE] getProductAlternatives failed:', { url, message: error.message });
+    console.error('[PRODUCT_SERVICE] getProductAlternatives failed:', {
+      url,
+      message: error.message,
+    });
     if (isProd) throw error;
     return { oem: [], aftermarket: [] };
   }

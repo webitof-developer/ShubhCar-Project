@@ -1,0 +1,79 @@
+import type { ReviewsRequestShape } from './reviews.types';
+const ProductReview = require('../../models/ProductReview.model');
+const { getOffsetPagination } = require('../../utils/pagination');
+
+class ReviewsRepo {
+  findByProduct(productId) {
+    return ProductReview.find(
+      { productId, status: 'published' },
+      { userId: 1, rating: 1, title: 1, comment: 1, createdAt: 1 },
+    )
+      .populate('userId', 'firstName lastName email')
+      .sort({ createdAt: -1 })
+      .lean();
+  }
+
+  getAggregate(productId) {
+    const mongoose = require('mongoose');
+    return ProductReview.aggregate([
+      {
+        $match: {
+          productId: new mongoose.Types.ObjectId(productId),
+          status: 'published',
+        },
+      },
+      {
+        $group: {
+          _id: '$productId',
+          avgRating: { $avg: '$rating' },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+  }
+
+  findById(id) {
+    return ProductReview.findById(id).lean();
+  }
+
+  findByIdWithRefs(id) {
+    return ProductReview.findById(id)
+      .populate('userId', 'firstName lastName email phone')
+      .populate('productId', 'name sku slug ratingAvg ratingCount')
+      .lean();
+  }
+
+  findByUserProduct(userId, productId) {
+    return ProductReview.findOne({ userId, productId }).lean();
+  }
+
+  create(data) {
+    return ProductReview.create(data);
+  }
+
+  update(id, payload) {
+    return ProductReview.findByIdAndUpdate(id, payload, { new: true }).lean();
+  }
+
+  remove(id) {
+    return ProductReview.findByIdAndDelete(id).lean();
+  }
+
+  adminList(filter: any = {}, { limit = 20, page = 1 } = {}) {
+    const { limit: safeLimit, skip } = getOffsetPagination({ page, limit });
+
+    return ProductReview.find(filter)
+      .sort({ createdAt: -1 })
+      .limit(safeLimit)
+      .skip(skip)
+      .populate('userId', 'firstName lastName email phone')
+      .populate('productId', 'name sku slug ratingAvg ratingCount')
+      .lean();
+  }
+
+  adminCount(filter: any = {}) {
+    return ProductReview.countDocuments(filter);
+  }
+}
+
+module.exports = new ReviewsRepo();
