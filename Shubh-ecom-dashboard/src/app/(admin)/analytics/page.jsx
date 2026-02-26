@@ -174,7 +174,22 @@ const AnalyticsPage = () => {
 
   const chartOptions = useMemo(
     () => ({
-      chart: { height: 320, type: 'line', toolbar: { show: false } },
+      chart: {
+        height: 320,
+        type: 'line',
+        toolbar: {
+          show: false,
+          tools: {
+            zoom: false,
+            zoomin: false,
+            zoomout: false,
+            pan: false,
+            reset: false,
+          },
+        },
+        zoom: { enabled: false },
+        selection: { enabled: false },
+      },
       stroke: { width: [2, 3], curve: 'smooth', dashArray: [0, 8] },
       colors: ['#1f5eff', '#1aa36f'],
       series: [

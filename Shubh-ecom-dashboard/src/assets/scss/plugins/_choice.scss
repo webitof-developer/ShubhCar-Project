@@ -25,25 +25,26 @@
           }
 
           &:after {
-               content: "\ea4a";
+               content: "";
                position: absolute;
                border: 0;
                top: 18px;
                right: 12px;
                left: auto;
-               font-size: 20px;
-               font-family: "boxicons";
-               width: auto;
-               height: auto;
+               width: 8px;
+               height: 8px;
                margin-top: 0;
-               transform: translateY(-50%);
+               border-right: 1.5px solid currentColor;
+               border-bottom: 1.5px solid currentColor;
+               transform: translateY(-50%) rotate(45deg);
                transition: transform 0.2s ease-in-out;
                pointer-events: none;
+               opacity: 0.8;
           }
 
           &.is-open:after {
                margin-top: 0;
-               transform: translateY(-50%) rotate(-180deg);
+               transform: translateY(-40%) rotate(-135deg);
           }
 
           .choices__button {

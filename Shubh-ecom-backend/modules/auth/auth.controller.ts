@@ -4,14 +4,27 @@ import type { AuthRequest } from './auth.types';
 const asyncHandler = require('../../utils/asyncHandler');
 const authService = require('./auth.service');
 const { success } = require('../../utils/apiResponse');
+const {
+  setAccessTokenCookie,
+  setAuthCookies,
+  clearAuthCookies,
+  getRefreshTokenFromRequest,
+} = require('../../utils/cookieTokens');
 
 exports.register = asyncHandler(async (req: AuthRequest, res: Response) => {
   const result = await authService.register(req.body);
+  if (result?.token) {
+    setAccessTokenCookie(res, result.token);
+  }
   return success(res, result, 'Registration successful');
 });
 
 exports.login = asyncHandler(async (req: AuthRequest, res: Response) => {
   const result = await authService.login(req.body);
+  setAuthCookies(res, {
+    accessToken: result?.accessToken,
+    refreshToken: result?.refreshToken,
+  });
   return success(res, result, 'Login successful');
 });
 
@@ -24,6 +37,10 @@ exports.verifyPhoneOtp = asyncHandler(async (req: AuthRequest, res: Response) =>
   const result = await authService.verifyPhoneOtp(req.body, {
     ip: req.ip,
     device: req.headers['user-agent'],
+  });
+  setAuthCookies(res, {
+    accessToken: result?.accessToken,
+    refreshToken: result?.refreshToken,
   });
   return success(res, result, 'OTP verified successfully');
 });
@@ -38,6 +55,10 @@ exports.verifyEmailOtp = asyncHandler(async (req: AuthRequest, res: Response) =>
     ip: req.ip,
     device: req.headers['user-agent'],
   });
+  setAuthCookies(res, {
+    accessToken: result?.accessToken,
+    refreshToken: result?.refreshToken,
+  });
   return success(res, result, 'OTP verified successfully');
 });
 
@@ -46,24 +67,35 @@ exports.googleAuth = asyncHandler(async (req: AuthRequest, res: Response) => {
     ip: req.ip,
     device: req.headers['user-agent'],
   });
+  setAuthCookies(res, {
+    accessToken: result?.accessToken,
+    refreshToken: result?.refreshToken,
+  });
   return success(res, result, 'Login successful');
 });
 
 exports.refresh = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const result = await authService.refresh(req.body);
+  const refreshToken = getRefreshTokenFromRequest(req);
+  const result = await authService.refresh({ refreshToken });
+  setAuthCookies(res, {
+    accessToken: result?.accessToken,
+    refreshToken: result?.refreshToken,
+  });
   return success(res, result, 'Token refreshed');
 });
 exports.logout = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const refreshToken = getRefreshTokenFromRequest(req);
   await authService.logout({
-
-     userId: req.user.id,
-    refreshToken: req.body.refreshToken,
+    userId: req.user.id,
+    refreshToken,
   });
+  clearAuthCookies(res);
   return success(res, null, 'Logout successful');
 });
 
 exports.logoutAll = asyncHandler(async (req: AuthRequest, res: Response) => {
   await authService.logoutAll(req.user.userId);
+  clearAuthCookies(res);
   return success(res, null, 'All sessions logged out');
 });
 

@@ -67,7 +67,7 @@ app.use(
       env.BACKEND_ORIGIN,
       'http://localhost:3000',
     ],
-    credentials: false, // JWT in headers/localStorage; no cookies => no credentialed requests needed
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: [
       'Content-Type',

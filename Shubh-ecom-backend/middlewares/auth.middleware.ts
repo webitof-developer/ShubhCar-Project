@@ -2,17 +2,15 @@ const { verifyToken } = require('../utils/jwt');
 const { error } = require('../utils/apiResponse');
 const env = require('../config/env');
 const tokenBlacklist = require('../services/tokenBlacklist.service');
+const { getAccessTokenFromRequest } = require('../utils/cookieTokens');
 
 module.exports = (allowedRoles: string[] = []) => {
   return async (req: any, res: any, next: any) => {
     try {
-      const authHeader = req.headers.authorization;
-
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      const token = getAccessTokenFromRequest(req);
+      if (!token) {
         error('Authorization token missing', 401);
       }
-
-      const token = authHeader.split(' ')[1];
 
       // Security: Await blacklist check to ensure revoked tokens are blocked before auth succeeds.
       if (typeof tokenBlacklist?.isBlacklisted === 'function') {

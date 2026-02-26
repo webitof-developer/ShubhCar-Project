@@ -26,6 +26,22 @@ const extractItems = (payload, aliases = []) => {
   return []
 }
 
+const normalizeVehicleId = (value) => {
+  if (value === null || value === undefined) return ''
+  if (typeof value === 'string' || typeof value === 'number') return String(value)
+  if (typeof value === 'object') {
+    if (value.vehicleId !== undefined) return normalizeVehicleId(value.vehicleId)
+    if (value._id !== undefined) return normalizeVehicleId(value._id)
+    if (value.id !== undefined) return normalizeVehicleId(value.id)
+  }
+  return ''
+}
+
+const normalizeVehicleIds = (items = []) =>
+  (Array.isArray(items) ? items : [])
+    .map((item) => normalizeVehicleId(item))
+    .filter(Boolean)
+
 const AddProduct = () => {
   const { data: session } = useSession()
   const router = useRouter()
@@ -248,7 +264,7 @@ const AddProduct = () => {
         if (compatResponse.ok) {
           const compatData = await compatResponse.json()
           const ids = compatData?.data?.vehicleIds || []
-          const compatIds = Array.isArray(ids) ? ids : []
+          const compatIds = normalizeVehicleIds(ids)
           setCompatibilityVehicleIds(compatIds)
           // Save snapshot after all data is loaded
           setCompatSnapshot([...compatIds])

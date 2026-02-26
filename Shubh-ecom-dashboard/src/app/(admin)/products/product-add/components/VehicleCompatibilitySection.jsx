@@ -6,6 +6,39 @@ import { API_BASE_URL } from '@/helpers/apiBase'
 
 const sortByName = (items = []) => [...items].sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')))
 
+const normalizeVehicleId = (value) => {
+  if (value === null || value === undefined) return ''
+  if (typeof value === 'string' || typeof value === 'number') return String(value)
+  if (typeof value === 'object') {
+    if (value.vehicleId !== undefined) return normalizeVehicleId(value.vehicleId)
+    if (value._id !== undefined) return normalizeVehicleId(value._id)
+    if (value.id !== undefined) return normalizeVehicleId(value.id)
+  }
+  return ''
+}
+
+const normalizeVehicleIds = (items = []) =>
+  (Array.isArray(items) ? items : [])
+    .map((item) => normalizeVehicleId(item))
+    .filter(Boolean)
+
+const vehicleName = (vehicle, key) => {
+  const direct = vehicle?.[key]
+  if (direct && typeof direct === 'object') return direct.name || ''
+  const ref = vehicle?.[`${key}Id`]
+  if (ref && typeof ref === 'object') return ref.name || ''
+  return ''
+}
+
+const vehicleYear = (vehicle) => {
+  const direct = vehicle?.year
+  if (direct && typeof direct === 'object') return direct.year ?? ''
+  const ref = vehicle?.yearId
+  if (ref && typeof ref === 'object') return ref.year ?? ''
+  if (typeof direct === 'number' || typeof direct === 'string') return direct
+  return ''
+}
+
 const VehicleCompatibilitySection = ({ token, value = [], onChange }) => {
   const [brands, setBrands] = useState([])
   const [models, setModels] = useState([])
@@ -23,7 +56,8 @@ const VehicleCompatibilitySection = ({ token, value = [], onChange }) => {
   })
   const [error, setError] = useState(null)
 
-  const selectedIds = useMemo(() => new Set(value.map((id) => String(id))), [value])
+  const normalizedValue = useMemo(() => normalizeVehicleIds(value), [value])
+  const selectedIds = useMemo(() => new Set(normalizedValue), [normalizedValue])
 
   useEffect(() => {
     if (!token) return
@@ -130,8 +164,8 @@ const VehicleCompatibilitySection = ({ token, value = [], onChange }) => {
   }, [filters.brandId, filters.modelId, filters.yearId, token])
 
   useEffect(() => {
-    if (!token || !value.length) return
-    const missing = value.filter((id) => !selectedVehicles.has(String(id)))
+    if (!token || !normalizedValue.length) return
+    const missing = normalizedValue.filter((id) => !selectedVehicles.has(String(id)))
     if (!missing.length) return
     const fetchSelected = async () => {
       setLoading((prev) => ({ ...prev, selected: true }))
@@ -156,11 +190,11 @@ const VehicleCompatibilitySection = ({ token, value = [], onChange }) => {
       }
     }
     fetchSelected()
-  }, [token, value, selectedVehicles])
+  }, [token, normalizedValue, selectedVehicles])
 
   const toggleVehicle = (vehicle) => {
     const id = String(vehicle._id)
-    const next = new Set(value.map((item) => String(item)))
+    const next = new Set(normalizedValue)
     if (next.has(id)) {
       next.delete(id)
     } else {
@@ -176,7 +210,7 @@ const VehicleCompatibilitySection = ({ token, value = [], onChange }) => {
   }
 
   const removeSelected = (id) => {
-    const next = value.filter((item) => String(item) !== String(id))
+    const next = normalizedValue.filter((item) => String(item) !== String(id))
     onChange(next)
     setSelectedVehicles((prev) => {
       const updated = new Map(prev)
@@ -295,7 +329,7 @@ const VehicleCompatibilitySection = ({ token, value = [], onChange }) => {
 
         <div className="mt-4">
           <h6 className="mb-2">Selected Compatibility</h6>
-          {value.length === 0 ? (
+          {normalizedValue.length === 0 ? (
             <div className="text-muted small">No vehicles selected yet.</div>
           ) : (
             <div className="border rounded p-2">
@@ -303,7 +337,7 @@ const VehicleCompatibilitySection = ({ token, value = [], onChange }) => {
                 <div key={vehicle._id} className="d-flex align-items-start gap-3 border-bottom py-2">
                   <div className="flex-grow-1">
                     <div className="fw-semibold">
-                      {vehicle.brand?.name} {vehicle.model?.name} {vehicle.year?.year} {vehicle.variantName}
+                      {vehicleName(vehicle, 'brand') || '-'} {vehicleName(vehicle, 'model') || '-'} {vehicleYear(vehicle) || '-'} {vehicle.variantName}
                     </div>
                     <div className="text-muted small">
                       {[vehicle.display?.fuelType, vehicle.display?.transmission, vehicle.display?.engineCapacity]
