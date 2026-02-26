@@ -1,4 +1,3 @@
-import type { CouponsRequestShape } from './coupons.types';
 const express = require('express');
 const auth = require('../../middlewares/auth.middleware');
 const validate = require('../../middlewares/validate.middleware');
@@ -32,7 +31,7 @@ router.get('/public', controller.listPublic);
  *   post:
  *     summary: Preview coupon against current cart
  *     tags: [Coupons]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -55,7 +54,7 @@ router.post('/preview', auth(), validate(previewSchema), controller.preview);
  *   get:
  *     summary: List coupon usages
  *     tags: [Coupons]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200:
  *         description: Usage list
@@ -67,7 +66,7 @@ router.get('/usage/list', adminLimiter, auth([ROLES.ADMIN]), controller.listUsag
  *   get:
  *     summary: List coupons (Admin)
  *     tags: [Coupons]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Coupons list }
  */
@@ -79,7 +78,7 @@ router.get('/', adminLimiter, auth([ROLES.ADMIN]), controller.list);
  *   get:
  *     summary: Get coupon by id (Admin)
  *     tags: [Coupons]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -96,7 +95,7 @@ router.get('/:id', adminLimiter, auth([ROLES.ADMIN]), validateId('id'), controll
  *   post:
  *     summary: Create coupon (Admin)
  *     tags: [Coupons]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -129,7 +128,7 @@ router.post(
  *   put:
  *     summary: Update coupon (Admin)
  *     tags: [Coupons]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -167,7 +166,7 @@ router.put(
  *   delete:
  *     summary: Delete coupon (Admin)
  *     tags: [Coupons]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -179,3 +178,4 @@ router.put(
 router.delete('/:id', adminLimiter, auth([ROLES.ADMIN]), validateId('id'), controller.remove);
 
 module.exports = router;
+

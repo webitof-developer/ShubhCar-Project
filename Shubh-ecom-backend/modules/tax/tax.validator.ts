@@ -1,4 +1,3 @@
-import type { TaxRequestShape } from './tax.types';
 const Joi = require('joi');
 
 const listTaxQuerySchema = Joi.object({
@@ -27,3 +26,4 @@ module.exports = {
   createTaxSchema,
   updateTaxSchema,
 };
+

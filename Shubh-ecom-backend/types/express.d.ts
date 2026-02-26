@@ -1,4 +1,5 @@
 import 'express-serve-static-core';
+import type { AuthenticatedUser, UploadedFiles } from './modules/common';
 
 declare module 'express-serve-static-core' {
   interface Request {
@@ -8,17 +9,9 @@ declare module 'express-serve-static-core' {
       requestId?: string;
       [key: string]: unknown;
     };
-    user: {
-      _id?: string;
-      id?: string;
-      userId?: string;
-      email?: string;
-      phone?: string;
-      role?: string;
-      [key: string]: unknown;
-    };
-    file?: any;
-    files?: any;
+    user: AuthenticatedUser;
+    file?: Express.Multer.File;
+    files?: UploadedFiles;
   }
 
   interface Response {

@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -16,12 +17,12 @@ export interface AuditBody {
 }
 
 export interface AuditRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface AuditRequestShape {
@@ -39,25 +40,25 @@ export type AuditRequest = Request<
   AuditRequestContext;
 
 export interface AuditEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface AuditServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type AuditServiceResult<T = any> = Promise<T>;
+export type AuditServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface AuditRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface AuditRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface AuditValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -88,3 +89,4 @@ export interface AuditLogRecord {
   meta: Record<string, unknown>;
   timestamp: string;
 }
+

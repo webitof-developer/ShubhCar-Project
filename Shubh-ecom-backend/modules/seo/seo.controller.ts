@@ -1,4 +1,3 @@
-import type { SeoRequestShape } from './seo.types';
 import type { Response } from 'express';
 import type { SeoRequest } from './seo.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -32,3 +31,4 @@ exports.resolve = asyncHandler(async (req: SeoRequest, res: Response) => {
   const data = await seoService.resolveSeo(req.query);
   return success(res, data);
 });
+

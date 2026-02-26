@@ -1,4 +1,3 @@
-import type { VehicleManagementRequestShape } from '../vehicle-management.types';
 const express = require('express');
 const auth = require('../../../middlewares/auth.middleware');
 const validate = require('../../../middlewares/validate.middleware');
@@ -30,7 +29,7 @@ router.get('/', validate(modelListQuerySchema, 'query'), controller.list);
  *   post:
  *     summary: Create vehicle model
  *     tags: [Vehicle]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -69,7 +68,7 @@ router.get('/:id', validateId('id'), controller.get);
  *   put:
  *     summary: Update vehicle model
  *     tags: [Vehicle]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -102,7 +101,7 @@ router.put(
  *   delete:
  *     summary: Delete vehicle model
  *     tags: [Vehicle]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -114,3 +113,4 @@ router.put(
 router.delete('/:id', auth([ROLES.ADMIN]), validateId('id'), controller.remove);
 
 module.exports = router;
+

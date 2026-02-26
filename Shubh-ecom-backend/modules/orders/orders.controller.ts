@@ -1,4 +1,3 @@
-import type { OrdersRequestShape } from './orders.types';
 import type { Response } from 'express';
 import type { OrdersRequest } from './orders.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -161,3 +160,4 @@ exports.adminGetStatusCounts = asyncHandler(async (req: OrdersRequest, res: Resp
   const data = await adminService.adminGetStatusCounts(req.user);
   return success(res, data, 'Status counts fetched');
 });
+

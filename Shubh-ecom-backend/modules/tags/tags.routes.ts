@@ -1,4 +1,3 @@
-import type { TagsRequestShape } from './tags.types';
 const express = require('express');
 const auth = require('../../middlewares/auth.middleware');
 const validate = require('../../middlewares/validate.middleware');
@@ -25,3 +24,4 @@ router.put(
 router.delete('/:id', auth([ROLES.ADMIN]), validateId('id'), controller.remove);
 
 module.exports = router;
+

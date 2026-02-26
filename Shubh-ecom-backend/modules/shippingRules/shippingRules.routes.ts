@@ -1,4 +1,3 @@
-import type { ShippingRulesRequestShape } from './shippingRules.types';
 const express = require('express');
 const auth = require('../../middlewares/auth.middleware');
 const validate = require('../../middlewares/validate.middleware');
@@ -19,7 +18,7 @@ const router = express.Router();
  *   get:
  *     summary: List shipping rules
  *     tags: [Shipping]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Shipping rules }
  */
@@ -36,7 +35,7 @@ router.get(
  *   post:
  *     summary: Create shipping rule
  *     tags: [Shipping]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -64,7 +63,7 @@ router.post(
  *   put:
  *     summary: Update shipping rule
  *     tags: [Shipping]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -93,7 +92,7 @@ router.put(
  *   delete:
  *     summary: Delete shipping rule
  *     tags: [Shipping]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -105,3 +104,4 @@ router.put(
 router.delete('/:id', auth([ROLES.ADMIN]), validateId('id'), controller.remove);
 
 module.exports = router;
+

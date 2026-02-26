@@ -1,4 +1,3 @@
-import type { ProductsRequestShape } from './products.types';
 const ExcelJS = require('exceljs');
 const crypto = require('crypto');
 const mongoose = require('mongoose');
@@ -8,7 +7,28 @@ const { redis, redisEnabled } = require('../../config/redis');
 const { productBulkUpdateQueue } = require('../../queues/productBulkUpdate.queue');
 
 const UPLOAD_TTL_SECONDS = 60 * 60; // 1 hour
-const VALID_HEADERS: any = {
+type ProductBulkUpdateRow = {
+  rowNumber: number;
+  productId: string;
+  productCode: string;
+  sku: string;
+  productName: string;
+  retailMrp: number;
+  retailSalePrice: number;
+  wholesaleMrp: number;
+  wholesaleSalePrice: number;
+  stock: number;
+};
+
+type InvalidBulkUpdateRow = {
+  row: number;
+  productId: string | null;
+  sku: string | null;
+  productName: string | null;
+  reason: string;
+};
+
+const VALID_HEADERS: Record<string, string> = {
   productcode: 'productCode',
   product_code: 'productCode',
   productid: 'productId',
@@ -51,7 +71,7 @@ const toNumber = (value) => {
 
 const parseSheetRows = (sheet) => {
   const headerRow = sheet.getRow(1);
-  const headerMap: any = {};
+  const headerMap: Record<string, number> = {};
   headerRow.eachCell((cell, colNumber) => {
     const normalized = normalizeHeader(cell.value);
     const key = VALID_HEADERS[normalized];
@@ -65,7 +85,7 @@ const parseSheetRows = (sheet) => {
     error('CSV must include retail_mrp, retail_sale_price, wholesale_mrp, wholesale_sale_price, and stock columns', 400);
   }
 
-  const rows: any[] = [];
+  const rows: ProductBulkUpdateRow[] = [];
   for (let rowNumber = 2; rowNumber <= sheet.rowCount; rowNumber += 1) {
     const row = sheet.getRow(rowNumber);
     if (!row || row.cellCount === 0) continue;
@@ -97,8 +117,8 @@ const parseSheetRows = (sheet) => {
   return rows;
 };
 
-const validateRow = (row) => {
-  const errors: any[] = [];
+const validateRow = (row: ProductBulkUpdateRow) => {
+  const errors: string[] = [];
   const hasProductId = Boolean(row.productId);
   const hasProductCode = Boolean(row.productCode);
   const hasSku = Boolean(row.sku);
@@ -178,8 +198,8 @@ const loadUpload = async (uploadId) => {
 class ProductBulkUpdateService {
   async preview(file, actor) {
     const rows = await parseUpload(file);
-    const invalidRows: any[] = [];
-    const validRows: any[] = [];
+    const invalidRows: InvalidBulkUpdateRow[] = [];
+    const validRows: ProductBulkUpdateRow[] = [];
 
     rows.forEach((row) => {
       const rowErrors = validateRow(row);
@@ -271,3 +291,4 @@ class ProductBulkUpdateService {
 }
 
 module.exports = new ProductBulkUpdateService();
+

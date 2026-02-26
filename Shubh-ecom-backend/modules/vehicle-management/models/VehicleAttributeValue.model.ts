@@ -1,4 +1,3 @@
-import type { VehicleManagementRequestShape } from '../vehicle-management.types';
 const mongoose = require('mongoose');
 
 const vehicleAttributeValueSchema = new mongoose.Schema(
@@ -29,3 +28,4 @@ module.exports = mongoose.model(
   'VehicleAttributeValue',
   vehicleAttributeValueSchema,
 );
+

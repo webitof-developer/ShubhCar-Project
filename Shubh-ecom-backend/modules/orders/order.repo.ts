@@ -1,4 +1,3 @@
-import type { OrdersRequestShape } from './orders.types';
 const mongoose = require('mongoose');
 const { createSafeSession } = require('../../utils/mongoTransaction');
 const Order = require('../../models/Order.model');
@@ -6,7 +5,7 @@ const OrderItem = require('../../models/OrderItem.model');
 const orderVersionRepo = require('./orderVersion.repo');
 const orderEventRepo = require('./orderEvent.repo');
 
-const ORDER_STATUS_TO_ITEM_STATUS: any = {
+const ORDER_STATUS_TO_ITEM_STATUS: Record<string, string> = {
   created: 'pending',
   pending_payment: 'pending',
   confirmed: 'confirmed',
@@ -245,3 +244,4 @@ class OrderRepository {
 }
 
 module.exports = new OrderRepository();
+

@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -20,12 +21,12 @@ export interface RolesBody {
 }
 
 export interface RolesRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface RolesRequestShape {
@@ -43,25 +44,25 @@ export type RolesRequest = Request<
   RolesRequestContext;
 
 export interface RolesEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface RolesServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type RolesServiceResult<T = any> = Promise<T>;
+export type RolesServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface RolesRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface RolesRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface RolesValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -88,3 +89,4 @@ export interface UpdateRoleInput {
   name?: string;
   permissions?: PermissionsMap;
 }
+

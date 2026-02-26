@@ -1,9 +1,8 @@
-import type { ProductAttributeRequestShape } from './productAttribute.types';
 const ProductAttributeValue = require('../../models/ProductAttributeValue.model');
 const { getOffsetPagination } = require('../../utils/pagination');
 
 class ProductAttributeRepository {
-  getByProduct(productId, pagination: any = {}) {
+  getByProduct(productId, pagination: Record<string, unknown> = {}) {
     const { limit, skip } = getOffsetPagination(pagination);
     return ProductAttributeValue.find({ productId })
       .populate('attributeId')
@@ -39,3 +38,4 @@ class ProductAttributeRepository {
 }
 
 module.exports = new ProductAttributeRepository();
+

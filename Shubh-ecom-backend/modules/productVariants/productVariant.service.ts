@@ -1,5 +1,3 @@
-import type { ProductVariantsRequestShape } from './productVariants.types';
-const mongoose = require('mongoose');
 const { createSafeSession } = require('../../utils/mongoTransaction');
 const ProductVariant = require('../../models/ProductVariant.model');
 const InventoryLog = require('../../models/InventoryLog.model');
@@ -147,3 +145,4 @@ class ProductVariantService {
 }
 
 module.exports = new ProductVariantService();
+

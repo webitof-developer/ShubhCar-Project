@@ -1,8 +1,20 @@
-import type { ProductsRequestShape } from './products.types';
 const Product = require('../../models/Product.model');
 // Security: Escape user input before constructing RegExp to prevent ReDoS.
 const { escapeRegex } = require('../../utils/escapeRegex');
 const { getOffsetPagination } = require('../../utils/pagination');
+
+type ProductFilter = Record<string, unknown> & {
+  _id?: { $lt: string };
+  status?: string;
+  categoryId?: string;
+  manufacturerBrand?: string;
+  productType?: { $in: string[] };
+  $or?: unknown[];
+  $and?: unknown[];
+  isFeatured?: boolean;
+};
+
+type UpdateOptions = Record<string, unknown>;
 
 class ProductRepository {
   findById(id, session) {
@@ -25,14 +37,14 @@ class ProductRepository {
   }
 
   listByCategory(categoryId, { limit = 20, cursor }) {
-    const query: any = { categoryId, status: 'active' };
+    const query: ProductFilter = { categoryId, status: 'active' };
     if (cursor) query._id = { $lt: cursor };
     const { limit: safeLimit } = getOffsetPagination({ limit });
     return Product.find(query).sort({ _id: -1 }).limit(safeLimit).lean();
   }
 
   listFeatured({ limit = 20, cursor }) {
-    const query: any = { isFeatured: true, status: 'active' };
+    const query: ProductFilter = { isFeatured: true, status: 'active' };
     if (cursor) query._id = { $lt: cursor };
     const { limit: safeLimit } = getOffsetPagination({ limit });
     return Product.find(query).sort({ _id: -1 }).limit(safeLimit).lean();
@@ -49,7 +61,7 @@ class ProductRepository {
     maxPrice,
     sort = 'created_desc',
   }) {
-    const filter: any = { status: 'active' };
+    const filter: ProductFilter = { status: 'active' };
     if (categoryId) filter.categoryId = categoryId;
     if (manufacturerBrand) filter.manufacturerBrand = manufacturerBrand;
     if (productType) {
@@ -92,7 +104,7 @@ class ProductRepository {
       });
     }
 
-    const sortMap: any = {
+    const sortMap: Record<string, Record<string, 1 | -1>> = {
       created_desc: { createdAt: -1 },
       created_asc: { createdAt: 1 },
       price_asc: { 'retailPrice.mrp': 1 },
@@ -117,7 +129,7 @@ class ProductRepository {
     return Product.create(data);
   }
 
-  updateById(id, data, options: any = {}) {
+  updateById(id, data, options: UpdateOptions = {}) {
     return Product.findByIdAndUpdate(id, { $set: data }, { new: true })
       .setOptions(options)
       .lean();
@@ -163,3 +175,4 @@ class ProductRepository {
 }
 
 module.exports = new ProductRepository();
+

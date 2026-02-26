@@ -1,4 +1,3 @@
-import type { ReturnsRequestShape } from './returns.types';
 const ReturnRequest = require('../../models/ReturnRequest.model');
 const { getOffsetPagination } = require('../../utils/pagination');
 
@@ -13,7 +12,10 @@ class ReturnRepo {
     return query.lean();
   }
 
-  list(filter: any = {}, options: any = {}) {
+  list(
+    filter: Record<string, unknown> = {},
+    options: Record<string, unknown> = {},
+  ) {
     const { session } = options;
     const { limit, skip } = getOffsetPagination(options);
     const query = ReturnRequest.find(filter)
@@ -24,14 +26,15 @@ class ReturnRepo {
     return query.lean();
   }
 
-  count(filter: any = {}) {
+  count(filter: Record<string, unknown> = {}) {
     return ReturnRequest.countDocuments(filter);
   }
 
-  update(id, update, options: any = {}) {
-    const queryOpts: any = { new: true, ...options };
+  update(id, update, options: Record<string, unknown> = {}) {
+    const queryOpts: Record<string, unknown> = { new: true, ...options };
     return ReturnRequest.findByIdAndUpdate(id, update, queryOpts).lean();
   }
 }
 
 module.exports = new ReturnRepo();
+

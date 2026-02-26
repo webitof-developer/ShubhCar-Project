@@ -1,4 +1,3 @@
-import type { ProductsRequestShape } from './products.types';
 const ExcelJS = require('exceljs');
 const Product = require('../../models/Product.model');
 const ProductImage = require('../../models/ProductImage.model');
@@ -11,7 +10,20 @@ const PRODUCT_CODE_REGEX = /^PRO-\d{6}$/;
 const VEHICLE_CODE_REGEX = /^VEH-\d{6}$/;
 const CATEGORY_CODE_REGEX = /^(CAT|CATS)-\d{6}$/;
 
-const ensureProductCodes = async (products: any[] = []) => {
+type CodeableEntity = {
+  _id: unknown;
+  productId?: string;
+  vehicleCode?: string;
+  categoryCode?: string;
+  parentId?: unknown;
+};
+
+type HeaderColumn = {
+  key: string;
+  label: string;
+};
+
+const ensureProductCodes = async (products: CodeableEntity[] = []) => {
   const missing = products.filter((item) => !item.productId || !PRODUCT_CODE_REGEX.test(item.productId));
   if (!missing.length) return;
 
@@ -19,7 +31,7 @@ const ensureProductCodes = async (products: any[] = []) => {
     .select('productId')
     .lean();
   const used = new Set(existingCodes.map((item) => item.productId));
-  const updates: any[] = [];
+  const updates: Array<Record<string, unknown>> = [];
 
   for (const item of missing) {
     let next = await generateProductCode();
@@ -41,7 +53,7 @@ const ensureProductCodes = async (products: any[] = []) => {
   }
 };
 
-const ensureVehicleCodes = async (vehicles: any[] = []) => {
+const ensureVehicleCodes = async (vehicles: CodeableEntity[] = []) => {
   const missing = vehicles.filter((item) => !item.vehicleCode || !VEHICLE_CODE_REGEX.test(item.vehicleCode));
   if (!missing.length) return;
 
@@ -49,7 +61,7 @@ const ensureVehicleCodes = async (vehicles: any[] = []) => {
     .select('vehicleCode')
     .lean();
   const used = new Set(existingCodes.map((item) => item.vehicleCode));
-  const updates: any[] = [];
+  const updates: Array<Record<string, unknown>> = [];
 
   for (const item of missing) {
     let next = await generateVehicleCode();
@@ -71,7 +83,7 @@ const ensureVehicleCodes = async (vehicles: any[] = []) => {
   }
 };
 
-const ensureCategoryCodes = async (categories: any[] = []) => {
+const ensureCategoryCodes = async (categories: CodeableEntity[] = []) => {
   const missing = categories.filter((item) => !item.categoryCode || !CATEGORY_CODE_REGEX.test(item.categoryCode));
   if (!missing.length) return;
 
@@ -79,7 +91,7 @@ const ensureCategoryCodes = async (categories: any[] = []) => {
     .select('categoryCode')
     .lean();
   const used = new Set(existingCodes.map((item) => item.categoryCode));
-  const updates: any[] = [];
+  const updates: Array<Record<string, unknown>> = [];
 
   for (const category of missing) {
     let next = category.parentId ? await generateSubCategoryCode() : await generateCategoryCode();
@@ -122,7 +134,7 @@ const buildWorkbook = (headers, rows, sheetName) => {
   return workbook;
 };
 
-const bulkCreateHeaders: any[] = [
+const bulkCreateHeaders: HeaderColumn[] = [
   { key: 'productCode', label: 'productCode*' },
   { key: 'name', label: 'name*' },
   { key: 'categoryCode', label: 'categoryCode*' },
@@ -157,7 +169,7 @@ const bulkCreateHeaders: any[] = [
   { key: 'gallery_image_url_5', label: 'gallery_image_url_5' },
 ];
 
-const bulkUpdateHeaders: any[] = [
+const bulkUpdateHeaders: HeaderColumn[] = [
   { key: 'productCode', label: 'productCode*' },
   { key: 'sku', label: 'sku' },
   { key: 'productName', label: 'productName' },
@@ -272,7 +284,7 @@ class ProductBulkExportService {
       ProductCompatibility.find({ productId: { $in: productIds } }).lean(),
       categoryIds.length
         ? Category.find({ _id: { $in: categoryIds } }).select('_id categoryCode parentId').lean()
-        : [] as any[],
+        : [],
     ]);
 
     const imageMap = new Map();
@@ -286,7 +298,7 @@ class ProductBulkExportService {
     const compatMap = new Map();
     const allVehicleIds = new Set();
     compat.forEach((item) => {
-      const ids = Array.isArray(item.vehicleIds) ? item.vehicleIds : [] as any[];
+      const ids = Array.isArray(item.vehicleIds) ? item.vehicleIds : [];
       compatMap.set(String(item.productId), ids.map((id) => String(id)));
       ids.forEach((id) => allVehicleIds.add(String(id)));
     });
@@ -295,7 +307,7 @@ class ProductBulkExportService {
       ? await Vehicle.find({ _id: { $in: Array.from(allVehicleIds) } })
         .select('vehicleCode')
         .lean()
-      : [] as any[];
+      : [];
 
     await ensureVehicleCodes(vehicles);
 
@@ -372,3 +384,4 @@ class ProductBulkExportService {
 module.exports = new ProductBulkExportService();
 module.exports.bulkCreateHeaders = bulkCreateHeaders;
 module.exports.bulkUpdateHeaders = bulkUpdateHeaders;
+

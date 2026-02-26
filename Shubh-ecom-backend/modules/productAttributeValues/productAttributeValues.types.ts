@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -20,12 +21,12 @@ export interface ProductAttributeValuesBody {
 }
 
 export interface ProductAttributeValuesRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface ProductAttributeValuesRequestShape {
@@ -43,25 +44,25 @@ export type ProductAttributeValuesRequest = Request<
   ProductAttributeValuesRequestContext;
 
 export interface ProductAttributeValuesEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ProductAttributeValuesServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type ProductAttributeValuesServiceResult<T = any> = Promise<T>;
+export type ProductAttributeValuesServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface ProductAttributeValuesRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ProductAttributeValuesRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ProductAttributeValuesValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -82,3 +83,4 @@ export interface UpsertAttributeValueInput {
   value: string;
   displayOrder?: number;
 }
+

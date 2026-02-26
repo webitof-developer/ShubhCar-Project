@@ -1,4 +1,3 @@
-import type { MediaRequestShape } from './media.types';
 import type { Response } from 'express';
 import type { MediaRequest } from './media.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -38,3 +37,4 @@ exports.upload = asyncHandler(async (req: MediaRequest, res: Response) => {
   );
   return success(res, data, 'Media uploaded', 201);
 });
+

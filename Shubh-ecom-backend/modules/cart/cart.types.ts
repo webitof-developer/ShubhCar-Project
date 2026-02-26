@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -20,12 +21,12 @@ export interface CartBody {
 }
 
 export interface CartRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface CartRequestShape {
@@ -38,25 +39,25 @@ export type CartRequest = Request<CartParams, unknown, CartBody, CartQuery> &
   CartRequestContext;
 
 export interface CartEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface CartServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type CartServiceResult<T = any> = Promise<T>;
+export type CartServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface CartRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface CartRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface CartValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -97,3 +98,4 @@ export interface UpdateCartItemInput {
 export interface ApplyCouponInput {
   code: string;
 }
+

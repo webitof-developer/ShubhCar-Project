@@ -1,4 +1,3 @@
-import type { AuthRequestShape } from './auth.types';
 const express = require('express');
 const controller = require('./auth.controller');
 const auth = require('../../middlewares/auth.middleware');
@@ -12,7 +11,6 @@ const {
 
 const {
   registerSchema,
-  loginSchema,
   refreshSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
@@ -381,11 +379,7 @@ router.post(
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 // Refresh (VERY sensitive)
-router.post(
-  '/refresh',
-  validate(refreshSchema),
-  controller.refresh,
-);
+router.post('/refresh', validate(refreshSchema), controller.refresh);
 
 /**
  * @openapi
@@ -478,7 +472,7 @@ router.post(
  *     summary: Logout the current session
  *     tags: [Auth]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: [] as unknown[]
  *     responses:
  *       200:
  *         description: Session revoked
@@ -503,7 +497,7 @@ router.post('/logout', auth(), controller.logout);
  *     summary: Logout from all active sessions
  *     tags: [Auth]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: [] as unknown[]
  *     responses:
  *       200:
  *         description: All sessions revoked
@@ -522,3 +516,4 @@ router.post('/logout', auth(), controller.logout);
 router.post('/all-logouts', auth(), controller.logoutAll);
 
 module.exports = router;
+

@@ -1,6 +1,14 @@
-import type { CartRequestShape } from './cart.types';
 const Cart = require('../../models/Cart.model');
 const CartItem = require('../../models/CartItem.model');
+
+type CartItemPayload = Record<string, unknown> & {
+  productId?: string;
+};
+
+type QuantityUpdate = {
+  quantity: number;
+  priceAtTime?: number;
+};
 
 class CartRepository {
   async getOrCreateCart({ userId, sessionId }) {
@@ -29,7 +37,7 @@ class CartRepository {
   }
 
   async addItem({ cartId, item }) {
-    const payload: any = { ...item, cartId };
+    const payload: CartItemPayload = { ...item, cartId };
     return CartItem.findOneAndUpdate(
       { cartId, productId: item.productId },
       payload,
@@ -38,7 +46,7 @@ class CartRepository {
   }
 
   async updateQty({ cartId, itemId, quantity, priceAtTime }) {
-    const update: any = { quantity };
+    const update: QuantityUpdate = { quantity };
     if (priceAtTime != null) update.priceAtTime = priceAtTime;
     return CartItem.findOneAndUpdate(
       { _id: itemId, cartId },
@@ -62,3 +70,4 @@ class CartRepository {
 }
 
 module.exports = new CartRepository();
+

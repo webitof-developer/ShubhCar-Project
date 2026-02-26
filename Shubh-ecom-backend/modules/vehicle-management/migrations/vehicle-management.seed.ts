@@ -1,8 +1,7 @@
-import type { VehicleManagementRequestShape } from '../vehicle-management.types';
 const VehicleAttribute = require('../models/VehicleAttribute.model');
 const VehicleAttributeValue = require('../models/VehicleAttributeValue.model');
 
-const DEFAULT_ATTRIBUTES: any[] = [
+const DEFAULT_ATTRIBUTES = [
   {
     name: 'Engine Capacity',
     type: 'dropdown',
@@ -92,3 +91,4 @@ const ensureVehicleAttributeDefaults = async () => {
 };
 
 module.exports = { ensureVehicleAttributeDefaults };
+

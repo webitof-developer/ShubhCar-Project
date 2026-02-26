@@ -1,4 +1,3 @@
-import type { SalesReportsRequestShape } from './salesReports.types';
 import type { Response } from 'express';
 import type { SalesReportsRequest } from './salesReports.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -39,3 +38,4 @@ exports.remove = asyncHandler(async (req: SalesReportsRequest, res: Response) =>
   const data = await service.remove(req.params.id);
   return success(res, data, 'Sales report deleted');
 });
+

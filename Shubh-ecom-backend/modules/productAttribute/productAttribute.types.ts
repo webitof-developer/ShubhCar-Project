@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -19,12 +20,12 @@ export interface ProductAttributeBody {
 }
 
 export interface ProductAttributeRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface ProductAttributeRequestShape {
@@ -42,25 +43,25 @@ export type ProductAttributeRequest = Request<
   ProductAttributeRequestContext;
 
 export interface ProductAttributeEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ProductAttributeServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type ProductAttributeServiceResult<T = any> = Promise<T>;
+export type ProductAttributeServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface ProductAttributeRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ProductAttributeRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ProductAttributeValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -96,3 +97,4 @@ export interface CreateAttributeInput {
   isFilterable?: boolean;
   options?: string[];
 }
+

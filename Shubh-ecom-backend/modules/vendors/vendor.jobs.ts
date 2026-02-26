@@ -1,4 +1,3 @@
-import type { VendorsRequestShape } from './vendors.types';
 const logger = require('../../config/logger');
 
 const verifyVendorDocuments = async (vendorId) => {
@@ -18,3 +17,4 @@ module.exports = {
   vendorStatusChangedNotification,
   enqueueListingFeeJob,
 };
+

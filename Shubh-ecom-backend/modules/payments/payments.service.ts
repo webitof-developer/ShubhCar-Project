@@ -1,5 +1,3 @@
-import type { PaymentsRequestShape } from './payments.types';
-const mongoose = require('mongoose');
 const { createSafeSession } = require('../../utils/mongoTransaction');
 const paymentRepo = require('./payment.repo');
 const orderRepo = require('../orders/order.repo');
@@ -19,6 +17,12 @@ const {
 
 const { paymentRetryQueue } = require('../../queues/paymentRetry.queue');
 
+type PaymentAdminListQuery = {
+  status?: string;
+  limit?: number | string;
+  page?: number | string;
+};
+
 /* =======================
    PAYMENTS SERVICE
 ======================= */
@@ -26,7 +30,7 @@ class PaymentsService {
   /**
    * Initiate payment (idempotent)
    */
-  async initiatePayment({ orderId, gateway, context: any = {} }) {
+  async initiatePayment({ orderId, gateway, context = {} as Record<string, unknown> }) {
     const log = logger.withContext({
 // @ts-ignore
       requestId: context.requestId || null,
@@ -246,7 +250,7 @@ class PaymentsService {
   /**
    * Retry payment (async, safe)
    */
-  async retryPayment({ orderId, gateway, context: any = {} }) {
+  async retryPayment({ orderId, gateway, context = {} as Record<string, unknown> }) {
     const paymentSettings = await getPaymentSettings();
     if (gateway === 'razorpay' && !paymentSettings.razorpayEnabled) {
       error('Razorpay payments are disabled', 409);
@@ -283,10 +287,10 @@ class PaymentsService {
   /**
    * List all payments (Admin)
    */
-  async adminList(actor, query: any = {}) {
+  async adminList(_actor, query: PaymentAdminListQuery = {}) {
     // Permission check if needed, though routes handle role access control
     const { status, limit, page } = query;
-    const filter: any = {};
+    const filter: Record<string, unknown> = {};
     if (status) filter.status = status;
     const pagination = getOffsetPagination({ page, limit });
     const [data, total] = await Promise.all([
@@ -410,3 +414,4 @@ class PaymentsService {
 }
 
 module.exports = new PaymentsService();
+

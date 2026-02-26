@@ -1,4 +1,3 @@
-import type { RolesRequestShape } from './roles.types';
 const Joi = require('joi');
 
 const createRoleSchema = Joi.object({
@@ -25,3 +24,4 @@ module.exports = {
   createRoleSchema,
   updateRoleSchema,
 };
+

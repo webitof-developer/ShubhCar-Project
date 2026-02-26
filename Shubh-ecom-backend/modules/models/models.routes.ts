@@ -1,4 +1,3 @@
-import type { ModelsRequestShape } from './models.types';
 const express = require('express');
 const auth = require('../../middlewares/auth.middleware');
 const validate = require('../../middlewares/validate.middleware');
@@ -46,7 +45,7 @@ router.get('/:id', validateId('id'), controller.get);
  *   post:
  *     summary: Create model
  *     tags: [Catalog]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -69,7 +68,7 @@ router.post('/', auth([ROLES.ADMIN]), validate(createModelSchema), controller.cr
  *   put:
  *     summary: Update model
  *     tags: [Catalog]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -102,7 +101,7 @@ router.put(
  *   delete:
  *     summary: Delete model
  *     tags: [Catalog]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -114,3 +113,4 @@ router.put(
 router.delete('/:id', auth([ROLES.ADMIN]), validateId('id'), controller.remove);
 
 module.exports = router;
+

@@ -1,4 +1,3 @@
-import type { VehicleManagementRequestShape } from '../vehicle-management.types';
 const mongoose = require('mongoose');
 
 const vehicleAttributeSchema = new mongoose.Schema(
@@ -18,3 +17,4 @@ vehicleAttributeSchema.pre(/^find/, function () {
 vehicleAttributeSchema.index({ name: 1 }, { unique: true });
 
 module.exports = mongoose.model('VehicleAttribute', vehicleAttributeSchema);
+

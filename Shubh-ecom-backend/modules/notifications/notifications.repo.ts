@@ -1,4 +1,3 @@
-import type { NotificationsRequestShape } from './notifications.types';
 const Notification = require('../../models/Notification.model');
 const { getOffsetPagination } = require('../../utils/pagination');
 
@@ -11,7 +10,10 @@ class NotificationsRepo {
     return Notification.findById(id).lean();
   }
 
-  list(filter: any = {}, pagination: any = {}) {
+  list(
+    filter: Record<string, unknown> = {},
+    pagination: Record<string, unknown> = {},
+  ) {
     const { limit, skip } = getOffsetPagination(pagination);
     return Notification.find(filter)
       .sort({ createdAt: -1 })
@@ -20,7 +22,7 @@ class NotificationsRepo {
       .lean();
   }
 
-  count(filter: any = {}) {
+  count(filter: Record<string, unknown> = {}) {
     return Notification.countDocuments(filter);
   }
 
@@ -47,9 +49,10 @@ class NotificationsRepo {
     );
   }
 
-  countUnread(filter: any = {}) {
+  countUnread(filter: Record<string, unknown> = {}) {
     return Notification.countDocuments({ ...filter, status: 'unread' });
   }
 }
 
 module.exports = new NotificationsRepo();
+

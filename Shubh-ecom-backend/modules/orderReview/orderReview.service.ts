@@ -1,4 +1,3 @@
-import type { OrderReviewRequestShape } from './orderReview.types';
 const ManualReview = require('../../models/ManualReview.model');
 const orderService = require('../orders/orders.service');
 const { error } = require('../../utils/apiResponse');
@@ -30,3 +29,4 @@ class ManualReviewService {
 }
 
 module.exports = new ManualReviewService();
+

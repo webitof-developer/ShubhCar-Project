@@ -1,10 +1,9 @@
-import type { EmailTemplatesRequestShape } from './emailTemplates.types';
 const repo = require('./emailTemplates.repo');
 const { error } = require('../../utils/apiResponse');
 const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
 
 class EmailTemplatesService {
-  async list(query: any = {}) {
+  async list(query: Record<string, unknown> = {}) {
     const { page, limit, ...filter } = query;
     const pagination = getOffsetPagination({ page, limit });
     const [data, total] = await Promise.all([
@@ -41,3 +40,4 @@ class EmailTemplatesService {
 }
 
 module.exports = new EmailTemplatesService();
+

@@ -1,4 +1,3 @@
-import type { EmailTemplatesRequestShape } from './emailTemplates.types';
 const EmailTemplate = require('../../models/EmailTemplate.model');
 const { getOffsetPagination } = require('../../utils/pagination');
 
@@ -7,7 +6,10 @@ class EmailTemplatesRepo {
     return EmailTemplate.create(data);
   }
 
-  list(filter: any = {}, pagination: any = {}) {
+  list(
+    filter: Record<string, unknown> = {},
+    pagination: Record<string, unknown> = {},
+  ) {
     const { limit, skip } = getOffsetPagination(pagination);
     return EmailTemplate.find(filter)
       .sort({ updatedAt: -1 })
@@ -16,7 +18,7 @@ class EmailTemplatesRepo {
       .lean();
   }
 
-  count(filter: any = {}) {
+  count(filter: Record<string, unknown> = {}) {
     return EmailTemplate.countDocuments(filter);
   }
 
@@ -34,3 +36,4 @@ class EmailTemplatesRepo {
 }
 
 module.exports = new EmailTemplatesRepo();
+

@@ -1,7 +1,5 @@
-import type { UsersRequestShape } from './users.types';
 import type { Response } from 'express';
 import type { UsersRequest } from './users.types';
-const usersService = require('./users.service');
 const userRepo = require('./user.repo');
 const asyncHandler = require('../../utils/asyncHandler');
 
@@ -51,3 +49,4 @@ module.exports = {
   checkEmailAvailability,
   checkPhoneAvailability,
 };
+

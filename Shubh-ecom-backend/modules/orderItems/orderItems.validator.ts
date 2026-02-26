@@ -1,4 +1,3 @@
-import type { OrderItemsRequestShape } from './orderItems.types';
 const Joi = require('joi');
 
 exports.createOrderItemSchema = Joi.object({
@@ -39,3 +38,4 @@ exports.updateOrderItemStatusSchema = Joi.object({
     )
     .required(),
 });
+

@@ -1,4 +1,3 @@
-import type { ProductsRequestShape } from './products.types';
 const ExcelJS = require('exceljs');
 const crypto = require('crypto');
 const mongoose = require('mongoose');
@@ -11,7 +10,48 @@ const Category = require('../../models/Category.model');
 const Vehicle = require('../vehicle-management/models/Vehicle.model');
 
 const UPLOAD_TTL_SECONDS = 60 * 60; // 1 hour
-const VALID_HEADERS: any = {
+type ParsedBulkCreateRow = {
+  rowNumber: number;
+  productCode: string;
+  name: string;
+  categoryCode: string;
+  categoryId: string;
+  productType: string;
+  manufacturerBrand: string;
+  vehicleBrand: string;
+  oemNumber: string;
+  sku: string;
+  hsnCode: string;
+  shortDescription: string;
+  longDescription: string;
+  taxClassKey: string;
+  taxRate: number;
+  stockQty: number;
+  weight: number;
+  length: number;
+  width: number;
+  height: number;
+  minOrderQty: number;
+  minWholesaleQty: number;
+  retailMrp: number;
+  retailSalePrice: number;
+  wholesaleMrp: number;
+  wholesaleSalePrice: number;
+  status: string;
+  vehicleCodes: string[];
+  featuredImageUrl: string;
+  galleryImageUrls: string[];
+  _errors?: string[];
+};
+
+type InvalidBulkCreateRow = {
+  row: number;
+  productCode: string | null;
+  name: string | null;
+  reason: string;
+};
+
+const VALID_HEADERS: Record<string, string> = {
   productcode: 'productCode',
   product_code: 'productCode',
   name: 'name',
@@ -52,7 +92,13 @@ const VALID_HEADERS: any = {
   gallery_image_url_5: 'galleryImageUrl5',
 };
 
-const REQUIRED_HEADERS: any[] = ['productCode', 'name', 'categoryCode', 'productType', 'retailMrp'];
+const REQUIRED_HEADERS = [
+  'productCode',
+  'name',
+  'categoryCode',
+  'productType',
+  'retailMrp',
+];
 const PRODUCT_CODE_REGEX = /^PRO-\d{6}$/;
 const VEHICLE_CODE_REGEX = /^VEH-\d{6}$/;
 const CATEGORY_CODE_REGEX = /^(CAT|CATS)-\d{6}$/;
@@ -101,7 +147,7 @@ const isValidUrl = (value) => {
 
 const parseSheetRows = (sheet) => {
   const headerRow = sheet.getRow(1);
-  const headerMap: any = {};
+  const headerMap: Record<string, number> = {};
   headerRow.eachCell((cell, colNumber) => {
     const normalized = normalizeHeader(cell.value);
     const key = VALID_HEADERS[normalized];
@@ -114,7 +160,7 @@ const parseSheetRows = (sheet) => {
     }
   });
 
-  const rows: any[] = [];
+  const rows: ParsedBulkCreateRow[] = [];
   for (let rowNumber = 2; rowNumber <= sheet.rowCount; rowNumber += 1) {
     const row = sheet.getRow(rowNumber);
     if (!row || row.cellCount === 0) continue;
@@ -197,8 +243,8 @@ const parseSheetRows = (sheet) => {
   return rows;
 };
 
-const validateRow = (row) => {
-  const errors: any[] = [];
+const validateRow = (row: ParsedBulkCreateRow) => {
+  const errors: string[] = [];
   if (!row.productCode) errors.push('Missing productCode');
   if (row.productCode && !PRODUCT_CODE_REGEX.test(String(row.productCode).toUpperCase())) {
     errors.push('Invalid productCode format');
@@ -324,16 +370,18 @@ const loadUpload = async (uploadId) => {
 class ProductBulkCreateService {
   async preview(file, actor) {
     const rows = await parseUpload(file);
-    const invalidRows: any[] = [];
-    const validRows: any[] = [];
+    const invalidRows: InvalidBulkCreateRow[] = [];
+    const validRows: ParsedBulkCreateRow[] = [];
 
-    const rowMap = rows.map((row) => ({
-      ...row,
-      productCode: row.productCode.trim().toUpperCase(),
-      categoryCode: row.categoryCode.trim().toUpperCase(),
-      vehicleCodes: row.vehicleCodes.map((code) => code.toUpperCase()),
-      _errors: [] as any[],
-    }));
+    const rowMap: Array<ParsedBulkCreateRow & { _errors: string[] }> = rows.map(
+      (row) => ({
+        ...row,
+        productCode: row.productCode.trim().toUpperCase(),
+        categoryCode: row.categoryCode.trim().toUpperCase(),
+        vehicleCodes: row.vehicleCodes.map((code) => code.toUpperCase()),
+        _errors: [] as string[],
+      }),
+    );
 
     rowMap.forEach((row) => {
       const rowErrors = validateRow(row);
@@ -383,7 +431,7 @@ class ProductBulkCreateService {
       const categories = await Category.find({ categoryCode: { $in: categoryCodes } })
         .select('_id categoryCode')
         .lean();
-      const categoryMap = new Map(
+      const categoryMap = new Map<string, string>(
         categories.map((item) => [String(item.categoryCode).toUpperCase(), String(item._id)]),
       );
       rowMap.forEach((row) => {
@@ -510,3 +558,4 @@ class ProductBulkCreateService {
 }
 
 module.exports = new ProductBulkCreateService();
+

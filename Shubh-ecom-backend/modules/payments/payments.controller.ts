@@ -1,4 +1,3 @@
-import type { PaymentsRequestShape } from './payments.types';
 import type { Response } from 'express';
 import type { PaymentsRequest } from './payments.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -110,3 +109,4 @@ exports.getMethods = asyncHandler(async (_req, res) => {
     'Payment methods fetched',
   );
 });
+

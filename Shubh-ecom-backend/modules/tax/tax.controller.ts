@@ -1,4 +1,3 @@
-import type { TaxRequestShape } from './tax.types';
 import type { Response } from 'express';
 import type { TaxRequest } from './tax.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -24,3 +23,4 @@ exports.remove = asyncHandler(async (req: TaxRequest, res: Response) => {
   const data = await service.remove(req.params.id);
   return success(res, data, 'Tax slab removed');
 });
+

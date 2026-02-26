@@ -1,4 +1,3 @@
-import type { InvoiceRequestShape } from './invoice.types';
 const Invoice = require('../../models/InvoiceSchema');
 
 class InvoiceRepo {
@@ -15,3 +14,4 @@ class InvoiceRepo {
 }
 
 module.exports = new InvoiceRepo();
+

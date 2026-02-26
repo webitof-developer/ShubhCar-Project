@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -20,12 +21,12 @@ export interface EmailTemplatesBody {
 }
 
 export interface EmailTemplatesRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface EmailTemplatesRequestShape {
@@ -43,25 +44,25 @@ export type EmailTemplatesRequest = Request<
   EmailTemplatesRequestContext;
 
 export interface EmailTemplatesEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface EmailTemplatesServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type EmailTemplatesServiceResult<T = any> = Promise<T>;
+export type EmailTemplatesServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface EmailTemplatesRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface EmailTemplatesRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface EmailTemplatesValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -93,3 +94,4 @@ export interface UpdateEmailTemplateInput {
   body?: string;
   isActive?: boolean;
 }
+

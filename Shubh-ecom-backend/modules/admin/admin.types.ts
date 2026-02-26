@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -22,12 +23,12 @@ export interface AdminBody {
 }
 
 export interface AdminRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface AdminRequestShape {
@@ -45,25 +46,25 @@ export type AdminRequest = Request<
   AdminRequestContext;
 
 export interface AdminEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface AdminServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type AdminServiceResult<T = any> = Promise<T>;
+export type AdminServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface AdminRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface AdminRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface AdminValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -97,3 +98,4 @@ export interface UpdateFraudFlagInput {
   fraudFlag: boolean;
   fraudReason?: string;
 }
+

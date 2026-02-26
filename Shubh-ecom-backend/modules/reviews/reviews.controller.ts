@@ -1,4 +1,3 @@
-import type { ReviewsRequestShape } from './reviews.types';
 import type { Response } from 'express';
 import type { ReviewsRequest } from './reviews.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -54,3 +53,4 @@ exports.adminGetOrderHistory = asyncHandler(async (req: ReviewsRequest, res: Res
   const data = await orderService.adminGetOrderHistory(req.params.orderId);
   return success(res, data, 'Order history fetched');
 });
+

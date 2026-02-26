@@ -1,4 +1,3 @@
-import type { SalesReportsRequestShape } from './salesReports.types';
 const mongoose = require('mongoose');
 const Order = require('../../models/Order.model');
 const OrderItem = require('../../models/OrderItem.model');
@@ -6,12 +5,26 @@ const OrderItem = require('../../models/OrderItem.model');
 const SalesReport = require('../../models/SalesReport.model');
 const { getOffsetPagination } = require('../../utils/pagination');
 
+type DateRange = {
+  $gte?: Date;
+  $lte?: Date;
+};
+
+type ReportFilter = Record<string, unknown> & {
+  createdAt?: DateRange;
+  isDeleted?: boolean;
+  salesmanId?: unknown;
+};
+
 class SalesReportsRepo {
   create(data) {
     return SalesReport.create(data);
   }
 
-  list(filter: any = {}, pagination: any = {}) {
+  list(
+    filter: Record<string, unknown> = {},
+    pagination: Record<string, unknown> = {},
+  ) {
     const { limit, skip } = getOffsetPagination(pagination);
     return SalesReport.find(filter)
       .sort({ date: -1 })
@@ -20,7 +33,7 @@ class SalesReportsRepo {
       .lean();
   }
 
-  count(filter: any = {}) {
+  count(filter: Record<string, unknown> = {}) {
     return SalesReport.countDocuments(filter);
   }
 
@@ -37,11 +50,13 @@ class SalesReportsRepo {
   }
 
   async summary({ from, to }) {
-    const match: any = {};
-    if (from || to) match.createdAt = {};
-    if (from) match.createdAt.$gte = new Date(from);
-    if (to) match.createdAt.$lte = new Date(to);
-    const orderMatch: any = { ...match, isDeleted: false };
+    const match: ReportFilter = {};
+    if (from || to) {
+      match.createdAt = {};
+      if (from) match.createdAt.$gte = new Date(from);
+      if (to) match.createdAt.$lte = new Date(to);
+    }
+    const orderMatch: ReportFilter = { ...match, isDeleted: false };
 
     const ordersAgg = await Order.aggregate([
       { $match: orderMatch },
@@ -123,7 +138,10 @@ class SalesReportsRepo {
   }
 
   async salesmanPerformance({ from, to, salesmanId, limit = 20, page = 1 }) {
-    const orderMatch: any = { isDeleted: false, salesmanId: { $ne: null } };
+    const orderMatch: ReportFilter = {
+      isDeleted: false,
+      salesmanId: { $ne: null },
+    };
     if (from || to) {
       orderMatch.createdAt = {};
       if (from) orderMatch.createdAt.$gte = new Date(from);
@@ -270,7 +288,7 @@ class SalesReportsRepo {
             as: 'order',
           },
         },
-        { $match: { order: { $ne: [] as any[] } } },
+        { $match: { order: { $ne: [] } } },
         { $group: { _id: '$productId' } },
         { $count: 'count' },
       ]),
@@ -301,3 +319,4 @@ class SalesReportsRepo {
 }
 
 module.exports = new SalesReportsRepo();
+

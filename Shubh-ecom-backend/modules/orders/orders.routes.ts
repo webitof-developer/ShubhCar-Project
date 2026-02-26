@@ -1,4 +1,3 @@
-import type { OrdersRequestShape } from './orders.types';
 // backend/modules/orders/orders.routes.js
 const express = require('express');
 const controller = require('./orders.controller');
@@ -36,7 +35,7 @@ const router = express.Router();
  *     summary: Place an order from the current cart
  *     tags: [Orders]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -84,7 +83,7 @@ router.post(
  *     summary: Cancel an order initiated by the same user
  *     tags: [Orders]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: orderId
@@ -125,7 +124,7 @@ router.post(
  *     summary: List orders for the authenticated user
  *     tags: [Orders]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Orders for the user
@@ -167,7 +166,7 @@ router.get(
  *   get:
  *     summary: Order status counts (Admin)
  *     tags: [Orders]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Status counts }
  */
@@ -177,7 +176,7 @@ router.get(
  *   get:
  *     summary: List order notes (Admin)
  *     tags: [Orders]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: orderId
@@ -188,7 +187,7 @@ router.get(
  *   post:
  *     summary: Add order note (Admin)
  *     tags: [Orders]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: orderId
@@ -223,7 +222,7 @@ router.post(
  *   post:
  *     summary: Create order (Admin)
  *     tags: [Orders]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -262,7 +261,7 @@ router.post(
  *     summary: List all orders (Admin)
  *     tags: [Orders]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: page
@@ -306,7 +305,7 @@ router.get(
  *     summary: Get order history/audit logs (Admin)
  *     tags: [Orders]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: orderId
@@ -336,7 +335,7 @@ router.get(
  *     summary: Get full order details for admin
  *     tags: [Orders]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: orderId
@@ -366,7 +365,7 @@ router.get(
  *     summary: Update order status (Admin)
  *     tags: [Orders]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: orderId
@@ -407,7 +406,7 @@ router.post(
  *     summary: Update payment status (Admin, COD only)
  *     tags: [Orders]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: orderId
@@ -451,7 +450,7 @@ router.post(
  *     summary: Flag an order as potential fraud (Admin)
  *     tags: [Orders]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: orderId
@@ -498,7 +497,7 @@ router.post(
  *     summary: Get order detail for the authenticated user
  *     tags: [Orders]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: orderId
@@ -526,3 +525,4 @@ router.post(
  */
 router.get('/:orderId', auth(), validateId('orderId'), controller.getOrder);
 module.exports = router;
+

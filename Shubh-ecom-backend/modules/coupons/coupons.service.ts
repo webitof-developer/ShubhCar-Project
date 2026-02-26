@@ -1,8 +1,13 @@
-import type { CouponsRequestShape } from './coupons.types';
 const couponRepo = require('./coupon.repo');
 const couponUsageRepo = require('./couponUsage.repo');
 const { error } = require('../../utils/apiResponse');
 const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
+
+type CouponListQuery = {
+  page?: number | string;
+  limit?: number | string;
+  [key: string]: unknown;
+};
 
 class CouponsService {
   async preview({ userId, code, orderSubtotal, session }) {
@@ -78,10 +83,10 @@ class CouponsService {
     return deleted;
   }
 
-  async list(query: any = {}) {
+  async list(query: CouponListQuery = {}) {
     const { page, limit } = query;
     const pagination = getOffsetPagination({ page, limit });
-    const filter: any = {};
+    const filter: Record<string, unknown> = {};
     const [data, total] = await Promise.all([
       couponRepo.list(filter, pagination),
       couponRepo.count(filter),
@@ -93,11 +98,11 @@ class CouponsService {
     };
   }
 
-  async listPublic(query: any = {}) {
+  async listPublic(query: CouponListQuery = {}) {
     const { page, limit } = query;
     const pagination = getOffsetPagination({ page, limit });
     const now = new Date();
-    const filter: any = {
+    const filter: Record<string, unknown> = {
       isActive: true,
       validFrom: { $lte: now },
       validTo: { $gte: now },
@@ -117,7 +122,7 @@ class CouponsService {
     return couponRepo.findById(id);
   }
 
-  async listUsage(query: any = {}) {
+  async listUsage(query: CouponListQuery = {}) {
     const { page, limit, ...filter } = query;
     const pagination = getOffsetPagination({ page, limit });
     const [data, total] = await Promise.all([
@@ -148,3 +153,4 @@ class CouponsService {
 }
 
 module.exports = new CouponsService();
+

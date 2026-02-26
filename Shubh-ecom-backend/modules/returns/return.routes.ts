@@ -1,4 +1,3 @@
-import type { ReturnsRequestShape } from './returns.types';
 const express = require('express');
 const auth = require('../../middlewares/auth.middleware');
 const validateId = require('../../middlewares/objectId.middleware');
@@ -21,7 +20,7 @@ const router = express.Router();
  *   post:
  *     summary: Create a return request
  *     tags: [Returns]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -51,7 +50,7 @@ router.post('/', auth(), validate(createReturnSchema), controller.create);
  *   get:
  *     summary: Get a return by id
  *     tags: [Returns]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -69,7 +68,7 @@ router.get('/:id', auth(), validateId('id'), controller.get);
  *   get:
  *     summary: Admin list returns
  *     tags: [Returns]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200:
  *         description: Returns list
@@ -82,7 +81,7 @@ router.get('/', adminLimiter, auth([ROLES.ADMIN]), controller.list);
  *   post:
  *     summary: Admin approve or reject a return
  *     tags: [Returns]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -120,7 +119,7 @@ router.post(
  *   post:
  *     summary: Admin mark return as completed
  *     tags: [Returns]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -148,3 +147,4 @@ router.post(
 );
 
 module.exports = router;
+

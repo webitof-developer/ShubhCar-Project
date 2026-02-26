@@ -1,9 +1,8 @@
-import type { WishlistRequestShape } from './wishlist.types';
 const Wishlist = require('../../models/Wishlist.model');
 const { getOffsetPagination } = require('../../utils/pagination');
 
 class WishlistRepo {
-  findByUser(userId, pagination: any = {}) {
+  findByUser(userId, pagination: Record<string, unknown> = {}) {
     const { limit, skip } = getOffsetPagination(pagination);
     return Wishlist.find({ userId })
       .sort({ createdAt: -1 })
@@ -30,3 +29,4 @@ class WishlistRepo {
 }
 
 module.exports = new WishlistRepo();
+

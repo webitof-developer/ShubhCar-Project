@@ -1,4 +1,3 @@
-import type { EntriesRequestShape } from './entries.types';
 const Joi = require('joi');
 
 const createEntrySchema = Joi.object({
@@ -29,3 +28,4 @@ module.exports = {
   createEntrySchema,
   listEntriesQuerySchema,
 };
+

@@ -1,4 +1,3 @@
-import type { PagesRequestShape } from './pages.types';
 const Page = require('../../models/Page.model');
 const { getOffsetPagination } = require('../../utils/pagination');
 
@@ -13,12 +12,15 @@ class PageRepository {
   }
 
   findBySlug(slug, publishedOnly = true) {
-    const filter: any = { slug };
+    const filter: Record<string, unknown> = { slug };
     if (publishedOnly) filter.status = 'published';
     return Page.findOne(filter).lean();
   }
 
-  list(filter: any = {}, pagination: any = {}) {
+  list(
+    filter: Record<string, unknown> = {},
+    pagination: Record<string, unknown> = {},
+  ) {
     const { limit, skip } = getOffsetPagination(pagination);
     return Page.find(filter)
       .sort({ updatedAt: -1 })
@@ -27,7 +29,7 @@ class PageRepository {
       .lean();
   }
 
-  count(filter: any = {}) {
+  count(filter: Record<string, unknown> = {}) {
     return Page.countDocuments(filter);
   }
 
@@ -44,3 +46,4 @@ class PageRepository {
 }
 
 module.exports = new PageRepository();
+

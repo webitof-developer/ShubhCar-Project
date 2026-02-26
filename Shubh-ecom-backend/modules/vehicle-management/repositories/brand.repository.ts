@@ -1,10 +1,9 @@
-import type { VehicleManagementRequestShape } from '../vehicle-management.types';
 const mongoose = require('mongoose');
 const Brand = require('../../../models/Brand.model');
 const { getOffsetPagination } = require('../../../utils/pagination');
 
 class VehicleBrandsRepo {
-  list(filter, { page = 1, limit = 50 }: any = {}) {
+  list(filter, { page = 1, limit = 50 }: Record<string, unknown> = {}) {
     const pagination = getOffsetPagination({ page, limit });
     return Brand.find(filter)
       .sort({ name: 1 })
@@ -55,3 +54,4 @@ class VehicleBrandsRepo {
 }
 
 module.exports = new VehicleBrandsRepo();
+

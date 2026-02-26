@@ -1,4 +1,3 @@
-import type { CartRequestShape } from './cart.types';
 const cartCache = require('./cart.cache');
 const cartRepo = require('./cart.repo');
 const { addItemSchema, updateQtySchema } = require('./cart.validator');
@@ -11,6 +10,50 @@ const Cart = require('../../models/Cart.model');
 const pricingService = require('../../services/pricing.service');
 const checkoutTotals = require('../../services/checkoutTotals.service');
 const addressRepo = require('../users/userAddress.repo');
+
+type CartUserRef = {
+  id?: string;
+  _id?: string;
+};
+
+type CartSummaryInput = {
+  user: CartUserRef;
+  sessionId?: string;
+  shippingAddressId?: string;
+};
+
+type GuestItemInput = {
+  productId?: string;
+  quantity?: number | string;
+  [key: string]: unknown;
+};
+
+type GuestSummaryInput = {
+  items?: GuestItemInput[];
+  shippingAddress?: Record<string, unknown> | null;
+  couponCode?: string | null;
+};
+
+type CartItemWithProductId = {
+  productId?: string;
+  quantity?: number;
+  priceAtTime?: number;
+  product?: {
+    _id?: unknown;
+    hsnCode?: unknown;
+    taxSlabs?: unknown[];
+    taxRate?: unknown;
+    taxClassKey?: unknown;
+    weight?: number;
+    length?: number;
+    width?: number;
+    height?: number;
+    isHeavy?: unknown;
+    isFragile?: unknown;
+  } | null;
+  [key: string]: unknown;
+};
+
 class CartService {
   /**
    * Fetch user's customerType from DB.
@@ -105,7 +148,7 @@ class CartService {
     const cart = await cartRepo.getOrCreateCart({ userId: user.id, sessionId });
     const items = await cartRepo.getCartWithItems(cart._id);
     const enrichedItems = await this.enrichItems(items);
-    const payload: any = {
+    const payload = {
       cartId: cart._id,
       items: enrichedItems,
       couponId: cart.couponId || null,
@@ -117,7 +160,11 @@ class CartService {
     return payload;
   }
 
-  async getSummary({ user, sessionId, shippingAddressId }: any = {}) {
+  async getSummary({
+    user,
+    sessionId,
+    shippingAddressId,
+  }: CartSummaryInput = { user: {} }) {
     const cart = await cartRepo.getOrCreateCart({ userId: user.id, sessionId });
     const items = await cartRepo.getCartWithItems(cart._id);
     if (!items.length) error('Cart is empty', 400);
@@ -140,7 +187,7 @@ class CartService {
     // enrichedItems contains full product documents (including wholesalePrice/retailPrice), so resolveUnitPrice works correctly.
     // Fall back to item.priceAtTime only if the product is missing (e.g., deleted product still in cart).
     const calcItems = enrichedItems.map((item) => {
-      const product = item.product || {};
+      const product = (item.product || {}) as NonNullable<CartItemWithProductId['product']>;
       const resolvedPrice = pricingService.resolveUnitPrice({ product, customerType });
       const unitPrice = resolvedPrice || item.priceAtTime || 0;
       return {
@@ -183,12 +230,30 @@ class CartService {
     };
   }
 
-  async getGuestSummary({ items = [], shippingAddress = null, couponCode = null }: any = {}) {
+  async getGuestSummary({
+    items = [],
+    shippingAddress = null,
+    couponCode = null,
+  }: GuestSummaryInput = {}) {
     if (!Array.isArray(items) || !items.length) {
       error('Cart is empty', 400);
     }
 
-    const calcItems: any[] = [];
+    const calcItems: Array<{
+      productId: unknown;
+      quantity: number;
+      price: number;
+      hsnCode: unknown;
+      taxSlabs: unknown[];
+      taxRate: unknown;
+      taxClassKey: unknown;
+      weight: number;
+      length: number;
+      width: number;
+      height: number;
+      isHeavy: boolean;
+      isFragile: boolean;
+    }> = [];
 
     for (const item of items) {
       const quantity = Number(item.quantity || 0);
@@ -248,7 +313,7 @@ class CartService {
     };
   }
 
-  async enrichItems(items: any[] = []) {
+  async enrichItems(items: CartItemWithProductId[] = []) {
     if (!items.length) return [];
     const productIds = items.map((i) => i.productId).filter(Boolean);
     const products = await Product.find({ _id: { $in: productIds } }).lean();
@@ -269,7 +334,7 @@ class CartService {
     return items.map((item) => {
       const product = productMap.get(String(item.productId));
 // @ts-ignore
-      const productImages = product ? imageMap.get(String(product._id)) || [] : [] as any[];
+      const productImages = product ? imageMap.get(String(product._id)) || [] : [];
       return {
         ...item,
         product: product ? { ...product, images: productImages } : null,
@@ -325,3 +390,4 @@ class CartService {
 }
 
 module.exports = new CartService();
+

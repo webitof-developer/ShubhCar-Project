@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -29,12 +30,12 @@ export interface CouponsBody {
 }
 
 export interface CouponsRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface CouponsRequestShape {
@@ -52,25 +53,25 @@ export type CouponsRequest = Request<
   CouponsRequestContext;
 
 export interface CouponsEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface CouponsServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type CouponsServiceResult<T = any> = Promise<T>;
+export type CouponsServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface CouponsRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface CouponsRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface CouponsValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -119,3 +120,4 @@ export interface ValidateCouponInput {
   userId?: string;
   orderSubtotal: number;
 }
+

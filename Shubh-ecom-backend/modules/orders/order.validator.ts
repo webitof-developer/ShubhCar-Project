@@ -1,4 +1,3 @@
-import type { OrdersRequestShape } from './orders.types';
 const Joi = require('joi');
 const { ORDER_STATUS_LIST } = require('../../constants/orderStatus');
 const { PAYMENT_STATUS } = require('../../constants/paymentStatus');
@@ -97,3 +96,4 @@ module.exports = {
   myOrdersQuerySchema,
   adminListOrdersQuerySchema,
 };
+

@@ -1,4 +1,3 @@
-import type { VehicleManagementRequestShape } from '../vehicle-management.types';
 const repo = require('../repositories/vehicle.repository');
 const ExcelJS = require('exceljs');
 const { generateVehicleCode } = require('../../../utils/numbering');
@@ -24,39 +23,86 @@ const buildSignature = (ids) =>
 const isVariantNameAttribute = (name) =>
   normalizeName(name) === VARIANT_NAME_KEY;
 
-const mapAttributeValues = (attributeValues: any[] = []) => {
+type VehicleAttributeValueItem = {
+  attributeId?: { _id?: unknown; name?: string } | string | null;
+  _id?: unknown;
+  value?: string;
+  status?: string;
+};
+
+type VehiclePayload = {
+  brandId?: unknown;
+  modelId?: unknown;
+  yearId?: unknown;
+  variantName?: unknown;
+  attributeValueIds?: unknown[];
+  vehicleCode?: unknown;
+  status?: unknown;
+  [key: string]: unknown;
+};
+
+type VehicleCodeItem = {
+  _id?: unknown;
+  vehicleCode?: string;
+  [key: string]: unknown;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const toAttributeRef = (value: unknown) => (isRecord(value) ? value : null);
+
+const getRefId = (value: unknown) => {
+  if (!isRecord(value)) return value;
+  return value._id ?? value;
+};
+
+const mapAttributeValues = (attributeValues: VehicleAttributeValueItem[] = []) => {
   const attributes = attributeValues
     .filter((item) => item?.attributeId)
-    .map((item) => ({
-      attributeId: item.attributeId?._id || item.attributeId,
-      attributeName: item.attributeId?.name || '',
-      valueId: item._id,
-      value: item.value,
-      status: item.status,
-    }))
+    .map((item) => {
+      const attributeRef = toAttributeRef(item.attributeId);
+      return {
+        attributeId: attributeRef?._id || item.attributeId,
+        attributeName:
+          typeof attributeRef?.name === 'string' ? attributeRef.name : '',
+        valueId: item._id,
+        value: item.value,
+        status: item.status,
+      };
+    })
     .filter((item) => !isVariantNameAttribute(item.attributeName));
 
-  const byName: any = {};
+  const byName: Record<string, string> = {};
   attributes.forEach((attr) => {
     const key = normalizeName(attr.attributeName);
-    if (key) byName[key] = attr.value;
+    if (key && typeof attr.value === 'string') {
+      byName[key] = attr.value;
+    }
   });
 
   return { attributes, byName };
 };
 
-const mapVehicle = (vehicle) => {
-  const { attributes, byName } = mapAttributeValues(vehicle.attributeValueIds || []);
+const mapVehicle = (vehicle: Record<string, unknown>) => {
+  const attributeValueIds = Array.isArray(vehicle.attributeValueIds)
+    ? (vehicle.attributeValueIds as VehicleAttributeValueItem[])
+    : [];
+  const { attributes, byName } = mapAttributeValues(attributeValueIds);
+  const brand = vehicle.brandId;
+  const model = vehicle.modelId;
+  const year = vehicle.yearId;
+
   return {
     _id: vehicle._id,
     vehicleCode: vehicle.vehicleCode || '',
-    brandId: vehicle.brandId?._id || vehicle.brandId,
-    modelId: vehicle.modelId?._id || vehicle.modelId,
-    yearId: vehicle.yearId?._id || vehicle.yearId,
+    brandId: getRefId(brand),
+    modelId: getRefId(model),
+    yearId: getRefId(year),
     variantName: vehicle.variantName || '',
-    brand: vehicle.brandId || null,
-    model: vehicle.modelId || null,
-    year: vehicle.yearId || null,
+    brand: brand || null,
+    model: model || null,
+    year: year || null,
     status: vehicle.status,
     attributes,
     display: {
@@ -70,7 +116,7 @@ const mapVehicle = (vehicle) => {
 
 const VEHICLE_CODE_REGEX = /^VEH-\d{6}$/;
 
-const ensureVehicleCodes = async (vehicles: any[] = []) => {
+const ensureVehicleCodes = async (vehicles: VehicleCodeItem[] = []) => {
   const missing = vehicles.filter((item) => !item.vehicleCode || !VEHICLE_CODE_REGEX.test(item.vehicleCode));
   if (!missing.length) return;
 
@@ -78,7 +124,7 @@ const ensureVehicleCodes = async (vehicles: any[] = []) => {
     .select('vehicleCode')
     .lean();
   const used = new Set(existingCodes.map((item) => item.vehicleCode));
-  const updates: any[] = [];
+  const updates: Array<Record<string, unknown>> = [];
 
   for (const item of missing) {
     let next = await generateVehicleCode();
@@ -111,14 +157,14 @@ const toXlsxBuffer = async (workbook) => {
 };
 
 class VehiclesService {
-  async list(query: any = {}) {
-    const filter: any = { isDeleted: false };
+  async list(query: Record<string, unknown> = {}) {
+    const filter: Record<string, unknown> = { isDeleted: false };
     if (query.brandId) filter.brandId = query.brandId;
     if (query.modelId) filter.modelId = query.modelId;
     if (query.yearId) filter.yearId = query.yearId;
     if (query.status) filter.status = query.status;
 
-    let attributeValueIds: any[] = [];
+    let attributeValueIds: string[] = [];
     if (query.attributeValueIds) {
       attributeValueIds = String(query.attributeValueIds)
         .split(',')
@@ -216,7 +262,7 @@ class VehiclesService {
     };
   }
 
-  async create(payload) {
+  async create(payload: VehiclePayload = {}) {
     if (!payload.brandId) error('brandId is required', 400);
     if (!payload.modelId) error('modelId is required', 400);
     if (!payload.yearId) error('yearId is required', 400);
@@ -242,11 +288,13 @@ class VehiclesService {
     const year = await VehicleYear.findById(payload.yearId).lean();
     if (!year) error('Vehicle year not found', 404);
 
-    const attributeValueIds = Array.isArray(payload.attributeValueIds)
+    const attributeValueIds: unknown[] = Array.isArray(payload.attributeValueIds)
       ? payload.attributeValueIds
-      : [] as any[];
+      : [];
 
-    const uniqueIds: any[] = [...new Set(attributeValueIds.map((id) => String(id)))];
+    const uniqueIds = [
+      ...new Set(attributeValueIds.map((id): string => String(id))),
+    ];
     if (!uniqueIds.length) {
       error('attributeValueIds is required', 400);
     }
@@ -348,7 +396,7 @@ class VehiclesService {
       const entry = grouped.get(yearKey) || {
         yearId: item.yearId,
         year: item.year?.year,
-        variants: [] as any[],
+        variants: [],
       };
       entry.variants.push(item);
       grouped.set(yearKey, entry);
@@ -368,14 +416,14 @@ class VehiclesService {
     };
   }
 
-  async update(id, payload) {
+  async update(id, payload: VehiclePayload = {}) {
     const existing = await repo.findById(id).lean();
     if (!existing) error('Vehicle not found', 404);
 
-    const updated: any = { ...payload };
+    const updated: VehiclePayload = { ...payload };
     if (updated.vehicleCode) {
       updated.vehicleCode = String(updated.vehicleCode).trim().toUpperCase();
-      if (!VEHICLE_CODE_REGEX.test(updated.vehicleCode)) {
+      if (!VEHICLE_CODE_REGEX.test(String(updated.vehicleCode))) {
         error('vehicleCode must be in format VEH-000001', 400);
       }
     }
@@ -411,13 +459,17 @@ class VehiclesService {
       if (!year) error('Vehicle year not found', 404);
     }
 
-    let attributeValueIds = existing.attributeValueIds || [];
+    let attributeValueIds: unknown[] = Array.isArray(existing.attributeValueIds)
+      ? existing.attributeValueIds
+      : [];
     if (updated.attributeValueIds) {
       attributeValueIds = Array.isArray(updated.attributeValueIds)
         ? updated.attributeValueIds
-        : [] as any[];
+        : [];
 
-      const uniqueIds: any[] = [...new Set(attributeValueIds.map((item) => String(item)))];
+      const uniqueIds = [
+        ...new Set(attributeValueIds.map((item): string => String(item))),
+      ];
       if (!uniqueIds.length) {
         error('attributeValueIds is required', 400);
       }
@@ -492,7 +544,7 @@ class VehiclesService {
     return item;
   }
 
-  async listAvailableYears(query: any = {}) {
+  async listAvailableYears(query: Record<string, unknown> = {}) {
     if (!query.modelId) error('modelId is required', 400);
     const yearIds = await Vehicle.distinct('yearId', {
       modelId: query.modelId,
@@ -504,9 +556,12 @@ class VehiclesService {
       .lean();
   }
 
-  async listAvailableAttributes(query: any = {}) {
+  async listAvailableAttributes(query: Record<string, unknown> = {}) {
     if (!query.modelId) error('modelId is required', 400);
-    const filter: any = { modelId: query.modelId, isDeleted: false };
+    const filter: Record<string, unknown> = {
+      modelId: query.modelId,
+      isDeleted: false,
+    };
     if (query.yearId) filter.yearId = query.yearId;
 
     const attributeValueIds = await Vehicle.distinct(
@@ -523,17 +578,22 @@ class VehiclesService {
       .populate('attributeId', 'name type status')
       .lean();
 
-    const map = new Map();
+    const map = new Map<string, {
+      attributeId: unknown;
+      name: string;
+      type: unknown;
+      values: Array<{ _id: unknown; value: unknown; status: unknown }>;
+    }>();
     values.forEach((value) => {
-      const attribute = value.attributeId;
-      if (!attribute) return;
+      const attribute = toAttributeRef(value.attributeId);
+      if (!attribute || typeof attribute.name !== 'string') return;
       if (isVariantNameAttribute(attribute.name)) return;
       const key = String(attribute._id);
       const entry = map.get(key) || {
         attributeId: attribute._id,
         name: attribute.name,
         type: attribute.type,
-        values: [] as any[],
+        values: [],
       };
       entry.values.push({
         _id: value._id,
@@ -550,3 +610,4 @@ class VehiclesService {
 }
 
 module.exports = new VehiclesService();
+

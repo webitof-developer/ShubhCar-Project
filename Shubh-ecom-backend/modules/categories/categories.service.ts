@@ -1,4 +1,3 @@
-import type { CategoriesRequestShape } from './categories.types';
 const repo = require('./category.repo');
 const cache = require('../../cache/category.cache');
 const productCache = require('../../cache/product.cache');
@@ -16,7 +15,7 @@ const ensureCategoryCodes = async () => {
   const missing = categories.filter((item) => !item.categoryCode || !CATEGORY_CODE_REGEX.test(item.categoryCode));
   if (!missing.length) return;
 
-  const updates: any[] = [];
+  const updates: Array<Record<string, unknown>> = [];
   for (const category of missing) {
     const code = category.parentId
       ? await generateSubCategoryCode()
@@ -198,10 +197,10 @@ class CategoryService {
     const allCategories = await repo.findAll();
 
     const categoryMap = new Map();
-    const rootCategories: any[] = [];
+    const rootCategories: Array<Record<string, unknown>> = [];
 
     allCategories.forEach(cat => {
-      categoryMap.set(String(cat._id), { ...cat, children: [] as any[] });
+      categoryMap.set(String(cat._id), { ...cat, children: [] });
     });
 
     allCategories.forEach(cat => {
@@ -281,3 +280,4 @@ class CategoryService {
 }
 
 module.exports = new CategoryService();
+

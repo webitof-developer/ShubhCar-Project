@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -16,12 +17,12 @@ export interface OrderReviewBody {
 }
 
 export interface OrderReviewRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface OrderReviewRequestShape {
@@ -39,25 +40,25 @@ export type OrderReviewRequest = Request<
   OrderReviewRequestContext;
 
 export interface OrderReviewEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface OrderReviewServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type OrderReviewServiceResult<T = any> = Promise<T>;
+export type OrderReviewServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface OrderReviewRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface OrderReviewRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface OrderReviewValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -83,3 +84,4 @@ export interface CreateOrderReviewInput {
   deliveryRating?: OrderReviewRating;
   packagingRating?: OrderReviewRating;
 }
+

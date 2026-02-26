@@ -1,10 +1,33 @@
-import type { InvoiceRequestShape } from './invoice.types';
 const Invoice = require('../../models/InvoiceSchema');
 const EmailTemplate = require('../../models/EmailTemplate.model');
 const { sendEmail } = require('../../utils/email');
 const generateCreditNoteNumber = require('../../utils/creditNoteNumber');
 const { error } = require('../../utils/apiResponse');
 const invoiceRepo = require('./invoice.repo');
+
+type CreditNoteTotals = {
+  subtotal: number;
+  taxTotal: number;
+  taxBreakdown: {
+    cgst: number;
+    sgst: number;
+    igst: number;
+  };
+  discountTotal: number;
+  grandTotal: number;
+  currency: string;
+};
+
+type CreditNoteTemplateVars = {
+  appName: string | undefined;
+  creditNoteNumber: string;
+  invoiceNumber: string;
+  creditDate: string;
+  customerName: string;
+  customerEmail: string;
+  items: unknown[];
+  grandTotal: number;
+};
 
 class CreditNoteService {
   async generate({ invoiceId, refundItems, refundMeta }) {
@@ -28,7 +51,7 @@ class CreditNoteService {
       lineTotal: i.lineTotal,
     }));
 
-    const totals: any = {
+    const totals: CreditNoteTotals = {
       subtotal: items.reduce((s, i) => s + i.unitPrice * i.quantity, 0),
       taxTotal: items.reduce((s, i) => s + i.taxAmount, 0),
       taxBreakdown: items.reduce(
@@ -68,7 +91,7 @@ class CreditNoteService {
 
     let html = tpl.bodyHtml;
 
-    const vars: any = {
+    const vars: CreditNoteTemplateVars = {
       appName: process.env.APP_NAME,
       creditNoteNumber: creditNote.invoiceNumber,
       invoiceNumber: originalInvoice.invoiceNumber,
@@ -93,7 +116,7 @@ class CreditNoteService {
     });
   }
 
-  async generateFromOrder(order, refundMeta: any = {}) {
+  async generateFromOrder(order, refundMeta: Record<string, unknown> = {}) {
     const invoice = await invoiceRepo.findByOrder(order._id);
     if (!invoice) return null;
 
@@ -117,3 +140,4 @@ class CreditNoteService {
 }
 
 module.exports = new CreditNoteService();
+

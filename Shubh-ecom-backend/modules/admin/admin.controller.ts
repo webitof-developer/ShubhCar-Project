@@ -1,4 +1,3 @@
-import type { AdminRequestShape } from './admin.types';
 import type { Response } from 'express';
 import type { AdminRequest } from './admin.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -19,3 +18,4 @@ exports.reviewWholesaleUser = asyncHandler(async (req: AdminRequest, res: Respon
 
   return success(res, data, 'Wholesale user reviewed');
 });
+

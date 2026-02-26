@@ -1,4 +1,3 @@
-import type { PagesRequestShape } from './pages.types';
 const express = require('express');
 const auth = require('../../middlewares/auth.middleware');
 const validate = require('../../middlewares/validate.middleware');
@@ -27,7 +26,7 @@ const router = express.Router();
  *   post:
  *     summary: Create page (Admin)
  *     tags: [CMS]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -58,7 +57,7 @@ router.post(
  *   get:
  *     summary: List pages (Admin)
  *     tags: [CMS]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Pages }
  */
@@ -76,7 +75,7 @@ router.get(
  *   get:
  *     summary: Get page by id (Admin)
  *     tags: [CMS]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -93,7 +92,7 @@ router.get('/:id', adminLimiter, auth([ROLES.ADMIN]), validateId('id'), controll
  *   put:
  *     summary: Update page (Admin)
  *     tags: [CMS]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -129,7 +128,7 @@ router.put(
  *   delete:
  *     summary: Delete page (Admin)
  *     tags: [CMS]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -184,3 +183,4 @@ router.get(
 );
 
 module.exports = router;
+

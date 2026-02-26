@@ -1,4 +1,3 @@
-import type { ShipmentsRequestShape } from './shipments.types';
 const shipmentRepo = require('./shipment.repo');
 const OrderItem = require('../../models/OrderItem.model');
 const { error } = require('../../utils/apiResponse');
@@ -10,13 +9,21 @@ const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagina
 
 const ROLES = require('../../constants/roles');
 
-const ALLOWED_TRANSITIONS: any = {
+type ShipmentQuery = {
+  page?: number | string;
+  limit?: number | string;
+  [key: string]: unknown;
+};
+
+type ShipmentFilter = Record<string, unknown>;
+
+const ALLOWED_TRANSITIONS: Record<string, string[]> = {
   pending: ['shipped', 'cancelled'],
   shipped: ['in_transit', 'delivered', 'cancelled', 'returned'],
   in_transit: ['delivered', 'cancelled', 'returned'],
-  delivered: [] as any[],
-  cancelled: [] as any[],
-  returned: [] as any[],
+  delivered: [],
+  cancelled: [],
+  returned: [],
 };
 
 class ShipmentService {
@@ -94,7 +101,7 @@ class ShipmentService {
     const items = await orderItemsRepo.findByOrderId(orderId);
     if (!items || !items.length) return [];
 
-    const prepared: any[] = [];
+    const prepared: unknown[] = [];
     for (const item of items) {
       const existing = await shipmentRepo.findByOrderItem(item._id);
       if (existing) continue;
@@ -135,7 +142,7 @@ class ShipmentService {
       }
     }
 
-    const update: any = {
+    const update: Record<string, unknown> = {
       carrierName: payload.carrierName ?? shipment.carrierName,
       shippingProviderId:
         payload.shippingProviderId ?? shipment.shippingProviderId,
@@ -175,7 +182,7 @@ class ShipmentService {
     return updatedShipment;
   }
 
-  async list(query: any = {}) {
+  async list(query: ShipmentQuery = {}) {
     const { page, limit, ...filter } = query;
     const pagination = getOffsetPagination({ page, limit });
     const [data, total] = await Promise.all([
@@ -232,7 +239,7 @@ class ShipmentService {
     };
   }
 
-  async adminListByOrder(orderId, query: any = {}) {
+  async adminListByOrder(orderId, query: ShipmentQuery = {}) {
     const orderItems = await orderItemsRepo.findByOrderId(orderId);
     if (!orderItems || !orderItems.length) {
       const pagination = getOffsetPagination({
@@ -240,13 +247,13 @@ class ShipmentService {
         limit: query.limit,
       });
       return {
-        shipments: [] as any[],
-        data: [] as any[],
+        shipments: [],
+        data: [],
         pagination: buildPaginationMeta({ ...pagination, total: 0 }),
       };
     }
 
-    const filter: any = {
+    const filter: ShipmentFilter = {
       orderItemId: { $in: orderItems.map((i) => i._id) },
     };
     const pagination = getOffsetPagination({
@@ -270,3 +277,4 @@ class ShipmentService {
 }
 
 module.exports = new ShipmentService();
+

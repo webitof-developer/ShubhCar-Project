@@ -1,4 +1,3 @@
-import type { AuthRequestShape } from './auth.types';
 const crypto = require('crypto');
 const { OAuth2Client } = require('google-auth-library');
 const userRepo = require('../users/user.repo');
@@ -26,7 +25,6 @@ const {
 const {
   registerSchema,
   loginSchema,
-  refreshSchema, // kept for symmetry; controller validates
   forgotPasswordSchema,
   resetPasswordSchema,
 } = require('./auth.validator');
@@ -42,6 +40,18 @@ const googleClient = env.GOOGLE_CLIENT_ID
   : null;
 
 const randomOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
+type AuthMeta = {
+  device?: string;
+  ip?: string;
+  method?: string;
+  [key: string]: unknown;
+};
+
+type SafeUserShape = {
+  passwordHash?: unknown;
+  [key: string]: unknown;
+};
+
 const DUMMY_PASSWORD_HASH =
   '$2b$10$8YKgCGjMln2L5PKu8Qj5UefIhQ8h1bS8Y7rN8Tg9fTg9Q8J6m1Q2W';
 
@@ -78,7 +88,7 @@ class AuthService {
     return this.sendEmailOtp(email);
   }
 
-  async verifyPhoneOtp(payload, meta: any = {}) {
+  async verifyPhoneOtp(payload, meta: AuthMeta = {}) {
     const { phone, otp, firstName, lastName, customerType } = payload;
     const data = await getOtpData(phone);
     if (!data) error('OTP expired or invalid', 400);
@@ -120,7 +130,7 @@ class AuthService {
     return this.#issueSession(user, { ...meta, method: 'phone_otp' });
   }
 
-  async verifyEmailOtp(payload, meta: any = {}) {
+  async verifyEmailOtp(payload, meta: AuthMeta = {}) {
     const { email, otp, firstName, lastName, customerType } = payload;
     if (!email) error('Email is required', 400);
     const data = await getOtpData(email);
@@ -164,7 +174,7 @@ class AuthService {
   }
 
   // Backwards-compatible alias used in tests
-  async verifyOtp(payload, meta: any = {}) {
+  async verifyOtp(payload, _meta: AuthMeta = {}) {
     const identifier =
       typeof payload === 'string'
         ? payload
@@ -187,7 +197,7 @@ class AuthService {
   /* =======================
      GOOGLE OAUTH FLOW
   ======================== */
-  async googleAuth(idToken, meta: any = {}) {
+  async googleAuth(idToken, meta: AuthMeta = {}) {
     if (!googleClient) error('Google auth not configured', 500);
 
     let payload;
@@ -260,7 +270,9 @@ class AuthService {
       authProvider: 'password',
     });
 
-    const safeUser: any = { ...(user.toObject?.() ? user.toObject() : user) };
+    const safeUser: SafeUserShape = {
+      ...(user.toObject?.() ? user.toObject() : user),
+    };
     delete safeUser.passwordHash;
 
     await cache.setById(user._id, safeUser);
@@ -301,7 +313,7 @@ class AuthService {
     return { token, user: safeUser };
   }
 
-  async login(payload, meta: any = {}) {
+  async login(payload, meta: AuthMeta = {}) {
     const { error: err, value } = loginSchema.validate(payload);
     if (err) error(err.details.map((d) => d.message).join(', '));
 
@@ -550,7 +562,7 @@ class AuthService {
   /* =======================
      INTERNAL
   ======================== */
-  async #issueSession(user, meta: any = {}) {
+  async #issueSession(user, meta: AuthMeta = {}) {
     const accessToken = signAccessToken({
       userId: user._id,
       role: user.role,
@@ -601,3 +613,4 @@ class AuthService {
 }
 
 module.exports = new AuthService();
+

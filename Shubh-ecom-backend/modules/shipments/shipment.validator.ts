@@ -1,4 +1,3 @@
-import type { ShipmentsRequestShape } from './shipments.types';
 const Joi = require('joi');
 
 const createShipmentSchema = Joi.object({
@@ -26,3 +25,4 @@ module.exports = {
   createShipmentSchema,
   updateShipmentSchema,
 };
+

@@ -1,4 +1,3 @@
-import type { BrandsRequestShape } from './brands.types';
 const Brand = require('../../models/Brand.model');
 const slugify = require('slugify');
 // Security: Escape user input before constructing RegExp to prevent ReDoS.
@@ -7,7 +6,7 @@ const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagina
 
 class BrandService {
     async list({ limit, page, search, type }) {
-        const filter: any = {};
+        const filter: Record<string, unknown> = {};
         if (search) filter.name = { $regex: escapeRegex(search), $options: 'i' };
         if (type) filter.type = type;
         const pagination = getOffsetPagination({ page, limit });
@@ -47,3 +46,4 @@ class BrandService {
 }
 
 module.exports = new BrandService();
+

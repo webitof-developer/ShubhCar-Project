@@ -1,4 +1,3 @@
-import type { VehicleManagementRequestShape } from '../vehicle-management.types';
 const repo = require('../repositories/variant.repository');
 const { error } = require('../../../utils/apiResponse');
 // Security: Escape user input before constructing RegExp to prevent ReDoS.
@@ -6,8 +5,8 @@ const { escapeRegex } = require('../../../utils/escapeRegex');
 const { getOffsetPagination, buildPaginationMeta } = require('../../../utils/pagination');
 
 class VehicleVariantsService {
-  async list(query: any = {}) {
-    const filter: any = {};
+  async list(query: Record<string, unknown> = {}) {
+    const filter: Record<string, unknown> = {};
     if (query.modelYearId) filter.modelYearId = query.modelYearId;
     if (query.status) filter.status = query.status;
     if (query.search) {
@@ -59,3 +58,4 @@ class VehicleVariantsService {
 }
 
 module.exports = new VehicleVariantsService();
+

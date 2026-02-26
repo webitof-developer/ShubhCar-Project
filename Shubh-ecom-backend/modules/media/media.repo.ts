@@ -1,4 +1,3 @@
-import type { MediaRequestShape } from './media.types';
 const Media = require('../../models/Media.model');
 const { getOffsetPagination } = require('../../utils/pagination');
 
@@ -8,7 +7,7 @@ class MediaRepository {
     return doc.toObject();
   }
 
-  async createMany(items: any[] = []) {
+  async createMany(items: Array<Record<string, unknown>> = []) {
     if (!items.length) return [];
     const docs = await Media.insertMany(items);
     return docs.map((doc) => doc.toObject());
@@ -18,7 +17,10 @@ class MediaRepository {
     return Media.findOne({ _id: id, isDeleted: false }).lean();
   }
 
-  list(filter: any = {}, { limit = 20, page = 1 } = {}) {
+  list(
+    filter: Record<string, unknown> = {},
+    { limit = 20, page = 1 } = {},
+  ) {
     const { limit: safeLimit, skip } = getOffsetPagination({ page, limit });
 
     return Media.find({ ...filter, isDeleted: false })
@@ -28,7 +30,7 @@ class MediaRepository {
       .lean();
   }
 
-  count(filter: any = {}) {
+  count(filter: Record<string, unknown> = {}) {
     return Media.countDocuments({ ...filter, isDeleted: false });
   }
 
@@ -42,3 +44,4 @@ class MediaRepository {
 }
 
 module.exports = new MediaRepository();
+

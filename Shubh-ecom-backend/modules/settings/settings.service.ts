@@ -1,12 +1,24 @@
-import type { SettingsRequestShape } from './settings.types';
 const Setting = require('../../models/Setting.model');
 const taxService = require('../../services/tax.service');
 const ROLES = require('../../constants/roles');
 const { getOffsetPagination, MAX_LIMIT } = require('../../utils/pagination');
 
+type SettingsFilter = {
+    group?: string | { $in: string[] };
+    isPublic?: boolean;
+    [key: string]: unknown;
+};
+
+type SettingRecord = {
+    key: string;
+    value: unknown;
+    group?: string;
+    [key: string]: unknown;
+};
+
 class SettingsService {
-    async _listBounded(filter: any = {}) {
-        const rows: any[] = [];
+    async _listBounded(filter: SettingsFilter = {}) {
+        const rows: SettingRecord[] = [];
         let page = 1;
 
         while (true) {
@@ -29,8 +41,7 @@ class SettingsService {
     /**
      * Get all settings, optionally filtered by group
      */
-    async list(group, actor = null) {
-// @ts-ignore
+    async list(group?: string, actor: { role?: string } | null = null) {
         const actorRole = String(actor?.role || '').toLowerCase();
         const isSalesman = actorRole === ROLES.SALESMAN;
 
@@ -50,7 +61,7 @@ class SettingsService {
             return {};
         }
 
-        const filter: any = {};
+        const filter: SettingsFilter = {};
         if (group) filter.group = group;
         if (isSalesman && !group) {
             filter.group = { $in: [...salesmanAllowedGroups] };
@@ -58,7 +69,7 @@ class SettingsService {
 
         // Return key-value pair object for easy frontend consumption
         const settings = await this._listBounded(filter);
-        const result: any = {};
+        const result: Record<string, unknown> = {};
 
         // Group by 'group' or return flat if filtered? 
         // Let's return a flat map { "store_name": "My Store", ... } 
@@ -81,7 +92,7 @@ class SettingsService {
      * Bulk update settings
      * data: { "store_name": "New Name", "tax_enabled": true }
      */
-    async updateBulk(data) {
+    async updateBulk(data: Record<string, unknown>) {
         const existing = await Setting.find({ key: { $in: Object.keys(data) } }).lean();
         const existingMap = new Map(existing.map((s) => [s.key, s.group]));
         const publicKeys = new Set([
@@ -110,7 +121,7 @@ class SettingsService {
             'invoice_logo_url',
             'invoice_template_image_url',
         ]);
-        const groupMap: any = {
+        const groupMap: Record<string, string> = {
             site_logo_dark: 'store',
             site_logo_light: 'store',
             'site_favicon': 'store',
@@ -195,17 +206,16 @@ class SettingsService {
             taxService.taxClassesCache = null;
         }
 
-// @ts-ignore
         return this.list(); // Return updated list
     }
 
-    async getByGroup(group) {
+    async getByGroup(group?: string) {
         return this.list(group);
     }
 
     async listPublic() {
         const settings = await this._listBounded({ isPublic: true });
-        const result: any = {};
+        const result: Record<string, unknown> = {};
         settings.forEach(s => {
             result[s.key] = s.value;
         });
@@ -217,11 +227,10 @@ class SettingsService {
      * Ensures invoices always have data to display
      */
     async getInvoiceSettings() {
-// @ts-ignore
-        const allSettings = await this.list();
+        const allSettings = await this.list() as Record<string, unknown>;
         
         // Default values for when settings are not configured
-        const defaults: any = {
+        const defaults: Record<string, unknown> = {
             invoice_company_name: allSettings.site_name || 'Company Name',
             invoice_company_address_line1: '123, Business Address',
             invoice_company_address_line2: '',
@@ -239,7 +248,7 @@ class SettingsService {
         };
 
         // Merge user settings with defaults (user settings take precedence)
-        const invoiceSettings: any = {};
+        const invoiceSettings: Record<string, unknown> = {};
         for (const key in defaults) {
             invoiceSettings[key] = allSettings[key] || defaults[key];
         }
@@ -249,3 +258,4 @@ class SettingsService {
 }
 
 module.exports = new SettingsService();
+

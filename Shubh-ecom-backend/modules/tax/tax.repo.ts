@@ -1,9 +1,11 @@
-import type { TaxRequestShape } from './tax.types';
 const TaxSlab = require('../../models/TaxSlab.model');
 const { getOffsetPagination } = require('../../utils/pagination');
 
 class TaxRepo {
-  list(filter: any = {}, pagination: any = {}) {
+  list(
+    filter: Record<string, unknown> = {},
+    pagination: Record<string, unknown> = {},
+  ) {
     const { limit, skip } = getOffsetPagination(pagination);
     return TaxSlab.find(filter)
       .sort({ hsnCode: 1, minAmount: 1 })
@@ -12,7 +14,7 @@ class TaxRepo {
       .lean();
   }
 
-  count(filter: any = {}) {
+  count(filter: Record<string, unknown> = {}) {
     return TaxSlab.countDocuments(filter);
   }
 
@@ -38,3 +40,4 @@ class TaxRepo {
 }
 
 module.exports = new TaxRepo();
+

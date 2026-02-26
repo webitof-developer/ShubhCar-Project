@@ -1,6 +1,4 @@
-import type { PaymentsRequestShape } from './payments.types';
 const paymentRepo = require('./payment.repo');
-const orderService = require('../orders/orders.service');
 const gatewayService = require('./payment.gateway.service');
 const { error } = require('../../utils/apiResponse');
 const audit = require('../audit/audit.service');
@@ -48,3 +46,4 @@ class RefundService {
 }
 
 module.exports = new RefundService();
+

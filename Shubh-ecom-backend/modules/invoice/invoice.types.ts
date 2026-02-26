@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -21,12 +22,12 @@ export interface InvoiceBody {
 }
 
 export interface InvoiceRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface InvoiceRequestShape {
@@ -44,25 +45,25 @@ export type InvoiceRequest = Request<
   InvoiceRequestContext;
 
 export interface InvoiceEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface InvoiceServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type InvoiceServiceResult<T = any> = Promise<T>;
+export type InvoiceServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface InvoiceRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface InvoiceRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface InvoiceValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -88,3 +89,4 @@ export interface GenerateInvoiceInput {
   orderId: string;
   type?: InvoiceType;
 }
+

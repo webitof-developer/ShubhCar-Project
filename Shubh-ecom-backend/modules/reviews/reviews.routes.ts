@@ -1,4 +1,3 @@
-import type { ReviewsRequestShape } from './reviews.types';
 const express = require('express');
 const auth = require('../../middlewares/auth.middleware');
 const validate = require('../../middlewares/validate.middleware');
@@ -54,7 +53,7 @@ router.get('/product/:productId', validateId('productId'), controller.listByProd
  *   post:
  *     summary: Create review
  *     tags: [Reviews]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -78,7 +77,7 @@ router.post('/', auth(), validate(createReviewSchema), controller.create);
  *   put:
  *     summary: Update review
  *     tags: [Reviews]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -101,7 +100,7 @@ router.put('/:id', auth(), validateId('id'), validate(updateReviewSchema), contr
  *   delete:
  *     summary: Delete review
  *     tags: [Reviews]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -119,7 +118,7 @@ router.delete('/:id', auth(), validateId('id'), controller.remove);
  *   get:
  *     summary: List reviews (Admin)
  *     tags: [Reviews]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Admin reviews list }
  */
@@ -131,7 +130,7 @@ router.get('/admin', adminLimiter, auth([ROLES.ADMIN]), controller.adminList);
  *   get:
  *     summary: Get review (Admin)
  *     tags: [Reviews]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: reviewId
@@ -143,3 +142,4 @@ router.get('/admin', adminLimiter, auth([ROLES.ADMIN]), controller.adminList);
 router.get('/admin/:reviewId', adminLimiter, auth([ROLES.ADMIN]), validateId('reviewId'), controller.adminGet);
 
 module.exports = router;
+

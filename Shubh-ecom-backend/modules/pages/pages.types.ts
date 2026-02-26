@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -31,12 +32,12 @@ export interface PagesBody {
 }
 
 export interface PagesRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface PagesRequestShape {
@@ -54,25 +55,25 @@ export type PagesRequest = Request<
   PagesRequestContext;
 
 export interface PagesEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface PagesServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type PagesServiceResult<T = any> = Promise<T>;
+export type PagesServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface PagesRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface PagesRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface PagesValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -110,3 +111,4 @@ export interface CreatePageInput {
   metaTitle?: string;
   metaDescription?: string;
 }
+

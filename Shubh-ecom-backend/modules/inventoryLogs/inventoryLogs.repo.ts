@@ -1,9 +1,11 @@
-import type { InventoryLogsRequestShape } from './inventoryLogs.types';
 const InventoryLog = require('../../models/InventoryLog.model');
 const { getOffsetPagination } = require('../../utils/pagination');
 
 class InventoryLogsRepo {
-  list(filter: any = {}, pagination: any = {}) {
+  list(
+    filter: Record<string, unknown> = {},
+    pagination: Record<string, unknown> = {},
+  ) {
     const { limit, skip } = getOffsetPagination(pagination);
     return InventoryLog.find(filter)
       .sort({ createdAt: -1 })
@@ -12,7 +14,7 @@ class InventoryLogsRepo {
       .lean();
   }
 
-  count(filter: any = {}) {
+  count(filter: Record<string, unknown> = {}) {
     return InventoryLog.countDocuments(filter);
   }
 
@@ -22,3 +24,4 @@ class InventoryLogsRepo {
 }
 
 module.exports = new InventoryLogsRepo();
+

@@ -1,4 +1,3 @@
-import type { UsersRequestShape } from './users.types';
 const Joi = require('joi');
 const ROLES = require('../../constants/roles');
 
@@ -117,3 +116,4 @@ module.exports = {
   checkEmailAvailabilitySchema,
   checkPhoneAvailabilitySchema,
 };
+

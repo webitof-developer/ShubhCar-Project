@@ -1,8 +1,7 @@
-import type { UsersRequestShape } from './users.types';
 const userRepo = require('./user.repo');
 const mongoose = require('mongoose');
 const { error } = require('../../utils/apiResponse');
-const { hashPassword, comparePassword } = require('../../utils/password');
+const { hashPassword } = require('../../utils/password');
 const { decideVerificationFlow } = require('../../utils/verificationFlow');
 const eventBus = require('../../utils/eventBus');
 const Role = require('../../models/Role.model');
@@ -17,6 +16,31 @@ const {
   buildPaginationMeta,
   MAX_LIMIT,
 } = require('../../utils/pagination');
+
+type AdminListQuery = {
+  role?: string;
+  status?: string;
+  customerType?: string;
+  verificationStatus?: string;
+  search?: string;
+  limit?: number | string;
+  page?: number | string;
+};
+
+type ExportCustomersQuery = {
+  status?: string;
+  customerType?: string;
+  verificationStatus?: string;
+  search?: string;
+  format?: string;
+};
+
+type ImportCustomersResult = {
+  created: number;
+  updated: number;
+  failed: number;
+  errors: Array<{ row: number; message: string }>;
+};
 
 /* =======================
    USERS SERVICE
@@ -116,7 +140,7 @@ class UsersService {
     return this._sanitize(updated);
   }
 
-  async adminList(actor, query: any = {}) {
+  async adminList(actor, query: AdminListQuery = {}) {
     const actorRole = String(actor?.role || '').toLowerCase();
     const isAdminActor = actorRole === 'admin';
     const isSalesmanActor = actorRole === 'salesman';
@@ -132,7 +156,7 @@ class UsersService {
       page,
     } = query;
 
-    const clauses: any[] = [];
+    const clauses: Array<Record<string, unknown>> = [];
     const normalizedRole = String(role || '')
       .trim()
       .toLowerCase();
@@ -239,7 +263,7 @@ class UsersService {
     };
   }
 
-  async adminExportCustomers(actor, query: any = {}) {
+  async adminExportCustomers(actor, query: ExportCustomersQuery = {}) {
     if (actor.role !== 'admin') error('Forbidden', 403);
 
     const {
@@ -250,7 +274,7 @@ class UsersService {
       format = 'csv',
     } = query;
 
-    const filter: any = { role: 'customer' };
+    const filter: Record<string, unknown> = { role: 'customer' };
     if (status) filter.status = status;
     if (customerType) filter.customerType = customerType;
     if (verificationStatus) filter.verificationStatus = verificationStatus;
@@ -305,7 +329,7 @@ class UsersService {
       }
     }
 
-    const customers: any[] = [];
+    const customers: Array<Record<string, unknown>> = [];
     let pageCursor = 1;
     while (true) {
       const batch = await userRepo.listAll(filter, {
@@ -325,7 +349,7 @@ class UsersService {
       verificationStatus: customer.verificationStatus || 'not_required',
       status: customer.status || 'active',
       createdAt: customer.createdAt
-        ? new Date(customer.createdAt).toISOString()
+        ? new Date(String(customer.createdAt)).toISOString()
         : '',
     }));
 
@@ -359,7 +383,7 @@ class UsersService {
       return raw;
     };
 
-    const headers: any[] = [
+    const headers = [
       'Customer Name',
       'Email',
       'Phone',
@@ -368,7 +392,7 @@ class UsersService {
       'Account Status',
       'Created Date',
     ];
-    const lines: any[] = [headers.map(escapeCsv).join(',')];
+    const lines: string[] = [headers.map(escapeCsv).join(',')];
     rows.forEach((row) => {
       lines.push(
         [
@@ -409,7 +433,7 @@ class UsersService {
     if (!sheet) error('No worksheet found', 400);
 
     const headerRow = sheet.getRow(1);
-    const headerMap: any = {};
+    const headerMap: Record<string, number> = {};
     headerRow.eachCell((cell, colNumber) => {
       const raw = String(cell.value || '')
         .trim()
@@ -418,7 +442,7 @@ class UsersService {
       if (normalized) headerMap[normalized] = colNumber;
     });
 
-    const requiredHeaders: any[] = [
+    const requiredHeaders = [
       'name',
       'email',
       'customer_type',
@@ -444,11 +468,11 @@ class UsersService {
       return String(value).trim();
     };
 
-    const results: any = {
+    const results: ImportCustomersResult = {
       created: 0,
       updated: 0,
       failed: 0,
-      errors: [] as any[],
+      errors: [],
     };
 
     const seenEmails = new Set();
@@ -644,7 +668,7 @@ class UsersService {
   async adminUpdateStatus(actor, userId, payload) {
     if (actor.role !== 'admin') error('Forbidden', 403);
 
-    const allowed: any[] = ['active', 'inactive', 'banned'];
+    const allowed = ['active', 'inactive', 'banned'];
     if (!allowed.includes(payload.status)) {
       error('Invalid status', 400);
     }
@@ -727,7 +751,7 @@ class UsersService {
     }
 
     // 2. Explicitly block privilege-escalation fields
-    const forbiddenFields: any[] = ['role', 'authProvider'];
+    const forbiddenFields = ['role', 'authProvider'];
     for (const field of forbiddenFields) {
       if (payload[field] !== undefined) {
         error(`${field} cannot be updated via this endpoint`, 400);
@@ -735,7 +759,7 @@ class UsersService {
     }
 
     // 3. Whitelist allowed fields
-    const allowedFields: any[] = [
+    const allowedFields = [
       'firstName',
       'lastName',
       'email',
@@ -744,7 +768,7 @@ class UsersService {
       'roleId',
       'status',
     ];
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
 
     // Handle optional password change — hash before storing
     if (payload.password) {
@@ -765,13 +789,13 @@ class UsersService {
       }
 
       // Optional: validate allowed values
-      if (!['retail', 'wholesale'].includes(updateData.customerType)) {
+      if (!['retail', 'wholesale'].includes(String(updateData.customerType))) {
         error('Invalid customerType', 400);
       }
     }
 
     if (updateData.roleId) {
-      const role = await Role.findById(updateData.roleId).lean();
+      const role = await Role.findById(String(updateData.roleId)).lean();
       if (!role) error('Role not found', 404);
     }
 
@@ -814,3 +838,4 @@ class UsersService {
 }
 
 module.exports = new UsersService();
+

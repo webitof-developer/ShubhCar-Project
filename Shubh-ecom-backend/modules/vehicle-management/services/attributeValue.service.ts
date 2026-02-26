@@ -1,4 +1,3 @@
-import type { VehicleManagementRequestShape } from '../vehicle-management.types';
 const repo = require('../repositories/attributeValue.repository');
 const VehicleAttribute = require('../models/VehicleAttribute.model');
 const Vehicle = require('../models/Vehicle.model');
@@ -12,8 +11,8 @@ const isVariantName = (name) =>
   String(name || '').trim().toLowerCase() === VARIANT_NAME_KEY;
 
 class VehicleAttributeValuesService {
-  async list(query: any = {}) {
-    const filter: any = { isDeleted: false };
+  async list(query: Record<string, unknown> = {}) {
+    const filter: Record<string, unknown> = { isDeleted: false };
     if (query.attributeId) filter.attributeId = query.attributeId;
     if (query.status) filter.status = query.status;
     if (query.search) {
@@ -114,3 +113,4 @@ class VehicleAttributeValuesService {
 }
 
 module.exports = new VehicleAttributeValuesService();
+

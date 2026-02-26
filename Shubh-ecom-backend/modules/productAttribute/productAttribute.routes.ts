@@ -1,4 +1,3 @@
-import type { ProductAttributeRequestShape } from './productAttribute.types';
 const express = require('express');
 const auth = require('../../middlewares/auth.middleware');
 const validate = require('../../middlewares/validate.middleware');
@@ -16,7 +15,7 @@ const router = express.Router();
  *   get:
  *     summary: List attributes on a product
  *     tags: [Products]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: productId
@@ -33,7 +32,7 @@ router.get('/:productId/attributes', auth(), validateId('productId'), controller
  *   put:
  *     summary: Upsert attribute on product
  *     tags: [Products]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: productId
@@ -60,7 +59,7 @@ router.put('/:productId/attributes/:attributeId', adminLimiter, auth([ROLES.ADMI
  *   delete:
  *     summary: Remove attribute from product
  *     tags: [Products]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: productId
@@ -76,3 +75,4 @@ router.put('/:productId/attributes/:attributeId', adminLimiter, auth([ROLES.ADMI
 router.delete('/:productId/attributes/:attributeId', adminLimiter, auth([ROLES.ADMIN]), validateId('productId'), validateId('attributeId'), controller.remove);
 
 module.exports = router;
+

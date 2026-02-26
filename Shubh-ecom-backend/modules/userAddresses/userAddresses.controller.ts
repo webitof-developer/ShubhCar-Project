@@ -1,4 +1,3 @@
-import type { UserAddressesRequestShape } from './userAddresses.types';
 import type { Response } from 'express';
 import type { UserAddressesRequest } from './userAddresses.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -34,3 +33,4 @@ exports.remove = asyncHandler(async (req: UserAddressesRequest, res: Response) =
   const data = await service.remove(req.params.id, req.user.id);
   return success(res, data, 'Address deleted');
 });
+

@@ -1,4 +1,3 @@
-import type { OrdersRequestShape } from './orders.types';
 const OrderEvent = require('../../models/OrderEvent.model');
 
 class OrderEventRepo {
@@ -37,3 +36,4 @@ class OrderEventRepo {
 }
 
 module.exports = new OrderEventRepo();
+

@@ -1,4 +1,3 @@
-import type { OrdersRequestShape } from './orders.types';
 const { PAYMENT_STATUS } = require('../../constants/paymentStatus');
 
 const toNumber = (value) => {
@@ -14,7 +13,7 @@ const getPaidAmount = (order) => {
   if ((order.paymentMethod || '').toLowerCase() !== 'cod') {
     return order.paymentStatus === PAYMENT_STATUS.PAID ? total : 0;
   }
-  const entries = Array.isArray(order.codPayments) ? order.codPayments : [] as any[];
+  const entries = Array.isArray(order.codPayments) ? order.codPayments : [];
   return entries.reduce((sum, entry) => sum + toNumber(entry?.amount), 0);
 };
 
@@ -49,3 +48,4 @@ module.exports = {
   attachPaymentSummary,
   derivePaymentStatus,
 };
+

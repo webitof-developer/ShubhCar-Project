@@ -1,4 +1,3 @@
-import type { CategoryAttributeRequestShape } from './categoryAttribute.types';
 const categoryRepo = require('../categories/category.repo');
 const categoryAttrRepo = require('./categoryAttribute.repo');
 const { error } = require('../../utils/apiResponse');
@@ -52,7 +51,7 @@ class CategoryAttributeService {
     }
 
     const targetSpecType = payload.specType || attribute.specType;
-    const safePayload: any = { ...payload };
+    const safePayload: Record<string, unknown> = { ...payload };
 
     if (['text', 'number'].includes(targetSpecType)) {
       if (payload.options && payload.options.length) {
@@ -78,3 +77,4 @@ class CategoryAttributeService {
 }
 
 module.exports = new CategoryAttributeService();
+

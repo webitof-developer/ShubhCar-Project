@@ -1,4 +1,3 @@
-import type { ReviewsRequestShape } from './reviews.types';
 const ProductReview = require('../../models/ProductReview.model');
 const { getOffsetPagination } = require('../../utils/pagination');
 
@@ -59,7 +58,10 @@ class ReviewsRepo {
     return ProductReview.findByIdAndDelete(id).lean();
   }
 
-  adminList(filter: any = {}, { limit = 20, page = 1 } = {}) {
+  adminList(
+    filter: Record<string, unknown> = {},
+    { limit = 20, page = 1 } = {},
+  ) {
     const { limit: safeLimit, skip } = getOffsetPagination({ page, limit });
 
     return ProductReview.find(filter)
@@ -71,9 +73,10 @@ class ReviewsRepo {
       .lean();
   }
 
-  adminCount(filter: any = {}) {
+  adminCount(filter: Record<string, unknown> = {}) {
     return ProductReview.countDocuments(filter);
   }
 }
 
 module.exports = new ReviewsRepo();
+

@@ -1,10 +1,9 @@
-import type { VendorsRequestShape } from './vendors.types';
 const { jsonGet, jsonSet } = require('../../cache/cacheUtils');
 const { redis } = require('../../config/redis');
 
 const TTL = 60 * 10; // 10 minutes
 
-const key: any = {
+const key = {
   byId: (id) => `vendor:id:${id}`,
   byOwner: (ownerId) => `vendor:owner:${ownerId}`,
 };
@@ -17,10 +16,11 @@ const setByOwner = async (ownerId, value) =>
   jsonSet(key.byOwner(ownerId), value, TTL);
 
 const invalidate = async ({ _id, ownerUserId }) => {
-  const keys: any[] = [];
+  const keys: string[] = [];
   if (_id) keys.push(key.byId(_id));
   if (ownerUserId) keys.push(key.byOwner(ownerUserId));
   if (keys.length && redis.isOpen) await redis.del(keys);
 };
 
 module.exports = { getById, getByOwner, setById, setByOwner, invalidate };
+

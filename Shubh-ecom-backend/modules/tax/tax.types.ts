@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -23,12 +24,12 @@ export interface TaxBody {
 }
 
 export interface TaxRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface TaxRequestShape {
@@ -41,25 +42,25 @@ export type TaxRequest = Request<TaxParams, unknown, TaxBody, TaxQuery> &
   TaxRequestContext;
 
 export interface TaxEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface TaxServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type TaxServiceResult<T = any> = Promise<T>;
+export type TaxServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface TaxRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface TaxRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface TaxValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -91,3 +92,4 @@ export interface UpdateTaxSlabInput {
   rate?: number;
   status?: TaxSlabStatus;
 }
+

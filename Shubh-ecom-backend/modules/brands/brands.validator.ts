@@ -1,4 +1,3 @@
-import type { BrandsRequestShape } from './brands.types';
 const Joi = require('joi');
 
 const listBrandsQuerySchema = Joi.object({
@@ -39,3 +38,4 @@ module.exports = {
   createBrandSchema,
   updateBrandSchema,
 };
+

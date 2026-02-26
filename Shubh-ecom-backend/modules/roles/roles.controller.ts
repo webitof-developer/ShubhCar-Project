@@ -1,4 +1,3 @@
-import type { RolesRequestShape } from './roles.types';
 import type { Response } from 'express';
 import type { RolesRequest } from './roles.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -29,3 +28,4 @@ exports.remove = asyncHandler(async (req: RolesRequest, res: Response) => {
   const data = await rolesService.remove(req.params.roleId);
   return success(res, data, 'Role deleted');
 });
+

@@ -1,4 +1,3 @@
-import type { InvoiceRequestShape } from './invoice.types';
 const Invoice = require('../../models/InvoiceSchema');
 const EmailTemplate = require('../../models/EmailTemplate.model');
 const { sendEmail } = require('../../utils/email');
@@ -9,6 +8,33 @@ const orderRepo = require('../orders/order.repo');
 const User = require('../../models/User.model');
 const UserAddress = require('../../models/UserAddress.model');
 const logger = require('../../config/logger');
+
+type InvoiceTemplateVars = {
+  appName: string | undefined;
+  invoiceNumber: string;
+  orderNumber: string;
+  invoiceDate: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  items: unknown[];
+  subtotal: number;
+  taxTotal: number;
+  discountTotal: number;
+  grandTotal: number;
+};
+
+type CreditNoteTemplateVars = {
+  appName: string | undefined;
+  creditNoteNumber: string;
+  originalInvoiceNumber: string;
+  orderNumber: string;
+  creditNoteDate: string;
+  customerName: string;
+  customerEmail: string;
+  grandTotal: number;
+  refundReason: string;
+};
 
 class InvoiceService {
   async generateFromOrder(order) {
@@ -91,7 +117,7 @@ class InvoiceService {
 
     let html = tpl.bodyHtml;
 
-    const vars: any = {
+    const vars: InvoiceTemplateVars = {
       appName: process.env.APP_NAME,
       invoiceNumber: invoice.invoiceNumber,
       orderNumber: order.orderNumber || order._id,
@@ -180,7 +206,7 @@ class InvoiceService {
 
     let html = tpl.bodyHtml;
 
-    const vars: any = {
+    const vars: CreditNoteTemplateVars = {
       appName: process.env.APP_NAME,
       creditNoteNumber: creditNote.invoiceNumber,
       originalInvoiceNumber: originalInvoice.invoiceNumber,
@@ -206,3 +232,4 @@ class InvoiceService {
 }
 
 module.exports = new InvoiceService();
+

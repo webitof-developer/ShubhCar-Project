@@ -1,4 +1,3 @@
-import type { VehicleManagementRequestShape } from './vehicle-management.types';
 const Joi = require('joi');
 
 const baseListQuerySchema = Joi.object({
@@ -171,3 +170,4 @@ module.exports = {
   vehicleCreateSchema,
   vehicleUpdateSchema,
 };
+

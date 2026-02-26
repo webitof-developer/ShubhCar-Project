@@ -1,4 +1,3 @@
-import type { SeoRequestShape } from './seo.types';
 const seoRepo = require('./seo.repo');
 const { error } = require('../../utils/apiResponse');
 const ROLES = require('../../constants/roles');
@@ -12,7 +11,7 @@ class SeoService {
   async upsertSeo(payload, user) {
     if (!user || user.role !== ROLES.ADMIN) error('Forbidden', 403);
 
-    const required: any[] = ['entityType', 'metaTitle', 'metaDescription'];
+    const required = ['entityType', 'metaTitle', 'metaDescription'];
     required.forEach((f) => {
       if (!payload[f]) error(`${f} is required`, 400);
     });
@@ -34,12 +33,12 @@ class SeoService {
     );
   }
 
-  async listSeo(query: any = {}) {
+  async listSeo(query: Record<string, unknown> = {}) {
     const pagination = getOffsetPagination({
       page: query.page,
       limit: query.limit,
     });
-    const filter: any = { isActive: true };
+    const filter: Record<string, unknown> = { isActive: true };
 
     const [data, total] = await Promise.all([
       seoRepo.list(filter, pagination),
@@ -89,3 +88,4 @@ class SeoService {
 }
 
 module.exports = new SeoService();
+

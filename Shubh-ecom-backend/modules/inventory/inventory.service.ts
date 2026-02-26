@@ -1,4 +1,3 @@
-import type { InventoryRequestShape } from './inventory.types';
 const Product = require('../../models/Product.model');
 const { error } = require('../../utils/apiResponse');
 const { enqueueEmail } = require('../../queues/email.queue');
@@ -9,12 +8,21 @@ const logger = require('../../config/logger');
 const LOW_STOCK_THRESHOLD = Number(env.LOW_STOCK_THRESHOLD || 5);
 const STOCK_ALERT_EMAIL = env.STOCK_ALERT_EMAIL; // admin email
 
+type InventoryContext = {
+  orderId?: string;
+  requestId?: string | null;
+  route?: string;
+  method?: string;
+  userId?: string;
+  [key: string]: unknown;
+};
+
 class InventoryService {
   /**
    * Reserve stock when order is created
    * Decrements stockQty for simple products.
    */
-  async reserve(productId, qty, session, context: any = {}) {
+  async reserve(productId, qty, session, context: InventoryContext = {}) {
     if (qty <= 0) error('Invalid quantity', 400);
 
     const res = await Product.updateOne(
@@ -58,7 +66,7 @@ class InventoryService {
    * No-op stock mutation for simple products (already decremented on reserve).
    * Triggers low-stock email alert if needed.
    */
-  async commit(productId, qty, session, context: any = {}) {
+  async commit(productId, qty, session, context: InventoryContext = {}) {
     if (qty <= 0) error('Invalid quantity', 400);
 
     const updated = await Product.findOne({
@@ -108,7 +116,7 @@ class InventoryService {
    * Release stock on cancel / failure
    * Restores stockQty for simple products.
    */
-  async release(productId, qty, session, context: any = {}) {
+  async release(productId, qty, session, context: InventoryContext = {}) {
     if (qty <= 0) error('Invalid quantity', 400);
 
     const updated = await Product.findOneAndUpdate(
@@ -141,3 +149,4 @@ class InventoryService {
 }
 
 module.exports = new InventoryService();
+

@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -27,12 +28,12 @@ export interface EntriesBody {
 }
 
 export interface EntriesRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface EntriesRequestShape {
@@ -50,25 +51,25 @@ export type EntriesRequest = Request<
   EntriesRequestContext;
 
 export interface EntriesEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface EntriesServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type EntriesServiceResult<T = any> = Promise<T>;
+export type EntriesServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface EntriesRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface EntriesRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface EntriesValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -94,3 +95,4 @@ export interface SubmitEntryInput {
   subject?: string;
   message: string;
 }
+

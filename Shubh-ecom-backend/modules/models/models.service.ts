@@ -1,4 +1,3 @@
-import type { ModelsRequestShape } from './models.types';
 const Model = require('../../models/Model.model');
 const slugify = require('slugify');
 // Security: Escape user input before constructing RegExp to prevent ReDoS.
@@ -7,7 +6,7 @@ const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagina
 
 class ModelService {
     async list({ limit, page, search }) {
-        const filter: any = {};
+        const filter: Record<string, unknown> = {};
         if (search) filter.year = { $regex: escapeRegex(search), $options: 'i' };
         const pagination = getOffsetPagination({ page, limit });
 
@@ -50,3 +49,4 @@ class ModelService {
 }
 
 module.exports = new ModelService();
+

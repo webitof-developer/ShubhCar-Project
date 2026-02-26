@@ -1,4 +1,4 @@
-import type { AuditRequestShape, AuditLogInput } from './audit.types';
+import type { AuditLogInput } from './audit.types';
 
 const logger = require('../../config/logger');
 

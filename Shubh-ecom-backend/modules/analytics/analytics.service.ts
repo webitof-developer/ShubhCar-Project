@@ -1,4 +1,3 @@
-import type { AnalyticsRequestShape } from './analytics.types';
 const mongoose = require('mongoose');
 const Order = require('../../models/Order.model');
 const OrderItem = require('../../models/OrderItem.model');
@@ -9,8 +8,46 @@ const Role = require('../../models/Role.model');
 
 const MAX_ANALYTICS_LIMIT = 100;
 
+type AnalyticsUser = {
+  id?: string;
+  _id?: string;
+  role?: string;
+  [key: string]: unknown;
+};
+
+type DateRangeInput = {
+  from?: string | Date;
+  to?: string | Date;
+};
+
+type LimitedDateRangeInput = DateRangeInput & {
+  limit?: string | number;
+};
+
+type RevenueSummaryInput = DateRangeInput & {
+  salesmanId?: string | null;
+};
+
+type RevenueChartInput = DateRangeInput & {
+  range?: string;
+  salesmanId?: string | null;
+};
+
+type SalesmanScopeId = string | null | undefined;
+
+type AnalyticsMatch = Record<string, unknown> & {
+  createdAt?: {
+    $gte?: Date;
+    $lte?: Date;
+  };
+  isDeleted?: boolean;
+  paymentStatus?: string | { $in: string[] };
+  orderStatus?: string;
+  salesmanId?: unknown;
+};
+
 class AnalyticsService {
-  async _resolveSalesmanActor(user: any = {}) {
+  async _resolveSalesmanActor(user: AnalyticsUser = {}) {
     const actorId = user?.id || user?._id;
     if (!actorId || !mongoose.Types.ObjectId.isValid(actorId)) return null;
     if (String(user?.role || '').toLowerCase() === 'salesman') {
@@ -33,8 +70,12 @@ class AnalyticsService {
       : null;
   }
 
-  async _roleScopedOrderMatch(user: any = {}, extra: any = {}, targetSalesmanId = null) {
-    const match: any = { ...extra };
+  async _roleScopedOrderMatch(
+    user: AnalyticsUser = {},
+    extra: AnalyticsMatch = {},
+    targetSalesmanId: SalesmanScopeId = null,
+  ) {
+    const match: AnalyticsMatch = { ...extra };
 
     // 1. If user is Admin and targetSalesmanId is provided, force filter by that salesman
     if (targetSalesmanId) {
@@ -53,25 +94,31 @@ class AnalyticsService {
     return match;
   }
 
-  _toSafePositiveInt(value, fallback, min = 1, max = MAX_ANALYTICS_LIMIT) {
-    const parsed = Number.parseInt(value, 10);
+  _toSafePositiveInt(
+    value: string | number | null | undefined,
+    fallback: number,
+    min = 1,
+    max = MAX_ANALYTICS_LIMIT,
+  ) {
+    if (value === null || value === undefined) return fallback;
+    const parsed = Number.parseInt(String(value), 10);
     if (!Number.isFinite(parsed)) return fallback;
     return Math.min(max, Math.max(min, parsed));
   }
 
-  _toSafeDate(value) {
+  _toSafeDate(value: string | Date | null | undefined) {
     if (!value) return null;
     const parsed = value instanceof Date ? value : new Date(value);
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   }
 
-  _dateFilter(from, to) {
+  _dateFilter(from?: string | Date, to?: string | Date) {
     const safeFrom = this._toSafeDate(from);
     const safeTo = this._toSafeDate(to);
 
     if (!safeFrom && !safeTo) return {};
 
-    const createdAt: any = {};
+    const createdAt: { $gte?: Date; $lte?: Date } = {};
     if (safeFrom) createdAt.$gte = safeFrom;
     if (safeTo) createdAt.$lte = safeTo;
     return { createdAt };
@@ -80,8 +127,11 @@ class AnalyticsService {
   /* =======================
      REVENUE & ORDERS
   ======================== */
-  async revenueSummary({ from, to, salesmanId }, user: any = {}) {
-    const match: any = {
+  async revenueSummary(
+    { from, to, salesmanId }: RevenueSummaryInput,
+    user: AnalyticsUser = {},
+  ) {
+    const match: AnalyticsMatch = {
       ...(await this._roleScopedOrderMatch(
         user,
         this._dateFilter(from, to),
@@ -89,7 +139,7 @@ class AnalyticsService {
       )),
       isDeleted: false,
     };
-    const pendingStatuses: any[] = ['pending', 'partially_paid'];
+    const pendingStatuses = ['pending', 'partially_paid'];
 
     const [
       totalOrders,
@@ -171,9 +221,8 @@ class AnalyticsService {
     };
   }
 
-// @ts-ignore
-  async repeatCustomerSummary({ from, to } = {}) {
-    const match: any = {
+  async repeatCustomerSummary({ from, to }: DateRangeInput = {}) {
+    const match: AnalyticsMatch = {
       ...this._dateFilter(from, to),
       paymentStatus: 'paid',
       isDeleted: false,
@@ -210,8 +259,8 @@ class AnalyticsService {
     };
   }
 
-  async fulfillmentSummary({ from, to }: any = {}) {
-    const match: any = { ...this._dateFilter(from, to), isDeleted: false };
+  async fulfillmentSummary({ from, to }: DateRangeInput = {}) {
+    const match: AnalyticsMatch = { ...this._dateFilter(from, to), isDeleted: false };
     const [shipAgg, deliverAgg] = await Promise.all([
       Order.aggregate([
         {
@@ -269,8 +318,8 @@ class AnalyticsService {
     };
   }
 
-  async orderFunnel({ from, to }: any = {}) {
-    const match: any = { ...this._dateFilter(from, to), isDeleted: false };
+  async orderFunnel({ from, to }: DateRangeInput = {}) {
+    const match: AnalyticsMatch = { ...this._dateFilter(from, to), isDeleted: false };
     const [
       totalOrders,
       paidOrders,
@@ -297,9 +346,9 @@ class AnalyticsService {
     };
   }
 
-  async topCategories({ from, to, limit = 6 }: any = {}) {
+  async topCategories({ from, to, limit = 6 }: LimitedDateRangeInput = {}) {
     const safeLimit = this._toSafePositiveInt(limit, 6);
-    const match: any = {
+    const match: AnalyticsMatch = {
       ...this._dateFilter(from, to),
       paymentStatus: 'paid',
       isDeleted: false,
@@ -321,7 +370,7 @@ class AnalyticsService {
           as: 'order',
         },
       },
-      { $match: { order: { $ne: [] as any[] } } },
+      { $match: { order: { $ne: [] } } },
       {
         $group: {
           _id: '$productId',
@@ -365,9 +414,9 @@ class AnalyticsService {
     ]);
   }
 
-  async topBrands({ from, to, limit = 6 }: any = {}) {
+  async topBrands({ from, to, limit = 6 }: LimitedDateRangeInput = {}) {
     const safeLimit = this._toSafePositiveInt(limit, 6);
-    const match: any = {
+    const match: AnalyticsMatch = {
       ...this._dateFilter(from, to),
       paymentStatus: 'paid',
       isDeleted: false,
@@ -389,7 +438,7 @@ class AnalyticsService {
           as: 'order',
         },
       },
-      { $match: { order: { $ne: [] as any[] } } },
+      { $match: { order: { $ne: [] } } },
       {
         $group: {
           _id: '$productId',
@@ -420,9 +469,9 @@ class AnalyticsService {
     ]);
   }
 
-  async inventoryTurnover({ from, to, limit = 6 }: any = {}) {
+  async inventoryTurnover({ from, to, limit = 6 }: LimitedDateRangeInput = {}) {
     const safeLimit = this._toSafePositiveInt(limit, 6);
-    const match: any = {
+    const match: AnalyticsMatch = {
       ...this._dateFilter(from, to),
       paymentStatus: 'paid',
       isDeleted: false,
@@ -444,7 +493,7 @@ class AnalyticsService {
           as: 'order',
         },
       },
-      { $match: { order: { $ne: [] as any[] } } },
+      { $match: { order: { $ne: [] } } },
       { $group: { _id: null, totalSoldQty: { $sum: '$quantity' } } },
     ]);
 
@@ -472,7 +521,7 @@ class AnalyticsService {
           as: 'order',
         },
       },
-      { $match: { order: { $ne: [] as any[] } } },
+      { $match: { order: { $ne: [] } } },
       { $group: { _id: '$productId' } },
     ]);
     const soldProductIds = soldProductIdsAgg.map((row) => row._id);
@@ -495,9 +544,9 @@ class AnalyticsService {
     };
   }
 
-  async salesByCity({ from, to, limit = 6 }: any = {}) {
+  async salesByCity({ from, to, limit = 6 }: LimitedDateRangeInput = {}) {
     const safeLimit = this._toSafePositiveInt(limit, 6);
-    const match: any = {
+    const match: AnalyticsMatch = {
       ...this._dateFilter(from, to),
       isDeleted: false,
       paymentStatus: 'paid',
@@ -564,7 +613,7 @@ class AnalyticsService {
           as: 'order',
         },
       },
-      { $match: { order: { $ne: [] as any[] } } },
+      { $match: { order: { $ne: [] } } },
       {
         $group: {
           _id: '$productId',
@@ -640,7 +689,10 @@ class AnalyticsService {
   /* =======================
      DASHBOARD STATS
   ======================== */
-  async dashboardStats(user: any = {}, targetSalesmanId = null) {
+  async dashboardStats(
+    user: AnalyticsUser = {},
+    targetSalesmanId: SalesmanScopeId = null,
+  ) {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -700,7 +752,7 @@ class AnalyticsService {
     const revenue = currentRevenue[0]?.total || 0;
     const prevRevenue = lastMonthRevenue[0]?.total || 0;
 
-    const response: any = {
+    const response: Record<string, unknown> = {
       totalOrders: currentOrders,
       ordersChange: calculateChange(currentOrders, lastMonthOrders),
       newLeads: currentUsers,
@@ -800,15 +852,14 @@ class AnalyticsService {
      CHART DATA
   ======================== */
   async revenueChartData(
-// @ts-ignore
-    { range = 'month', from, to, salesmanId } = {},
-    user: any = {},
+    { range = 'month', from, to, salesmanId }: RevenueChartInput = {},
+    user: AnalyticsUser = {},
   ) {
     const now = new Date();
     let startDate = new Date();
     let endDate = now;
-    let groupId: any = {};
-    let labels: any[] = [];
+    let groupId: Record<string, unknown> = {};
+    let labels: string[] = [];
     let points = 0;
 
     if (range === 'custom' && from && to) {
@@ -911,7 +962,11 @@ class AnalyticsService {
       { $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1, '_id.hour': 1 } },
     ]);
 
-    const result: any = { revenue: [] as any[], orders: [] as any[], labels: [] as any[] };
+    const result: { revenue: number[]; orders: number[]; labels: string[] } = {
+      revenue: [],
+      orders: [],
+      labels: [],
+    };
 
     for (let i = 0; i < points; i++) {
       const current = new Date(startDate);
@@ -958,10 +1013,9 @@ class AnalyticsService {
     return result;
   }
 
-// @ts-ignore
-  async salesByState({ limit = 6, from, to } = {}) {
+  async salesByState({ limit = 6, from, to }: LimitedDateRangeInput = {}) {
     const safeLimit = this._toSafePositiveInt(limit, 6);
-    const match: any = {
+    const match: AnalyticsMatch = {
       ...this._dateFilter(from, to),
       isDeleted: false,
       paymentStatus: 'paid',
@@ -1004,3 +1058,4 @@ class AnalyticsService {
 }
 
 module.exports = new AnalyticsService();
+

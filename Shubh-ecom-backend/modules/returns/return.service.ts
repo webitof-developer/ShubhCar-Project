@@ -1,5 +1,3 @@
-import type { ReturnsRequestShape } from './returns.types';
-const mongoose = require('mongoose');
 const { createSafeSession } = require('../../utils/mongoTransaction');
 const returnRepo = require('./return.repo');
 const orderRepo = require('../orders/order.repo');
@@ -43,7 +41,7 @@ class ReturnService {
     });
   }
 
-  async adminDecision({ admin, id, payload }) {
+  async adminDecision({ admin: _admin, id, payload }) {
     const existing = await returnRepo.findById(id);
     if (!existing) error('Return request not found', 404);
 
@@ -55,7 +53,7 @@ class ReturnService {
     return updated;
   }
 
-  async complete({ admin, id, payload, context: any = {} }) {
+  async complete({ admin: _admin, id, payload, context = {} as Record<string, unknown> }) {
     const session = await createSafeSession();
     if (!session._isStandalone) {
       session.startTransaction({ readPreference: 'primary' });
@@ -112,7 +110,7 @@ class ReturnService {
     }
   }
 
-  async list(query: any = {}) {
+  async list(query: Record<string, unknown> = {}) {
     const { page, limit, ...filter } = query;
     const pagination = getOffsetPagination({ page, limit });
     const [data, total] = await Promise.all([
@@ -140,3 +138,4 @@ class ReturnService {
 }
 
 module.exports = new ReturnService();
+

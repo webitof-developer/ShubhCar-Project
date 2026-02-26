@@ -1,4 +1,3 @@
-import type { SalesReportsRequestShape } from './salesReports.types';
 const Joi = require('joi');
 
 const summaryQuerySchema = Joi.object({
@@ -41,3 +40,4 @@ module.exports = {
   createSalesReportSchema,
   updateSalesReportSchema,
 };
+

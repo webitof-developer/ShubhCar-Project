@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -19,12 +20,12 @@ export interface InventoryLogsBody {
 }
 
 export interface InventoryLogsRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface InventoryLogsRequestShape {
@@ -42,25 +43,25 @@ export type InventoryLogsRequest = Request<
   InventoryLogsRequestContext;
 
 export interface InventoryLogsEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface InventoryLogsServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type InventoryLogsServiceResult<T = any> = Promise<T>;
+export type InventoryLogsServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface InventoryLogsRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface InventoryLogsRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface InventoryLogsValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -83,3 +84,4 @@ export interface InventoryLogRecord {
   note: string;
   createdAt: Date;
 }
+

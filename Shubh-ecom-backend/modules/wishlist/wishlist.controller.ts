@@ -1,4 +1,3 @@
-import type { WishlistRequestShape } from './wishlist.types';
 import type { Response } from 'express';
 import type { WishlistRequest } from './wishlist.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -19,3 +18,4 @@ exports.remove = asyncHandler(async (req: WishlistRequest, res: Response) => {
   await service.remove(req.user.id, req.params.productId);
   return success(res, null, 'Removed from wishlist');
 });
+

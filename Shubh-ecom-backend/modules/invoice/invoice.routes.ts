@@ -1,4 +1,3 @@
-import type { InvoiceRequestShape } from './invoice.types';
 const express = require('express');
 const fs = require('fs/promises');
 const path = require('path');
@@ -19,6 +18,9 @@ const { listInvoicesQuerySchema, pdfQuerySchema } = require('./invoice.validator
 
 const BASE_DIR = path.resolve(__dirname, '../../');
 const PAGE_MARGIN = 28;
+type StreamPdfOptions = {
+  download?: boolean;
+};
 
 const getMoney = (value, currency = 'INR') =>
   `${currency} ${Number(value || 0).toFixed(2)}`;
@@ -79,8 +81,7 @@ const drawInvoiceHeader = (doc, invoice, settings, logoBuffer) => {
 
   doc.fontSize(12).font('Helvetica-Bold').fillColor('#111827').text(settings.invoice_company_name || '-', 44, 136);
 
-// @ts-ignore
-  const companyAddress: any[] = [
+  const companyAddress = [
     settings.invoice_company_address_line1,
     settings.invoice_company_address_line2,
     [settings.invoice_company_city, settings.invoice_company_state, settings.invoice_company_pincode]
@@ -113,8 +114,7 @@ const drawBillingSection = (doc, invoice) => {
   doc.text(invoice.customerSnapshot?.phone || '-', 56, 278);
 
   const address = invoice.customerSnapshot?.address || {};
-// @ts-ignore
-  const addressText: any[] = [
+  const addressText = [
     address.line1,
     address.line2,
     address.city,
@@ -210,7 +210,11 @@ const drawFooter = (doc, settings) => {
     .text(settings.invoice_notes || '', 44, footerY + 18, { width: 508, align: 'left' });
 };
 
-const streamInvoicePdf = async (invoice, res, { download = false }: any = {}) => {
+const streamInvoicePdf = async (
+  invoice,
+  res,
+  { download = false }: StreamPdfOptions = {},
+) => {
   const doc = new PDFDocument({ margin: PAGE_MARGIN, size: 'A4' });
   const filePrefix = invoice.type === 'credit_note' ? 'credit-note' : 'invoice';
   const filename = `${filePrefix}-${invoice.invoiceNumber || invoice._id}.pdf`;
@@ -251,7 +255,7 @@ const streamInvoicePdf = async (invoice, res, { download = false }: any = {}) =>
   drawBillingSection(doc, invoice);
 
   const currency = invoice.totals?.currency || 'INR';
-  const items = Array.isArray(invoice.items) ? invoice.items : [] as any[];
+  const items = Array.isArray(invoice.items) ? invoice.items : [];
   let tableY = 330;
 
   drawItemsHeader(doc, tableY);
@@ -287,7 +291,7 @@ const streamInvoicePdf = async (invoice, res, { download = false }: any = {}) =>
  *   get:
  *     summary: List invoices (Admin)
  *     tags: [Invoices]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: query
  *         name: page
@@ -310,7 +314,7 @@ router.get(
   asyncHandler(async (req, res) => {
     const { page = 1, limit = 50, type } = req.query;
 
-    const query: any = {};
+    const query: Record<string, unknown> = {};
     if (type) query.type = type;
 
     const invoices = await Invoice.find(query)
@@ -339,7 +343,7 @@ router.get(
  *   get:
  *     summary: Get invoice by id (Admin)
  *     tags: [Invoices]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -370,7 +374,7 @@ router.get(
  *   get:
  *     summary: Get invoice PDF (Admin)
  *     tags: [Invoices]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -405,7 +409,7 @@ router.get(
  *   get:
  *     summary: Get invoice by order id (Admin)
  *     tags: [Invoices]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: orderId
@@ -436,7 +440,7 @@ router.get(
  *   get:
  *     summary: Get invoice PDF by order id (Admin)
  *     tags: [Invoices]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: orderId
@@ -477,3 +481,4 @@ router.get(
 );
 
 module.exports = router;
+

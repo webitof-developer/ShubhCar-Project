@@ -1,4 +1,3 @@
-import type { CartRequestShape } from './cart.types';
 import type { Response } from 'express';
 import type { CartRequest } from './cart.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -75,3 +74,4 @@ exports.removeCoupon = asyncHandler(async (req: CartRequest, res: Response) => {
   });
   return success(res, data, 'Coupon removed');
 });
+

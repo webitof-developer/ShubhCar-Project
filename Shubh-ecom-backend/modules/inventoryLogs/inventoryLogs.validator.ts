@@ -1,4 +1,3 @@
-import type { InventoryLogsRequestShape } from './inventoryLogs.types';
 const Joi = require('joi');
 
 const listInventoryLogsQuerySchema = Joi.object({
@@ -16,3 +15,4 @@ const listInventoryLogsQuerySchema = Joi.object({
 module.exports = {
   listInventoryLogsQuerySchema,
 };
+

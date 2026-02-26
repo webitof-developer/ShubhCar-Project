@@ -1,4 +1,3 @@
-import type { ReturnsRequestShape } from './returns.types';
 const Joi = require('joi');
 
 const createReturnSchema = Joi.object({
@@ -29,3 +28,4 @@ module.exports = {
   adminDecisionSchema,
   completeSchema,
 };
+

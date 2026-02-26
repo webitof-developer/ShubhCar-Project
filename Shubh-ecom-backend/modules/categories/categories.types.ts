@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -25,12 +26,12 @@ export interface CategoriesBody {
 }
 
 export interface CategoriesRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface CategoriesRequestShape {
@@ -48,25 +49,25 @@ export type CategoriesRequest = Request<
   CategoriesRequestContext;
 
 export interface CategoriesEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface CategoriesServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type CategoriesServiceResult<T = any> = Promise<T>;
+export type CategoriesServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface CategoriesRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface CategoriesRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface CategoriesValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -102,3 +103,4 @@ export interface UpdateCategoryInput {
   iconUrl?: string;
   imageUrl?: string;
 }
+

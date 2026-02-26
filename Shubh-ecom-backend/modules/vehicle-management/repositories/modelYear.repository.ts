@@ -1,10 +1,9 @@
-import type { VehicleManagementRequestShape } from '../vehicle-management.types';
 const mongoose = require('mongoose');
 const VehicleModelYear = require('../models/VehicleModelYear.model');
 const { getOffsetPagination } = require('../../../utils/pagination');
 
 class VehicleModelYearsRepo {
-  list(filter, { page = 1, limit = 50 }: any = {}) {
+  list(filter, { page = 1, limit = 50 }: Record<string, unknown> = {}) {
     const pagination = getOffsetPagination({ page, limit });
     return VehicleModelYear.find(filter)
       .sort({ year: -1 })
@@ -58,3 +57,4 @@ class VehicleModelYearsRepo {
 }
 
 module.exports = new VehicleModelYearsRepo();
+

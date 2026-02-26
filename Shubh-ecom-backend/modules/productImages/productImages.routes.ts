@@ -1,4 +1,3 @@
-import type { ProductImagesRequestShape } from './productImages.types';
 const express = require('express');
 const auth = require('../../middlewares/auth.middleware');
 const validate = require('../../middlewares/validate.middleware');
@@ -20,7 +19,7 @@ const router = express.Router();
  *   get:
  *     summary: List product images
  *     tags: [Products]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Images list }
  */
@@ -38,7 +37,7 @@ router.get(
  *   get:
  *     summary: Get product image by id
  *     tags: [Products]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -55,7 +54,7 @@ router.get('/:id', adminLimiter, auth([ROLES.ADMIN]), validateId('id'), controll
  *   post:
  *     summary: Create product image
  *     tags: [Products]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -85,7 +84,7 @@ router.post(
  *   put:
  *     summary: Update product image
  *     tags: [Products]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -119,7 +118,7 @@ router.put(
  *   delete:
  *     summary: Delete product image
  *     tags: [Products]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -131,3 +130,4 @@ router.put(
 router.delete('/:id', adminLimiter, auth([ROLES.ADMIN]), validateId('id'), controller.remove);
 
 module.exports = router;
+

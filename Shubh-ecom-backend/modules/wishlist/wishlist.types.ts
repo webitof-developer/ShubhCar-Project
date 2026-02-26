@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -18,12 +19,12 @@ export interface WishlistBody {
 }
 
 export interface WishlistRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface WishlistRequestShape {
@@ -41,25 +42,25 @@ export type WishlistRequest = Request<
   WishlistRequestContext;
 
 export interface WishlistEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface WishlistServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type WishlistServiceResult<T = any> = Promise<T>;
+export type WishlistServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface WishlistRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface WishlistRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface WishlistValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -85,3 +86,4 @@ export interface WishlistItem extends WishlistRecord {
     status?: string;
   };
 }
+

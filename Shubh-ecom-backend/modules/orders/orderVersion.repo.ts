@@ -1,4 +1,3 @@
-import type { OrdersRequestShape } from './orders.types';
 const OrderVersion = require('../../models/OrderVersion.model');
 
 class OrderVersionRepo {
@@ -43,3 +42,4 @@ class OrderVersionRepo {
 }
 
 module.exports = new OrderVersionRepo();
+

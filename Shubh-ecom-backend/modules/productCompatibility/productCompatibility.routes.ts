@@ -1,4 +1,3 @@
-import type { ProductCompatibilityRequestShape } from './productCompatibility.types';
 const express = require('express');
 const auth = require('../../middlewares/auth.middleware');
 const validate = require('../../middlewares/validate.middleware');
@@ -17,7 +16,7 @@ const router = express.Router();
  *   get:
  *     summary: Get vehicle compatibility for a product
  *     tags: [Products]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: productId
@@ -34,7 +33,7 @@ router.get('/:productId', auth([ROLES.ADMIN]), validateId('productId'), controll
  *   put:
  *     summary: Set vehicle compatibility for a product
  *     tags: [Products]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: productId
@@ -63,3 +62,4 @@ router.put(
 );
 
 module.exports = router;
+

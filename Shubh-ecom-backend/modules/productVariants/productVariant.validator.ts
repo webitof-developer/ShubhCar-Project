@@ -1,4 +1,3 @@
-import type { ProductVariantsRequestShape } from './productVariants.types';
 const Joi = require('joi');
 
 const stockAdjustSchema = Joi.object({
@@ -48,3 +47,4 @@ module.exports = {
   createVariantSchema,
   updateVariantSchema 
 };
+

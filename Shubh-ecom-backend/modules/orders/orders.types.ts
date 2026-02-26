@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -57,12 +58,12 @@ export interface OrdersBody {
 }
 
 export interface OrdersRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface OrdersRequestShape {
@@ -80,25 +81,25 @@ export type OrdersRequest = Request<
   OrdersRequestContext;
 
 export interface OrdersEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface OrdersServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type OrdersServiceResult<T = any> = Promise<T>;
+export type OrdersServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface OrdersRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface OrdersRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface OrdersValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -189,3 +190,4 @@ export interface OrderServiceContext {
   userId?: string;
   actor?: { type: string; id?: string };
 }
+

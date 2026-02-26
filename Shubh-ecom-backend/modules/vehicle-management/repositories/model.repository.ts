@@ -1,9 +1,8 @@
-import type { VehicleManagementRequestShape } from '../vehicle-management.types';
 const VehicleModel = require('../models/VehicleModel.model');
 const { getOffsetPagination } = require('../../../utils/pagination');
 
 class VehicleModelsRepo {
-  list(filter, { page = 1, limit = 50 }: any = {}) {
+  list(filter, { page = 1, limit = 50 }: Record<string, unknown> = {}) {
     const pagination = getOffsetPagination({ page, limit });
     const query = VehicleModel.find(filter)
       .sort({ createdAt: -1 })
@@ -59,3 +58,4 @@ class VehicleModelsRepo {
 }
 
 module.exports = new VehicleModelsRepo();
+

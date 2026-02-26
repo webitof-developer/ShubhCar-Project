@@ -1,4 +1,3 @@
-import type { ProductCompatibilityRequestShape } from './productCompatibility.types';
 import type { Response } from 'express';
 import type { ProductCompatibilityRequest } from './productCompatibility.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -14,3 +13,4 @@ exports.upsert = asyncHandler(async (req: ProductCompatibilityRequest, res: Resp
   const data = await service.upsert(req.params.productId, req.body);
   return success(res, data, 'Compatibility updated');
 });
+

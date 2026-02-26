@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -28,12 +29,12 @@ export interface MediaBody {
 }
 
 export interface MediaRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface MediaRequestShape {
@@ -51,25 +52,25 @@ export type MediaRequest = Request<
   MediaRequestContext;
 
 export interface MediaEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface MediaServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type MediaServiceResult<T = any> = Promise<T>;
+export type MediaServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface MediaRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface MediaRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface MediaValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -108,3 +109,4 @@ export interface UploadMediaInput {
   folder?: string;
   usedIn?: MediaUsedIn;
 }
+

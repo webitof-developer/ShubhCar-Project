@@ -1,4 +1,3 @@
-import type { OrderItemsRequestShape } from './orderItems.types';
 // backend/modules/orderItems/orderItems.routes.js
 const express = require('express');
 const auth = require('../../middlewares/auth.middleware');
@@ -28,7 +27,7 @@ router.patch(
  *   patch:
  *     summary: Update order item status
  *     tags: [Orders]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -48,3 +47,4 @@ router.patch(
  */
 
 module.exports = router;
+

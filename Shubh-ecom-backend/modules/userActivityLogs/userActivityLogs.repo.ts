@@ -1,4 +1,3 @@
-import type { UserActivityLogsRequestShape } from './userActivityLogs.types';
 const UserActivityLog = require('../../models/UserActivityLog.model');
 const { getOffsetPagination } = require('../../utils/pagination');
 
@@ -7,7 +6,10 @@ class UserActivityLogsRepo {
     return UserActivityLog.create(data);
   }
 
-  list(filter: any = {}, pagination: any = {}) {
+  list(
+    filter: Record<string, unknown> = {},
+    pagination: Record<string, unknown> = {},
+  ) {
     const { limit, skip } = getOffsetPagination(pagination);
     return UserActivityLog.find(filter)
       .sort({ createdAt: -1 })
@@ -16,9 +18,10 @@ class UserActivityLogsRepo {
       .lean();
   }
 
-  count(filter: any = {}) {
+  count(filter: Record<string, unknown> = {}) {
     return UserActivityLog.countDocuments(filter);
   }
 }
 
 module.exports = new UserActivityLogsRepo();
+

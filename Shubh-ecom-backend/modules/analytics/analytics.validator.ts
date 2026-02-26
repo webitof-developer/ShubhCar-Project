@@ -1,4 +1,3 @@
-import type { AnalyticsRequestShape } from './analytics.types';
 const Joi = require('joi');
 
 const analyticsQuerySchema = Joi.object({
@@ -16,3 +15,4 @@ const analyticsQuerySchema = Joi.object({
 module.exports = {
   analyticsQuerySchema,
 };
+

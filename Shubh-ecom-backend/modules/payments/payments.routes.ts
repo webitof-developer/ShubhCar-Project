@@ -1,4 +1,3 @@
-import type { PaymentsRequestShape } from './payments.types';
 const express = require('express');
 
 /* =======================
@@ -66,7 +65,7 @@ router.post(
  *   post:
  *     summary: Initiate payment
  *     tags: [Payments]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -94,7 +93,7 @@ router.post(
  *   post:
  *     summary: Retry payment
  *     tags: [Payments]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -115,7 +114,7 @@ router.post(
  *   get:
  *     summary: Get payment status
  *     tags: [Payments]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: paymentId
@@ -151,7 +150,7 @@ router.post(
  *   post:
  *     summary: Confirm payment (COD/manual)
  *     tags: [Payments]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: paymentId
@@ -174,7 +173,7 @@ router.post(
  *   post:
  *     summary: Approve refund
  *     tags: [Payments]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: paymentId
@@ -206,9 +205,10 @@ router.get(
  *   get:
  *     summary: List payments (Admin)
  *     tags: [Payments]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Payments list }
  */
 
 module.exports = router;
+

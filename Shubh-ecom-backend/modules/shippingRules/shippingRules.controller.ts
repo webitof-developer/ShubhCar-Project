@@ -1,4 +1,3 @@
-import type { ShippingRulesRequestShape } from './shippingRules.types';
 import type { Response } from 'express';
 import type { ShippingRulesRequest } from './shippingRules.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -24,3 +23,4 @@ exports.remove = asyncHandler(async (req: ShippingRulesRequest, res: Response) =
   const data = await service.remove(req.params.id);
   return success(res, data, 'Shipping rule removed');
 });
+

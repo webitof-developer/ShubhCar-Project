@@ -1,4 +1,3 @@
-import type { VehicleManagementRequestShape } from '../vehicle-management.types';
 const mongoose = require('mongoose');
 
 const vehicleYearSchema = new mongoose.Schema(
@@ -15,3 +14,4 @@ vehicleYearSchema.pre(/^find/, function () {
 });
 
 module.exports = mongoose.model('VehicleYear', vehicleYearSchema);
+

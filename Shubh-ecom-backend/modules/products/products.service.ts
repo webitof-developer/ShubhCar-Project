@@ -1,4 +1,3 @@
-import type { ProductsRequestShape } from './products.types';
 //products.service.js
 const repo = require('./product.repo');
 const cache = require('../../cache/product.cache');
@@ -23,6 +22,42 @@ const { escapeRegex } = require('../../utils/escapeRegex');
 
 const PRODUCT_CODE_REGEX = /^PRO-\d{6}$/;
 
+type ProductRecord = {
+  _id?: string;
+  id?: string;
+  type?: string;
+  brand?: string;
+  oemPartNumber?: string;
+  productType?: string;
+  manufacturerBrand?: string | null;
+  vehicleBrand?: string | null;
+  oemNumber?: string | null;
+  productId?: string;
+  slug?: string;
+  retailPrice?: unknown;
+  wholesalePrice?: unknown;
+  [key: string]: unknown;
+};
+
+type ProductListQuery = {
+  page?: number | string;
+  limit?: number | string;
+  search?: string;
+  categoryId?: string;
+  manufacturerBrand?: string;
+  productType?: string;
+  minPrice?: number | string;
+  maxPrice?: number | string;
+  sort?: string;
+};
+
+type ProductAdminListQuery = ProductListQuery & {
+  status?: string;
+  stockStatus?: string;
+  isFeatured?: boolean | string;
+  summary?: string | boolean;
+};
+
 const normalizeProductFields = (product) => {
   if (!product) return product;
   const legacyType = product.type;
@@ -31,7 +66,7 @@ const normalizeProductFields = (product) => {
 
   const rawType = product.productType || legacyType || 'AFTERMARKET';
   const productType = String(rawType).toUpperCase() === 'AFTERMARKET' ? 'AFTERMARKET' : 'OEM';
-  const normalized: any = {
+  const normalized: ProductRecord = {
     ...product,
     productType,
     manufacturerBrand: product.manufacturerBrand || legacyBrand || null,
@@ -59,10 +94,10 @@ const normalizeProductFields = (product) => {
   return normalized;
 };
 
-const normalizeProductList = (products: any[] = []) =>
-  Array.isArray(products) ? products.map(normalizeProductFields) : [] as any[];
+const normalizeProductList = (products: ProductRecord[] = []) =>
+  Array.isArray(products) ? products.map(normalizeProductFields) : [];
 
-const ensureListProductCodes = async (products: any[] = []) => {
+const ensureListProductCodes = async (products: ProductRecord[] = []) => {
   const missing = products.filter((item) => !item.productId || !PRODUCT_CODE_REGEX.test(item.productId));
   if (!missing.length) return;
 
@@ -70,7 +105,7 @@ const ensureListProductCodes = async (products: any[] = []) => {
     .select('productId')
     .lean();
   const used = new Set(existingCodes.map((item) => item.productId));
-  const updates: any[] = [];
+  const updates: Array<Record<string, unknown>> = [];
 
   for (const product of missing) {
     let next = await generateProductCode();
@@ -177,7 +212,7 @@ class ProductService {
     return this.applyPricingList(withImages, user);
   }
 
-  async listPublic(query: any = {}, user) {
+  async listPublic(query: ProductListQuery = {}, user) {
     const { page = 1, limit = 20, search, categoryId, manufacturerBrand, productType, minPrice, maxPrice, sort } = query;
     const { items, total, page: safePage, limit: safeLimit } = await repo.listPublic({
       page,
@@ -203,7 +238,7 @@ class ProductService {
     };
   }
 
-  async attachImages(products: any[] = []) {
+  async attachImages(products: ProductRecord[] = []) {
     if (!products.length) return products;
     const productIds = products.map((p) => p._id);
     const images = await ProductImage.find({ productId: { $in: productIds }, isDeleted: false })
@@ -338,8 +373,7 @@ class ProductService {
       if (safePayload[field]) safePayload[field] = sanitize(safePayload[field]);
     });
 
-// @ts-ignore
-    const typeFieldsTouched: any[] = ['productType', 'vehicleBrand', 'oemNumber', 'manufacturerBrand', 'hlaapNo']
+    const typeFieldsTouched = ['productType', 'vehicleBrand', 'oemNumber', 'manufacturerBrand', 'hlaapNo']
       .some((field) => Object.prototype.hasOwnProperty.call(safePayload, field));
 
     if (typeFieldsTouched) {
@@ -495,13 +529,13 @@ class ProductService {
     return updated;
   }
 
-  async adminList(query: any = {}) {
+  async adminList(query: ProductAdminListQuery = {}) {
     const { limit = 20, page = 1, status, categoryId, manufacturerBrand, productType, stockStatus, isFeatured, search } = query;
     const searchValue = search || '';
 
     logger.info('admin_list_query_received', { query, status });
 
-    const filter: any = {};
+    const filter: Record<string, unknown> = {};
     let includeDeleted = false;
 
     if (status === 'published') {
@@ -517,7 +551,7 @@ class ProductService {
       filter.isDeleted = false;
     } else {
       // All = everything (Published + Draft + Trashed)
-      // Don't set any status or isDeleted filter
+      // Don't set status or isDeleted filter
       includeDeleted = true;
     }
 
@@ -619,7 +653,7 @@ class ProductService {
       return {
         ...normalizeProductFields(product),
         category,
-        images: image ? [{ url: image.url, altText: image.altText }] : [] as any[],
+        images: image ? [{ url: image.url, altText: image.altText }] : [],
       };
     });
 
@@ -700,8 +734,8 @@ class ProductService {
         error('S3 config missing', 400);
       }
 
-      const formatted: any[] = [];
-      const mediaItems: any[] = [];
+      const formatted: Array<Record<string, unknown>> = [];
+      const mediaItems: Array<Record<string, unknown>> = [];
 
       for (const [index, file] of files.entries()) {
         const mimeType = file.detectedMimeType;
@@ -873,8 +907,7 @@ class ProductService {
 
   async getCompatibility(productId) {
     const ProductCompatibility = require('../../models/ProductCompatibility.model');
-    // Lazy load models to avoid circular dependencies if any, though here it's likely fine
-    const Vehicle = require('../../modules/vehicle-management/models/Vehicle.model');
+    // Lazy load models to avoid circular dependencies, though here it's likely fine
 
     const compatibility = await ProductCompatibility.findOne({ productId })
       .populate({
@@ -894,7 +927,7 @@ class ProductService {
     if (!compatibility || !compatibility.vehicleIds) return {};
 
     // Group by Brand
-    const grouped: any = {};
+    const grouped: Record<string, Array<Record<string, unknown>>> = {};
     compatibility.vehicleIds.forEach(v => {
       const brandName = v.brandId?.name || 'Other';
       if (!grouped[brandName]) {
@@ -927,9 +960,9 @@ class ProductService {
     const Product = require('../../models/Product.model');
     const currentProduct = await repo.findById(productId);
 
-    if (!currentProduct) return { oem: [] as any[], aftermarket: [] as any[] };
+    if (!currentProduct) return { oem: [], aftermarket: [] };
 
-    const query: any = {
+    const query: Record<string, unknown> = {
       _id: { $ne: productId },
       status: 'active',
       isDeleted: false
@@ -993,7 +1026,7 @@ class ProductService {
     }
 
     // Prepare duplicate data
-    const duplicateData: any = {
+    const duplicateData: Record<string, unknown> = {
       name: sourceProduct.name,
       slug: newSlug,
       shortDescription: sourceProduct.shortDescription,
@@ -1061,3 +1094,4 @@ class ProductService {
 }
 
 module.exports = new ProductService();
+

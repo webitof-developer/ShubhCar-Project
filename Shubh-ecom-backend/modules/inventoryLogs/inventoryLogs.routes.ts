@@ -1,4 +1,3 @@
-import type { InventoryLogsRequestShape } from './inventoryLogs.types';
 const express = require('express');
 const auth = require('../../middlewares/auth.middleware');
 const validate = require('../../middlewares/validate.middleware');
@@ -16,7 +15,7 @@ const router = express.Router();
  *   get:
  *     summary: List inventory logs
  *     tags: [Inventory]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: query
  *         name: productId
@@ -45,7 +44,7 @@ router.get(
  *   get:
  *     summary: Get inventory log by id
  *     tags: [Inventory]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -58,3 +57,4 @@ router.get(
 router.get('/:id', adminLimiter, auth([ROLES.ADMIN]), validateId('id'), controller.get);
 
 module.exports = router;
+

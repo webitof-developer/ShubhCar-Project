@@ -1,4 +1,3 @@
-import type { MediaRequestShape } from './media.types';
 const mediaRepo = require('./media.repo');
 const { error } = require('../../utils/apiResponse');
 const s3 = require('../../utils/s3');
@@ -7,7 +6,14 @@ const { getStorageSettings } = require('../../utils/storageSettings');
 const fs = require('fs/promises');
 const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
 
-const ALLOWED_MEDIA_MIME_TYPES: any[] = ['image/jpeg', 'image/png', 'image/webp'];
+type UploadFile = {
+  detectedMimeType?: string;
+  filename?: string;
+  path?: string;
+  size?: number;
+};
+
+const ALLOWED_MEDIA_MIME_TYPES: string[] = ['image/jpeg', 'image/png', 'image/webp'];
 
 class MediaService {
   async presign({ mimeType, folder }, user) {
@@ -42,7 +48,7 @@ class MediaService {
   async create(payload, user) {
     if (!user || user.role !== ROLES.ADMIN) error('Forbidden', 403);
 
-    const required: any[] = ['key', 'bucket', 'mimeType', 'size'];
+    const required = ['key', 'bucket', 'mimeType', 'size'];
     required.forEach((f) => {
       if (!payload[f]) error(`${f} is required`, 400);
     });
@@ -68,14 +74,18 @@ class MediaService {
     });
   }
 
-  async createFromUpload(files: any[] = [], user, { usedIn }: any = {}) {
+  async createFromUpload(
+    files: UploadFile[] = [],
+    user,
+    { usedIn }: { usedIn?: string } = {},
+  ) {
     if (!user || user.role !== ROLES.ADMIN) error('Forbidden', 403);
     if (!files.length) error('No media uploaded', 400);
     files.forEach((file) => {
       if (!file.detectedMimeType) error('Invalid uploaded file type', 400);
     });
 
-    const usedInList = usedIn ? [usedIn] : [] as any[];
+    const usedInList = usedIn ? [usedIn] : [];
 
     const storage = await getStorageSettings();
 
@@ -85,7 +95,7 @@ class MediaService {
         error('S3 config missing', 400);
       }
 
-      const created: any[] = [];
+      const created: Array<Record<string, unknown>> = [];
       for (const file of files) {
         const mimeType = file.detectedMimeType;
         if (!mimeType) error('Invalid uploaded file type', 400);
@@ -128,9 +138,9 @@ class MediaService {
     return created;
   }
 
-  async list(query: any = {}) {
+  async list(query: Record<string, unknown> = {}) {
     const { usedIn, limit, page } = query;
-    const filter: any = {};
+    const filter: Record<string, unknown> = {};
     if (usedIn) filter.usedIn = usedIn;
     const pagination = getOffsetPagination({ page, limit });
 
@@ -160,3 +170,4 @@ class MediaService {
 }
 
 module.exports = new MediaService();
+

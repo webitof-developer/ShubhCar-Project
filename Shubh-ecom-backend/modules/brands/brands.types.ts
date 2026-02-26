@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -26,12 +27,12 @@ export interface BrandsBody {
 }
 
 export interface BrandsRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface BrandsRequestShape {
@@ -49,25 +50,25 @@ export type BrandsRequest = Request<
   BrandsRequestContext;
 
 export interface BrandsEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface BrandsServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type BrandsServiceResult<T = any> = Promise<T>;
+export type BrandsServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface BrandsRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface BrandsRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface BrandsValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -102,3 +103,4 @@ export interface UpdateBrandInput {
   logo?: string;
   status?: BrandStatus;
 }
+

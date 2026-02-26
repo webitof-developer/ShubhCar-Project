@@ -1,4 +1,3 @@
-import type { MediaRequestShape } from './media.types';
 const Joi = require('joi');
 
 const presignSchema = Joi.object({
@@ -52,3 +51,4 @@ module.exports = {
   createMediaSchema,
   listMediaQuerySchema,
 };
+

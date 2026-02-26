@@ -1,4 +1,3 @@
-import type { RolesRequestShape } from './roles.types';
 const rolesRepo = require('./roles.repo');
 const { error } = require('../../utils/apiResponse');
 const {
@@ -7,7 +6,7 @@ const {
   buildPaginationMeta,
 } = require('../../utils/pagination');
 
-const DEFAULT_ROLES: any[] = [
+const DEFAULT_ROLES: Array<Record<string, unknown>> = [
   {
     name: 'Shop Manager',
     slug: 'shop-manager',
@@ -70,8 +69,8 @@ const normalizeSlug = (value) =>
     .replace(/^-+|-+$/g, '');
 
 class RolesService {
-  async _listAllRoles(filter: any = {}) {
-    const all: any[] = [];
+  async _listAllRoles(filter: Record<string, unknown> = {}) {
+    const all: Array<Record<string, unknown>> = [];
     let page = 1;
     while (true) {
       const batch = await rolesRepo.list(filter, { page, limit: MAX_LIMIT });
@@ -99,8 +98,9 @@ class RolesService {
       .filter((role) => role.isSystem && systemDefaultsBySlug.has(role.slug))
       .map((role) => {
         const defaultRole = systemDefaultsBySlug.get(role.slug);
-        const currentPermissions = Array.isArray(role.permissions) ? role.permissions : [] as any[];
-        const targetPermissions = Array.isArray(defaultRole.permissions) ? defaultRole.permissions : [] as any[];
+        if (!defaultRole) return null;
+        const currentPermissions = Array.isArray(role.permissions) ? role.permissions : [];
+        const targetPermissions = Array.isArray(defaultRole.permissions) ? defaultRole.permissions : [];
         const sameLength = currentPermissions.length === targetPermissions.length;
         const samePermissions = sameLength && targetPermissions.every((perm) => currentPermissions.includes(perm));
         if (samePermissions) return null;
@@ -115,7 +115,7 @@ class RolesService {
     }
   }
 
-  async list(query: any = {}) {
+  async list(query: Record<string, unknown> = {}) {
     await this.ensureDefaults();
     const pagination = getOffsetPagination({
       page: query.page,
@@ -152,7 +152,7 @@ class RolesService {
     return rolesRepo.create({
       name: payload.name,
       slug,
-      permissions: Array.isArray(payload.permissions) ? payload.permissions : [] as any[],
+      permissions: Array.isArray(payload.permissions) ? payload.permissions : [],
       isSystem: false,
     });
   }
@@ -162,7 +162,7 @@ class RolesService {
     if (!role) error('Role not found', 404);
     if (role.isSystem) error('System roles cannot be edited', 400);
 
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     if (payload.name) {
       updateData.name = payload.name;
       updateData.slug = normalizeSlug(payload.slug || payload.name);
@@ -170,7 +170,7 @@ class RolesService {
     if (payload.permissions) {
       updateData.permissions = Array.isArray(payload.permissions)
         ? payload.permissions
-        : [] as any[];
+        : [];
     }
 
     if (updateData.slug) {
@@ -194,3 +194,4 @@ class RolesService {
 }
 
 module.exports = new RolesService();
+

@@ -1,4 +1,3 @@
-import type { UserAddressesRequestShape } from './userAddresses.types';
 const UserAddress = require('../../models/UserAddress.model');
 const { getOffsetPagination } = require('../../utils/pagination');
 
@@ -7,7 +6,7 @@ class UserAddressesRepo {
     return UserAddress.create(data);
   }
 
-  listByUser(userId, pagination: any = {}) {
+  listByUser(userId, pagination: Record<string, unknown> = {}) {
     const { limit, skip } = getOffsetPagination(pagination);
     return UserAddress.find({ userId })
       .sort({ createdAt: -1 })
@@ -34,3 +33,4 @@ class UserAddressesRepo {
 }
 
 module.exports = new UserAddressesRepo();
+

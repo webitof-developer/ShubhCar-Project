@@ -1,4 +1,3 @@
-import type { ModelsRequestShape } from './models.types';
 const Joi = require('joi');
 
 const listModelsQuerySchema = Joi.object({
@@ -32,3 +31,4 @@ module.exports = {
   createModelSchema,
   updateModelSchema,
 };
+

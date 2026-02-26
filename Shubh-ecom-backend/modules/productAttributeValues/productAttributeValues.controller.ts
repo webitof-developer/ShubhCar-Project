@@ -1,4 +1,3 @@
-import type { ProductAttributeValuesRequestShape } from './productAttributeValues.types';
 import type { Response } from 'express';
 import type { ProductAttributeValuesRequest } from './productAttributeValues.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -29,3 +28,4 @@ exports.remove = asyncHandler(async (req: ProductAttributeValuesRequest, res: Re
   const data = await service.remove(req.params.id);
   return success(res, data, 'Product attribute value deleted');
 });
+

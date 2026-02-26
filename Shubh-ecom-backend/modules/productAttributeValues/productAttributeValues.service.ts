@@ -1,10 +1,9 @@
-import type { ProductAttributeValuesRequestShape } from './productAttributeValues.types';
 const repo = require('./productAttributeValues.repo');
 const { error } = require('../../utils/apiResponse');
 const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
 
 class ProductAttributeValuesService {
-  async list(query: any = {}) {
+  async list(query: Record<string, unknown> = {}) {
     const { page, limit, ...filter } = query;
     const pagination = getOffsetPagination({ page, limit });
     const [data, total] = await Promise.all([
@@ -41,3 +40,4 @@ class ProductAttributeValuesService {
 }
 
 module.exports = new ProductAttributeValuesService();
+

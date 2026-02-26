@@ -1,4 +1,3 @@
-import type { OrdersRequestShape } from './orders.types';
 const mongoose = require('mongoose');
 const { createSafeSession } = require('../../utils/mongoTransaction');
 const cartCache = require('../cart/cart.cache');
@@ -8,7 +7,6 @@ const orderRepo = require('./order.repo');
 const addressRepo = require('../users/userAddress.repo');
 const couponRepo = require('../coupons/coupon.repo');
 const couponService = require('../coupons/coupons.service');
-const paymentRepo = require('../payments/payment.repo');
 const inventoryService = require('../inventory/inventory.service');
 const orderVersionRepo = require('./orderVersion.repo');
 const orderEventRepo = require('./orderEvent.repo');
@@ -32,16 +30,8 @@ const Setting = require('../../models/Setting.model');
 const Role = require('../../models/Role.model');
 const userRepo = require('../users/user.repo');
 const { getPaymentSettings } = require('../../utils/paymentSettings');
-const { placeOrderSchema } = require('./order.validator');
-const {
-  cancelOrderSchema,
-  adminStatusUpdateSchema,
-} = require('./orderStatus.validator');
 const { ORDER_STATUS } = require('../../constants/orderStatus');
-const {
-  PAYMENT_STATUS,
-  PAYMENT_RECORD_STATUS,
-} = require('../../constants/paymentStatus');
+const { PAYMENT_STATUS } = require('../../constants/paymentStatus');
 const {
   getPaymentSummary,
   attachPaymentSummary,
@@ -52,6 +42,70 @@ const ROLES = require('../../constants/roles');
 const { generateOrderNumber } = require('../../utils/numbering');
 const { ADMIN_STATUS_UPDATES } = require('../../constants/orderStatus');
 const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
+
+type TaxBreakdown = {
+  cgst: number;
+  sgst: number;
+  igst: number;
+};
+
+type CouponPayload = {
+  couponId: unknown;
+  couponCode: string | null;
+  discount: number;
+};
+
+type MutableOrderItem = {
+  productId: unknown;
+  quantity: number;
+  price: number;
+  discount: number;
+  taxableAmount: number;
+  taxPercent: number;
+  taxAmount: number;
+  taxComponents: TaxBreakdown;
+  taxMode: string | null;
+  total: number;
+  status: string;
+  hsnCode?: unknown;
+  [key: string]: unknown;
+};
+
+type CheckoutCalcItem = {
+  productId: unknown;
+  quantity: number;
+  price: number;
+  hsnCode?: unknown;
+  taxSlabs: unknown[];
+  taxRate: unknown;
+  taxClassKey: unknown;
+  weight: number;
+  length: number;
+  width: number;
+  height: number;
+  isHeavy: boolean;
+  isFragile: boolean;
+};
+
+type ShippingItem = {
+  quantity: number;
+  weight: number;
+  length: number;
+  width: number;
+  height: number;
+  isHeavy: boolean;
+  isFragile: boolean;
+};
+
+type OrderListFilter = {
+  userId?: string;
+  orderStatus?: string;
+  paymentStatus?: string;
+  createdAt?: {
+    $gte?: Date;
+    $lte?: Date;
+  };
+};
 
 const roundCurrency = (value) => Math.round((Number(value) || 0) * 100) / 100;
 const normalizeOrderStatus = (status) =>
@@ -69,7 +123,7 @@ const isSalesmanUser = async (user) => {
   const name = String(roleDoc?.name || '').toLowerCase();
   return slug === 'salesman' || name.includes('salesman');
 };
-const isSalesmanActor = async (actor: any = {}) => {
+const isSalesmanActor = async (actor: Record<string, unknown> = {}) => {
   if (String(actor?.role || '').toLowerCase() === ROLES.SALESMAN) return true;
   const actorId = actor?.id || actor?._id;
   if (!actorId || !mongoose.Types.ObjectId.isValid(actorId)) return false;
@@ -170,7 +224,7 @@ function assertRequestedQuantityWithinStock(product, requestedQuantity) {
 }
 
 class OrderService {
-  async placeOrder({ user, sessionId, payload, context: any = {} }) {
+  async placeOrder({ user, sessionId, payload, context = {} as Record<string, unknown> }) {
     const log = logger.withContext({
 // @ts-ignore
       requestId: context.requestId || null,
@@ -228,8 +282,8 @@ class OrderService {
 
       let subtotal = 0;
       let totalItems = 0;
-      const orderItems: any[] = [];
-      const calcItems: any[] = [];
+      const orderItems: MutableOrderItem[] = [];
+      const calcItems: CheckoutCalcItem[] = [];
 
       // Fetch full user from DB to get customerType/verificationStatus
       // (JWT middleware only provides { id, role })
@@ -344,7 +398,7 @@ class OrderService {
       const taxBreakdown = totals.taxBreakdown || { cgst: 0, sgst: 0, igst: 0 };
       const shippingFee = totals.shippingFee || 0;
       const grandTotal = totals.grandTotal || 0;
-      const couponPayload: any = {
+      const couponPayload: CouponPayload = {
         couponId: totals.coupon?.couponId || null,
         couponCode: totals.coupon?.couponCode || null,
         discount,
@@ -507,7 +561,7 @@ class OrderService {
     }
   }
 
-  async failOrder(orderId, context: any = {}) {
+  async failOrder(orderId, context: Record<string, unknown> = {}) {
     const session = await createSafeSession();
     if (!session._isStandalone) {
       session.startTransaction({ readPreference: 'primary' });
@@ -582,7 +636,7 @@ class OrderService {
     }
   }
 
-  async markRefunded(orderId, isFullRefund, context: any = {}) {
+  async markRefunded(orderId, isFullRefund, context: Record<string, unknown> = {}) {
     const session = await createSafeSession();
     if (!session._isStandalone) {
       session.startTransaction({ readPreference: 'primary' });
@@ -717,7 +771,7 @@ class OrderService {
   }
 
   async getUserOrders(userId, { status, limit, page, includeItems }) {
-    const filter: any = { userId };
+    const filter: OrderListFilter = { userId };
     if (status) filter.orderStatus = status;
     const pagination = getOffsetPagination({ page, limit });
 
@@ -764,7 +818,7 @@ class OrderService {
       const productId = item.productId?._id || item.productId;
       const productImages = productId
         ? imageMap.get(String(productId)) || []
-        : [] as any[];
+        : [];
       itemsByOrder.get(orderKey).push({
         ...item,
         product: item.productId
@@ -817,7 +871,7 @@ class OrderService {
       const productId = item.productId?._id || item.productId;
       const productImages = productId
         ? imageMap.get(String(productId)) || []
-        : [] as any[];
+        : [];
       return {
         ...item,
         product: item.productId
@@ -845,7 +899,7 @@ class OrderService {
   }
 
   async adminList({ status, paymentStatus, from, to, page, limit }) {
-    const filter: any = {};
+    const filter: OrderListFilter = {};
     if (status) filter.orderStatus = status;
     if (paymentStatus) filter.paymentStatus = paymentStatus;
     if (from || to) {
@@ -985,7 +1039,13 @@ class OrderService {
       error('Paid amount cannot exceed total amount', 400);
     }
 
-    const entry: any = {
+    const entry: {
+      amount: number;
+      note: string;
+      method: string;
+      createdBy: string;
+      createdAt: Date;
+    } = {
       amount: incomingAmount,
       note: payload.note || '',
       method: 'cod',
@@ -1057,7 +1117,7 @@ class OrderService {
     return { versions, events };
   }
 
-  async adminCreateOrder({ admin, payload, context: any = {} }) {
+  async adminCreateOrder({ admin, payload, context = {} as Record<string, unknown> }) {
     const log = logger.withContext({
 // @ts-ignore
       requestId: context.requestId || null,
@@ -1182,9 +1242,9 @@ class OrderService {
       let subtotal = 0;
       let totalItems = 0;
       let taxAmount = 0;
-      let taxBreakdown: any = { cgst: 0, sgst: 0, igst: 0 };
-      const orderItems: any[] = [];
-      const shippingItems: any[] = [];
+      let taxBreakdown: TaxBreakdown = { cgst: 0, sgst: 0, igst: 0 };
+      const orderItems: MutableOrderItem[] = [];
+      const shippingItems: ShippingItem[] = [];
       const taxMetaByItem = new Map();
 
       for (const item of payload.items || []) {
@@ -1263,7 +1323,11 @@ class OrderService {
         });
       }
 
-      const couponPayload: any = { couponId: null, couponCode: null, discount: 0 };
+      const couponPayload: CouponPayload = {
+        couponId: null,
+        couponCode: null,
+        discount: 0,
+      };
       if (payload.couponCode && !isSalesmanActor) {
         const preview = await couponService.preview({
           userId: user._id,
@@ -1302,10 +1366,10 @@ class OrderService {
       const taxOverrideRate =
         payload.taxPercent != null ? Number(payload.taxPercent) / 100 : null;
 
-      const rawTotals: any[] = [];
-      const rawCgst: any[] = [];
-      const rawSgst: any[] = [];
-      const rawIgst: any[] = [];
+      const rawTotals: number[] = [];
+      const rawCgst: number[] = [];
+      const rawSgst: number[] = [];
+      const rawIgst: number[] = [];
 
       for (const item of orderItems) {
         const lineSubtotal = item.price * item.quantity;
@@ -1377,9 +1441,9 @@ class OrderService {
       );
 
       orderItems.forEach((item) => {
-        const cgst = item.cgstComponent || 0;
-        const sgst = item.sgstComponent || 0;
-        const igst = item.igstComponent || 0;
+        const cgst = Number(item.cgstComponent || 0);
+        const sgst = Number(item.sgstComponent || 0);
+        const igst = Number(item.igstComponent || 0);
         item.taxComponents = { cgst, sgst, igst };
         item.taxAmount = roundCurrency(cgst + sgst + igst);
         item.total = roundCurrency(item.taxableAmount + item.taxAmount);
@@ -1712,3 +1776,4 @@ class OrderService {
 }
 
 module.exports = new OrderService();
+

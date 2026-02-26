@@ -1,4 +1,3 @@
-import type { VendorsRequestShape } from './vendors.types';
 const Joi = require('joi');
 
 const documentSchema = Joi.object({
@@ -79,3 +78,4 @@ module.exports = {
   statusUpdateSchema,
   addDocumentsSchema,
 };
+

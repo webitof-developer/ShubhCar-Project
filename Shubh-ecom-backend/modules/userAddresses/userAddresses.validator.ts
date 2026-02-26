@@ -1,7 +1,6 @@
-import type { UserAddressesRequestShape } from './userAddresses.types';
 const Joi = require('joi');
 
-const addressPayload: any = {
+const addressPayload = {
   label: Joi.string().trim().max(50),
   fullName: Joi.string().trim().min(2).max(120),
   phone: Joi.string().trim().pattern(/^[0-9+\-()\s]{7,20}$/),
@@ -31,3 +30,4 @@ module.exports = {
   createUserAddressSchema,
   updateUserAddressSchema,
 };
+

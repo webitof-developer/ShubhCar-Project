@@ -1,6 +1,11 @@
-import type { ShipmentsRequestShape } from './shipments.types';
 const Shipment = require('../../models/Shipment.model');
 const { getOffsetPagination } = require('../../utils/pagination');
+
+type ShipmentFilter = Record<string, unknown>;
+type PaginationInput = {
+  page?: number | string;
+  limit?: number | string;
+};
 
 class ShipmentRepository {
   create(data) {
@@ -18,7 +23,7 @@ class ShipmentRepository {
     return Shipment.findById(id).lean();
   }
 
-  list(filter: any = {}, pagination: any = {}) {
+  list(filter: ShipmentFilter = {}, pagination: PaginationInput = {}) {
     const { limit, skip } = getOffsetPagination(pagination);
     return Shipment.find(filter)
       .sort({ createdAt: -1 })
@@ -27,7 +32,7 @@ class ShipmentRepository {
       .lean();
   }
 
-  count(filter: any = {}) {
+  count(filter: ShipmentFilter = {}) {
     return Shipment.countDocuments(filter);
   }
 
@@ -42,7 +47,10 @@ class ShipmentRepository {
   }
 
   updateStatusWithHistory(orderItemId, update, nextStatus) {
-    const updateDoc: any = { $set: update };
+    const updateDoc: {
+      $set: Record<string, unknown>;
+      $push?: { statusHistory: { status: string; at: Date } };
+    } = { $set: update };
     if (nextStatus) {
       updateDoc.$push = {
         statusHistory: { status: nextStatus, at: new Date() },
@@ -56,3 +64,4 @@ class ShipmentRepository {
 }
 
 module.exports = new ShipmentRepository();
+

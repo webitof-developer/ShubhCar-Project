@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -35,12 +36,12 @@ export interface ShippingRulesBody {
 }
 
 export interface ShippingRulesRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface ShippingRulesRequestShape {
@@ -58,25 +59,25 @@ export type ShippingRulesRequest = Request<
   ShippingRulesRequestContext;
 
 export interface ShippingRulesEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ShippingRulesServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type ShippingRulesServiceResult<T = any> = Promise<T>;
+export type ShippingRulesServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface ShippingRulesRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ShippingRulesRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ShippingRulesValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -117,3 +118,4 @@ export interface CreateShippingRuleInput {
   freeShippingAbove?: number;
   codFee?: number;
 }
+

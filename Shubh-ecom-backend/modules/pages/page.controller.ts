@@ -1,4 +1,3 @@
-import type { PagesRequestShape } from './pages.types';
 import type { Response } from 'express';
 import type { PagesRequest } from './pages.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -21,7 +20,7 @@ exports.update = asyncHandler(async (req: PagesRequest, res: Response) => {
 
 exports.list = asyncHandler(async (req: PagesRequest, res: Response) => {
   const { slug, status, page, limit } = req.query;
-  const filters: any = { page, limit };
+  const filters: Record<string, unknown> = { page, limit };
   if (slug) filters.slug = slug;
   if (status) filters.status = status;
   
@@ -47,3 +46,4 @@ exports.resolve = asyncHandler(async (req: PagesRequest, res: Response) => {
   const data = await pageService.resolveBySlug(req.params.slug);
   return success(res, data);
 });
+

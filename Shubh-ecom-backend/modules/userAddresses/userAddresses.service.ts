@@ -1,10 +1,9 @@
-import type { UserAddressesRequestShape } from './userAddresses.types';
 const repo = require('./userAddresses.repo');
 const { error } = require('../../utils/apiResponse');
 const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
 
 class UserAddressesService {
-  async list(userId, query: any = {}) {
+  async list(userId, query: Record<string, unknown> = {}) {
     const pagination = getOffsetPagination({
       page: query.page,
       limit: query.limit,
@@ -20,7 +19,7 @@ class UserAddressesService {
     };
   }
 
-  async adminListByUser(userId, query: any = {}) {
+  async adminListByUser(userId, query: Record<string, unknown> = {}) {
     const pagination = getOffsetPagination({
       page: query.page,
       limit: query.limit,
@@ -65,3 +64,4 @@ class UserAddressesService {
 }
 
 module.exports = new UserAddressesService();
+

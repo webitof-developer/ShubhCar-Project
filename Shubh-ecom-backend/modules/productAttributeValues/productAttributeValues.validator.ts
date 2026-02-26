@@ -1,7 +1,6 @@
-import type { ProductAttributeValuesRequestShape } from './productAttributeValues.types';
 const Joi = require('joi');
 
-const base: any = {
+const base = {
   productId: Joi.string().required(),
   attributeId: Joi.string().required(),
   value: Joi.string().required(),
@@ -24,3 +23,4 @@ module.exports = {
   createSchema,
   updateSchema,
 };
+

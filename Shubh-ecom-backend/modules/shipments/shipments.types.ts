@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -26,12 +27,12 @@ export interface ShipmentsBody {
 }
 
 export interface ShipmentsRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface ShipmentsRequestShape {
@@ -49,25 +50,25 @@ export type ShipmentsRequest = Request<
   ShipmentsRequestContext;
 
 export interface ShipmentsEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ShipmentsServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type ShipmentsServiceResult<T = any> = Promise<T>;
+export type ShipmentsServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface ShipmentsRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ShipmentsRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ShipmentsValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -117,3 +118,4 @@ export interface UpdateShipmentInput {
   trackingNumber?: string;
   deliveredAt?: string | Date;
 }
+

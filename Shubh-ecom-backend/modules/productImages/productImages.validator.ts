@@ -1,4 +1,3 @@
-import type { ProductImagesRequestShape } from './productImages.types';
 const Joi = require('joi');
 
 const listProductImagesQuerySchema = Joi.object({
@@ -26,3 +25,4 @@ module.exports = {
   createProductImageSchema,
   updateProductImageSchema,
 };
+

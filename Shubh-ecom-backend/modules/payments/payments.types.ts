@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -22,12 +23,12 @@ export interface PaymentsBody {
 }
 
 export interface PaymentsRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface PaymentsRequestShape {
@@ -45,25 +46,25 @@ export type PaymentsRequest = Request<
   PaymentsRequestContext;
 
 export interface PaymentsEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface PaymentsServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type PaymentsServiceResult<T = any> = Promise<T>;
+export type PaymentsServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface PaymentsRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface PaymentsRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface PaymentsValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -113,3 +114,4 @@ export interface PaymentServiceContext {
   method?: string;
   userId?: string;
 }
+

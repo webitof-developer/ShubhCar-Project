@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -17,12 +18,12 @@ export interface OrderItemsBody {
 }
 
 export interface OrderItemsRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface OrderItemsRequestShape {
@@ -40,25 +41,25 @@ export type OrderItemsRequest = Request<
   OrderItemsRequestContext;
 
 export interface OrderItemsEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface OrderItemsServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type OrderItemsServiceResult<T = any> = Promise<T>;
+export type OrderItemsServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface OrderItemsRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface OrderItemsRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface OrderItemsValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -103,3 +104,4 @@ export interface OrderItemRecord {
   createdAt: Date;
   updatedAt: Date;
 }
+

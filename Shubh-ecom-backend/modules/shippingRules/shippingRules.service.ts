@@ -1,11 +1,10 @@
-import type { ShippingRulesRequestShape } from './shippingRules.types';
 const repo = require('./shippingRules.repo');
 const { error } = require('../../utils/apiResponse');
 const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
 
 class ShippingRulesService {
-  async list(query: any = {}) {
-    const filter: any = {};
+  async list(query: Record<string, unknown> = {}) {
+    const filter: Record<string, unknown> = {};
     if (query.status) filter.status = query.status;
     if (query.country) filter.country = query.country;
 
@@ -41,3 +40,4 @@ class ShippingRulesService {
 }
 
 module.exports = new ShippingRulesService();
+

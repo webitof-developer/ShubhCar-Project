@@ -1,4 +1,3 @@
-import type { InventoryLogsRequestShape } from './inventoryLogs.types';
 import type { Response } from 'express';
 import type { InventoryLogsRequest } from './inventoryLogs.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -14,3 +13,4 @@ exports.get = asyncHandler(async (req: InventoryLogsRequest, res: Response) => {
   const data = await service.get(req.params.id);
   return success(res, data, 'Inventory log fetched');
 });
+

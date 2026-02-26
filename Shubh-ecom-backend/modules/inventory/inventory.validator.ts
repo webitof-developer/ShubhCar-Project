@@ -1,4 +1,3 @@
-import type { InventoryRequestShape } from './inventory.types';
 const Joi = require('joi');
 const { paginationQuerySchema } = require('../../utils/paginationQuery.validator');
 
@@ -25,3 +24,4 @@ module.exports = {
   listProductsQuerySchema,
   adjustStockSchema,
 };
+

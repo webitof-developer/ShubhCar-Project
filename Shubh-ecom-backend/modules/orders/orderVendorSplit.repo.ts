@@ -1,4 +1,3 @@
-import type { OrdersRequestShape } from './orders.types';
 const OrderVendorSplit = require('../../models/OrderVendorSplit.model');
 
 class OrderVendorSplitRepo {
@@ -16,3 +15,4 @@ class OrderVendorSplitRepo {
 }
 
 module.exports = new OrderVendorSplitRepo();
+

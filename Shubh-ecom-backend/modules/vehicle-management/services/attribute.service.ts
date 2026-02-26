@@ -1,4 +1,3 @@
-import type { VehicleManagementRequestShape } from '../vehicle-management.types';
 const repo = require('../repositories/attribute.repository');
 const VehicleAttributeValue = require('../models/VehicleAttributeValue.model');
 const Vehicle = require('../models/Vehicle.model');
@@ -7,15 +6,15 @@ const { error } = require('../../../utils/apiResponse');
 const { escapeRegex } = require('../../../utils/escapeRegex');
 const { getOffsetPagination, buildPaginationMeta } = require('../../../utils/pagination');
 
-const VALID_TYPES: any[] = ['dropdown', 'text'];
+const VALID_TYPES = ['dropdown', 'text'];
 const VARIANT_NAME_KEY = 'variant name';
 const isVariantName = (name) =>
   String(name || '').trim().toLowerCase() === VARIANT_NAME_KEY;
 
 class VehicleAttributesService {
-  async list(query: any = {}) {
-    const filter: any = { isDeleted: false };
-    const nameExclusion: any = { $not: /^variant name$/i };
+  async list(query: Record<string, unknown> = {}) {
+    const filter: Record<string, unknown> = { isDeleted: false };
+    const nameExclusion = { $not: /^variant name$/i };
     if (query.status) filter.status = query.status;
     if (query.search) {
       const safeSearch = escapeRegex(query.search);
@@ -99,7 +98,7 @@ class VehicleAttributesService {
     );
 
     const linkedVehicle = await Vehicle.findOne({
-      attributeValueIds: { $exists: true, $ne: [] as any[] },
+      attributeValueIds: { $exists: true, $ne: [] },
     })
       .populate({
         path: 'attributeValueIds',
@@ -119,3 +118,4 @@ class VehicleAttributesService {
 }
 
 module.exports = new VehicleAttributesService();
+

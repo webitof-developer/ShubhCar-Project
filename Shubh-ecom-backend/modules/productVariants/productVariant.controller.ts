@@ -1,4 +1,3 @@
-import type { ProductVariantsRequestShape } from './productVariants.types';
 import type { Response } from 'express';
 import type { ProductVariantsRequest } from './productVariants.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -21,7 +20,7 @@ const buildRouter = () => {
    *   post:
    *     summary: Create product variant
    *     tags: [Products]
-   *     security: [ { bearerAuth: [] as any[] } ]
+   *     security: [ { bearerAuth: [] } ]
    *     parameters:
    *       - in: path
    *         name: productId
@@ -38,7 +37,7 @@ const buildRouter = () => {
    */
   router.post(
     '/product/:productId',
-    auth(),  // Allow any authenticated user (admin or vendor)
+    auth(),  // Allow authenticated user (admin or vendor)
     validateId('productId'),
     validate(require('./productVariant.validator').createVariantSchema),
     asyncHandler(async (req: ProductVariantsRequest, res: Response) => {
@@ -106,7 +105,7 @@ const buildRouter = () => {
    *   put:
    *     summary: Update variant
    *     tags: [Products]
-   *     security: [ { bearerAuth: [] as any[] } ]
+   *     security: [ { bearerAuth: [] } ]
    *     parameters:
    *       - in: path
    *         name: variantId
@@ -123,7 +122,7 @@ const buildRouter = () => {
    */
   router.put(
     '/:variantId',
-    auth(),  // Allow any authenticated user
+    auth(),  // Allow authenticated user
     validateId('variantId'),
     validate(require('./productVariant.validator').updateVariantSchema),
     asyncHandler(async (req: ProductVariantsRequest, res: Response) => {
@@ -143,7 +142,7 @@ const buildRouter = () => {
    *   delete:
    *     summary: Delete variant
    *     tags: [Products]
-   *     security: [ { bearerAuth: [] as any[] } ]
+   *     security: [ { bearerAuth: [] } ]
    *     parameters:
    *       - in: path
    *         name: variantId
@@ -154,7 +153,7 @@ const buildRouter = () => {
    */
   router.delete(
     '/:variantId',
-    auth(),  // Allow any authenticated user
+    auth(),  // Allow authenticated user
     validateId('variantId'),
     asyncHandler(async (req: ProductVariantsRequest, res: Response) => {
       const data = await service.remove(req.params.variantId, req.user);
@@ -169,7 +168,7 @@ const buildRouter = () => {
    *   put:
    *     summary: Adjust variant stock (Admin)
    *     tags: [Products]
-   *     security: [ { bearerAuth: [] as any[] } ]
+   *     security: [ { bearerAuth: [] } ]
    *     parameters:
    *       - in: path
    *         name: variantId
@@ -209,3 +208,4 @@ const buildRouter = () => {
 };
 
 module.exports = { buildRouter };
+

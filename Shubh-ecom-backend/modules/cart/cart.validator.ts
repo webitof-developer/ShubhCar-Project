@@ -1,4 +1,3 @@
-import type { CartRequestShape } from './cart.types';
 const Joi = require('joi');
 
 const addItemSchema = Joi.object({
@@ -18,3 +17,4 @@ module.exports = {
   updateQtySchema,
   applyCouponSchema,
 };
+

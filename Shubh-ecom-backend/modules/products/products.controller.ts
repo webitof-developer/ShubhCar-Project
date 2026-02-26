@@ -1,4 +1,3 @@
-import type { ProductsRequestShape } from './products.types';
 import type { Response } from 'express';
 import type { ProductsRequest } from './products.types';
 //products.controller.js  
@@ -307,3 +306,4 @@ exports.adminDuplicateAsAftermarket = asyncHandler(async (req: ProductsRequest, 
   });
   return success(res, data, 'Product duplicated as Aftermarket draft');
 });
+

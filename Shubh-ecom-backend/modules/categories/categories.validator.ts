@@ -1,7 +1,6 @@
-import type { CategoriesRequestShape } from './categories.types';
 const Joi = require('joi');
 
-const base: any = {
+const base = {
   name: Joi.string().trim().min(2).max(100),
   slug: Joi.string().trim().lowercase().regex(/^[a-z0-9-]+$/),
   parentId: Joi.string().allow(null, ''),
@@ -35,3 +34,4 @@ module.exports = {
   createCategorySchema,
   updateCategorySchema,
 };
+

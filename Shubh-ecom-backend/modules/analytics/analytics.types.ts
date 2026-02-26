@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -23,12 +24,12 @@ export interface AnalyticsBody {
 }
 
 export interface AnalyticsRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface AnalyticsRequestShape {
@@ -46,25 +47,25 @@ export type AnalyticsRequest = Request<
   AnalyticsRequestContext;
 
 export interface AnalyticsEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface AnalyticsServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type AnalyticsServiceResult<T = any> = Promise<T>;
+export type AnalyticsServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface AnalyticsRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface AnalyticsRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface AnalyticsValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -105,3 +106,4 @@ export interface AnalyticsSummary {
   topProducts?: TopProductStat[];
   revenueByDay?: RevenuePoint[];
 }
+

@@ -1,4 +1,3 @@
-import type { ProductCompatibilityRequestShape } from './productCompatibility.types';
 const ProductCompatibility = require('../../models/ProductCompatibility.model');
 
 class ProductCompatibilityRepo {
@@ -16,3 +15,4 @@ class ProductCompatibilityRepo {
 }
 
 module.exports = new ProductCompatibilityRepo();
+

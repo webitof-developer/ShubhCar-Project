@@ -1,4 +1,3 @@
-import type { ProductImagesRequestShape } from './productImages.types';
 const ProductImage = require('../../models/ProductImage.model');
 const { getOffsetPagination } = require('../../utils/pagination');
 
@@ -11,7 +10,10 @@ class ProductImagesRepo {
     return ProductImage.findById(id).lean();
   }
 
-  list(filter: any = {}, pagination: any = {}) {
+  list(
+    filter: Record<string, unknown> = {},
+    pagination: Record<string, unknown> = {},
+  ) {
     const { limit, skip } = getOffsetPagination(pagination);
     return ProductImage.find(filter)
       .sort({ createdAt: -1 })
@@ -20,7 +22,7 @@ class ProductImagesRepo {
       .lean();
   }
 
-  count(filter: any = {}) {
+  count(filter: Record<string, unknown> = {}) {
     return ProductImage.countDocuments(filter);
   }
 
@@ -40,3 +42,4 @@ class ProductImagesRepo {
 }
 
 module.exports = new ProductImagesRepo();
+

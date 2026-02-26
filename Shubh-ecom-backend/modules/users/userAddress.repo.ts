@@ -1,4 +1,3 @@
-import type { UsersRequestShape } from './users.types';
 const UserAddress = require('../../models/UserAddress.model');
 
 class UserAddressRepository {
@@ -8,3 +7,4 @@ class UserAddressRepository {
 }
 
 module.exports = new UserAddressRepository();
+

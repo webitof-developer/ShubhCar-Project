@@ -1,4 +1,3 @@
-import type { VendorsRequestShape } from './vendors.types';
 import type { Response } from 'express';
 import type { VendorsRequest } from './vendors.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -70,3 +69,4 @@ exports.updateBank = asyncHandler(async (req: VendorsRequest, res: Response) => 
   });
   return success(res, data, 'Bank details saved');
 });
+

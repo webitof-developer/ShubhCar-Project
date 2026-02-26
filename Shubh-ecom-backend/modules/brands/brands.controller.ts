@@ -1,4 +1,3 @@
-import type { BrandsRequestShape } from './brands.types';
 import type { Response } from 'express';
 import type { BrandsRequest } from './brands.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -29,3 +28,4 @@ exports.remove = asyncHandler(async (req: BrandsRequest, res: Response) => {
     await brandService.delete(req.params.id);
     return success(res, null, 'Brand deleted');
 });
+

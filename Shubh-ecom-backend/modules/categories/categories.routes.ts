@@ -1,19 +1,14 @@
-import type { CategoriesRequestShape } from './categories.types';
 const express = require('express');
 const controller = require('./categories.controller');
 const auth = require('../../middlewares/auth.middleware');
 const validate = require('../../middlewares/validate.middleware');
 const validateId = require('../../middlewares/objectId.middleware');
 const { adminLimiter } = require('../../middlewares/rateLimiter.middleware');
-const cacheRead = require('../../middlewares/cacheRead');
 const ROLES = require('../../constants/roles');
 const {
   createCategorySchema,
   updateCategorySchema,
 } = require('./categories.validator');
-
-const cacheKeys = require('../../lib/cache/keys');
-const catKeys = cacheKeys.catalog.categories;
 
 const router = express.Router();
 
@@ -23,7 +18,7 @@ const router = express.Router();
  *   post:
  *     summary: Create category
  *     tags: [Catalog]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -53,7 +48,7 @@ router.post(
  *   put:
  *     summary: Update category
  *     tags: [Catalog]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -88,7 +83,7 @@ router.put(
  *   delete:
  *     summary: Delete category
  *     tags: [Catalog]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -198,3 +193,4 @@ router.get(
 );
 
 module.exports = router;
+

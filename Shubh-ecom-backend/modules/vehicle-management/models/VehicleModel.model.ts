@@ -1,4 +1,3 @@
-import type { VehicleManagementRequestShape } from '../vehicle-management.types';
 const mongoose = require('mongoose');
 const slugify = require('slugify');
 
@@ -33,3 +32,4 @@ vehicleModelSchema.index({ brandId: 1, status: 1 });
 vehicleModelSchema.index({ name: 1, brandId: 1 }, { unique: true });
 
 module.exports = mongoose.model('VehicleModel', vehicleModelSchema);
+

@@ -1,4 +1,3 @@
-import type { CouponsRequestShape } from './coupons.types';
 const Coupon = require('../../models/Coupon.model');
 const logger = require('../../config/logger');
 const CouponUsage = require('../../models/CouponUsage.model');
@@ -51,3 +50,4 @@ const fraudUsageAudit = async () => {
 };
 
 module.exports = { expireCoupons, fraudUsageAudit };
+

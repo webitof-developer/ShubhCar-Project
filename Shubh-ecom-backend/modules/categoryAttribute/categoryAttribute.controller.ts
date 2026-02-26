@@ -1,4 +1,3 @@
-import type { CategoryAttributeRequestShape } from './categoryAttribute.types';
 import type { Response } from 'express';
 import type { CategoryAttributeRequest } from './categoryAttribute.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -24,3 +23,4 @@ exports.remove = asyncHandler(async (req: CategoryAttributeRequest, res: Respons
   const data = await service.remove(req.params.attributeId);
   return success(res, data, 'Attribute deleted');
 });
+

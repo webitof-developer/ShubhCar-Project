@@ -1,4 +1,3 @@
-import type { PaymentsRequestShape } from './payments.types';
 const Joi = require('joi');
 
 const initiatePaymentSchema = Joi.object({
@@ -21,3 +20,4 @@ module.exports = {
   retryPaymentSchema,
   refundApprovalSchema,
 };
+

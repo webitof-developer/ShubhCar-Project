@@ -1,4 +1,3 @@
-import type { NotificationsRequestShape } from './notifications.types';
 import type { Response } from 'express';
 import type { NotificationsRequest } from './notifications.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -61,3 +60,4 @@ exports.summary = asyncHandler(async (req: NotificationsRequest, res: Response) 
   const data = await service.summary(req.user);
   return success(res, data, 'Notification summary');
 });
+

@@ -1,4 +1,3 @@
-import type { CouponsRequestShape } from './coupons.types';
 const Coupon = require('../../models/Coupon.model');
 const CouponUsage = require('../../models/CouponUsage.model');
 const { redis } = require('../../config/redis');
@@ -58,7 +57,10 @@ class CouponRepository {
     return Coupon.findById(id).lean();
   }
 
-  list(filter: any = {}, pagination: any = {}) {
+  list(
+    filter: Record<string, unknown> = {},
+    pagination: Record<string, unknown> = {},
+  ) {
     const { limit, skip } = getOffsetPagination(pagination);
     return Coupon.find(filter)
       .sort({ createdAt: -1 })
@@ -67,7 +69,7 @@ class CouponRepository {
       .lean();
   }
 
-  count(filter: any = {}) {
+  count(filter: Record<string, unknown> = {}) {
     return Coupon.countDocuments(filter);
   }
 
@@ -165,3 +167,4 @@ class CouponRepository {
 }
 
 module.exports = new CouponRepository();
+

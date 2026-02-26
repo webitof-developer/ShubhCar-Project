@@ -1,4 +1,3 @@
-import type { ReturnsRequestShape } from './returns.types';
 import type { Response } from 'express';
 import type { ReturnsRequest } from './returns.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -63,3 +62,4 @@ exports.get = asyncHandler(async (req: ReturnsRequest, res: Response) => {
   const data = await service.get(req.params.id, req.user);
   return success(res, data, 'Return fetched');
 });
+

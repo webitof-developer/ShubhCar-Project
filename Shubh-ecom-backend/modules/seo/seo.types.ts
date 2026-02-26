@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -28,12 +29,12 @@ export interface SeoBody {
 }
 
 export interface SeoRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface SeoRequestShape {
@@ -46,25 +47,25 @@ export type SeoRequest = Request<SeoParams, unknown, SeoBody, SeoQuery> &
   SeoRequestContext;
 
 export interface SeoEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface SeoServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type SeoServiceResult<T = any> = Promise<T>;
+export type SeoServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface SeoRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface SeoRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface SeoValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -102,3 +103,4 @@ export interface UpsertSeoInput {
   canonicalUrl?: string;
   robots?: SeoRobotsDirective;
 }
+

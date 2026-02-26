@@ -1,4 +1,3 @@
-import type { UsersRequestShape } from './users.types';
 import type { Response } from 'express';
 import type { UsersRequest } from './users.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -108,3 +107,4 @@ exports.adminImportCustomers = asyncHandler(async (req: UsersRequest, res: Respo
   const data = await userService.adminImportCustomers(req.user, req.file);
   return res.ok(data, 'Customers import completed');
 });
+

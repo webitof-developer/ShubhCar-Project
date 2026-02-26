@@ -1,4 +1,3 @@
-import type { ProductsRequestShape } from './products.types';
 const Joi = require('joi');
 const { paginationQuerySchema } = require('../../utils/paginationQuery.validator');
 
@@ -163,3 +162,4 @@ exports.adminListQuerySchema = Joi.object({
   search: searchQuerySchema.optional(),
   summary: Joi.boolean().optional(),
 });
+

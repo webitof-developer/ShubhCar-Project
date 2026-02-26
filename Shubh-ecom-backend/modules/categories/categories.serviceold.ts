@@ -1,4 +1,3 @@
-import type { CategoriesRequestShape } from './categories.types';
 const repo = require('./category.repo');
 const cache = require('../../cache/category.cache');
 const productCache = require('../../cache/product.cache');
@@ -162,11 +161,11 @@ if (Array.isArray(cached)) return cached;
     
     // Build hierarchy in memory
     const categoryMap = new Map();
-    const rootCategories: any[] = [];
+    const rootCategories: Array<Record<string, unknown>> = [];
     
     // First pass: create map of all categories
     allCategories.forEach(cat => {
-      categoryMap.set(String(cat._id), { ...cat, children: [] as any[] });
+      categoryMap.set(String(cat._id), { ...cat, children: [] });
     });
     
     // Second pass: link children to parents
@@ -186,3 +185,4 @@ if (Array.isArray(cached)) return cached;
 }
 
 module.exports = new CategoryService();
+

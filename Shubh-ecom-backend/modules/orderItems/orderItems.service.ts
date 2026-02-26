@@ -1,4 +1,3 @@
-import type { OrderItemsRequestShape } from './orderItems.types';
 // backend/modules/orderItems/orderItems.service.js
 
 const repo = require('./orderItems.repo'); // ✅ FIXED filename
@@ -80,3 +79,4 @@ exports.updateStatus = async ({ orderItemId, newStatus }) => {
 
   return updated;
 };
+

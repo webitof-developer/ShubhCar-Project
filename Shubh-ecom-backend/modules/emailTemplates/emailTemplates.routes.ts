@@ -1,4 +1,3 @@
-import type { EmailTemplatesRequestShape } from './emailTemplates.types';
 const express = require('express');
 const auth = require('../../middlewares/auth.middleware');
 const validate = require('../../middlewares/validate.middleware');
@@ -20,7 +19,7 @@ const router = express.Router();
  *   get:
  *     summary: List email templates
  *     tags: [CMS]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Templates list }
  */
@@ -38,7 +37,7 @@ router.get(
  *   get:
  *     summary: Get email template by id
  *     tags: [CMS]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -55,7 +54,7 @@ router.get('/:id', adminLimiter, auth([ROLES.ADMIN]), validateId('id'), controll
  *   post:
  *     summary: Create email template
  *     tags: [CMS]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -85,7 +84,7 @@ router.post(
  *   put:
  *     summary: Update email template
  *     tags: [CMS]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -120,7 +119,7 @@ router.put(
  *   delete:
  *     summary: Delete email template
  *     tags: [CMS]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -132,3 +131,4 @@ router.put(
 router.delete('/:id', adminLimiter, auth([ROLES.ADMIN]), validateId('id'), controller.remove);
 
 module.exports = router;
+

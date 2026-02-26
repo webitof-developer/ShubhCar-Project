@@ -1,4 +1,3 @@
-import type { CategoryAttributeRequestShape } from './categoryAttribute.types';
 const CategoryAttribute = require('../../models/CategoryAttribute.model');
 const ProductAttributeValue = require('../../models/ProductAttributeValue.model');
 
@@ -38,3 +37,4 @@ class CategoryAttributeRepository {
 }
 
 module.exports = new CategoryAttributeRepository();
+

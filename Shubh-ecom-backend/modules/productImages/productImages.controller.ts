@@ -1,4 +1,3 @@
-import type { ProductImagesRequestShape } from './productImages.types';
 import type { Response } from 'express';
 import type { ProductImagesRequest } from './productImages.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -29,3 +28,4 @@ exports.remove = asyncHandler(async (req: ProductImagesRequest, res: Response) =
   const data = await service.remove(req.params.id);
   return success(res, data, 'Product image deleted');
 });
+

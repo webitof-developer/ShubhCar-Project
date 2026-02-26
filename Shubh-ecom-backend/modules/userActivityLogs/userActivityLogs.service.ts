@@ -1,4 +1,3 @@
-import type { UserActivityLogsRequestShape } from './userActivityLogs.types';
 const repo = require('./userActivityLogs.repo');
 const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
 
@@ -7,7 +6,7 @@ class UserActivityLogsService {
     return repo.create(payload);
   }
 
-  async list(query: any = {}) {
+  async list(query: Record<string, unknown> = {}) {
     const { page, limit, ...filter } = query;
     const pagination = getOffsetPagination({ page, limit });
     const [data, total] = await Promise.all([
@@ -22,3 +21,4 @@ class UserActivityLogsService {
 }
 
 module.exports = new UserActivityLogsService();
+

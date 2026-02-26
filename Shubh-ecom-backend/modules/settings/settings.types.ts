@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -17,12 +18,12 @@ export interface SettingsBody {
 }
 
 export interface SettingsRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface SettingsRequestShape {
@@ -40,25 +41,25 @@ export type SettingsRequest = Request<
   SettingsRequestContext;
 
 export interface SettingsEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface SettingsServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type SettingsServiceResult<T = any> = Promise<T>;
+export type SettingsServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface SettingsRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface SettingsRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface SettingsValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -85,3 +86,4 @@ export interface UpdateSettingInput {
 export interface BatchUpdateSettingsInput {
   settings: { key: string; value: unknown }[];
 }
+

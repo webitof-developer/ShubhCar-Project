@@ -1,4 +1,3 @@
-import type { UsersRequestShape } from './users.types';
 const express = require('express');
 
 /* =======================
@@ -85,7 +84,7 @@ router.post(
  *     summary: Get current user profile
  *     tags: [Users]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: User profile
@@ -108,7 +107,7 @@ router.get('/me', auth(), controller.getMyProfile);
  *     summary: Update current user profile
  *     tags: [Users]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -177,7 +176,7 @@ router.post(
  *     summary: List all users (Admin)
  *     tags: [Users]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: page
@@ -213,7 +212,7 @@ router.post(
  *     summary: Get user details (Admin)
  *     tags: [Users]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: userId
@@ -243,7 +242,7 @@ router.get(
  *     summary: Update user status (Admin)
  *     tags: [Users]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: userId
@@ -296,7 +295,7 @@ router.patch(
  *     summary: Approve wholesale status for a user (Admin)
  *     tags: [Users]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: userId
@@ -326,7 +325,7 @@ router.post(
  *     summary: Force logout user from all devices (Admin)
  *     tags: [Users]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: userId
@@ -356,7 +355,7 @@ router.post(
  *     summary: Admin force reset password
  *     tags: [Users]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: userId
@@ -446,3 +445,4 @@ router.get(
 );
 
 module.exports = router;
+

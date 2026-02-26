@@ -1,4 +1,3 @@
-import type { ProductAttributeValuesRequestShape } from './productAttributeValues.types';
 const ProductAttributeValue = require('../../models/ProductAttributeValue.model');
 const { getOffsetPagination } = require('../../utils/pagination');
 
@@ -11,7 +10,10 @@ class ProductAttributeValuesRepo {
     return ProductAttributeValue.findById(id).lean();
   }
 
-  list(filter: any = {}, pagination: any = {}) {
+  list(
+    filter: Record<string, unknown> = {},
+    pagination: Record<string, unknown> = {},
+  ) {
     const { limit, skip } = getOffsetPagination(pagination);
     return ProductAttributeValue.find(filter)
       .sort({ createdAt: -1 })
@@ -20,7 +22,7 @@ class ProductAttributeValuesRepo {
       .lean();
   }
 
-  count(filter: any = {}) {
+  count(filter: Record<string, unknown> = {}) {
     return ProductAttributeValue.countDocuments(filter);
   }
 
@@ -34,3 +36,4 @@ class ProductAttributeValuesRepo {
 }
 
 module.exports = new ProductAttributeValuesRepo();
+

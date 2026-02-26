@@ -1,4 +1,3 @@
-import type { UserAddressesRequestShape } from './userAddresses.types';
 const express = require('express');
 const auth = require('../../middlewares/auth.middleware');
 const validate = require('../../middlewares/validate.middleware');
@@ -18,7 +17,7 @@ const router = express.Router();
  *   get:
  *     summary: List addresses for current user
  *     tags: [Users]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Addresses }
  */
@@ -30,7 +29,7 @@ router.get('/', auth(), controller.list);
  *   get:
  *     summary: List addresses for user (Admin)
  *     tags: [Users]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: userId
@@ -47,7 +46,7 @@ router.get('/admin/:userId', auth([ROLES.ADMIN]), validateId('userId'), controll
  *   get:
  *     summary: Get address by id
  *     tags: [Users]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -64,7 +63,7 @@ router.get('/:id', auth(), validateId('id'), controller.get);
  *   post:
  *     summary: Create address
  *     tags: [Users]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -92,7 +91,7 @@ router.post('/', auth(), validate(createUserAddressSchema), controller.create);
  *   put:
  *     summary: Update address
  *     tags: [Users]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -121,7 +120,7 @@ router.put(
  *   delete:
  *     summary: Delete address
  *     tags: [Users]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -133,3 +132,4 @@ router.put(
 router.delete('/:id', auth(), validateId('id'), controller.remove);
 
 module.exports = router;
+

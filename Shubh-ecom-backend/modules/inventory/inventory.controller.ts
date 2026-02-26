@@ -1,4 +1,3 @@
-import type { InventoryRequestShape } from './inventory.types';
 import type { Response } from 'express';
 import type { InventoryRequest } from './inventory.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -19,3 +18,4 @@ exports.adjustStock = asyncHandler(async (req: InventoryRequest, res: Response) 
   const data = await service.adjustStock(req.body);
   return success(res, data, 'Inventory stock adjusted');
 });
+

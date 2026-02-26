@@ -1,4 +1,3 @@
-import type { VehicleManagementRequestShape } from '../vehicle-management.types';
 const mongoose = require('mongoose');
 const { generateVehicleCode } = require('../../../utils/numbering');
 
@@ -83,3 +82,4 @@ vehicleSchema.index(
 );
 
 module.exports = mongoose.model('Vehicle', vehicleSchema);
+

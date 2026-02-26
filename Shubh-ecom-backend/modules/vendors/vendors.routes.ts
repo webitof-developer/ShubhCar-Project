@@ -1,4 +1,3 @@
-import type { VendorsRequestShape } from './vendors.types';
 const express = require('express');
 const auth = require('../../middlewares/auth.middleware');
 const validate = require('../../middlewares/validate.middleware');
@@ -24,7 +23,7 @@ const router = express.Router();
  *   get:
  *     summary: Get vendor profile (self)
  *     tags: [Vendors]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Vendor profile }
  */
@@ -35,7 +34,7 @@ router.get('/me', auth(), controller.getMine);
  *   post:
  *     summary: Upload vendor documents
  *     tags: [Vendors]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -53,7 +52,7 @@ router.post('/me/documents', vendorLimiter, auth(), validate(addDocumentsSchema)
  *   put:
  *     summary: Update vendor profile (self)
  *     tags: [Vendors]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -71,7 +70,7 @@ router.put('/me', vendorLimiter, auth(), validate(vendorSelfUpdateSchema), contr
  *   put:
  *     summary: Update vendor bank details
  *     tags: [Vendors]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -90,7 +89,7 @@ router.put('/me/bank', vendorLimiter, auth(), validate(updateBankSchema), contro
  *   post:
  *     summary: Onboard a new vendor (Admin)
  *     tags: [Vendors]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -108,7 +107,7 @@ router.post('/admin/onboard', adminLimiter, auth([ROLES.ADMIN]), validate(onboar
  *   patch:
  *     summary: Update vendor status (Admin)
  *     tags: [Vendors]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: vendorId
@@ -131,7 +130,7 @@ router.patch('/admin/:vendorId/status', adminLimiter, auth([ROLES.ADMIN]), valid
  *   patch:
  *     summary: Update vendor details (Admin)
  *     tags: [Vendors]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: vendorId
@@ -149,3 +148,4 @@ router.patch('/admin/:vendorId/status', adminLimiter, auth([ROLES.ADMIN]), valid
 router.patch('/admin/:vendorId', adminLimiter, auth([ROLES.ADMIN]), validateId('vendorId'), validate(adminUpdateVendorSchema), controller.updateDetailsAdmin);
 
 module.exports = router;
+

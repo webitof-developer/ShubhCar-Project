@@ -1,4 +1,3 @@
-import type { PaymentsRequestShape } from './payments.types';
 import type { Response } from 'express';
 import type { PaymentsRequest } from './payments.types';
 const { randomUUID } = require('crypto');
@@ -277,3 +276,4 @@ class WebhookController {
 }
 
 module.exports = new WebhookController();
+

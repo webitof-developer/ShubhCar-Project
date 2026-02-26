@@ -1,4 +1,3 @@
-import type { VehicleManagementRequestShape } from '../vehicle-management.types';
 import type { Response } from 'express';
 import type { VehicleManagementRequest } from '../vehicle-management.types';
 const asyncHandler = require('../../../utils/asyncHandler');
@@ -51,3 +50,4 @@ exports.export = asyncHandler(async (req: VehicleManagementRequest, res: Respons
   res.setHeader('Content-Disposition', `attachment; filename="${data.filename}"`);
   return res.send(data.buffer);
 });
+

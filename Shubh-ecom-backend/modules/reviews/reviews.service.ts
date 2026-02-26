@@ -1,4 +1,3 @@
-import type { ReviewsRequestShape } from './reviews.types';
 const repo = require('./reviews.repo');
 const { error } = require('../../utils/apiResponse');
 const reviewCache = require('../../cache/review.cache');
@@ -33,7 +32,7 @@ class ReviewsService {
     if (cached) return cached;
 
     const [agg] = await repo.getAggregate(productId);
-    const result: any = {
+    const result = {
       averageRating: agg ? Number(agg.avgRating.toFixed(2)) : 0,
       reviewCount: agg ? agg.count : 0,
     };
@@ -136,10 +135,10 @@ class ReviewsService {
     await reviewCache.del(reviewCache.key.aggregate(productId));
   }
 
-  async adminList(query: any = {}) {
+  async adminList(query: Record<string, unknown> = {}) {
     const { status, productId, rating, limit, page } = query;
 
-    const filter: any = {};
+    const filter: Record<string, unknown> = {};
     if (status) filter.status = status;
     if (productId) filter.productId = productId;
     if (rating) filter.rating = Number(rating);
@@ -165,3 +164,4 @@ class ReviewsService {
 }
 
 module.exports = new ReviewsService();
+

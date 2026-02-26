@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -24,12 +25,12 @@ export interface ReviewsBody {
 }
 
 export interface ReviewsRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface ReviewsRequestShape {
@@ -47,25 +48,25 @@ export type ReviewsRequest = Request<
   ReviewsRequestContext;
 
 export interface ReviewsEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ReviewsServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type ReviewsServiceResult<T = any> = Promise<T>;
+export type ReviewsServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface ReviewsRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ReviewsRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ReviewsValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -101,3 +102,4 @@ export interface UpdateReviewInput {
   title?: string;
   comment?: string;
 }
+

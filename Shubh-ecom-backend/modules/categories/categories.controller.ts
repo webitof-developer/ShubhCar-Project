@@ -1,4 +1,3 @@
-import type { CategoriesRequestShape } from './categories.types';
 import type { Response } from 'express';
 import type { CategoriesRequest } from './categories.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -13,7 +12,7 @@ const auth = require('../../middlewares/auth.middleware');
 const { adminLimiter } = require('../../middlewares/rateLimiter.middleware');
 const audit = require('../audit/audit.service');
 
-exports.getRoots = asyncHandler(async (req: CategoriesRequest, res: Response) => {
+exports.getRoots = asyncHandler(async (_req: CategoriesRequest, res: Response) => {
   const data = await service.getRootCategories();
   return success(res, data);
 });
@@ -72,7 +71,8 @@ exports.remove = [
   }),
 ];
 
-exports.getHierarchy = asyncHandler(async (req: CategoriesRequest, res: Response) => {
+exports.getHierarchy = asyncHandler(async (_req: CategoriesRequest, res: Response) => {
   const data = await service.getHierarchy();
   return success(res, data);
 });
+

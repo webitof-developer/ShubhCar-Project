@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -23,12 +24,12 @@ export interface InventoryBody {
 }
 
 export interface InventoryRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface InventoryRequestShape {
@@ -46,25 +47,25 @@ export type InventoryRequest = Request<
   InventoryRequestContext;
 
 export interface InventoryEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface InventoryServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type InventoryServiceResult<T = any> = Promise<T>;
+export type InventoryServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface InventoryRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface InventoryRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface InventoryValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -96,3 +97,4 @@ export interface AdminInventoryAdjustInput {
   newStock: number;
   note?: string;
 }
+

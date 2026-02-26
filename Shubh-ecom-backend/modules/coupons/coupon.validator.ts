@@ -1,4 +1,3 @@
-import type { CouponsRequestShape } from './coupons.types';
 const Joi = require('joi');
 
 const previewSchema = Joi.object({
@@ -26,3 +25,4 @@ const updateSchema = createSchema.fork(
 );
 
 module.exports = { previewSchema, createSchema, updateSchema };
+

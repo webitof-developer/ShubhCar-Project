@@ -1,4 +1,3 @@
-import type { ProductsRequestShape } from './products.types';
 const express = require('express');
 const controller = require('./products.controller');
 const auth = require('../../middlewares/auth.middleware');
@@ -188,7 +187,7 @@ router.get('/id/:productId/alternatives', validateId('productId'), controller.ge
  *     summary: List all products for admin (CMS)
  *     tags: [Catalog]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: page
@@ -231,7 +230,7 @@ router.get(
  *   post:
  *     summary: Preview bulk update
  *     tags: [Catalog]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -251,7 +250,7 @@ router.post('/admin/bulk-update/preview', adminLimiter, auth([ROLES.ADMIN]), bul
  *   get:
  *     summary: Download bulk update template
  *     tags: [Catalog]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Template }
  */
@@ -263,7 +262,7 @@ router.get('/admin/bulk-update/template', adminLimiter, auth([ROLES.ADMIN]), con
  *   get:
  *     summary: Export products for bulk update
  *     tags: [Catalog]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Export }
  */
@@ -275,7 +274,7 @@ router.get('/admin/bulk-update/export', adminLimiter, auth([ROLES.ADMIN]), contr
  *   post:
  *     summary: Confirm bulk update
  *     tags: [Catalog]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Enqueued/confirmed }
  */
@@ -287,7 +286,7 @@ router.post('/admin/bulk-update/confirm', adminLimiter, auth([ROLES.ADMIN]), con
  *   get:
  *     summary: Bulk update job status
  *     tags: [Catalog]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: jobId
@@ -304,7 +303,7 @@ router.get('/admin/bulk-update/jobs/:jobId', adminLimiter, auth([ROLES.ADMIN]), 
  *   post:
  *     summary: Preview bulk create
  *     tags: [Catalog]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -324,7 +323,7 @@ router.post('/admin/bulk-create/preview', adminLimiter, auth([ROLES.ADMIN]), bul
  *   post:
  *     summary: Confirm bulk create
  *     tags: [Catalog]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Enqueued/confirmed }
  */
@@ -336,7 +335,7 @@ router.post('/admin/bulk-create/confirm', adminLimiter, auth([ROLES.ADMIN]), con
  *   get:
  *     summary: Bulk create job status
  *     tags: [Catalog]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: jobId
@@ -353,7 +352,7 @@ router.get('/admin/bulk-create/jobs/:jobId', adminLimiter, auth([ROLES.ADMIN]), 
  *   get:
  *     summary: Download bulk create template
  *     tags: [Catalog]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Template }
  */
@@ -365,7 +364,7 @@ router.get('/admin/bulk-create/template', adminLimiter, auth([ROLES.ADMIN]), con
  *   get:
  *     summary: Export products for bulk create
  *     tags: [Catalog]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Export }
  */
@@ -377,7 +376,7 @@ router.get('/admin/bulk-create/export', adminLimiter, auth([ROLES.ADMIN]), contr
  *   get:
  *     summary: Get product (Admin)
  *     tags: [Catalog]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: productId
@@ -395,7 +394,7 @@ router.get('/admin/:productId', adminLimiter, auth([ROLES.ADMIN]), validateId('p
  *     summary: Approve a product (Admin)
  *     tags: [Catalog]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: productId
@@ -425,7 +424,7 @@ router.post(
  *     summary: Duplicate OEM product as Aftermarket draft (Admin)
  *     tags: [Catalog]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: productId
@@ -456,7 +455,7 @@ router.post(
  *     summary: Force delete a product (Admin)
  *     tags: [Catalog]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: productId
@@ -479,7 +478,7 @@ router.post(
  *     summary: Restore a soft-deleted product (Admin)
  *     tags: [Catalog]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: productId
@@ -509,7 +508,7 @@ router.post(
  *     summary: Empty trash (Admin)
  *     tags: [Catalog]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Trash emptied
@@ -532,7 +531,7 @@ router.delete(
  *     summary: Force delete a product (Admin)
  *     tags: [Catalog]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: productId
@@ -562,7 +561,7 @@ router.delete(
  *     summary: Permanently delete a product (Admin)
  *     tags: [Catalog]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: productId
@@ -593,7 +592,7 @@ router.delete(
  *     summary: Create a new product (Admin)
  *     tags: [Catalog]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -633,7 +632,7 @@ router.post(
  *   post:
  *     summary: Upload product images (Admin)
  *     tags: [Catalog]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: productId
@@ -650,7 +649,7 @@ router.post(
  *     summary: Update a product (Admin)
  *     tags: [Catalog]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: productId
@@ -686,7 +685,7 @@ router.put(
  *     summary: Soft delete a product (Admin)
  *     tags: [Catalog]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: productId
@@ -747,3 +746,4 @@ router.get(
 );
 
 module.exports = router;
+

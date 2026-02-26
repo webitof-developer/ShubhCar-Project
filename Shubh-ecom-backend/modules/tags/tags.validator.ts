@@ -1,4 +1,3 @@
-import type { TagsRequestShape } from './tags.types';
 const Joi = require('joi');
 
 const listTagsQuerySchema = Joi.object({
@@ -30,3 +29,4 @@ module.exports = {
   createTagSchema,
   updateTagSchema,
 };
+

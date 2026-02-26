@@ -1,9 +1,11 @@
-import type { ShippingRulesRequestShape } from './shippingRules.types';
 const ShippingRule = require('../../models/ShippingRule.model');
 const { getOffsetPagination } = require('../../utils/pagination');
 
 class ShippingRulesRepo {
-  list(filter: any = {}, pagination: any = {}) {
+  list(
+    filter: Record<string, unknown> = {},
+    pagination: Record<string, unknown> = {},
+  ) {
     const { limit, skip } = getOffsetPagination(pagination);
     return ShippingRule.find(filter)
       .sort({ createdAt: -1 })
@@ -12,7 +14,7 @@ class ShippingRulesRepo {
       .lean();
   }
 
-  count(filter: any = {}) {
+  count(filter: Record<string, unknown> = {}) {
     return ShippingRule.countDocuments(filter);
   }
 
@@ -30,3 +32,4 @@ class ShippingRulesRepo {
 }
 
 module.exports = new ShippingRulesRepo();
+

@@ -1,4 +1,3 @@
-import type { VehicleManagementRequestShape } from '../vehicle-management.types';
 const slugify = require('slugify');
 const repo = require('../repositories/brand.repository');
 const VehicleModel = require('../models/VehicleModel.model');
@@ -8,8 +7,8 @@ const { escapeRegex } = require('../../../utils/escapeRegex');
 const { getOffsetPagination, buildPaginationMeta } = require('../../../utils/pagination');
 
 class VehicleBrandsService {
-  async list(query: any = {}) {
-    const filter: any = { type: 'vehicle', isDeleted: false };
+  async list(query: Record<string, unknown> = {}) {
+    const filter: Record<string, unknown> = { type: 'vehicle', isDeleted: false };
     if (query.status) filter.status = query.status;
     if (query.search) {
       filter.name = { $regex: escapeRegex(query.search), $options: 'i' };
@@ -124,3 +123,4 @@ class VehicleBrandsService {
 }
 
 module.exports = new VehicleBrandsService();
+

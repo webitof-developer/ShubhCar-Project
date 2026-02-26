@@ -1,9 +1,11 @@
-import type { CouponsRequestShape } from './coupons.types';
 const CouponUsage = require('../../models/CouponUsage.model');
 const { getOffsetPagination } = require('../../utils/pagination');
 
 class CouponUsageRepo {
-  list(filter: any = {}, pagination: any = {}) {
+  list(
+    filter: Record<string, unknown> = {},
+    pagination: Record<string, unknown> = {},
+  ) {
     const { limit, skip } = getOffsetPagination(pagination);
     return CouponUsage.find(filter)
       .sort({ createdAt: -1 })
@@ -12,9 +14,10 @@ class CouponUsageRepo {
       .lean();
   }
 
-  count(filter: any = {}) {
+  count(filter: Record<string, unknown> = {}) {
     return CouponUsage.countDocuments(filter);
   }
 }
 
 module.exports = new CouponUsageRepo();
+

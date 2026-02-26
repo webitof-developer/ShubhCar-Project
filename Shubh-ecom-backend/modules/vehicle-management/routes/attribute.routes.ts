@@ -1,4 +1,3 @@
-import type { VehicleManagementRequestShape } from '../vehicle-management.types';
 const express = require('express');
 const auth = require('../../../middlewares/auth.middleware');
 const validate = require('../../../middlewares/validate.middleware');
@@ -19,7 +18,7 @@ const router = express.Router();
  *   get:
  *     summary: List vehicle attributes
  *     tags: [Vehicle]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Attributes }
  */
@@ -36,7 +35,7 @@ router.get(
  *   get:
  *     summary: List vehicle attributes with values
  *     tags: [Vehicle]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Attributes with values }
  */
@@ -53,7 +52,7 @@ router.get(
  *   post:
  *     summary: Create vehicle attribute
  *     tags: [Vehicle]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -80,7 +79,7 @@ router.post(
  *   get:
  *     summary: Get vehicle attribute by id
  *     tags: [Vehicle]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -97,7 +96,7 @@ router.get('/:id', auth([ROLES.ADMIN]), validateId('id'), controller.get);
  *   put:
  *     summary: Update vehicle attribute
  *     tags: [Vehicle]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -129,7 +128,7 @@ router.put(
  *   delete:
  *     summary: Delete vehicle attribute
  *     tags: [Vehicle]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -141,3 +140,4 @@ router.put(
 router.delete('/:id', auth([ROLES.ADMIN]), validateId('id'), controller.remove);
 
 module.exports = router;
+

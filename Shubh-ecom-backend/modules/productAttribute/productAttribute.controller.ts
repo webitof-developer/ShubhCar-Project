@@ -1,4 +1,3 @@
-import type { ProductAttributeRequestShape } from './productAttribute.types';
 import type { Response } from 'express';
 import type { ProductAttributeRequest } from './productAttribute.types';
 const { success } = require('../../utils/apiResponse');
@@ -28,3 +27,4 @@ exports.remove = asyncHandler(async (req: ProductAttributeRequest, res: Response
   );
   return success(res, data, 'Attribute removed');
 });
+

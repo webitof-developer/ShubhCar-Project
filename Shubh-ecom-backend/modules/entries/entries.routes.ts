@@ -1,4 +1,3 @@
-import type { EntriesRequestShape } from './entries.types';
 const express = require('express');
 const auth = require('../../middlewares/auth.middleware');
 const validate = require('../../middlewares/validate.middleware');
@@ -42,7 +41,7 @@ router.post('/', validate(createEntrySchema), controller.create);
  *   get:
  *     summary: Entry stats
  *     tags: [Entries]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Stats }
  */
@@ -54,7 +53,7 @@ router.get('/stats', auth([ROLES.ADMIN]), controller.stats);
  *   get:
  *     summary: List entries (Admin)
  *     tags: [Entries]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Entries }
  */
@@ -71,7 +70,7 @@ router.get(
  *   get:
  *     summary: Get entry by id
  *     tags: [Entries]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -88,7 +87,7 @@ router.get('/:id', auth([ROLES.ADMIN]), validateId('id'), controller.get);
  *   delete:
  *     summary: Delete entry
  *     tags: [Entries]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -105,7 +104,7 @@ router.delete('/:id', auth([ROLES.ADMIN]), validateId('id'), controller.remove);
  *   patch:
  *     summary: Mark entry as read
  *     tags: [Entries]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -122,3 +121,4 @@ router.patch(
 );
 
 module.exports = router;
+

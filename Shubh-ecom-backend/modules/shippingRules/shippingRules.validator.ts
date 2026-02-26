@@ -1,4 +1,3 @@
-import type { ShippingRulesRequestShape } from './shippingRules.types';
 const Joi = require('joi');
 
 const pincodeRangeSchema = Joi.object({
@@ -52,3 +51,4 @@ module.exports = {
   createShippingRuleSchema,
   updateShippingRuleSchema,
 };
+

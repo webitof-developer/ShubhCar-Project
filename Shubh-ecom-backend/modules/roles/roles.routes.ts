@@ -1,4 +1,3 @@
-import type { RolesRequestShape } from './roles.types';
 const express = require('express');
 const auth = require('../../middlewares/auth.middleware');
 const validate = require('../../middlewares/validate.middleware');
@@ -15,7 +14,7 @@ const router = express.Router();
  *   get:
  *     summary: List roles
  *     tags: [Roles]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Roles }
  */
@@ -27,7 +26,7 @@ router.get('/', auth([ROLES.ADMIN]), controller.list);
  *   post:
  *     summary: Create role
  *     tags: [Roles]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -54,7 +53,7 @@ router.post(
  *   get:
  *     summary: Get role by id
  *     tags: [Roles]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: roleId
@@ -76,7 +75,7 @@ router.get(
  *   put:
  *     summary: Update role
  *     tags: [Roles]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: roleId
@@ -108,7 +107,7 @@ router.put(
  *   delete:
  *     summary: Delete role
  *     tags: [Roles]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: roleId
@@ -125,3 +124,4 @@ router.delete(
 );
 
 module.exports = router;
+

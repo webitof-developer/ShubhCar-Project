@@ -1,4 +1,3 @@
-import type { SettingsRequestShape } from './settings.types';
 const express = require('express');
 const auth = require('../../middlewares/auth.middleware');
 const validate = require('../../middlewares/validate.middleware');
@@ -28,7 +27,7 @@ router.get('/public', controller.listPublic);
  *   get:
  *     summary: Get all settings (Admin)
  *     tags: [Settings]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Settings }
  */
@@ -45,7 +44,7 @@ router.get(
  *   put:
  *     summary: Update settings (Admin)
  *     tags: [Settings]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -58,3 +57,4 @@ router.get(
 router.put('/', auth([ROLES.ADMIN]), validate(updateSettingsSchema), controller.updateBulk);
 
 module.exports = router;
+

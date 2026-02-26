@@ -1,4 +1,3 @@
-import type { WishlistRequestShape } from './wishlist.types';
 const repo = require('./wishlist.repo');
 const { error } = require('../../utils/apiResponse');
 const wishlistCache = require('../../cache/wishlist.cache');
@@ -10,8 +9,13 @@ const {
   buildPaginationMeta,
 } = require('../../utils/pagination');
 
+type WishlistQuery = {
+  page?: number | string;
+  limit?: number | string;
+};
+
 class WishlistService {
-  async list(userId, query: any = {}) {
+  async list(userId, query: WishlistQuery = {}) {
     const pagination = getOffsetPagination({
       page: query.page,
       limit: query.limit,
@@ -30,7 +34,7 @@ class WishlistService {
       repo.countByUser(userId),
     ]);
     const enriched = await this.enrichItems(items);
-    const response: any = {
+    const response = {
       items: enriched,
       data: enriched,
       pagination: buildPaginationMeta({ ...pagination, total }),
@@ -59,7 +63,7 @@ class WishlistService {
     return deleted;
   }
 
-  async enrichItems(items: any[] = []) {
+  async enrichItems(items: Array<Record<string, unknown>> = []) {
     if (!items.length) return [];
     const productIds = items.map((item) => item.productId).filter(Boolean);
     const products = await Product.find({ _id: { $in: productIds } }).lean();
@@ -78,9 +82,10 @@ class WishlistService {
     });
 
     return items.map((item) => {
-      const product = productMap.get(String(item.productId));
-// @ts-ignore
-      const productImages = product ? imageMap.get(String(product._id)) || [] : [] as any[];
+      const product = productMap.get(String(item.productId)) as
+        | { _id?: unknown; [key: string]: unknown }
+        | undefined;
+      const productImages = product ? imageMap.get(String(product._id)) || [] : [];
       return {
         ...item,
         product: product ? { ...product, images: productImages } : null,
@@ -90,3 +95,4 @@ class WishlistService {
 }
 
 module.exports = new WishlistService();
+

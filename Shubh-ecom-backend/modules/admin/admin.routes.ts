@@ -1,4 +1,3 @@
-import type { AdminRequestShape } from './admin.types';
 const express = require('express');
 const controller = require('./admin.controller');
 const auth = require('../../middlewares/auth.middleware');
@@ -17,7 +16,7 @@ const router = express.Router();
  *     summary: List pending wholesale user verifications
  *     tags: [Admin]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: List of pending requests
@@ -45,7 +44,7 @@ router.get(
  *     summary: Approve or reject a wholesale application
  *     tags: [Admin]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: userId
@@ -83,3 +82,4 @@ router.post(
 );
 
 module.exports = router;
+

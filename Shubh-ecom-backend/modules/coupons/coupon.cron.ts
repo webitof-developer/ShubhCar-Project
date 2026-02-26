@@ -1,4 +1,3 @@
-import type { CouponsRequestShape } from './coupons.types';
 const cron = require('node-cron');
 const { expireCoupons, fraudUsageAudit } = require('./coupon.jobs');
 
@@ -15,3 +14,4 @@ const scheduleCouponExpiry = () => {
 };
 
 module.exports = { scheduleCouponExpiry };
+

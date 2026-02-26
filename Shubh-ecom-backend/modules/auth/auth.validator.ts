@@ -1,4 +1,3 @@
-import type { AuthRequestShape } from './auth.types';
 const Joi = require('joi');
 
 const registerSchema = Joi.object({
@@ -76,3 +75,4 @@ module.exports = {
   verifyEmailOtpSchema,
   googleAuthSchema,
 };
+

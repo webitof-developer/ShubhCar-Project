@@ -1,4 +1,3 @@
-import type { VehicleManagementRequestShape } from '../vehicle-management.types';
 const repo = require('../repositories/year.repository');
 const Vehicle = require('../models/Vehicle.model');
 const { error } = require('../../../utils/apiResponse');
@@ -17,8 +16,8 @@ const validateYear = (year) => {
 };
 
 class VehicleYearsService {
-  async list(query: any = {}) {
-    const filter: any = { isDeleted: false };
+  async list(query: Record<string, unknown> = {}) {
+    const filter: Record<string, unknown> = { isDeleted: false };
     if (query.status) filter.status = query.status;
     if (query.search) {
       filter.year = Number(query.search);
@@ -100,3 +99,4 @@ class VehicleYearsService {
 }
 
 module.exports = new VehicleYearsService();
+

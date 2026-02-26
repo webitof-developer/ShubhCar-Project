@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -23,12 +24,12 @@ export interface NotificationsBody {
 }
 
 export interface NotificationsRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface NotificationsRequestShape {
@@ -46,25 +47,25 @@ export type NotificationsRequest = Request<
   NotificationsRequestContext;
 
 export interface NotificationsEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface NotificationsServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type NotificationsServiceResult<T = any> = Promise<T>;
+export type NotificationsServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface NotificationsRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface NotificationsRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface NotificationsValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -99,3 +100,4 @@ export interface CreateNotificationInput {
 export interface MarkReadInput {
   notificationId: string;
 }
+

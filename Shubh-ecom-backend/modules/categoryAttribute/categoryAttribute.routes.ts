@@ -1,4 +1,3 @@
-import type { CategoryAttributeRequestShape } from './categoryAttribute.types';
 const express = require('express');
 const auth = require('../../middlewares/auth.middleware');
 const validate = require('../../middlewares/validate.middleware');
@@ -19,7 +18,7 @@ const router = express.Router();
  *   get:
  *     summary: List attributes for a category
  *     tags: [Catalog]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: categoryId
@@ -36,7 +35,7 @@ router.get('/:categoryId', adminLimiter, auth([ROLES.ADMIN]), validateId('catego
  *   post:
  *     summary: Create category attribute
  *     tags: [Catalog]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -54,7 +53,7 @@ router.post('/', adminLimiter, auth([ROLES.ADMIN]), validate(createCategoryAttri
  *   put:
  *     summary: Update category attribute
  *     tags: [Catalog]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: attributeId
@@ -77,7 +76,7 @@ router.put('/:attributeId', adminLimiter, auth([ROLES.ADMIN]), validateId('attri
  *   delete:
  *     summary: Delete category attribute
  *     tags: [Catalog]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: attributeId
@@ -89,3 +88,4 @@ router.put('/:attributeId', adminLimiter, auth([ROLES.ADMIN]), validateId('attri
 router.delete('/:attributeId', adminLimiter, auth([ROLES.ADMIN]), validateId('attributeId'), controller.remove);
 
 module.exports = router;
+

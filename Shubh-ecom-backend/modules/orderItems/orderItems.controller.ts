@@ -1,4 +1,3 @@
-import type { OrderItemsRequestShape } from './orderItems.types';
 import type { Response } from 'express';
 import type { OrderItemsRequest } from './orderItems.types';
 // backend/modules/orderItems/orderItems.controller.js
@@ -14,3 +13,4 @@ exports.updateStatus = asyncHandler(async (req: OrderItemsRequest, res: Response
 
   return success(res, data, 'Order item status updated');
 });
+

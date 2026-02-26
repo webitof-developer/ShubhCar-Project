@@ -1,4 +1,3 @@
-import type { CouponsRequestShape } from './coupons.types';
 import type { Response } from 'express';
 import type { CouponsRequest } from './coupons.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -78,3 +77,4 @@ exports.listUsage = asyncHandler(async (req: CouponsRequest, res: Response) => {
   const data = await service.listUsage(req.query);
   return success(res, data, 'Coupon usage fetched');
 });
+

@@ -1,4 +1,3 @@
-import type { ShipmentsRequestShape } from './shipments.types';
 const express = require('express');
 const auth = require('../../middlewares/auth.middleware');
 const controller = require('./shipment.controller');
@@ -24,7 +23,7 @@ const router = express.Router();
  *   get:
  *     summary: List shipments
  *     tags: [Shipments]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200:
  *         description: Shipments list
@@ -38,7 +37,7 @@ router.get('/', adminLimiter, auth([ROLES.ADMIN]), controller.list);
  *   get:
  *     summary: List shipments for an order
  *     tags: [Shipments]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: orderId
@@ -57,7 +56,7 @@ router.get('/admin/order/:orderId', adminLimiter, auth([ROLES.ADMIN]), validateI
  *   get:
  *     summary: Get shipment by id
  *     tags: [Shipments]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -76,7 +75,7 @@ router.get('/:id', adminLimiter, auth([ROLES.ADMIN]), validateId('id'), controll
  *   post:
  *     summary: Create shipment for an order item
  *     tags: [Shipments]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: orderItemId
@@ -109,7 +108,7 @@ router.post('/:orderItemId', adminLimiter, auth([ROLES.ADMIN]), validateId('orde
  *   patch:
  *     summary: Update shipment status
  *     tags: [Shipments]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: orderItemId
@@ -138,7 +137,7 @@ router.patch('/:orderItemId/status', adminLimiter, auth([ROLES.ADMIN]), validate
  *   delete:
  *     summary: Delete shipment
  *     tags: [Shipments]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -161,7 +160,7 @@ router.delete('/:id', adminLimiter, auth([ROLES.ADMIN]), validateId('id'), contr
  *   get:
  *     summary: Track shipment for an order item
  *     tags: [Shipments]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: orderItemId
@@ -184,7 +183,7 @@ router.get('/track/:orderItemId', auth(), validateId('orderItemId'), controller.
  *   post:
  *     summary: Calculate shipping fee
  *     tags: [Shipments]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -200,3 +199,4 @@ router.get('/track/:orderItemId', auth(), validateId('orderItemId'), controller.
 router.post('/calculate', auth(), controller.calculate);
 
 module.exports = router;
+

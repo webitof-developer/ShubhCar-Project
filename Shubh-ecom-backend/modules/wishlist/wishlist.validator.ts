@@ -1,4 +1,3 @@
-import type { WishlistRequestShape } from './wishlist.types';
 const Joi = require('joi');
 
 const addSchema = Joi.object({
@@ -8,3 +7,4 @@ const addSchema = Joi.object({
 module.exports = {
   addSchema,
 };
+

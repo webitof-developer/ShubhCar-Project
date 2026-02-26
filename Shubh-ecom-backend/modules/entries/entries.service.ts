@@ -1,4 +1,3 @@
-import type { EntriesRequestShape } from './entries.types';
 const Entry = require('../../models/Entry.model');
 // Security: Escape user input before constructing RegExp to prevent ReDoS.
 const { escapeRegex } = require('../../utils/escapeRegex');
@@ -6,7 +5,11 @@ const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagina
 
 class EntriesService {
     async list({ limit, page, status, startDate, endDate, search }) {
-        const filter: any = {};
+        const filter: {
+            status?: string;
+            createdAt?: { $gte?: Date; $lte?: Date };
+            $or?: Array<Record<string, unknown>>;
+        } = {};
         if (status) filter.status = status;
 
         if (startDate || endDate) {
@@ -83,3 +86,4 @@ class EntriesService {
 }
 
 module.exports = new EntriesService();
+

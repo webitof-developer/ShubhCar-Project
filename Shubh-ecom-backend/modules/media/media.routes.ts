@@ -1,4 +1,3 @@
-import type { MediaRequestShape } from './media.types';
 const express = require('express');
 const auth = require('../../middlewares/auth.middleware');
 const validate = require('../../middlewares/validate.middleware');
@@ -24,7 +23,7 @@ const router = express.Router();
  *   post:
  *     summary: Get S3 presigned POST
  *     tags: [Media]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -52,7 +51,7 @@ router.post(
  *   post:
  *     summary: Upload media (multipart)
  *     tags: [Media]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       201: { description: Uploaded media }
  */
@@ -71,7 +70,7 @@ router.post(
  *   post:
  *     summary: Create media record
  *     tags: [Media]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -101,7 +100,7 @@ router.post(
  *   get:
  *     summary: List media
  *     tags: [Media]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Media list }
  */
@@ -119,7 +118,7 @@ router.get(
  *   get:
  *     summary: Get media by id
  *     tags: [Media]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -136,7 +135,7 @@ router.get('/:id', adminLimiter, auth([ROLES.ADMIN]), validateId('id'), controll
  *   delete:
  *     summary: Delete media
  *     tags: [Media]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -148,3 +147,4 @@ router.get('/:id', adminLimiter, auth([ROLES.ADMIN]), validateId('id'), controll
 router.delete('/:id', adminLimiter, auth([ROLES.ADMIN]), validateId('id'), controller.remove);
 
 module.exports = router;
+

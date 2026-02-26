@@ -1,4 +1,3 @@
-import type { ProductAttributeRequestShape } from './productAttribute.types';
 const Product = require('../../models/Product.model');
 const categoryRepo = require('../categories/category.repo');
 const categoryAttrRepo = require('../categoryAttribute/categoryAttribute.repo');
@@ -44,7 +43,7 @@ class ProductAttributeService {
   /* =====================
      LIST
   ====================== */
-  async list(productId, user, query: any = {}) {
+  async list(productId, user, query: Record<string, unknown> = {}) {
     const product = await Product.findById(productId).lean();
     if (!product) error('Product not found', 404);
 
@@ -109,10 +108,11 @@ class ProductAttributeService {
   /* =====================
      VALIDATION BEFORE ACTIVATE
   ====================== */
-  async validateRequired(productId) {
+  async validateRequired(_productId) {
     // Product attributes are optional; skip required enforcement.
     return true;
   }
 }
 
 module.exports = new ProductAttributeService();
+

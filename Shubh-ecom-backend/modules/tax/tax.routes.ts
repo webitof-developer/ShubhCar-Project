@@ -1,4 +1,3 @@
-import type { TaxRequestShape } from './tax.types';
 const express = require('express');
 const auth = require('../../middlewares/auth.middleware');
 const validate = require('../../middlewares/validate.middleware');
@@ -15,7 +14,7 @@ const router = express.Router();
  *   get:
  *     summary: List tax slabs
  *     tags: [Tax]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Tax slabs }
  */
@@ -32,7 +31,7 @@ router.get(
  *   post:
  *     summary: Create tax slab
  *     tags: [Tax]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -56,7 +55,7 @@ router.post('/slabs', auth([ROLES.ADMIN]), validate(createTaxSchema), controller
  *   put:
  *     summary: Update tax slab
  *     tags: [Tax]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -90,7 +89,7 @@ router.put(
  *   delete:
  *     summary: Delete tax slab
  *     tags: [Tax]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -102,3 +101,4 @@ router.put(
 router.delete('/slabs/:id', auth([ROLES.ADMIN]), validateId('id'), controller.remove);
 
 module.exports = router;
+

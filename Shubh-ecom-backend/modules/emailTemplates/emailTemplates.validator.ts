@@ -1,4 +1,3 @@
-import type { EmailTemplatesRequestShape } from './emailTemplates.types';
 const Joi = require('joi');
 
 const listEmailTemplatesQuerySchema = Joi.object({
@@ -6,7 +5,7 @@ const listEmailTemplatesQuerySchema = Joi.object({
   subject: Joi.string().trim().max(200),
 });
 
-const templatePayload: any = {
+const templatePayload = {
   name: Joi.string().trim().min(2).max(120),
   subject: Joi.string().trim().min(2).max(200),
   bodyHtml: Joi.string().min(1),
@@ -29,3 +28,4 @@ module.exports = {
   createEmailTemplateSchema,
   updateEmailTemplateSchema,
 };
+

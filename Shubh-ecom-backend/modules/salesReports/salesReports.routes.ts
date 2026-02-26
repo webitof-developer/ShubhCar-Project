@@ -1,4 +1,3 @@
-import type { SalesReportsRequestShape } from './salesReports.types';
 const express = require('express');
 const auth = require('../../middlewares/auth.middleware');
 const validate = require('../../middlewares/validate.middleware');
@@ -22,7 +21,7 @@ const router = express.Router();
  *   get:
  *     summary: Sales reports summary
  *     tags: [Reports]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Summary }
  */
@@ -48,7 +47,7 @@ router.get(
  *   get:
  *     summary: List sales reports
  *     tags: [Reports]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Reports }
  */
@@ -66,7 +65,7 @@ router.get(
  *   get:
  *     summary: Get sales report by id
  *     tags: [Reports]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -83,7 +82,7 @@ router.get('/:id', adminLimiter, auth([ROLES.ADMIN]), validateId('id'), controll
  *   post:
  *     summary: Create sales report
  *     tags: [Reports]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -113,7 +112,7 @@ router.post(
  *   put:
  *     summary: Update sales report metadata
  *     tags: [Reports]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -147,7 +146,7 @@ router.put(
  *   delete:
  *     summary: Delete sales report
  *     tags: [Reports]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -159,3 +158,4 @@ router.put(
 router.delete('/:id', adminLimiter, auth([ROLES.ADMIN]), validateId('id'), controller.remove);
 
 module.exports = router;
+

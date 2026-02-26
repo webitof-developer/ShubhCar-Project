@@ -1,4 +1,3 @@
-import type { VehicleManagementRequestShape } from '../vehicle-management.types';
 const brandRoutes = require('./brand.routes');
 const modelRoutes = require('./model.routes');
 const yearRoutes = require('./year.routes');
@@ -18,3 +17,4 @@ module.exports = {
   variantRoutes,
   vehicleRoutes,
 };
+

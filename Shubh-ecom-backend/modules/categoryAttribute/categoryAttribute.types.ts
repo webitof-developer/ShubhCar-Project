@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -18,12 +19,12 @@ export interface CategoryAttributeBody {
 }
 
 export interface CategoryAttributeRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface CategoryAttributeRequestShape {
@@ -41,25 +42,25 @@ export type CategoryAttributeRequest = Request<
   CategoryAttributeRequestContext;
 
 export interface CategoryAttributeEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface CategoryAttributeServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type CategoryAttributeServiceResult<T = any> = Promise<T>;
+export type CategoryAttributeServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface CategoryAttributeRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface CategoryAttributeRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface CategoryAttributeValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -82,3 +83,4 @@ export interface AddCategoryAttributeInput {
   isFilterable?: boolean;
   displayOrder?: number;
 }
+

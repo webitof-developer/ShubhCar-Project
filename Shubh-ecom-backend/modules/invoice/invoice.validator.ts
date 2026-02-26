@@ -1,4 +1,3 @@
-import type { InvoiceRequestShape } from './invoice.types';
 const Joi = require('joi');
 
 const listInvoicesQuerySchema = Joi.object({
@@ -15,3 +14,4 @@ module.exports = {
   listInvoicesQuerySchema,
   pdfQuerySchema,
 };
+

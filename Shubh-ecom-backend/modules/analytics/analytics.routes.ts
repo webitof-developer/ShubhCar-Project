@@ -1,4 +1,3 @@
-import type { AnalyticsRequestShape } from './analytics.types';
 const express = require('express');
 const auth = require('../../middlewares/auth.middleware');
 const validate = require('../../middlewares/validate.middleware');
@@ -18,7 +17,7 @@ router.use(validate(analyticsQuerySchema, 'query'));
  *   get:
  *     summary: Revenue summary
  *     tags: [Analytics]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: query
  *         name: from
@@ -49,7 +48,7 @@ router.get(
  *   get:
  *     summary: User metrics
  *     tags: [Analytics]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: User metrics }
  */
@@ -66,7 +65,7 @@ router.get(
  *   get:
  *     summary: Top products
  *     tags: [Analytics]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: query
  *         name: limit
@@ -91,7 +90,7 @@ router.get(
  *   get:
  *     summary: Inventory metrics
  *     tags: [Analytics]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Inventory metrics }
  */
@@ -112,7 +111,7 @@ router.get(
  *   get:
  *     summary: Reviews analytics
  *     tags: [Analytics]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Review stats }
  */
@@ -129,7 +128,7 @@ router.get(
  *   get:
  *     summary: Dashboard KPIs
  *     tags: [Analytics]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: KPI snapshot }
  */
@@ -151,7 +150,7 @@ router.get(
  *   get:
  *     summary: Dashboard chart series
  *     tags: [Analytics]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Chart data }
  */
@@ -173,7 +172,7 @@ router.get(
  *   get:
  *     summary: Sales by state
  *     tags: [Analytics]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Sales by state }
  */
@@ -194,7 +193,7 @@ router.get(
  *   get:
  *     summary: Sales by city
  *     tags: [Analytics]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Sales by city }
  */
@@ -215,7 +214,7 @@ router.get(
  *   get:
  *     summary: Repeat customer stats
  *     tags: [Analytics]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Repeat metrics }
  */
@@ -236,7 +235,7 @@ router.get(
  *   get:
  *     summary: Fulfillment metrics
  *     tags: [Analytics]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Fulfillment metrics }
  */
@@ -257,7 +256,7 @@ router.get(
  *   get:
  *     summary: Checkout funnel stats
  *     tags: [Analytics]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Funnel data }
  */
@@ -278,7 +277,7 @@ router.get(
  *   get:
  *     summary: Top categories
  *     tags: [Analytics]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Top categories }
  */
@@ -299,7 +298,7 @@ router.get(
  *   get:
  *     summary: Top brands
  *     tags: [Analytics]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Top brands }
  */
@@ -320,7 +319,7 @@ router.get(
  *   get:
  *     summary: Inventory turnover metrics
  *     tags: [Analytics]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Inventory turnover }
  */
@@ -337,3 +336,4 @@ router.get(
 );
 
 module.exports = router;
+

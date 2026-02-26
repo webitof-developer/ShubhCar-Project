@@ -1,4 +1,3 @@
-import type { CartRequestShape } from './cart.types';
 const express = require('express');
 const controller = require('./cart.controller');
 const auth = require('../../middlewares/auth.middleware');
@@ -19,7 +18,7 @@ const router = express.Router();
  *     summary: Get current user's cart
  *     tags: [Cart]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Active cart with items
@@ -44,7 +43,7 @@ router.post('/summary/guest', controller.getGuestSummary);
  *     summary: Add an item to the cart
  *     tags: [Cart]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -86,7 +85,7 @@ router.patch(
  *     summary: Update quantity of a cart item
  *     tags: [Cart]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: itemId
@@ -130,7 +129,7 @@ router.delete(
  *     summary: Remove an item from the cart
  *     tags: [Cart]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: itemId
@@ -164,7 +163,7 @@ router.post(
  *     summary: Apply a coupon code to the cart
  *     tags: [Cart]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -197,7 +196,7 @@ router.delete('/coupon', auth(), controller.removeCoupon);
  *     summary: Remove the applied coupon from the cart
  *     tags: [Cart]
  *     security:
- *       - bearerAuth: [] as any[]
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Coupon removed
@@ -213,3 +212,4 @@ router.delete('/coupon', auth(), controller.removeCoupon);
  */
 
 module.exports = router;
+

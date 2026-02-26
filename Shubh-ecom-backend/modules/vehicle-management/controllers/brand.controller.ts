@@ -1,4 +1,3 @@
-import type { VehicleManagementRequestShape } from '../vehicle-management.types';
 import type { Response } from 'express';
 import type { VehicleManagementRequest } from '../vehicle-management.types';
 const asyncHandler = require('../../../utils/asyncHandler');
@@ -29,3 +28,4 @@ exports.remove = asyncHandler(async (req: VehicleManagementRequest, res: Respons
   const data = await service.remove(req.params.id);
   return success(res, data, 'Vehicle brand deleted');
 });
+

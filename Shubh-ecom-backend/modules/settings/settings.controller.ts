@@ -1,4 +1,3 @@
-import type { SettingsRequestShape } from './settings.types';
 import type { Response } from 'express';
 import type { SettingsRequest } from './settings.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -20,3 +19,4 @@ exports.updateBulk = asyncHandler(async (req: SettingsRequest, res: Response) =>
     const data = await settingsService.updateBulk(req.body);
     return success(res, data, 'Settings updated successfully');
 });
+

@@ -1,4 +1,3 @@
-import type { PagesRequestShape } from './pages.types';
 const Joi = require('joi');
 
 const sectionSchema = Joi.object({
@@ -53,3 +52,4 @@ module.exports = {
   updatePageSchema,
   resolvePageParamsSchema,
 };
+

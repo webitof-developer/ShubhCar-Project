@@ -1,4 +1,3 @@
-import type { UserActivityLogsRequestShape } from './userActivityLogs.types';
 const express = require('express');
 const auth = require('../../middlewares/auth.middleware');
 const validate = require('../../middlewares/validate.middleware');
@@ -15,7 +14,7 @@ const router = express.Router();
  *   get:
  *     summary: List user activity logs
  *     tags: [Audit]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Activity logs }
  */
@@ -28,3 +27,4 @@ router.get(
 );
 
 module.exports = router;
+

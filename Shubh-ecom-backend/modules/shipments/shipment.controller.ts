@@ -1,4 +1,3 @@
-import type { ShipmentsRequestShape } from './shipments.types';
 import type { Response } from 'express';
 import type { ShipmentsRequest } from './shipments.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -78,3 +77,4 @@ exports.adminListByOrder = asyncHandler(async (req: ShipmentsRequest, res: Respo
   const data = await shipmentService.adminListByOrder(req.params.orderId, req.query);
   return success(res, data, 'Shipments fetched');
 });
+

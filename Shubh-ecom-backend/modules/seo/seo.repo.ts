@@ -1,4 +1,3 @@
-import type { SeoRequestShape } from './seo.types';
 const Seo = require('../../models/Seo.model');
 const { getOffsetPagination } = require('../../utils/pagination');
 
@@ -15,7 +14,10 @@ class SeoRepository {
     return Seo.findOne(filter).lean();
   }
 
-  list(filter: any = {}, pagination: any = {}) {
+  list(
+    filter: Record<string, unknown> = {},
+    pagination: Record<string, unknown> = {},
+  ) {
     const { limit, skip } = getOffsetPagination(pagination);
     return Seo.find(filter)
       .sort({ updatedAt: -1 })
@@ -24,7 +26,7 @@ class SeoRepository {
       .lean();
   }
 
-  count(filter: any = {}) {
+  count(filter: Record<string, unknown> = {}) {
     return Seo.countDocuments(filter);
   }
 
@@ -34,3 +36,4 @@ class SeoRepository {
 }
 
 module.exports = new SeoRepository();
+

@@ -1,4 +1,3 @@
-import type { EntriesRequestShape } from './entries.types';
 import type { Response } from 'express';
 import type { EntriesRequest } from './entries.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -19,7 +18,7 @@ exports.create = asyncHandler(async (req: EntriesRequest, res: Response) => {
     // Extract IP
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
-    const entryData: any = {
+    const entryData: Record<string, unknown> = {
         ...req.body,
         ip,
         userAgent: userAgentString,
@@ -48,7 +47,8 @@ exports.markRead = asyncHandler(async (req: EntriesRequest, res: Response) => {
     return success(res, data, 'Marked as read');
 });
 
-exports.stats = asyncHandler(async (req: EntriesRequest, res: Response) => {
+exports.stats = asyncHandler(async (_req: EntriesRequest, res: Response) => {
     const data = await entriesService.stats();
     return success(res, data);
 });
+

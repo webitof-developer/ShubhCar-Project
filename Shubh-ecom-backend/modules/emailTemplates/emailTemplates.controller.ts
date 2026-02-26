@@ -1,4 +1,3 @@
-import type { EmailTemplatesRequestShape } from './emailTemplates.types';
 import type { Response } from 'express';
 import type { EmailTemplatesRequest } from './emailTemplates.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -45,3 +44,4 @@ exports.remove = asyncHandler(async (req: EmailTemplatesRequest, res: Response) 
   });
   return success(res, data, 'Email template deleted');
 });
+

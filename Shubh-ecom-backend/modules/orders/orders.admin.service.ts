@@ -1,4 +1,3 @@
-import type { OrdersRequestShape } from './orders.types';
 // Temporary admin service methods for orders - to be integrated into orders.service.js
 const Order = require('../../models/Order.model');
 const orderRepo = require('./order.repo');
@@ -15,7 +14,42 @@ const Role = require('../../models/Role.model');
 const { escapeRegex } = require('../../utils/escapeRegex');
 const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
 
-const isSalesmanActor = async (actor: any = {}) => {
+type ActorRef = {
+  id?: string;
+  _id?: string;
+  role?: string;
+  [key: string]: unknown;
+};
+
+type AdminListQuery = {
+  status?: string;
+  paymentStatus?: string;
+  customerType?: string;
+  productType?: string;
+  page?: number | string;
+  limit?: number | string;
+  from?: string;
+  to?: string;
+  userId?: string;
+  search?: string;
+  summary?: string | number | boolean;
+};
+
+type DateRangeFilter = {
+  $gte?: Date;
+  $lte?: Date;
+};
+
+type AdminOrderFilter = {
+  isDeleted: boolean;
+  orderStatus?: string;
+  paymentStatus?: string;
+  salesmanId?: unknown;
+  userId?: unknown;
+  createdAt?: DateRangeFilter;
+};
+
+const isSalesmanActor = async (actor: ActorRef = {}) => {
   if (String(actor?.role || '').toLowerCase() === 'salesman') return true;
   const actorId = actor?.id || actor?._id;
   if (!actorId || !mongoose.Types.ObjectId.isValid(actorId)) return false;
@@ -30,7 +64,7 @@ const isSalesmanActor = async (actor: any = {}) => {
 };
 
 // Admin list orders method
-exports.adminList = async (query: any = {}, actor: any = {}) => {
+exports.adminList = async (query: AdminListQuery = {}, actor: ActorRef = {}) => {
   const {
     status,
     paymentStatus,
@@ -47,7 +81,7 @@ exports.adminList = async (query: any = {}, actor: any = {}) => {
 
   const pagination = getOffsetPagination({ page, limit });
   const skip = pagination.skip;
-  const filter: any = { isDeleted: false };
+  const filter: AdminOrderFilter = { isDeleted: false };
   const isSalesman = await isSalesmanActor(actor);
 
   if (status) filter.orderStatus = status;
@@ -80,7 +114,7 @@ exports.adminList = async (query: any = {}, actor: any = {}) => {
       ? { 'user.customerType': normalizedCustomerType }
       : null;
   const hasProductTypeFilter = normalizedProductTypes.length > 0;
-  const searchMatch = hasSearch
+  const searchMatch: { $or: unknown[] } | null = hasSearch
     ? {
       $or: [
         { orderNumber: searchRegex },
@@ -92,12 +126,11 @@ exports.adminList = async (query: any = {}, actor: any = {}) => {
     }
     : null;
 
-  if (hasSearch && mongoose.Types.ObjectId.isValid(searchValue)) {
-// @ts-ignore
+  if (hasSearch && searchMatch && mongoose.Types.ObjectId.isValid(searchValue)) {
     searchMatch.$or.push({ _id: new mongoose.Types.ObjectId(searchValue) });
   }
 
-  const pipeline: any[] = [
+  const pipeline: Array<Record<string, unknown>> = [
     { $match: filter },
     { $sort: { createdAt: -1 } },
     {
@@ -215,8 +248,8 @@ exports.adminList = async (query: any = {}, actor: any = {}) => {
 };
 
 // Admin get status counts method
-exports.adminGetStatusCounts = async (actor: any = {}) => {
-  const match: any = { isDeleted: false };
+exports.adminGetStatusCounts = async (actor: ActorRef = {}) => {
+  const match: Record<string, unknown> = { isDeleted: false };
   if (await isSalesmanActor(actor)) {
     match.salesmanId = new mongoose.Types.ObjectId(actor.id);
   }
@@ -249,8 +282,8 @@ exports.adminGetStatusCounts = async (actor: any = {}) => {
 };
 
 // Admin get single order
-exports.adminGetOrder = async (orderId, actor: any = {}) => {
-  const filter: any = { _id: orderId };
+exports.adminGetOrder = async (orderId, actor: ActorRef = {}) => {
+  const filter: Record<string, unknown> = { _id: orderId };
   if (await isSalesmanActor(actor)) {
     filter.salesmanId = actor.id;
   }
@@ -276,7 +309,7 @@ exports.adminGetOrder = async (orderId, actor: any = {}) => {
     ? await ProductImage.find({ productId: { $in: productIds }, isDeleted: false })
         .sort({ isPrimary: -1, sortOrder: 1 })
         .lean()
-    : [] as any[];
+    : [];
   const imageMap = new Map();
   images.forEach((img) => {
     const key = String(img.productId);
@@ -285,13 +318,18 @@ exports.adminGetOrder = async (orderId, actor: any = {}) => {
   });
   const enrichedItems = items.map((item) => {
     const productId = item.productId?._id || item.productId;
-    const productImages = productId ? imageMap.get(String(productId)) || [] : [] as any[];
+    const productImages = productId ? imageMap.get(String(productId)) || [] : [];
     if (item.productId && typeof item.productId === 'object') {
       return { ...item, productId: { ...item.productId, images: productImages } };
     }
     return { ...item, productImages };
   });
-  const result: any = { order: attachPaymentSummary(order), items: enrichedItems, shipments, events };
+  const result = {
+    order: attachPaymentSummary(order),
+    items: enrichedItems,
+    shipments,
+    events,
+  };
   return result;
 };
 
@@ -332,3 +370,4 @@ exports.adminAddOrderNote = async ({ admin, orderId, payload }) => {
 
   return event;
 };
+

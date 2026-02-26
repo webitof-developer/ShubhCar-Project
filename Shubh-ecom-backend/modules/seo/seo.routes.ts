@@ -1,4 +1,3 @@
-import type { SeoRequestShape } from './seo.types';
 const express = require('express');
 const auth = require('../../middlewares/auth.middleware');
 const validate = require('../../middlewares/validate.middleware');
@@ -22,7 +21,7 @@ const router = express.Router();
  *   post:
  *     summary: Upsert SEO record
  *     tags: [SEO]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -46,7 +45,7 @@ router.post(
  *   get:
  *     summary: List SEO records
  *     tags: [SEO]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: SEO list }
  */
@@ -58,7 +57,7 @@ router.get('/', adminLimiter, auth([ROLES.ADMIN]), controller.list);
  *   delete:
  *     summary: Deactivate SEO record
  *     tags: [SEO]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -124,3 +123,4 @@ router.get(
 );
 
 module.exports = router;
+

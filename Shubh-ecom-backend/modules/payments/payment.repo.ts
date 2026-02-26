@@ -1,7 +1,23 @@
-import type { PaymentsRequestShape } from './payments.types';
 const Payment = require('../../models/Payment.model');
 const { PAYMENT_RECORD_STATUS } = require('../../constants/paymentStatus');
 const { getOffsetPagination } = require('../../utils/pagination');
+
+type PaymentUpdatePayload = Record<string, unknown>;
+type PaymentListFilter = Record<string, unknown>;
+type PaymentPagination = {
+  limit?: number | string;
+  page?: number | string;
+};
+
+type PaymentStatusUpdateInput = {
+  transactionId?: string;
+  gatewayResponse?: Record<string, unknown>;
+};
+
+type PaymentFailureUpdateInput = {
+  reason?: string;
+  gatewayResponse?: Record<string, unknown>;
+};
 
 /**
  * PAYMENT REPOSITORY
@@ -43,7 +59,7 @@ class PaymentRepository {
     }).lean();
   }
 
-  // Stronger idempotency helper: if any CREATED/SUCCESS exists, reuse it
+  // Stronger idempotency helper: if a CREATED/SUCCESS exists, reuse it
   // (Use this in initiatePayment to avoid duplicates under race)
   findInitiatedByOrderAndGateway(orderId, gateway) {
     return Payment.findOne({
@@ -121,8 +137,8 @@ class PaymentRepository {
   }
 
   // Useful explicit helpers (optional but solid)
-  markSuccess(id, { transactionId, gatewayResponse }: any = {}) {
-    const update: any = {
+  markSuccess(id, { transactionId, gatewayResponse }: PaymentStatusUpdateInput = {}) {
+    const update: PaymentUpdatePayload = {
       status: PAYMENT_RECORD_STATUS.SUCCESS,
     };
     if (transactionId) update.transactionId = transactionId;
@@ -130,8 +146,8 @@ class PaymentRepository {
     return Payment.findByIdAndUpdate(id, update, { new: true });
   }
 
-  markFailed(id, { reason = 'payment_failed', gatewayResponse }: any = {}) {
-    const update: any = {
+  markFailed(id, { reason = 'payment_failed', gatewayResponse }: PaymentFailureUpdateInput = {}) {
+    const update: PaymentUpdatePayload = {
       status: PAYMENT_RECORD_STATUS.FAILED,
       failureReason: reason,
     };
@@ -192,7 +208,7 @@ class PaymentRepository {
   ====================== */
 
   async applyRefund(paymentId, amount, isFullRefund = false) {
-    const update: any = {
+    const update: PaymentUpdatePayload = {
       $inc: { refundAmount: amount },
     };
 
@@ -250,7 +266,7 @@ class PaymentRepository {
   /* =====================
      LIST
   ====================== */
-  list(filter: any = {}, { limit = 20, page = 1 } = {}) {
+  list(filter: PaymentListFilter = {}, { limit = 20, page = 1 }: PaymentPagination = {}) {
     const { limit: safeLimit, skip } = getOffsetPagination({ page, limit });
 
     return Payment.find(filter)
@@ -260,9 +276,10 @@ class PaymentRepository {
       .lean();
   }
 
-  count(filter: any = {}) {
+  count(filter: PaymentListFilter = {}) {
     return Payment.countDocuments(filter);
   }
 }
 
 module.exports = new PaymentRepository();
+

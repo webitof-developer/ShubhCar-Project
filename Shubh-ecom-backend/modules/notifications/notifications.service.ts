@@ -1,4 +1,3 @@
-import type { NotificationsRequestShape } from './notifications.types';
 const repo = require('./notifications.repo');
 const { error } = require('../../utils/apiResponse');
 const notificationCache = require('../../cache/notification.cache');
@@ -10,9 +9,9 @@ const {
 } = require('../../utils/pagination');
 
 class NotificationsService {
-  visibleFilter(user, filter: any = {}) {
+  visibleFilter(user, filter: Record<string, unknown> = {}) {
     if (user.role === ROLES.ADMIN) return { ...filter };
-    const or: any[] = [{ audience: 'user', userId: user.id }];
+    const or: unknown[] = [{ audience: 'user', userId: user.id }];
     return { ...filter, $or: or };
   }
 
@@ -25,7 +24,7 @@ class NotificationsService {
     return created;
   }
 
-  async list({ user, filter: any = {} }) {
+  async list({ user, filter = {} }) {
 // @ts-ignore
     const { page, limit, ...queryFilter } = filter || {};
     const pagination = getOffsetPagination({ page, limit });
@@ -58,7 +57,7 @@ class NotificationsService {
       repo.list(baseFilter, pagination),
       repo.count(baseFilter),
     ]);
-    const response: any = {
+    const response = {
       items: data,
       data,
       pagination: buildPaginationMeta({ ...pagination, total }),
@@ -122,7 +121,7 @@ class NotificationsService {
     return updated;
   }
 
-  async markAllRead(user, payload: any = {}) {
+  async markAllRead(user, payload: Record<string, unknown> = {}) {
     const allowedAudiences =
       user.role === ROLES.ADMIN
         ? ['user', ROLES.ADMIN]
@@ -149,3 +148,4 @@ class NotificationsService {
 }
 
 module.exports = new NotificationsService();
+

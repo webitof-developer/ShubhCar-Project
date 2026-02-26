@@ -1,9 +1,11 @@
-import type { RolesRequestShape } from './roles.types';
 const Role = require('../../models/Role.model');
 const { getOffsetPagination } = require('../../utils/pagination');
 
 class RolesRepo {
-  list(filter: any = {}, pagination: any = {}) {
+  list(
+    filter: Record<string, unknown> = {},
+    pagination: Record<string, unknown> = {},
+  ) {
     const { limit, skip } = getOffsetPagination(pagination);
     return Role.find(filter)
       .sort({ createdAt: -1 })
@@ -12,7 +14,7 @@ class RolesRepo {
       .lean();
   }
 
-  count(filter: any = {}) {
+  count(filter: Record<string, unknown> = {}) {
     return Role.countDocuments(filter);
   }
 
@@ -42,3 +44,4 @@ class RolesRepo {
 }
 
 module.exports = new RolesRepo();
+

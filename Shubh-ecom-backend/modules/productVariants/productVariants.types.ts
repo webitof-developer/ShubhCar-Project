@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -27,12 +28,12 @@ export interface ProductVariantsBody {
 }
 
 export interface ProductVariantsRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface ProductVariantsRequestShape {
@@ -50,25 +51,25 @@ export type ProductVariantsRequest = Request<
   ProductVariantsRequestContext;
 
 export interface ProductVariantsEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ProductVariantsServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type ProductVariantsServiceResult<T = any> = Promise<T>;
+export type ProductVariantsServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface ProductVariantsRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ProductVariantsRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ProductVariantsValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -104,3 +105,4 @@ export interface UpdateVariantStockInput {
   changeType: 'increase' | 'decrease' | 'order' | 'cancel' | 'admin_adjust';
   referenceId?: string;
 }
+

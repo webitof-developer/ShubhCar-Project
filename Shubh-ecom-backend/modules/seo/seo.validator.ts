@@ -1,4 +1,3 @@
-import type { SeoRequestShape } from './seo.types';
 const Joi = require('joi');
 
 const upsertSeoSchema = Joi.object({
@@ -30,3 +29,4 @@ module.exports = {
   upsertSeoSchema,
   resolveSeoQuerySchema,
 };
+

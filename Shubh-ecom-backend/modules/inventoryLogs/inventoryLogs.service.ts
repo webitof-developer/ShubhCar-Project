@@ -1,10 +1,9 @@
-import type { InventoryLogsRequestShape } from './inventoryLogs.types';
 const repo = require('./inventoryLogs.repo');
 const { error } = require('../../utils/apiResponse');
 const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
 
 class InventoryLogsService {
-  async list(query: any = {}) {
+  async list(query: Record<string, unknown> = {}) {
     const { page, limit, ...filter } = query;
     const pagination = getOffsetPagination({ page, limit });
     const [data, total] = await Promise.all([
@@ -25,3 +24,4 @@ class InventoryLogsService {
 }
 
 module.exports = new InventoryLogsService();
+

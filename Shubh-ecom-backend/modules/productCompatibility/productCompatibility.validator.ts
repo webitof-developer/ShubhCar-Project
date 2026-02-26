@@ -1,4 +1,3 @@
-import type { ProductCompatibilityRequestShape } from './productCompatibility.types';
 const Joi = require('joi');
 
 const upsertProductCompatibilitySchema = Joi.object({
@@ -8,3 +7,4 @@ const upsertProductCompatibilitySchema = Joi.object({
 module.exports = {
   upsertProductCompatibilitySchema,
 };
+

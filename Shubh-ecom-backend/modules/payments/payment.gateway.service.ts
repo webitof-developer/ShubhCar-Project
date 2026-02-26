@@ -1,4 +1,3 @@
-import type { PaymentsRequestShape } from './payments.types';
 const Stripe = require('stripe');
 const Razorpay = require('razorpay');
 const env = require('../../config/env');
@@ -116,3 +115,4 @@ class PaymentGatewayService {
 }
 
 module.exports = new PaymentGatewayService();
+

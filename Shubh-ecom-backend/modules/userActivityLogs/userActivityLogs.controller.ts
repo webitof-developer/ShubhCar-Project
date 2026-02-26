@@ -1,4 +1,3 @@
-import type { UserActivityLogsRequestShape } from './userActivityLogs.types';
 import type { Response } from 'express';
 import type { UserActivityLogsRequest } from './userActivityLogs.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -9,3 +8,4 @@ exports.list = asyncHandler(async (req: UserActivityLogsRequest, res: Response) 
   const data = await service.list(req.query);
   return success(res, data, 'User activity logs fetched');
 });
+

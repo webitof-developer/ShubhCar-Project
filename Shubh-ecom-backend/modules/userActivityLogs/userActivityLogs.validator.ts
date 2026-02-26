@@ -1,4 +1,3 @@
-import type { UserActivityLogsRequestShape } from './userActivityLogs.types';
 const Joi = require('joi');
 
 const listUserActivityLogsQuerySchema = Joi.object({
@@ -9,3 +8,4 @@ const listUserActivityLogsQuerySchema = Joi.object({
 module.exports = {
   listUserActivityLogsQuerySchema,
 };
+

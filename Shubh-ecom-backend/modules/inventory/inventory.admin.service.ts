@@ -1,4 +1,3 @@
-import type { InventoryRequestShape } from './inventory.types';
 const Product = require('../../models/Product.model');
 const InventoryLog = require('../../models/InventoryLog.model');
 const { error } = require('../../utils/apiResponse');
@@ -7,8 +6,35 @@ const inventoryCache = require('../../cache/inventory.cache');
 const { escapeRegex } = require('../../utils/escapeRegex');
 const { getOffsetPagination } = require('../../utils/pagination');
 
+type SummaryInput = {
+  threshold?: number | string;
+};
+
+type ListProductsInput = {
+  page?: number | string;
+  limit?: number | string;
+  search?: string;
+  status?: string;
+  threshold?: number | string;
+};
+
+type AdjustStockInput = {
+  productId?: string;
+  type?: string;
+  quantity?: number | string;
+  note?: string;
+};
+
+type InventoryMatch = Record<string, unknown> & {
+  _id?: string;
+  isDeleted?: boolean;
+  status?: string;
+  stockQty?: { $lte: number };
+  $expr?: Record<string, unknown>;
+};
+
 class InventoryAdminService {
-  async summary({ threshold = 5 }: any = {}) {
+  async summary({ threshold = 5 }: SummaryInput = {}) {
     const thresholdValue = Number(threshold) || 5;
 
     const totalProducts = await Product.countDocuments({ isDeleted: false });
@@ -44,18 +70,24 @@ class InventoryAdminService {
     };
   }
 
-  async listProducts({ page = 1, limit = 20, search, status, threshold }: any = {}) {
+  async listProducts({
+    page = 1,
+    limit = 20,
+    search,
+    status,
+    threshold,
+  }: ListProductsInput = {}) {
     const pagination = getOffsetPagination({ page, limit });
     const thresholdValue = threshold != null ? Number(threshold) : null;
     const safeSearch = search ? escapeRegex(search) : '';
 
-    const match: any = { isDeleted: false };
+    const match: InventoryMatch = { isDeleted: false };
     if (status) match.status = status;
     if (thresholdValue != null) {
       match.stockQty = { $lte: thresholdValue };
     }
 
-    const pipeline: any[] = [
+    const pipeline: Array<Record<string, unknown>> = [
       { $match: match },
     ];
 
@@ -103,7 +135,7 @@ class InventoryAdminService {
                 },
               },
             ]
-          : [] as any[]),
+          : []),
         { $count: 'total' },
       ]),
     ]);
@@ -119,7 +151,12 @@ class InventoryAdminService {
     };
   }
 
-  async adjustStock({ productId, type = 'increase', quantity = 0, note = '' }: any = {}) {
+  async adjustStock({
+    productId,
+    type = 'increase',
+    quantity = 0,
+    note = '',
+  }: AdjustStockInput = {}) {
     if (!productId) error('Product ID is required', 400);
     const qty = Number(quantity);
     if (!qty || qty <= 0) error('Quantity must be greater than 0', 400);
@@ -127,7 +164,7 @@ class InventoryAdminService {
     const isDecrease = String(type).toLowerCase() === 'decrease';
     const delta = isDecrease ? -qty : qty;
 
-    const match: any = {
+    const match: InventoryMatch = {
       _id: productId,
       isDeleted: false,
     };
@@ -166,3 +203,4 @@ class InventoryAdminService {
 }
 
 module.exports = new InventoryAdminService();
+

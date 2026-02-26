@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -22,12 +23,12 @@ export interface ModelsBody {
 }
 
 export interface ModelsRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface ModelsRequestShape {
@@ -45,25 +46,25 @@ export type ModelsRequest = Request<
   ModelsRequestContext;
 
 export interface ModelsEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ModelsServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type ModelsServiceResult<T = any> = Promise<T>;
+export type ModelsServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface ModelsRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ModelsRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ModelsValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -87,3 +88,4 @@ export interface CreateVehicleModelInput {
   slug?: string;
   year?: number;
 }
+

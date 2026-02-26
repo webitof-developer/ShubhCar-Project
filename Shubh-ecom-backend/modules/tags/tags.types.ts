@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -21,12 +22,12 @@ export interface TagsBody {
 }
 
 export interface TagsRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface TagsRequestShape {
@@ -43,25 +44,25 @@ export type TagsRequest = Request<
 > & TagsRequestContext;
 
 export interface TagsEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface TagsServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type TagsServiceResult<T = any> = Promise<T>;
+export type TagsServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface TagsRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface TagsRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface TagsValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface TagRecord {
@@ -104,3 +105,4 @@ export interface ListTagsResult {
   data: TagRecord[];
   pagination: TagsPaginationMeta;
 }
+

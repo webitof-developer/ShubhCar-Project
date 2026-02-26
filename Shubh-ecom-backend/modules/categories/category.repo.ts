@@ -1,4 +1,3 @@
-import type { CategoriesRequestShape } from './categories.types';
 const Category = require('../../models/Category.model');
 
 class CategoryRepository {
@@ -58,7 +57,7 @@ class CategoryRepository {
   }
 
   async getAncestryIds(categoryId) {
-    const chain: any[] = [];
+    const chain: unknown[] = [];
     let current = await Category.findById(categoryId).lean();
 
     while (current) {
@@ -72,3 +71,4 @@ class CategoryRepository {
 }
 
 module.exports = new CategoryRepository();
+

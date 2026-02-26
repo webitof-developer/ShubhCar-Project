@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -27,12 +28,12 @@ export interface SalesReportsBody {
 }
 
 export interface SalesReportsRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface SalesReportsRequestShape {
@@ -50,25 +51,25 @@ export type SalesReportsRequest = Request<
   SalesReportsRequestContext;
 
 export interface SalesReportsEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface SalesReportsServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type SalesReportsServiceResult<T = any> = Promise<T>;
+export type SalesReportsServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface SalesReportsRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface SalesReportsRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface SalesReportsValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -98,3 +99,4 @@ export interface SalesReportSummary {
   totalOrders: number;
   commissions: CommissionStat[];
 }
+

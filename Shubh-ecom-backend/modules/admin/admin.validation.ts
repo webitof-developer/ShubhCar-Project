@@ -1,4 +1,3 @@
-import type { AdminRequestShape } from './admin.types';
 const Joi = require('joi');
 
 const approveWholesaleSchema = Joi.object({
@@ -11,3 +10,4 @@ const approveWholesaleSchema = Joi.object({
 });
 
 module.exports = { approveWholesaleSchema };
+

@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -28,12 +29,12 @@ export interface AuthBody {
 }
 
 export interface AuthRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface AuthRequestShape {
@@ -46,25 +47,25 @@ export type AuthRequest = Request<AuthParams, unknown, AuthBody, AuthQuery> &
   AuthRequestContext;
 
 export interface AuthEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface AuthServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type AuthServiceResult<T = any> = Promise<T>;
+export type AuthServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface AuthRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface AuthRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface AuthValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -125,3 +126,4 @@ export interface ResetPasswordInput {
   phone?: string;
   email?: string;
 }
+

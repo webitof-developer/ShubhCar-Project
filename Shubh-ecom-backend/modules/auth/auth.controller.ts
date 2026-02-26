@@ -1,4 +1,4 @@
-import type { AuthRequestShape } from './auth.types';
+
 import type { Response } from 'express';
 import type { AuthRequest } from './auth.types';
 const asyncHandler = require('../../utils/asyncHandler');

@@ -1,4 +1,3 @@
-import type { AdminRequestShape } from './admin.types';
 const userRepo = require('../users/user.repo');
 
 const { error } = require('../../utils/apiResponse');
@@ -26,7 +25,7 @@ class AdminService {
       error('User already reviewed', 409);
     }
 
-    let update: any = {};
+    const update: Record<string, unknown> = {};
 
     if (value.action === 'approve') {
       update.verificationStatus = 'approved';
@@ -42,7 +41,7 @@ class AdminService {
     return userRepo.updateById(userId, update);
   }
 
-  async listPendingWholesale(query: any = {}) {
+  async listPendingWholesale(query: Record<string, unknown> = {}) {
     const pagination = getOffsetPagination({
       page: query.page,
       limit: query.limit,
@@ -62,3 +61,4 @@ class AdminService {
 }
 
 module.exports = new AdminService();
+

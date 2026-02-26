@@ -1,4 +1,3 @@
-import type { CartRequestShape } from './cart.types';
 const { redis } = require('../../config/redis');
 
 const CART_TTL = 60 * 10; // 10 minutes
@@ -22,10 +21,10 @@ const clear = async (opts) => {
 // Backward-compatible helpers for existing usages
 const getCart = async (userId, sessionId) => {
   const data = await get({ userId, sessionId });
-  if (!data) return { items: [] as any[] };
+  if (!data) return { items: [] };
 
   if (Array.isArray(data.items)) {
-    const itemsMap: any = {};
+    const itemsMap: Record<string, unknown> = {};
     data.items.forEach((it) => {
       const key = it.productId || it._id;
       if (key) itemsMap[key] = it;
@@ -45,3 +44,4 @@ const clearCart = async (userId, sessionId) => {
 };
 
 module.exports = { get, set, clear, key, getCart, saveCart, clearCart };
+

@@ -1,4 +1,3 @@
-import type { OrderItemsRequestShape } from './orderItems.types';
 // backend/modules/orderItems/orderItems.repo.js
 const OrderItem = require('../../models/OrderItem.model');
 
@@ -27,3 +26,4 @@ class OrderItemRepository {
 }
 
 module.exports = new OrderItemRepository();
+

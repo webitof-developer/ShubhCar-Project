@@ -1,4 +1,3 @@
-import type { ProductAttributeValuesRequestShape } from './productAttributeValues.types';
 const express = require('express');
 const auth = require('../../middlewares/auth.middleware');
 const controller = require('./productAttributeValues.controller');
@@ -16,7 +15,7 @@ const router = express.Router();
  *   get:
  *     summary: List attribute values
  *     tags: [Products]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Attribute values }
  */
@@ -28,7 +27,7 @@ router.get('/', adminLimiter, auth([ROLES.ADMIN]), controller.list);
  *   get:
  *     summary: Get attribute value by id
  *     tags: [Products]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -45,7 +44,7 @@ router.get('/:id', adminLimiter, auth([ROLES.ADMIN]), validateId('id'), controll
  *   post:
  *     summary: Create attribute value
  *     tags: [Products]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -68,7 +67,7 @@ router.post('/', adminLimiter, auth([ROLES.ADMIN]), validate(createSchema), cont
  *   put:
  *     summary: Update attribute value
  *     tags: [Products]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -94,7 +93,7 @@ router.put('/:id', adminLimiter, auth([ROLES.ADMIN]), validateId('id'), validate
  *   delete:
  *     summary: Delete attribute value
  *     tags: [Products]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -106,3 +105,4 @@ router.put('/:id', adminLimiter, auth([ROLES.ADMIN]), validateId('id'), validate
 router.delete('/:id', adminLimiter, auth([ROLES.ADMIN]), validateId('id'), controller.remove);
 
 module.exports = router;
+

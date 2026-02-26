@@ -1,4 +1,3 @@
-import type { ProductCompatibilityRequestShape } from './productCompatibility.types';
 const repo = require('./productCompatibility.repo');
 const { error } = require('../../utils/apiResponse');
 
@@ -15,7 +14,7 @@ const normalizeVehicleId = (value) => {
   return '';
 };
 
-const normalizeVehicleIds = (items: any[] = []) =>
+const normalizeVehicleIds = (items: unknown[] = []) =>
   items
     .map((item) => normalizeVehicleId(item))
     .filter(Boolean);
@@ -24,7 +23,7 @@ class ProductCompatibilityService {
   async getByProduct(productId) {
     const doc = await repo.findByProduct(productId);
     if (!doc) {
-      return { productId, vehicleIds: [] as any[] };
+      return { productId, vehicleIds: [] };
     }
     if (!Array.isArray(doc.vehicleIds) && Array.isArray(doc.fits)) {
       const vehicleIds = normalizeVehicleIds(
@@ -34,7 +33,7 @@ class ProductCompatibilityService {
         const updated = await repo.upsert(productId, vehicleIds);
         return updated || { productId, vehicleIds };
       }
-      return { productId, vehicleIds: [] as any[] };
+      return { productId, vehicleIds: [] };
     }
     return { productId, vehicleIds: normalizeVehicleIds(doc.vehicleIds || []) };
   }
@@ -50,3 +49,4 @@ class ProductCompatibilityService {
 }
 
 module.exports = new ProductCompatibilityService();
+

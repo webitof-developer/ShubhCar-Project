@@ -1,4 +1,3 @@
-import type { InventoryRequestShape } from './inventory.types';
 const express = require('express');
 const auth = require('../../middlewares/auth.middleware');
 const validate = require('../../middlewares/validate.middleware');
@@ -19,7 +18,7 @@ const router = express.Router();
  *   get:
  *     summary: Inventory summary
  *     tags: [Inventory]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200:
  *         description: Summary
@@ -38,7 +37,7 @@ router.get(
  *   get:
  *     summary: List product inventory
  *     tags: [Inventory]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: query
  *         name: page
@@ -64,7 +63,7 @@ router.get(
  *   post:
  *     summary: Adjust stock
  *     tags: [Inventory]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -90,3 +89,4 @@ router.post(
 );
 
 module.exports = router;
+

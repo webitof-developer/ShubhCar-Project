@@ -1,4 +1,3 @@
-import type { WishlistRequestShape } from './wishlist.types';
 const express = require('express');
 const auth = require('../../middlewares/auth.middleware');
 const validate = require('../../middlewares/validate.middleware');
@@ -14,7 +13,7 @@ const router = express.Router();
  *   get:
  *     summary: Get wishlist
  *     tags: [Wishlist]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200:
  *         description: Wishlist items
@@ -27,7 +26,7 @@ router.get('/', auth(), controller.list);
  *   post:
  *     summary: Add product to wishlist
  *     tags: [Wishlist]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -49,7 +48,7 @@ router.post('/', auth(), validate(addSchema), controller.add);
  *   delete:
  *     summary: Remove product from wishlist
  *     tags: [Wishlist]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: productId
@@ -62,3 +61,4 @@ router.post('/', auth(), validate(addSchema), controller.add);
 router.delete('/:productId', auth(), validateId('productId'), controller.remove);
 
 module.exports = router;
+

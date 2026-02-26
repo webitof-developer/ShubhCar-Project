@@ -1,4 +1,3 @@
-import type { OrdersRequestShape } from './orders.types';
 const Joi = require('joi');
 const { ADMIN_STATUS_UPDATES } = require('../../constants/orderStatus');
 
@@ -28,3 +27,4 @@ module.exports = {
   adminPaymentUpdateSchema,
   fraudFlagSchema,
 };
+

@@ -1,4 +1,3 @@
-import type { ProductAttributeRequestShape } from './productAttribute.types';
 const Joi = require('joi');
 
 exports.upsertSchema = Joi.object({
@@ -6,3 +5,4 @@ exports.upsertSchema = Joi.object({
     .try(Joi.string(), Joi.number(), Joi.array().items(Joi.string()))
     .required(),
 });
+

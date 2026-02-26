@@ -1,10 +1,7 @@
-import type { VehicleManagementRequestShape } from '../vehicle-management.types';
 const Vehicle = require('../models/Vehicle.model');
 const VehicleAttribute = require('../models/VehicleAttribute.model');
 const VehicleAttributeValue = require('../models/VehicleAttributeValue.model');
 const logger = require('../../../config/logger');
-
-const VARIANT_NAME_KEY = 'variant name';
 
 const normalizeVariantName = (value = '') => value.trim().toLowerCase();
 
@@ -105,3 +102,4 @@ const migrateVariantNameAttribute = async () => {
 };
 
 module.exports = { migrateVariantNameAttribute };
+

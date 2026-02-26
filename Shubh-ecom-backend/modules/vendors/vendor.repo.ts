@@ -1,4 +1,3 @@
-import type { VendorsRequestShape } from './vendors.types';
 const Vendor = require('../../models/Vendor.model');
 const VendorDocument = require('../../models/VendorDocument.model');
 const VendorBankDetails = require('../../models/VendorBankDetails.model');
@@ -56,3 +55,4 @@ class VendorRepository {
 }
 
 module.exports = new VendorRepository();
+

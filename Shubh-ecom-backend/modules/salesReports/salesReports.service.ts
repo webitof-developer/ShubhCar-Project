@@ -1,4 +1,3 @@
-import type { SalesReportsRequestShape } from './salesReports.types';
 const repo = require('./salesReports.repo');
 const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
 
@@ -11,7 +10,7 @@ class SalesReportsService {
     return repo.salesmanPerformance(params);
   }
 
-  async list(query: any = {}) {
+  async list(query: Record<string, unknown> = {}) {
     const { page, limit, ...filter } = query;
     const pagination = getOffsetPagination({ page, limit });
     const [data, total] = await Promise.all([
@@ -49,3 +48,4 @@ class SalesReportsService {
 }
 
 module.exports = new SalesReportsService();
+

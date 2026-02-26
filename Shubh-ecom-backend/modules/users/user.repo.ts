@@ -1,6 +1,12 @@
-import type { UsersRequestShape } from './users.types';
 const User = require('../../models/User.model');
 const { getOffsetPagination } = require('../../utils/pagination');
+
+type PaginationInput = {
+  page?: number | string;
+  limit?: number | string;
+};
+
+type UserFilter = Record<string, unknown>;
 
 /**
  * USER REPOSITORY
@@ -41,7 +47,7 @@ class UserRepository {
     }).lean();
   }
 
-  findPendingWholesale(pagination: any = {}) {
+  findPendingWholesale(pagination: PaginationInput = {}) {
     const { limit, skip } = getOffsetPagination(pagination);
     return User.find({
       customerType: 'wholesale',
@@ -91,7 +97,7 @@ class UserRepository {
     return doc.toObject();
   }
 
-  list(filter: any = {}, { limit = 20, page = 1 } = {}) {
+  list(filter: UserFilter = {}, { limit = 20, page = 1 }: PaginationInput = {}) {
     const { limit: safeLimit, skip } = getOffsetPagination({ page, limit });
 
     return User.find(filter)
@@ -101,7 +107,7 @@ class UserRepository {
       .lean();
   }
 
-  listAll(filter: any = {}, pagination: any = {}) {
+  listAll(filter: UserFilter = {}, pagination: PaginationInput = {}) {
     const { limit, skip } = getOffsetPagination(pagination);
     return User.find(filter)
       .sort({ createdAt: -1 })
@@ -110,7 +116,7 @@ class UserRepository {
       .lean();
   }
 
-  count(filter: any = {}) {
+  count(filter: UserFilter = {}) {
     return User.countDocuments(filter);
   }
 
@@ -127,3 +133,4 @@ class UserRepository {
 }
 
 module.exports = new UserRepository();
+

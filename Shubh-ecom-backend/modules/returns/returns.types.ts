@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { AuthenticatedUser, ServiceResult } from '../../types/modules/common';
 
 export type QueryScalar = string | number | boolean | null | undefined;
 
@@ -23,12 +24,12 @@ export interface ReturnsBody {
 }
 
 export interface ReturnsRequestContext {
-  user: any;
+  user: AuthenticatedUser;
   id?: string;
   sessionId?: string;
-  file?: any;
-  files?: any;
-  [key: string]: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
+  [key: string]: unknown;
 }
 
 export interface ReturnsRequestShape {
@@ -46,25 +47,25 @@ export type ReturnsRequest = Request<
   ReturnsRequestContext;
 
 export interface ReturnsEntity {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ReturnsServiceInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export type ReturnsServiceResult<T = any> = Promise<T>;
+export type ReturnsServiceResult<T = unknown> = ServiceResult<T>;
 
 export interface ReturnsRepoFilter {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ReturnsRepoUpdate {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ReturnsValidatorInput {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
@@ -103,3 +104,4 @@ export interface AdminReturnDecisionInput {
   status: 'approved' | 'rejected';
   adminNote?: string;
 }
+

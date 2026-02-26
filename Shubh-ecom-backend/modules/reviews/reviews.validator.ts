@@ -1,4 +1,3 @@
-import type { ReviewsRequestShape } from './reviews.types';
 const Joi = require('joi');
 
 const createReviewSchema = Joi.object({
@@ -19,3 +18,4 @@ module.exports = {
   createReviewSchema,
   updateReviewSchema,
 };
+

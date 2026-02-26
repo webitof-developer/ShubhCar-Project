@@ -1,4 +1,3 @@
-import type { CategoriesRequestShape } from './categories.types';
 const Joi = require('joi');
 
 const specType = Joi.string().valid('text', 'number', 'select', 'multiselect');
@@ -37,3 +36,4 @@ exports.updateCategoryAttributeSchema = Joi.object({
     otherwise: optionList,
   }),
 }).min(1).options({ allowUnknown: false });
+

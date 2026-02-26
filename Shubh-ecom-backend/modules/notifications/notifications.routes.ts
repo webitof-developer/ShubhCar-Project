@@ -1,4 +1,3 @@
-import type { NotificationsRequestShape } from './notifications.types';
 const express = require('express');
 const auth = require('../../middlewares/auth.middleware');
 const controller = require('./notifications.controller');
@@ -21,7 +20,7 @@ const router = express.Router();
  *   get:
  *     summary: List notifications
  *     tags: [Notifications]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: List notifications }
  */
@@ -33,7 +32,7 @@ router.get('/', auth(), controller.list);
  *   get:
  *     summary: Notification summary
  *     tags: [Notifications]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: Counts }
  */
@@ -45,7 +44,7 @@ router.get('/summary', auth(), controller.summary);
  *   get:
  *     summary: Get notification by id
  *     tags: [Notifications]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -61,7 +60,7 @@ router.get('/:id', auth(), validateId('id'), controller.get);
  *   post:
  *     summary: Create/broadcast notification
  *     tags: [Notifications]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -78,7 +77,7 @@ router.post('/', adminLimiter, auth([ROLES.ADMIN]), validate(createNotificationS
  *   put:
  *     summary: Update notification
  *     tags: [Notifications]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -100,7 +99,7 @@ router.put('/:id', adminLimiter, auth([ROLES.ADMIN]), validateId('id'), validate
  *   delete:
  *     summary: Delete notification
  *     tags: [Notifications]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -117,7 +116,7 @@ router.delete('/:id', adminLimiter, auth([ROLES.ADMIN]), validateId('id'), contr
  *   post:
  *     summary: Mark notification as read
  *     tags: [Notifications]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
  *         name: id
@@ -134,10 +133,11 @@ router.post('/:id/read', auth(), validateId('id'), controller.markRead);
  *   post:
  *     summary: Mark all notifications as read
  *     tags: [Notifications]
- *     security: [ { bearerAuth: [] as any[] } ]
+ *     security: [ { bearerAuth: [] } ]
  *     responses:
  *       200: { description: All read }
  */
 router.post('/mark-all-read', auth(), validate(markAllSchema), controller.markAllRead);
 
 module.exports = router;
+

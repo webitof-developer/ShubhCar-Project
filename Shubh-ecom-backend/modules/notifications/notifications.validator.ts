@@ -1,7 +1,6 @@
-import type { NotificationsRequestShape } from './notifications.types';
 const Joi = require('joi');
 
-const base: any = {
+const base = {
   userId: Joi.string().optional(),
   type: Joi.string().valid('email', 'sms', 'inapp').required(),
   audience: Joi.string().valid('user', 'admin').default('user'),
@@ -38,3 +37,4 @@ module.exports = {
   updateNotificationSchema,
   markAllSchema,
 };
+

@@ -1,4 +1,3 @@
-import type { TagsRequestShape } from './tags.types';
 import type { CreateTagInput, ListTagsQuery, ListTagsResult, TagRecord, UpdateTagInput } from './tags.types';
 
 const Tag = require('../../models/Tag.model');
@@ -45,3 +44,4 @@ class TagService {
 }
 
 module.exports = new TagService();
+

@@ -1,4 +1,3 @@
-import type { VehicleManagementRequestShape } from '../vehicle-management.types';
 const vehicleModelsRepo = require('../repositories/model.repository');
 const Brand = require('../../../models/Brand.model');
 const VehicleModelYear = require('../models/VehicleModelYear.model');
@@ -9,8 +8,8 @@ const { escapeRegex } = require('../../../utils/escapeRegex');
 const { getOffsetPagination, buildPaginationMeta } = require('../../../utils/pagination');
 
 class VehicleModelsService {
-  async list(query: any = {}) {
-    const filter: any = {};
+  async list(query: Record<string, unknown> = {}) {
+    const filter: Record<string, unknown> = {};
     if (query.brandId) filter.brandId = query.brandId;
     if (query.status) filter.status = query.status;
     if (query.search) {
@@ -108,3 +107,4 @@ class VehicleModelsService {
 }
 
 module.exports = new VehicleModelsService();
+

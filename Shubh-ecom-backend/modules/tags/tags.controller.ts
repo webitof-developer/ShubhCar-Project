@@ -1,4 +1,3 @@
-import type { TagsRequestShape } from './tags.types';
 import type { Response } from 'express';
 import type { TagsRequest } from './tags.types';
 
@@ -25,3 +24,4 @@ exports.remove = asyncHandler(async (req: TagsRequest, res: Response) => {
   await tagService.delete(req.params.id);
   return success(res, null, 'Tag deleted');
 });
+

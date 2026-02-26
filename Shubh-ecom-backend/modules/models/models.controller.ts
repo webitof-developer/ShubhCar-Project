@@ -1,4 +1,3 @@
-import type { ModelsRequestShape } from './models.types';
 import type { Response } from 'express';
 import type { ModelsRequest } from './models.types';
 const asyncHandler = require('../../utils/asyncHandler');
@@ -29,3 +28,4 @@ exports.remove = asyncHandler(async (req: ModelsRequest, res: Response) => {
     await modelService.delete(req.params.id);
     return success(res, null, 'Model deleted');
 });
+

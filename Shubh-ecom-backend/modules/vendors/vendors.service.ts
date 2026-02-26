@@ -1,4 +1,3 @@
-import type { VendorsRequestShape } from './vendors.types';
 const vendorRepo = require('./vendor.repo');
 const cache = require('./vendor.cache');
 const jobs = require('./vendor.jobs');
@@ -156,3 +155,4 @@ class VendorService {
 }
 
 module.exports = new VendorService();
+

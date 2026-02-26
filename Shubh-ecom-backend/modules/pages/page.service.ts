@@ -1,4 +1,3 @@
-import type { PagesRequestShape } from './pages.types';
 const pageRepo = require('./page.repo');
 const { error } = require('../../utils/apiResponse');
 const sanitize = require('../../utils/sanitizeHtml');
@@ -27,7 +26,7 @@ class PageService {
       }
       // If data is an object (like {heading, content}), sanitize string fields
       if (typeof section.data === 'object' && section.data !== null) {
-        const sanitizedData: any = {};
+        const sanitizedData: Record<string, unknown> = {};
         for (const [key, value] of Object.entries(section.data)) {
           sanitizedData[key] = typeof value === 'string' ? sanitize(value) : value;
         }
@@ -59,7 +58,7 @@ class PageService {
         }
         // If data is an object (like {heading, content}), sanitize string fields
         if (typeof section.data === 'object' && section.data !== null) {
-          const sanitizedData: any = {};
+          const sanitizedData: Record<string, unknown> = {};
           for (const [key, value] of Object.entries(section.data)) {
             sanitizedData[key] = typeof value === 'string' ? sanitize(value) : value;
           }
@@ -82,7 +81,7 @@ class PageService {
     return updated;
   }
 
-  async list(query: any = {}) {
+  async list(query: Record<string, unknown> = {}) {
     const { page, limit, ...filters } = query;
     const pagination = getOffsetPagination({ page, limit });
     const [data, total] = await Promise.all([
@@ -121,3 +120,4 @@ class PageService {
 }
 
 module.exports = new PageService();
+
