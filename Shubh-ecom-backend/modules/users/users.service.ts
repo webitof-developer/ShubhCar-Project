@@ -585,6 +585,12 @@ class UsersService {
     if (!password) error('Password is required', 400);
     const passwordHash = await hashPassword(password);
 
+    // Allow caller to explicitly set verificationStatus (admin privilege)
+    const allowedVerifStatuses = ['approved', 'pending', 'not_required'];
+    const requestedVerifStatus = allowedVerifStatuses.includes(payload.verificationStatus)
+      ? payload.verificationStatus
+      : 'not_required';
+
     let createPayload = null;
 
     if (isSalesmanActor) {
@@ -600,8 +606,9 @@ class UsersService {
         customerType: payload.customerType || 'retail',
         status: payload.status || 'active',
         passwordHash,
-        verificationStatus: 'not_required',
+        verificationStatus: requestedVerifStatus,
         verificationType: 'email',
+        verifiedAt: requestedVerifStatus === 'approved' ? new Date() : undefined,
       };
     } else {
       if (roleId) {
@@ -611,11 +618,12 @@ class UsersService {
 
       createPayload = {
         ...payload,
-        role: 'admin',
+        role: payload.role === 'customer' ? 'customer' : 'admin',
         roleId: roleId || undefined,
         passwordHash,
-        verificationStatus: 'not_required',
+        verificationStatus: requestedVerifStatus,
         verificationType: 'email',
+        verifiedAt: requestedVerifStatus === 'approved' ? new Date() : undefined,
       };
     }
 

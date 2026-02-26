@@ -30,6 +30,7 @@ const adminCreateSchema = Joi.object({
   roleId: Joi.string().trim().allow('').optional(),
   customerType: Joi.string().valid('retail', 'wholesale').default('retail'),
   status: Joi.string().valid('active', 'inactive', 'banned').default('active'),
+  verificationStatus: Joi.string().valid('approved', 'pending', 'not_required').optional(),
 }).or('email', 'phone');
 
 const profileUpdateSchema = Joi.object({

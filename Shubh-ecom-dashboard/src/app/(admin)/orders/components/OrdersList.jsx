@@ -846,31 +846,48 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
   const handleCreateCustomer = async (e) => {
     e.preventDefault()
     setCustomerCreateError('')
+
+    // --- Validation (matches /customer page) ---
     if (!newCustomerForm.firstName.trim()) {
       setCustomerCreateError('First name is required')
       return
     }
-    if (!newCustomerForm.email.trim() && !newCustomerForm.phone.trim()) {
-      setCustomerCreateError('Email or phone is required')
+    if (!newCustomerForm.email.trim()) {
+      setCustomerCreateError('Email is required')
+      return
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newCustomerForm.email.trim())) {
+      setCustomerCreateError('Please enter a valid email address')
+      return
+    }
+    if (newCustomerForm.phone.trim() && !/^[6-9]\d{9}$/.test(newCustomerForm.phone.replace(/\D/g, ''))) {
+      setCustomerCreateError('Please enter a valid 10-digit Indian phone number')
       return
     }
     if (!newCustomerForm.password.trim()) {
       setCustomerCreateError('Password is required')
       return
     }
+    if (newCustomerForm.password.length < 6) {
+      setCustomerCreateError('Password must be at least 6 characters')
+      return
+    }
 
     setCreatingCustomer(true)
     try {
+      const isWholesale = newCustomerForm.customerType === 'wholesale'
       const payload = {
         firstName: newCustomerForm.firstName.trim(),
         lastName: newCustomerForm.lastName.trim(),
-        email: newCustomerForm.email.trim() || undefined,
+        email: newCustomerForm.email.trim(),
         phone: newCustomerForm.phone.trim() || undefined,
         password: newCustomerForm.password,
         role: 'customer',
         customerType: newCustomerForm.customerType || 'retail',
+        // Wholesale customers created from orders are auto-approved
+        ...(isWholesale ? { verificationStatus: 'approved' } : {}),
       }
-      const response = await userAPI.register(payload)
+      const response = await userAPI.create(payload, session.accessToken)
       const createdUser = response?.data || response?.user || response
       if (!createdUser?._id) {
         throw new Error('Customer was not created')
@@ -2029,21 +2046,27 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                     </FloatingLabel>
                   </Col>
                   <Col md={6}>
-                    <FloatingLabel controlId="new-customer-email" label="Email">
+                    <FloatingLabel controlId="new-customer-email" label="Email *">
                       <Form.Control
                         type="email"
                         value={newCustomerForm.email}
                         onChange={(e) => setNewCustomerForm((prev) => ({ ...prev, email: e.target.value }))}
                         placeholder="Email"
+                        required
                       />
                     </FloatingLabel>
                   </Col>
                   <Col md={6}>
                     <FloatingLabel controlId="new-customer-phone" label="Phone">
                       <Form.Control
+                        type="tel"
                         value={newCustomerForm.phone}
-                        onChange={(e) => setNewCustomerForm((prev) => ({ ...prev, phone: e.target.value }))}
-                        placeholder="Phone"
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 10)
+                          setNewCustomerForm((prev) => ({ ...prev, phone: value }))
+                        }}
+                        placeholder="10-digit mobile number"
+                        maxLength={10}
                       />
                     </FloatingLabel>
                   </Col>
