@@ -1,96 +1,126 @@
-//src/utils/storage.js
-
+// src/utils/storage.js
 /**
- * Safe localStorage wrapper with SSR guards and fallbacks
- * Prevents Next.js hydration errors and provides in-memory fallback
+ * Cookie-based storage wrapper (replaces localStorage).
+ *
+ * Uses js-cookie as primary layer, with in-memory fallback for:
+ *  - SSR (server side where `document` is unavailable)
+ *  - Environments where cookies are blocked
+ *
+ * Exported API is identical to the old localStorage wrapper so all
+ * callers (AuthContext, CartContext, etc.) need zero changes.
+ *
+ * Cookie options:
+ *  - expires : 7 days
+ *  - sameSite: 'Lax'
+ *  - secure  : true in production (HTTPS)
  */
 
-// In-memory fallback for SSR or when localStorage is unavailable
+import Cookies from 'js-cookie';
+
+// In-memory fallback for SSR / cookie-blocked environments
 const memoryStorage = new Map();
 
-/**
- * Check if we're in a browser environment
- */
 const isBrowser = () => typeof window !== 'undefined';
 
-/**
- * Check if localStorage is available
- */
-const isLocalStorageAvailable = () => {
-  if (!isBrowser()) return false;
-  
+const COOKIE_OPTIONS = {
+  expires: 7,          // days
+  sameSite: 'Lax',
+  // Only set Secure flag in production HTTPS
+  ...(isBrowser() && window.location.protocol === 'https:' ? { secure: true } : {}),
+};
+
+/* ── Helpers ───────────────────────────────────────────────────────────── */
+
+const serializeValue = (value) => {
   try {
-    const test = '__localStorage_test__';
-    window.localStorage.setItem(test, test);
-    window.localStorage.removeItem(test);
-    return true;
-  } catch (e) {
-    return false;
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
   }
 };
 
+const deserializeValue = (raw) => {
+  if (raw === null || raw === undefined) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return raw; // Return as-is if it's already a plain string
+  }
+};
+
+/* ── Public API ────────────────────────────────────────────────────────── */
+
 /**
- * Safely get item from storage
+ * Get an item from cookie storage.
+ * Returns the parsed value or null.
  */
 export const getStorageItem = (key) => {
   try {
-    if (isLocalStorageAvailable()) {
-      const item = window.localStorage.getItem(key);
-      return item ? JSON.parse(item) : null;
+    if (isBrowser()) {
+      const raw = Cookies.get(key);
+      if (raw !== undefined) return deserializeValue(raw);
     }
-    // Fallback to memory storage
-    return memoryStorage.get(key) || null;
+    // SSR / cookie unavailable: fall back to in-memory
+    return memoryStorage.get(key) ?? null;
   } catch (error) {
-    console.warn(`[Storage] Failed to get item "${key}":`, error);
-    return memoryStorage.get(key) || null;
+    console.warn(`[Storage] Failed to get "${key}":`, error);
+    return memoryStorage.get(key) ?? null;
   }
 };
 
 /**
- * Safely set item in storage
+ * Set an item in cookie storage.
  */
 export const setStorageItem = (key, value) => {
   try {
-    const serialized = JSON.stringify(value);
-    
-    if (isLocalStorageAvailable()) {
-      window.localStorage.setItem(key, serialized);
+    const serialized = serializeValue(value);
+    if (isBrowser()) {
+      Cookies.set(key, serialized, COOKIE_OPTIONS);
     }
-    // Always keep in memory as backup
+    // Always mirror to memory (instant reads without parse overhead)
     memoryStorage.set(key, value);
     return true;
   } catch (error) {
-    console.warn(`[Storage] Failed to set item "${key}":`, error);
-    // Still try to save in memory
+    console.warn(`[Storage] Failed to set "${key}":`, error);
     memoryStorage.set(key, value);
     return false;
   }
 };
 
 /**
- * Safely remove item from storage
+ * Remove an item from cookie storage.
  */
 export const removeStorageItem = (key) => {
   try {
-    if (isLocalStorageAvailable()) {
-      window.localStorage.removeItem(key);
+    if (isBrowser()) {
+      Cookies.remove(key);
     }
     memoryStorage.delete(key);
     return true;
   } catch (error) {
-    console.warn(`[Storage] Failed to remove item "${key}":`, error);
+    console.warn(`[Storage] Failed to remove "${key}":`, error);
     memoryStorage.delete(key);
     return false;
   }
 };
 
 /**
- * Safely clear all storage
+ * Clear ALL app cookies (only those managed by this wrapper).
+ * Note: Cookies.clear() doesn't exist in js-cookie — we track known keys.
  */
+const MANAGED_KEYS = [
+  'accessToken',
+  'refreshToken',
+  'user',
+  'cart_items',
+  'applied_coupon',
+  'vehicleSelection',
+];
+
 export const clearStorage = () => {
   try {
-    if (isLocalStorageAvailable()) {
-      window.localStorage.clear();
+    if (isBrowser()) {
+      MANAGED_KEYS.forEach((k) => Cookies.remove(k));
     }
     memoryStorage.clear();
     return true;

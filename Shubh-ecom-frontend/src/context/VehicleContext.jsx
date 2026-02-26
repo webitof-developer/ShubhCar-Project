@@ -2,6 +2,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storage';
 
 const STORAGE_KEY = 'vehicleSelection';
 
@@ -24,9 +25,7 @@ const buildSummary = (selection) => {
 const readSelection = () => {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
+    const parsed = getStorageItem(STORAGE_KEY);
     return parsed && typeof parsed === 'object' ? parsed : null;
   } catch {
     return null;
@@ -34,12 +33,11 @@ const readSelection = () => {
 };
 
 const writeSelection = (selection) => {
-  if (typeof window === 'undefined') return;
   if (!selection) {
-    window.localStorage.removeItem(STORAGE_KEY);
+    removeStorageItem(STORAGE_KEY);
     return;
   }
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(selection));
+  setStorageItem(STORAGE_KEY, selection);
 };
 
 export const VehicleProvider = ({ children }) => {
