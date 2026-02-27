@@ -1,3 +1,4 @@
+import type { TaxBreakdown } from './orders.types';
 const mongoose = require('mongoose');
 const { createSafeSession } = require('../../utils/mongoTransaction');
 const cartCache = require('../cart/cart.cache');
@@ -42,12 +43,6 @@ const ROLES = require('../../constants/roles');
 const { generateOrderNumber } = require('../../utils/numbering');
 const { ADMIN_STATUS_UPDATES } = require('../../constants/orderStatus');
 const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
-
-type TaxBreakdown = {
-  cgst: number;
-  sgst: number;
-  igst: number;
-};
 
 type CouponPayload = {
   couponId: unknown;

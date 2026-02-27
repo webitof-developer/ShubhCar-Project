@@ -9,13 +9,13 @@ const {
   buildPaginationMeta,
 } = require('../../utils/pagination');
 
-type WishlistQuery = {
+type WishlistPaginationQuery = {
   page?: number | string;
   limit?: number | string;
 };
 
 class WishlistService {
-  async list(userId, query: WishlistQuery = {}) {
+  async list(userId, query: WishlistPaginationQuery = {}) {
     const pagination = getOffsetPagination({
       page: query.page,
       limit: query.limit,

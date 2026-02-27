@@ -22,7 +22,7 @@ const { escapeRegex } = require('../../utils/escapeRegex');
 
 const PRODUCT_CODE_REGEX = /^PRO-\d{6}$/;
 
-type ProductRecord = {
+type MutableProductDoc = {
   _id?: string;
   id?: string;
   type?: string;
@@ -66,7 +66,7 @@ const normalizeProductFields = (product) => {
 
   const rawType = product.productType || legacyType || 'AFTERMARKET';
   const productType = String(rawType).toUpperCase() === 'AFTERMARKET' ? 'AFTERMARKET' : 'OEM';
-  const normalized: ProductRecord = {
+  const normalized: MutableProductDoc = {
     ...product,
     productType,
     manufacturerBrand: product.manufacturerBrand || legacyBrand || null,
@@ -94,10 +94,10 @@ const normalizeProductFields = (product) => {
   return normalized;
 };
 
-const normalizeProductList = (products: ProductRecord[] = []) =>
+const normalizeProductList = (products: MutableProductDoc[] = []) =>
   Array.isArray(products) ? products.map(normalizeProductFields) : [];
 
-const ensureListProductCodes = async (products: ProductRecord[] = []) => {
+const ensureListProductCodes = async (products: MutableProductDoc[] = []) => {
   const missing = products.filter((item) => !item.productId || !PRODUCT_CODE_REGEX.test(item.productId));
   if (!missing.length) return;
 
@@ -238,7 +238,7 @@ class ProductService {
     };
   }
 
-  async attachImages(products: ProductRecord[] = []) {
+  async attachImages(products: MutableProductDoc[] = []) {
     if (!products.length) return products;
     const productIds = products.map((p) => p._id);
     const images = await ProductImage.find({ productId: { $in: productIds }, isDeleted: false })

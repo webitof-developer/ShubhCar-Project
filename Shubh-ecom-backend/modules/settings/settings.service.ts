@@ -9,7 +9,7 @@ type SettingsFilter = {
     [key: string]: unknown;
 };
 
-type SettingRecord = {
+type SettingRow = {
     key: string;
     value: unknown;
     group?: string;
@@ -18,7 +18,7 @@ type SettingRecord = {
 
 class SettingsService {
     async _listBounded(filter: SettingsFilter = {}) {
-        const rows: SettingRecord[] = [];
+        const rows: SettingRow[] = [];
         let page = 1;
 
         while (true) {

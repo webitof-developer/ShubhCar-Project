@@ -2,6 +2,38 @@
 
 ## Recent Updates
 
+### Security Audit — Pre-Production Hardening (2026-02-27)
+
+**Status**: ✅ Audit Complete — All critical backend issues were pre-fixed
+
+**Scope**: Full review of 20+ reported security/quality concerns against the current codebase.
+
+**Result — Already Fixed (no changes required)**:
+
+| Issue                                                | Evidence                                                                                      |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Auth middleware blacklist check not awaited          | `auth.middleware.ts:17` — `await tokenBlacklist.isBlacklisted(token)`                         |
+| JWT algorithm not specified                          | `utils/jwt.ts` — `JWT_ALGORITHM = 'HS256'` on sign + verify                                   |
+| Login error messages enable user enumeration         | `auth.service.ts:330,347` — both paths: `error('Invalid credentials', 401)`                   |
+| `NEXTAUTH_SECRET` hardcoded fallback                 | `config/env.ts:7-12` — throws loudly if env var missing                                       |
+| Razorpay webhook timing-unsafe comparison            | `services/razorpay.service.ts:35` — `crypto.timingSafeEqual()`                                |
+| ReDoS in 12+ search endpoints                        | `utils/escapeRegex.ts` exists; used in all 12+ affected service files                         |
+| File upload MIME validation (client-trustable only)  | Both upload middlewares call `validateUploadedImageFiles()` (magic-byte check)                |
+| Invoice routes inline try/catch (5 handlers)         | All 5 routes in `invoice.routes.ts` use `asyncHandler(...)`                                   |
+| Login controller bypasses `asyncHandler`             | `auth.controller.ts:22` — `exports.login = asyncHandler(...)`                                 |
+| `/users/register` missing rate limiter               | `users.routes.ts:75` — `registerLimiter` applied                                              |
+| `findPendingWholesale()` / `listAll()` no pagination | `user.repo.ts:50-59, 110-116` — both use `getOffsetPagination()`                              |
+| Webhook secrets optional in env validation           | `config/env.ts:37` — `RAZORPAY_WEBHOOK_SECRET: Joi.string().required()`                       |
+| Auth routes missing rate limiters                    | All auth routes have `loginLimiter`, `registerLimiter`, `authLimiter`, `passwordResetLimiter` |
+| Backend `.env.example` missing                       | `.env.example` exists with all required variables                                             |
+
+**Deferred (pending)**:
+
+- Remove `console.log` from `dashboard/options.js` login error catch (Gap 1)
+- Create `.env.example` for `Shubh-ecom-dashboard` and `Shubh-ecom-frontend` (Gap 2)
+
+---
+
 ### Fix: Admin Users PATCH 400 Error (2026-02-25)
 
 **Status**: ✅ Fixed
