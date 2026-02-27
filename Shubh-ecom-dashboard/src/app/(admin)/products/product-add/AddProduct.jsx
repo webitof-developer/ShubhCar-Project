@@ -1,4 +1,5 @@
 'use client'
+import logger from '@/lib/logger'
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -71,6 +72,7 @@ const AddProduct = () => {
     sku: '',
     hsnCode: '',
     oemNumber: '',
+    oesNumber: '',
     taxClassKey: '',
     taxRate: '',
     hlaapNo: '',
@@ -150,7 +152,7 @@ const AddProduct = () => {
         const list = response?.data || []
         setProductReviews(Array.isArray(list) ? list : [])
       } catch (err) {
-        console.error('Error fetching product reviews:', err)
+        logger.error('Error fetching product reviews:', err)
         setReviewsError(err?.message || 'Failed to load reviews')
       } finally {
         setReviewsLoading(false)
@@ -188,6 +190,7 @@ const AddProduct = () => {
         sku: product.sku || '',
         hsnCode: product.hsnCode || '',
         oemNumber: product.oemNumber || product.oemPartNumber || '',
+        oesNumber: product.oesNumber || '',
         taxClassKey: product.taxClassKey || '',
         taxRate: product.taxRate !== undefined && product.taxRate !== null ? String(product.taxRate) : '',
         hlaapNo: product.hlaapNo || '',
@@ -230,7 +233,7 @@ const AddProduct = () => {
               setSubcategories(extractItems(subData?.data || subData, ['categories']))
             }
           } catch (subErr) {
-            console.error('Error fetching subcategories:', subErr)
+            logger.error('Error fetching subcategories:', subErr)
           }
         } else {
           setSelectedCategory(categoryId)
@@ -252,7 +255,7 @@ const AddProduct = () => {
           setFeaturedImageId(primary?._id || safeImages[0]?._id || null)
         }
       } catch (imgErr) {
-        console.error('Error fetching images:', imgErr)
+        logger.error('Error fetching images:', imgErr)
       }
 
       try {
@@ -270,7 +273,7 @@ const AddProduct = () => {
           setCompatSnapshot([...compatIds])
         }
       } catch (compatErr) {
-        console.error('Error fetching compatibility:', compatErr)
+        logger.error('Error fetching compatibility:', compatErr)
       }
 
       // Store form snapshot for dirty detection (set after all setFormData calls above)
@@ -284,6 +287,7 @@ const AddProduct = () => {
         sku: product.sku || '',
         hsnCode: product.hsnCode || '',
         oemNumber: product.oemNumber || product.oemPartNumber || '',
+        oesNumber: product.oesNumber || '',
         taxClassKey: product.taxClassKey || '',
         taxRate: product.taxRate !== undefined && product.taxRate !== null ? String(product.taxRate) : '',
         hlaapNo: product.hlaapNo || '',
@@ -313,7 +317,7 @@ const AddProduct = () => {
           : ''
       })
     } catch (err) {
-      console.error('Error fetching product:', err)
+      logger.error('Error fetching product:', err)
       setError(err.message || 'Failed to load product')
     } finally {
       setLoading(false)
@@ -339,7 +343,7 @@ const AddProduct = () => {
           setCategories(extractItems(data?.data || data, ['categories']))
         }
       } catch (err) {
-        console.error('Error fetching categories:', err)
+        logger.error('Error fetching categories:', err)
       } finally {
         setLoadingCategories(false)
       }
@@ -399,7 +403,7 @@ const AddProduct = () => {
           setHsnSlabs(Array.isArray(slabs) ? slabs.filter(s => s.status === 'active') : [])
         }
       } catch (err) {
-        console.error('Error fetching lookups:', err)
+        logger.error('Error fetching lookups:', err)
       } finally {
         setLoadingVehicleBrands(false)
         setLoadingHsnSlabs(false)
@@ -437,7 +441,7 @@ const AddProduct = () => {
           setSubcategories(extractItems(data?.data || data, ['categories']))
         }
       } catch (err) {
-        console.error('Error fetching subcategories:', err)
+        logger.error('Error fetching subcategories:', err)
       } finally {
         setLoadingSubcategories(false)
       }
@@ -493,8 +497,9 @@ const AddProduct = () => {
       ...prev,
       productType: value,
       manufacturerBrand: value === 'AFTERMARKET' ? prev.manufacturerBrand : '',
-      vehicleBrand: value === 'OEM' ? prev.vehicleBrand : '',
-      oemNumber: value === 'OEM' ? prev.oemNumber : ''
+      vehicleBrand: (value === 'OEM' || value === 'OES') ? prev.vehicleBrand : '',
+      oemNumber: value === 'OEM' ? prev.oemNumber : '',
+      oesNumber: value === 'OES' ? prev.oesNumber : ''
     }))
   }
 
@@ -611,6 +616,17 @@ const AddProduct = () => {
       }
     }
 
+    if (formData.productType === 'OES') {
+      if (!formData.vehicleBrand?.trim()) {
+        setError('Vehicle brand is required for OES products')
+        return
+      }
+      if (!formData.oesNumber?.trim()) {
+        setError('OES number is required for OES products')
+        return
+      }
+    }
+
     if (formData.productType === 'AFTERMARKET' && !formData.manufacturerBrand?.trim()) {
       setError('Manufacturer brand is required for Aftermarket products')
       return
@@ -651,10 +667,11 @@ const AddProduct = () => {
         },
         productType: formData.productType,
         manufacturerBrand: formData.productType === 'AFTERMARKET' ? formData.manufacturerBrand || undefined : undefined,
-        vehicleBrand: formData.productType === 'OEM' ? formData.vehicleBrand || undefined : undefined,
+        vehicleBrand: (formData.productType === 'OEM' || formData.productType === 'OES') ? formData.vehicleBrand || undefined : undefined,
         sku: formData.sku || undefined,
         hsnCode: formData.hsnCode || undefined,
         oemNumber: formData.productType === 'OEM' ? formData.oemNumber || undefined : undefined,
+        oesNumber: formData.productType === 'OES' ? formData.oesNumber || undefined : undefined,
         shortDescription: formData.shortDescription || undefined,
         longDescription: formData.longDescription || undefined,
         minOrderQty: parseInt(formData.minOrderQty, 10) || 1,
@@ -704,7 +721,7 @@ const AddProduct = () => {
             })
           }
         } catch (imgErr) {
-          console.error('Error deleting images:', imgErr)
+          logger.error('Error deleting images:', imgErr)
         }
       }
 
@@ -743,10 +760,10 @@ const AddProduct = () => {
               setSelectedImages([])
             }
           } catch (refreshError) {
-            console.error('Error refreshing images:', refreshError)
+            logger.error('Error refreshing images:', refreshError)
           }
         } catch (imgError) {
-          console.error('Error uploading images:', imgError)
+          logger.error('Error uploading images:', imgError)
           const message = imgError?.message || 'Failed to upload images'
           setError(message)
           toast.error(message)
@@ -793,7 +810,7 @@ const AddProduct = () => {
         setCompatibilityVehicleIds([])
       }
     } catch (err) {
-      console.error('Error saving product:', err)
+      logger.error('Error saving product:', err)
       setError(err.message || 'Failed to save product. Please try again.')
     } finally {
       setSubmitting(false)
@@ -873,7 +890,7 @@ const AddProduct = () => {
 
       setSelectedImages((prev) => [...prev, ...validFiles])
     } catch (error) {
-      console.error('Failed to add media images:', error)
+      logger.error('Failed to add media images:', error)
       toast.error('Failed to add images from media library.')
     }
   }
@@ -951,6 +968,13 @@ const AddProduct = () => {
                       onClick={() => handleProductTypeChange('OEM')}
                     >
                       OEM
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn ${formData.productType === 'OES' ? 'btn-primary' : 'btn-outline-secondary'}`}
+                      onClick={() => handleProductTypeChange('OES')}
+                    >
+                      OES
                     </button>
                     <button
                       type="button"
@@ -1064,7 +1088,7 @@ const AddProduct = () => {
                       </small>
                     )}
                   </Col>
-                  {formData.productType === 'OEM' && (
+                  {(formData.productType === 'OEM' || formData.productType === 'OES') && (
                     <>
                       <Col lg={3} md={6}>
                         <label className="form-label">Vehicle Brand</label>
@@ -1086,18 +1110,34 @@ const AddProduct = () => {
                           ))}
                         </select>
                       </Col>
-                      <Col lg={3} md={6}>
-                        <label className="form-label">OEM Number</label>
-                        <input
-                          type="text"
-                          name="oemNumber"
-                          className="form-control product-field"
-                          placeholder="OEM Number"
-                          value={formData.oemNumber}
-                          onChange={handleInputChange}
-                          required
-                        />
-                      </Col>
+                      {formData.productType === 'OEM' && (
+                        <Col lg={3} md={6}>
+                          <label className="form-label">OEM Number</label>
+                          <input
+                            type="text"
+                            name="oemNumber"
+                            className="form-control product-field"
+                            placeholder="OEM Number"
+                            value={formData.oemNumber}
+                            onChange={handleInputChange}
+                            required
+                          />
+                        </Col>
+                      )}
+                      {formData.productType === 'OES' && (
+                        <Col lg={3} md={6}>
+                          <label className="form-label">OES Number</label>
+                          <input
+                            type="text"
+                            name="oesNumber"
+                            className="form-control product-field"
+                            placeholder="OES Number"
+                            value={formData.oesNumber}
+                            onChange={handleInputChange}
+                            required
+                          />
+                        </Col>
+                      )}
                     </>
                   )}
 

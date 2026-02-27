@@ -1,4 +1,4 @@
-import PageTItle from '@/components/PageTItle'
+import PageTItle from '@/components/PageTitle'
 import OrdersList from './components/OrdersList'
 export const dynamic = 'force-dynamic'
 export const metadata = {

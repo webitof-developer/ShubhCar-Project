@@ -52,3 +52,10 @@
         color: $white !important;
     }
 }
+
+// create modal border
+.create-modal {
+    border: 1px solid var(--#{$prefix}border-color);
+    box-shadow: var(--#{$prefix}box-shadow-sm);
+}
+

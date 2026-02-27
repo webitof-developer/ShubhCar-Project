@@ -1,16 +1,10 @@
 'use client'
+import logger from '@/lib/logger'
+import { fetchWithAuth } from '@/lib/apiClient'
+import { API_BASE_URL } from '@/helpers/apiBase'
 import { useSession } from 'next-auth/react'
 import { useEffect, useMemo, useState } from 'react'
 import { rolesAPI } from '@/helpers/rolesApi'
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'
-
-const fetchWithAuth = async (url, token) => {
-  const headers = token ? { Authorization: `Bearer ${token}` } : {}
-  const response = await fetch(url, { headers })
-  if (!response.ok) return null
-  return response.json()
-}
 
 export const usePermissions = () => {
   const { data: session, status } = useSession()
@@ -33,7 +27,10 @@ export const usePermissions = () => {
       }
 
       try {
-        const meResponse = await fetchWithAuth(`${API_BASE_URL}/users/me`, token)
+        const meResponse = await fetchWithAuth(`${API_BASE_URL}/users/me`, {
+          token,
+          returnNullOnError: true,
+        })
         const me = meResponse?.data || meResponse
         if (!me) {
           setPermissions([])
@@ -84,7 +81,7 @@ export const usePermissions = () => {
         })
         setPermissions(Array.from(expanded))
       } catch (error) {
-        console.error('Failed to load permissions', error)
+        logger.error('Failed to load permissions', error)
         setPermissions([])
       } finally {
         setLoading(false)

@@ -1,5 +1,6 @@
 'use client'
-import PageTItle from '@/components/PageTItle'
+import logger from '@/lib/logger'
+import PageTItle from '@/components/PageTitle'
 import { Card, CardBody, Col, Row, Spinner, Table, Button } from 'react-bootstrap'
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
@@ -26,7 +27,7 @@ const VehicleDetailPage = () => {
         setDetail(data)
       }
     } catch (error) {
-      console.error(error)
+      logger.error(error)
     } finally {
       setLoading(false)
     }

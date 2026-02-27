@@ -1,15 +1,6 @@
 // API helper functions for dashboard analytics
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'
-
-/**
- * Get authentication token from localStorage
- */
-const getAuthToken = () => {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('authToken') || ''
-  }
-  return ''
-}
+import { fetchWithAuth } from '@/lib/apiClient'
+import { API_BASE_URL } from '@/helpers/apiBase'
 
 const extractResponseData = (payload) => {
   if (!payload || typeof payload !== 'object') return payload
@@ -21,32 +12,6 @@ const extractResponseData = (payload) => {
   return rootData
 }
 
-/**
- * Make authenticated API request
- */
-const fetchWithAuth = async (url, options = {}) => {
-  const token = getAuthToken()
-
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(token && { Authorization: `Bearer ${token}` }),
-    ...options.headers,
-  }
-
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  })
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}))
-    throw new Error(error.message || `API Error: ${response.statusText}`)
-  }
-
-  const payload = await response.json()
-  return extractResponseData(payload)
-}
-
 export const dashboardAPI = {
   /**
    * Get main dashboard stats (Revenue, Orders, etc.)
@@ -54,7 +19,10 @@ export const dashboardAPI = {
   getStats: async (token, params = {}) => {
     const query = new URLSearchParams(params).toString()
     const url = query ? `${API_BASE_URL}/analytics/dashboard?${query}` : `${API_BASE_URL}/analytics/dashboard`
-    return fetchWithAuth(url, { headers: { Authorization: `Bearer ${token}` } })
+    return fetchWithAuth(url, {
+      headers: { Authorization: `Bearer ${token}` },
+      extractData: extractResponseData,
+    })
   },
 
   /**
@@ -63,6 +31,9 @@ export const dashboardAPI = {
   getRevenueChart: async (token, params = {}) => {
     const query = new URLSearchParams(params).toString()
     const url = query ? `${API_BASE_URL}/analytics/dashboard/chart?${query}` : `${API_BASE_URL}/analytics/dashboard/chart`
-    return fetchWithAuth(url, { headers: { Authorization: `Bearer ${token}` } })
+    return fetchWithAuth(url, {
+      headers: { Authorization: `Bearer ${token}` },
+      extractData: extractResponseData,
+    })
   },
 }

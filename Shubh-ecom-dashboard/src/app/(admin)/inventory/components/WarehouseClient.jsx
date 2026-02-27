@@ -1,5 +1,5 @@
 'use client'
-import PageTItle from '@/components/PageTItle'
+import PageTItle from '@/components/PageTitle'
 import StockData from './StockData'
 import WarehouseList from './WarehouseList'
 import { useMemo, useState } from 'react'

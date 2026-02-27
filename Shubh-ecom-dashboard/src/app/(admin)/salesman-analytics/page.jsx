@@ -1,9 +1,10 @@
 'use client'
+import logger from '@/lib/logger'
 
 import { useEffect, useMemo, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { Alert, Container } from 'react-bootstrap'
-import PageTItle from '@/components/PageTItle'
+import PageTItle from '@/components/PageTitle'
 import { salesReportsAPI } from '@/helpers/salesReportsApi'
 import SalespersonFilter from './components/SalespersonFilter'
 import SalespersonDashboard from './components/SalespersonDashboard'
@@ -53,7 +54,7 @@ const SalesmanAnalyticsPage = () => {
       setData(response?.data || response || {})
     } catch (err) {
       setError(err.message || 'Failed to load salesman analytics')
-      console.error(err)
+      logger.error(err)
     } finally {
       setLoading(false)
     }

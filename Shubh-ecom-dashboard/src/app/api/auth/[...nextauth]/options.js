@@ -1,3 +1,4 @@
+import logger from '@/lib/logger'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { randomBytes } from 'crypto'
 import { API_BASE_URL } from '@/helpers/apiBase'
@@ -27,7 +28,7 @@ export const options = {
           throw new Error('Email and password are required')
         }
         if (!API_BASE_URL) {
-          console.error('Missing NEXT_PUBLIC_API_URL in production environment')
+          logger.error('Missing NEXT_PUBLIC_API_URL in production environment')
           throw new Error('Server configuration error')
         }
 
@@ -67,7 +68,7 @@ export const options = {
 
           throw new Error('Invalid response from server')
         } catch (error) {
-          console.error('Login error:', error)
+          logger.error('Login error:', error)
           throw new Error(error.message || 'Authentication failed')
         }
       },

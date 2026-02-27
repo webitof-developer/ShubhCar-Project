@@ -1,4 +1,5 @@
 'use client';
+import logger from '@/lib/logger'
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { orderAPI } from '@/helpers/orderApi';
@@ -32,7 +33,7 @@ const StatusFilterTabs = ({ activeStatus, onStatusChange, className = '', compac
           setStatusCounts(response.data);
         }
       } catch (error) {
-        console.error('Failed to fetch status counts:', error);
+        logger.error('Failed to fetch status counts:', error);
       }
     };
 

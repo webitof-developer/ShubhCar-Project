@@ -1,5 +1,6 @@
 'use client'
-import PageTItle from '@/components/PageTItle'
+import logger from '@/lib/logger'
+import PageTItle from '@/components/PageTitle'
 import { Card, CardBody, Col, Row, Spinner, Button } from 'react-bootstrap'
 import { useEffect, useMemo, useState } from 'react'
 import { useSession } from 'next-auth/react'
@@ -93,7 +94,7 @@ const ModelsPage = () => {
         setModels(data.items || [])
       }
     } catch (error) {
-      console.error(error)
+      logger.error(error)
     } finally {
       setLoading(false)
     }
@@ -125,7 +126,7 @@ const ModelsPage = () => {
       const imageUrl = Array.isArray(items) && items.length ? items[0].url : ''
       setTempImageUrl(imageUrl)
     } catch (error) {
-      console.error(error)
+      logger.error(error)
       toast.error('Failed to upload image')
     } finally {
       setUploading(false)
@@ -141,7 +142,7 @@ const ModelsPage = () => {
       setTempImageUrl('')
       fetchModels()
     } catch (error) {
-      console.error('Save failed:', error)
+      logger.error('Save failed:', error)
       setError(error.message || 'Failed to save model')
     }
   }
@@ -159,7 +160,7 @@ const ModelsPage = () => {
       setShowDeleteModal(false)
       setDeletingId(null)
     } catch (error) {
-      console.error('Delete failed:', error)
+      logger.error('Delete failed:', error)
       // Error toast already shown by useAPI
     }
   }

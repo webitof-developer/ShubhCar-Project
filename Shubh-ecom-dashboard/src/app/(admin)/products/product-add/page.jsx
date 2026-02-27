@@ -1,6 +1,6 @@
-import PageTItle from '@/components/PageTItle'
+import PageTItle from '@/components/PageTitle'
 import { Row } from 'react-bootstrap'
-import AddProduct from './components/AddProduct'
+import AddProduct from './AddProduct'
 
 export const metadata = {
   title: 'Add Product'

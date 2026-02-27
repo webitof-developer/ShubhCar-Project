@@ -1,6 +1,7 @@
 'use client'
+import logger from '@/lib/logger'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
-import PageTItle from '@/components/PageTItle'
+import PageTItle from '@/components/PageTitle'
 import { getAllReviews } from '@/helpers/data'
 import { reviewAPI } from '@/helpers/reviewApi'
 import { getRatingStatus } from '@/utils/other'
@@ -66,7 +67,7 @@ const ReviewPage = () => {
           const data = await getAllReviews(session.accessToken)
           setReviews(Array.isArray(data) ? data : [])
         } catch (e) {
-          console.error(e)
+          logger.error(e)
           toast.error('Failed to load reviews')
         } finally {
           setLoading(false)
@@ -113,7 +114,7 @@ const ReviewPage = () => {
       )
       toast.success(`Review marked as ${STATUS_LABELS[status] || status}`)
     } catch (err) {
-      console.error(err)
+      logger.error(err)
       toast.error(err?.message || 'Failed to update review')
     } finally {
       setActionId(null)
@@ -137,7 +138,7 @@ const ReviewPage = () => {
       setShowDeleteModal(false)
       setReviewToDelete(null)
     } catch (err) {
-      console.error(err)
+      logger.error(err)
       toast.error(err?.message || 'Failed to delete review')
     } finally {
       setActionId(null)

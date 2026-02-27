@@ -1,13 +1,5 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'
-
-const fetchWithAuth = async (url, options = {}) => {
-  const response = await fetch(url, options)
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}))
-    throw new Error(error.message || `API Error: ${response.statusText}`)
-  }
-  return response.json()
-}
+import { fetchWithAuth } from '@/lib/apiClient'
+import { API_BASE_URL } from '@/helpers/apiBase'
 
 export const invoiceAPI = {
   list: async (params = {}, token) => {

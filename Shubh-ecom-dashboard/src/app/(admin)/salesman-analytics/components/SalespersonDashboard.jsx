@@ -1,4 +1,5 @@
 'use client'
+import logger from '@/lib/logger'
 
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import { dashboardAPI } from '@/helpers/dashboardApi'
@@ -36,7 +37,7 @@ const SalespersonDashboard = ({ data, loading: reportLoading, salesmanId }) => {
         const chartResponse = await dashboardAPI.getRevenueChart(token, { range: chartRange, salesmanId })
         setChartData(chartResponse || { labels: [], revenue: [], orders: [] })
       } catch (error) {
-        console.error('Failed to load chart data', error)
+        logger.error('Failed to load chart data', error)
       } finally {
         setChartLoading(false)
       }

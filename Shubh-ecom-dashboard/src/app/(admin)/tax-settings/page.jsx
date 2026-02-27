@@ -1,10 +1,11 @@
 'use client'
+import logger from '@/lib/logger'
 
 import { useEffect, useMemo, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { Card, CardBody, CardHeader, CardTitle, Col, Row, Button, Form, Table, Spinner, InputGroup } from 'react-bootstrap'
 import { toast } from 'react-toastify'
-import PageTItle from '@/components/PageTItle'
+import PageTItle from '@/components/PageTitle'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import { settingsAPI } from '@/helpers/settingsApi'
 import { taxAPI } from '@/helpers/taxApi'
@@ -145,7 +146,7 @@ const TaxSettingsPage = () => {
           }
         }
       } catch (error) {
-        console.error('Failed to load tax settings', error)
+        logger.error('Failed to load tax settings', error)
       } finally {
         setLoading(false)
       }
@@ -281,7 +282,7 @@ const TaxSettingsPage = () => {
       )
       toast.success('Tax settings saved successfully!')
     } catch (error) {
-      console.error(error)
+      logger.error(error)
       toast.error('Failed to save tax settings')
     } finally {
       setSaving(false)
@@ -445,7 +446,7 @@ const TaxSettingsPage = () => {
 
       toast.success('Tax slabs saved successfully!');
     } catch (error) {
-      console.error(error);
+      logger.error(error);
       const errorMsg = error.message || 'Failed to save tax slabs';
       toast.error(errorMsg);
     } finally {

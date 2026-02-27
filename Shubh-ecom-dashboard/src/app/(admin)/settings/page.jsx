@@ -4,7 +4,7 @@ import EcommerceSettings from './components/EcommerceSettings'
 import LocalizationSettings from './components/LocalizationSettings'
 import InvoiceSettings from './components/InvoiceSettings'
 import StorageSettings from './components/StorageSettings'
-import PageTItle from '@/components/PageTItle'
+import PageTItle from '@/components/PageTitle'
 const SettingsPage = () => {
   return (
     <>

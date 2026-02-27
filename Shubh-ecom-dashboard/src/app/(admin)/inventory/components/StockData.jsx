@@ -1,4 +1,5 @@
 'use client'
+import logger from '@/lib/logger'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import { Card, CardBody, CardTitle, Col, Row, Spinner } from 'react-bootstrap'
 import { useEffect, useState } from 'react'
@@ -63,7 +64,7 @@ const StockData = ({ activeFilter, onFilterChange, refreshKey, lowStockThreshold
         const response = await inventoryAPI.summary(session.accessToken, { threshold: lowStockThreshold })
         setStats(response.data || response)
       } catch (error) {
-        console.error('Failed to load inventory summary', error)
+        logger.error('Failed to load inventory summary', error)
       } finally {
         setLoading(false)
       }

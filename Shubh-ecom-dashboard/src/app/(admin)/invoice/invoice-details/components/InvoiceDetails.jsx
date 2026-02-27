@@ -1,5 +1,5 @@
 'use client'
-import PageTItle from '@/components/PageTItle'
+import PageTItle from '@/components/PageTitle'
 import { currency } from '@/context/constants'
 import { invoiceAPI } from '@/helpers/invoiceApi'
 import { useSession } from 'next-auth/react'

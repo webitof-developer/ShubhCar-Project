@@ -1,4 +1,5 @@
 'use client'
+import logger from '@/lib/logger'
 import { settingsAPI } from '@/helpers/settingsApi'
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
@@ -35,7 +36,7 @@ const StorageSettings = () => {
           aws_secret_access_key: data.aws_secret_access_key || ''
         }))
       } catch (error) {
-        console.error('Failed to fetch storage settings', error)
+        logger.error('Failed to fetch storage settings', error)
       } finally {
         setLoading(false)
       }
@@ -60,7 +61,7 @@ const StorageSettings = () => {
       }, session.accessToken)
       toast.success('Storage settings saved successfully!')
     } catch (error) {
-      console.error(error)
+      logger.error(error)
       toast.error('Failed to save storage settings')
     }
   }

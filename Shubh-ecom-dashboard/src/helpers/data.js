@@ -1,3 +1,4 @@
+import logger from '@/lib/logger'
 
 
 import { sleep } from '@/utils/promise'
@@ -31,7 +32,7 @@ export const getAllUsers = async (token) => {
     const response = await userAPI.list({}, token)
     return extractItems(response?.data || response)
   } catch (error) {
-    console.error('Error fetching users:', error)
+    logger.error('Error fetching users:', error)
     return []
   }
 }
@@ -42,7 +43,7 @@ export const getAllTransactions = async (token) => {
     const response = await paymentAPI.list({}, token)
     return extractItems(response?.data || response)
   } catch (error) {
-    console.error('Error fetching transactions:', error)
+    logger.error('Error fetching transactions:', error)
     return []
   }
 }
@@ -65,7 +66,7 @@ export const getAllOrders = async (token) => {
     if (Array.isArray(payload)) return payload
     return payload.items || []
   } catch (error) {
-    console.error('Error fetching orders:', error)
+    logger.error('Error fetching orders:', error)
     return []
   }
 }
@@ -77,7 +78,7 @@ export const getAllReviews = async (token) => {
     const response = await reviewAPI.list({}, token)
     return extractItems(response?.data || response)
   } catch (error) {
-    console.error('Error fetching reviews:', error)
+    logger.error('Error fetching reviews:', error)
     return []
   }
 }

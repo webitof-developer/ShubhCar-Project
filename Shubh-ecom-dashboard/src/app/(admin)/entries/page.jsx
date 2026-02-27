@@ -1,5 +1,6 @@
 'use client'
-import PageTItle from '@/components/PageTItle'
+import logger from '@/lib/logger'
+import PageTItle from '@/components/PageTitle'
 import{ Card, CardBody, Col, Row, Spinner, Button, Form, Modal, Badge } from 'react-bootstrap'
 import { entriesAPI } from '@/helpers/entriesApi'
 import { useEffect, useState } from 'react'
@@ -45,7 +46,7 @@ const EntriesPage = () => {
                 const response = await entriesAPI.stats(session.accessToken)
                 setStats(response.data)
             } catch (error) {
-                console.error('Failed to fetch stats', error)
+                logger.error('Failed to fetch stats', error)
             }
         }
     }
@@ -57,7 +58,7 @@ const EntriesPage = () => {
                 const response = await entriesAPI.list(filters, session.accessToken)
                 setEntries(response.data.entries || [])
             } catch (error) {
-                console.error(error)
+                logger.error(error)
                 toast.error('Failed to load entries')
             } finally {
                 setLoading(false)
@@ -101,7 +102,7 @@ const EntriesPage = () => {
             setShowDeleteModal(false)
             setEntryToDelete(null)
         } catch (error) {
-            console.error(error)
+            logger.error(error)
             toast.error('Failed to delete')
         } finally {
             setDeleting(false)
@@ -119,7 +120,7 @@ const EntriesPage = () => {
                 setViewEntry(prev => ({ ...prev, status: 'read' }))
             }
         } catch (error) {
-            console.error(error)
+            logger.error(error)
         }
     }
 
@@ -163,7 +164,7 @@ const EntriesPage = () => {
             toast.dismiss(toastId);
             toast.success('Export successful');
         } catch (error) {
-            console.error(error);
+            logger.error(error);
             toast.error('Export failed');
         }
     };

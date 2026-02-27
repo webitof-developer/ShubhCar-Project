@@ -1,4 +1,4 @@
-import PageTItle from '@/components/PageTItle'
+import PageTItle from '@/components/PageTitle'
 import { Row } from 'react-bootstrap'
 import AddProduct from '../product-add/components/AddProduct'
 // import VehicleVariantCreator from '@/components/VehicleVariantCreator'

@@ -1,5 +1,6 @@
 'use client'
-import PageTItle from '@/components/PageTItle'
+import logger from '@/lib/logger'
+import PageTItle from '@/components/PageTitle'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import { mediaAPI } from '@/helpers/mediaApi'
 import { API_BASE_URL, API_ORIGIN } from '@/helpers/apiBase'
@@ -47,7 +48,7 @@ const MediaPage = () => {
       const response = await mediaAPI.list(listParams, session.accessToken)
       setMediaItems(response.data?.data || [])
     } catch (error) {
-      console.error('Failed to load media', error)
+      logger.error('Failed to load media', error)
     } finally {
       setLoading(false)
     }
@@ -66,7 +67,7 @@ const MediaPage = () => {
       await mediaAPI.upload(files, uploadUsedIn, session.accessToken)
       await fetchMedia()
     } catch (error) {
-      console.error('Upload failed', error)
+      logger.error('Upload failed', error)
     } finally {
       setUploading(false)
       event.target.value = ''
@@ -88,7 +89,7 @@ const MediaPage = () => {
       setShowDeleteModal(false)
       setMediaToDelete(null)
     } catch (error) {
-      console.error('Delete failed', error)
+      logger.error('Delete failed', error)
     } finally {
       setDeleting(false)
     }

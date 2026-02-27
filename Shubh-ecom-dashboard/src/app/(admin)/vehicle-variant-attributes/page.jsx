@@ -1,5 +1,5 @@
 'use client'
-import PageTItle from '@/components/PageTItle'
+import PageTItle from '@/components/PageTitle'
 import { Card, CardBody, Col, Row, Spinner, Table, Button, Form, Modal } from 'react-bootstrap'
 import { useEffect, useMemo, useState } from 'react'
 import { useSession } from 'next-auth/react'

@@ -1,4 +1,5 @@
 'use client'
+import logger from '@/lib/logger'
 
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import { analyticsAPI } from '@/helpers/analyticsApi'
@@ -102,7 +103,7 @@ const ModernDashboard = () => {
         setStats((unwrapData(statsResponse) || {}))
         setStatusCounts((unwrapData(statusResponse) || {}))
       } catch (error) {
-        console.error('Failed to load dashboard', error)
+        logger.error('Failed to load dashboard', error)
       } finally {
         setLoading((prev) => ({ ...prev, stats: false, statusCounts: false }))
       }
@@ -138,7 +139,7 @@ const ModernDashboard = () => {
           salesmanCommissionPercent: Number(settingsData.salesmanCommissionPercent || 0),
         })
       } catch (error) {
-        console.error('Failed to load dashboard details', error)
+        logger.error('Failed to load dashboard details', error)
       } finally {
         setLoading((prev) => ({ ...prev, topProducts: false, orders: false, states: false }))
       }
@@ -162,7 +163,7 @@ const ModernDashboard = () => {
         const chartResponse = await dashboardAPI.getRevenueChart(token, { range: chartRange })
         setChartData(chartResponse || { labels: [], revenue: [], orders: [] })
       } catch (error) {
-        console.error('Failed to load chart data', error)
+        logger.error('Failed to load chart data', error)
       } finally {
         setLoading((prev) => ({ ...prev, chart: false }))
       }
@@ -238,7 +239,7 @@ const ModernDashboard = () => {
       )
       toast.success('Salesman policy updated')
     } catch (error) {
-      console.error('Failed to save salesman policy', error)
+      logger.error('Failed to save salesman policy', error)
       toast.error(error.message || 'Failed to update salesman policy')
     } finally {
       setSavingSalesmanPolicy(false)

@@ -473,7 +473,8 @@ export const PaymentInformation = ({ order, onPaymentUpdate, updatingPayment, on
     ? [...order.codPayments].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     : []
   const numericAmount = Number(amount)
-  const canSubmit = Number.isFinite(numericAmount) && numericAmount > 0 && !updatingPayment
+  const isCancelled = order.orderStatus === 'cancelled'
+  const canSubmit = Number.isFinite(numericAmount) && numericAmount > 0 && !updatingPayment && !isCancelled
 
   const handleSubmit = async () => {
     if (!onPaymentUpdate) return
@@ -588,7 +589,7 @@ export const PaymentInformation = ({ order, onPaymentUpdate, updatingPayment, on
               variant="outline-primary"
               size="sm"
               className="w-100"
-              disabled={syncingPayment}
+              disabled={syncingPayment || isCancelled}
               onClick={() => onSyncPayment(order._id)}
             >
               {syncingPayment ? (

@@ -19,7 +19,7 @@ const productSchema = new mongoose.Schema(
       uppercase: true,
       index: true,
     },
-     categoryId: {
+    categoryId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Category',
       required: true,
@@ -43,12 +43,13 @@ const productSchema = new mongoose.Schema(
 
     productType: {
       type: String,
-      enum: ['OEM', 'AFTERMARKET'],
+      enum: ['OEM', 'OES', 'AFTERMARKET'],
       default: 'AFTERMARKET',
       index: true,
     },
     vehicleBrand: { type: String },
     oemNumber: { type: String },
+    oesNumber: { type: String },
     manufacturerBrand: { type: String },
     hlaapNo: { type: String }, // HLAAP Number for Aftermarket products
     aftermarketCopyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null }, // Tracks if OEM has been duplicated as Aftermarket

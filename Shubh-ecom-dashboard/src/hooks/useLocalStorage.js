@@ -1,4 +1,5 @@
 'use client'
+import logger from '@/lib/logger'
 
 import { useEffect, useState } from 'react'
 export default function useLocalStorage(key, initialValue, override = false) {
@@ -12,7 +13,7 @@ export default function useLocalStorage(key, initialValue, override = false) {
       if (!item) localStorage.setItem(key, JSON.stringify(initialValue))
       return item ? JSON.parse(item) : initialValue
     } catch (error) {
-      console.error(error)
+      logger.error(error)
       return initialValue
     }
   })
@@ -36,7 +37,7 @@ export default function useLocalStorage(key, initialValue, override = false) {
         window.localStorage.setItem(key, JSON.stringify(valueToStore))
       }
     } catch (error) {
-      console.error(error)
+      logger.error(error)
     }
   }
   return [storedValue, setValue]

@@ -1,45 +1,7 @@
 // API helper functions for orders
 import { getStatusBadge, getPaymentStatusBadge } from '@/constants/orderStatus';
 import { API_BASE_URL } from '@/helpers/apiBase';
-
-/**
- * Get authentication token from localStorage
- */
-const getAuthToken = () => {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('authToken') || '';
-  }
-  return '';
-};
-
-/**
- * Make authenticated API request
- */
-const fetchWithAuth = async (url, options = {}) => {
-  const token = getAuthToken();
-
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(token && { Authorization: `Bearer ${token}` }),
-    ...options.headers,
-  };
-
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
-
-  if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({}));
-    const message = errorBody.message || `API Error: ${response.statusText}`;
-    const error = new Error(message);
-    error.status = response.status;
-    error.data = errorBody;
-    throw error;
-  }
-
-  return response.json();
-};
+import { fetchWithAuth } from '@/lib/apiClient'
 
 /**
  * Order API functions

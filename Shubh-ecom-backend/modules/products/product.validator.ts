@@ -29,14 +29,19 @@ exports.createProductSchema = Joi.object({
 
   sku: Joi.string().allow('', null),
   hsnCode: Joi.string().allow('', null),
-  productType: Joi.string().valid('OEM', 'AFTERMARKET').required(),
+  productType: Joi.string().valid('OEM', 'OES', 'AFTERMARKET').required(),
   vehicleBrand: Joi.string().trim().when('productType', {
-    is: 'OEM',
+    is: Joi.valid('OEM', 'OES'),
     then: Joi.required(),
     otherwise: Joi.optional().allow('', null),
   }),
   oemNumber: Joi.string().trim().when('productType', {
     is: 'OEM',
+    then: Joi.required(),
+    otherwise: Joi.optional().allow('', null),
+  }),
+  oesNumber: Joi.string().trim().when('productType', {
+    is: 'OES',
     then: Joi.required(),
     otherwise: Joi.optional().allow('', null),
   }),
@@ -94,9 +99,10 @@ exports.updateProductSchema = Joi.object({
   warrantyInfo: Joi.string().allow('', null),
   sku: Joi.string().allow('', null),
   hsnCode: Joi.string().allow('', null),
-  productType: Joi.string().valid('OEM', 'AFTERMARKET'),
+  productType: Joi.string().valid('OEM', 'OES', 'AFTERMARKET'),
   vehicleBrand: Joi.string().trim().allow('', null),
   oemNumber: Joi.string().trim().allow('', null),
+  oesNumber: Joi.string().trim().allow('', null),
   manufacturerBrand: Joi.string().trim().allow('', null),
   stockQty: Joi.number().min(0),
   weight: Joi.number().min(0),

@@ -1,4 +1,5 @@
 'use client'
+import logger from '@/lib/logger'
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { API_BASE_URL } from '@/helpers/apiBase'
@@ -133,7 +134,7 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
       setCustomers(extractItems(data?.data || data))
       setError(null)
     } catch (err) {
-      console.error(err)
+      logger.error(err)
       setError(err.message)
     } finally {
       setLoading(false)
@@ -397,7 +398,7 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
 
       //check
       if (editMode && 'role' in payload) {
-        console.error('BUG: role leaked into customer edit payload', payload)
+        logger.error('BUG: role leaked into customer edit payload', payload)
       }
 
       const url = editMode
@@ -426,7 +427,7 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
 
       setTimeout(() => setSuccessMessage(''), 3000)
     } catch (err) {
-      console.error(err)
+      logger.error(err)
       setModalError(err.message)
     } finally {
       setSubmitting(false)
@@ -468,7 +469,7 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
 
       setTimeout(() => setSuccessMessage(''), 3000)
     } catch (err) {
-      console.error(err)
+      logger.error(err)
       setError(err.message)
     } finally {
       setSubmitting(false)
@@ -513,7 +514,7 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
       setSuccessMessage('Wholesale customer approved successfully!')
       setTimeout(() => setSuccessMessage(''), 3000)
     } catch (err) {
-      console.error(err)
+      logger.error(err)
       setError(err.message || 'Failed to approve wholesale customer')
     } finally {
       setApprovingId(null)
@@ -549,7 +550,7 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
       setSuccessMessage(`Customer status updated to ${newStatus}`)
       setTimeout(() => setSuccessMessage(''), 3000)
     } catch (err) {
-      console.error(err)
+      logger.error(err)
       setError(err.message || 'Failed to update customer status')
     } finally {
       setTogglingStatusId(null)

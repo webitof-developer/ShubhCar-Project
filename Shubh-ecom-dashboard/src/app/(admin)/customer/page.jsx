@@ -1,4 +1,4 @@
-import PageTItle from '@/components/PageTItle'
+import PageTItle from '@/components/PageTitle'
 import CustomerDataCard from './components/CustomerDataCard'
 import CustomerDataList from './components/CustomerDataList'
 export const dynamic = 'force-dynamic'

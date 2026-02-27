@@ -221,13 +221,13 @@ function assertRequestedQuantityWithinStock(product, requestedQuantity) {
 class OrderService {
   async placeOrder({ user, sessionId, payload, context = {} as Record<string, unknown> }) {
     const log = logger.withContext({
-// @ts-ignore
+      // @ts-ignore
       requestId: context.requestId || null,
-// @ts-ignore
+      // @ts-ignore
       route: context.route,
-// @ts-ignore
+      // @ts-ignore
       method: context.method,
-// @ts-ignore
+      // @ts-ignore
       userId: context.userId || user?.id || null,
     });
     const cart = await cartRepo.getOrCreateCart({ userId: user.id, sessionId });
@@ -285,7 +285,7 @@ class OrderService {
       const dbUser = await userRepo.findById(user.id);
       const orderCustomerType =
         dbUser?.customerType === 'wholesale' &&
-        dbUser?.verificationStatus === 'approved'
+          dbUser?.verificationStatus === 'approved'
           ? 'wholesale'
           : 'retail';
 
@@ -302,9 +302,9 @@ class OrderService {
         });
 
         await inventoryService.reserve(product._id, item.quantity, session, {
-// @ts-ignore
+          // @ts-ignore
           ...context,
-// @ts-ignore
+          // @ts-ignore
           userId: context.userId || user.id,
         });
 
@@ -922,7 +922,7 @@ class OrderService {
     const order = await orderRepo.findByIdLean(orderId);
     if (!order) error('Order not found', 404);
 
-// @ts-ignore
+    // @ts-ignore
     const items = await orderItemRepo.findByOrder(orderId);
     const shipments = await shipmentRepo.list(
       {
@@ -985,7 +985,31 @@ class OrderService {
 
     // Generate credit note if order was cancelled and invoice exists
     if (updated.orderStatus === 'cancelled' && previousStatus !== 'cancelled') {
-      // Check if invoice exists
+      // Restore stock for each item in the order (async-safe, non-blocking on error)
+      orderRepo.findItemsByOrder(orderId).then(async (items) => {
+        for (const item of items || []) {
+          try {
+            await inventoryService.release(item.productId, item.quantity, null, {
+              orderId,
+              reason: 'admin_cancel',
+            });
+          } catch (releaseErr) {
+            logger.error('Failed to restore stock on admin cancellation', {
+              orderId,
+              productId: item.productId,
+              quantity: item.quantity,
+              error: releaseErr?.message,
+            });
+          }
+        }
+      }).catch((err) => {
+        logger.error('Failed to fetch items for stock restoration on cancel', {
+          orderId,
+          error: err?.message,
+        });
+      });
+
+      // Check if invoice exists and generate credit note
       const invoice = await invoiceRepo.findByOrder(updated._id);
       if (invoice && invoice.type === 'invoice') {
         await invoiceService
@@ -1114,13 +1138,13 @@ class OrderService {
 
   async adminCreateOrder({ admin, payload, context = {} as Record<string, unknown> }) {
     const log = logger.withContext({
-// @ts-ignore
+      // @ts-ignore
       requestId: context.requestId || null,
-// @ts-ignore
+      // @ts-ignore
       route: context.route,
-// @ts-ignore
+      // @ts-ignore
       method: context.method,
-// @ts-ignore
+      // @ts-ignore
       userId: context.userId || admin?.id || null,
     });
 
@@ -1157,7 +1181,7 @@ class OrderService {
         actorUser = await userRepo.findById(admin.id);
       }
       if (await isSalesmanUser(actorUser)) {
-// @ts-ignore
+        // @ts-ignore
         assignedSalesmanId = actorUser._id;
       }
     }
@@ -1180,6 +1204,10 @@ class OrderService {
           400,
         );
       }
+    } else if (assignedSalesmanId) {
+      // Admin created this order and manually assigned a salesman —
+      // commission should still be applied for the assigned salesman.
+      salesmanCommissionPercent = policy.salesmanCommissionPercent;
     }
 
     await assertPaymentMethodEnabled(payload.paymentMethod, payload.gateway);
@@ -1200,7 +1228,7 @@ class OrderService {
           .session(session)
           .lean();
         if (!shippingAddress) error('Shipping address not found', 404);
-// @ts-ignore
+        // @ts-ignore
         if (String(shippingAddress.userId) !== String(user._id)) {
           error('Shipping address does not belong to user', 400);
         }
@@ -1221,7 +1249,7 @@ class OrderService {
           .session(session)
           .lean();
         if (!billingAddress) error('Billing address not found', 404);
-// @ts-ignore
+        // @ts-ignore
         if (String(billingAddress.userId) !== String(user._id)) {
           error('Billing address does not belong to user', 400);
         }
@@ -1251,7 +1279,7 @@ class OrderService {
 
         const customerType =
           user.customerType === 'wholesale' &&
-          user.verificationStatus === 'approved'
+            user.verificationStatus === 'approved'
             ? 'wholesale'
             : 'retail';
         const unitPrice = pricingService.resolveUnitPrice({
@@ -1260,9 +1288,9 @@ class OrderService {
         });
 
         await inventoryService.reserve(product._id, item.quantity, session, {
-// @ts-ignore
+          // @ts-ignore
           ...context,
-// @ts-ignore
+          // @ts-ignore
           userId: context.userId || admin?.id,
         });
 
@@ -1373,13 +1401,13 @@ class OrderService {
         const taxMeta = taxMetaByItem.get(String(item.productId)) || {};
         const tax = await taxService.calculateGST({
           amount: taxableBase,
-// @ts-ignore
+          // @ts-ignore
           destinationState: shippingAddress.state,
-// @ts-ignore
+          // @ts-ignore
           destinationCity: shippingAddress.city,
-// @ts-ignore
+          // @ts-ignore
           destinationPostalCode: shippingAddress.postalCode,
-// @ts-ignore
+          // @ts-ignore
           destinationCountry: shippingAddress.country,
           hsnCode: taxMeta.hsnCode || item.hsnCode,
           productTaxSlabs: taxMeta.taxSlabs,
@@ -1451,15 +1479,15 @@ class OrderService {
         payload.shippingFee != null
           ? Number(payload.shippingFee)
           : await shippingService.calculate({
-              subtotal: subtotal - totalDiscount,
-              items: shippingItems,
-              address: shippingAddress,
-              paymentMethod: payload.paymentMethod,
-            });
+            subtotal: subtotal - totalDiscount,
+            items: shippingItems,
+            address: shippingAddress,
+            paymentMethod: payload.paymentMethod,
+          });
       const grandTotal = subtotal - totalDiscount + taxAmount + shippingFee;
       const totalAfterDiscount = roundCurrency(grandTotal);
-      const commissionPercent = isSalesmanActor ? salesmanCommissionPercent : 0;
-      const commissionAmount = isSalesmanActor
+      const commissionPercent = salesmanCommissionPercent;
+      const commissionAmount = salesmanCommissionPercent > 0
         ? roundCurrency((totalAfterDiscount * commissionPercent) / 100)
         : 0;
 
@@ -1618,8 +1646,8 @@ class OrderService {
           trackingUrl: trackingUrl,
           estimatedDelivery: order.shipment?.estimatedDeliveryDate
             ? new Date(order.shipment.estimatedDeliveryDate).toLocaleDateString(
-                'en-IN',
-              )
+              'en-IN',
+            )
             : '3-7 business days',
         },
       });

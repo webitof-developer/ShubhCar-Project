@@ -1,5 +1,5 @@
 import ModernDashboard from './components/ModernDashboard'
-import PageTItle from '@/components/PageTItle'
+import PageTItle from '@/components/PageTitle'
 
 export const dynamic = 'force-dynamic'
 

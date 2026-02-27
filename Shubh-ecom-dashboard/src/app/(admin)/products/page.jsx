@@ -1,6 +1,6 @@
 import { Col, Row } from 'react-bootstrap'
-import ProductList from './Components/ProductList'
-import PageTItle from '@/components/PageTItle'
+import ProductList from './components/ProductList'
+import PageTItle from '@/components/PageTitle'
 export const dynamic = 'force-dynamic'
 export const metadata = {
   title: 'Product List',

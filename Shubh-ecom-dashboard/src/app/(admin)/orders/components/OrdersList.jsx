@@ -1,4 +1,5 @@
 'use client'
+import logger from '@/lib/logger'
 import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
@@ -196,7 +197,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
         const response = await orderAPI.getStatusCounts(session.accessToken)
         setStatusCounts(response?.data || { all: 0 })
       } catch (error) {
-        console.error('Failed to fetch status counts:', error)
+        logger.error('Failed to fetch status counts:', error)
       }
     }
     fetchCounts()
@@ -208,7 +209,13 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
       setSalesmenLoading(true)
       try {
         const normalizeList = (response) => {
-          const data = response?.data?.items || response?.data || response?.items || []
+          const data =
+            response?.data?.users ||
+            response?.data?.items ||
+            response?.data?.data ||
+            response?.data ||
+            response?.items ||
+            []
           return Array.isArray(data) ? data : []
         }
 
@@ -229,7 +236,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
 
         setSalesmen(list)
       } catch (error) {
-        console.error('Failed to load salesmen:', error)
+        logger.error('Failed to load salesmen:', error)
         setSalesmen([])
       } finally {
         setSalesmenLoading(false)
@@ -270,7 +277,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
           razorpayEnabled: toBool(paymentData.payment_razorpay_enabled, false),
         })
       } catch (error) {
-        console.error('Failed to load pricing policy settings:', error)
+        logger.error('Failed to load pricing policy settings:', error)
       }
     }
     fetchPricingPolicy()
@@ -310,7 +317,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
         setAllCoupons(normalized)
         setCouponOptions(normalized.slice(0, 20))
       } catch (error) {
-        console.error('Failed to load coupons:', error)
+        logger.error('Failed to load coupons:', error)
         setAllCoupons([])
         setCouponOptions([])
       } finally {
@@ -455,7 +462,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
 
       const token = session?.accessToken
       if (!token) {
-        console.error('No authentication token available')
+        logger.error('No authentication token available')
         setOrdersData([])
         setLoading(false)
         return
@@ -473,7 +480,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
         setTotalPages(payload.totalPages || 1)
       }
     } catch (error) {
-      console.error('Failed to fetch orders:', error)
+      logger.error('Failed to fetch orders:', error)
       setOrdersData([])
       setTotalCount(0)
       setTotalPages(1)
@@ -684,10 +691,10 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
       setCustomerLoading(true)
       try {
         const response = await userAPI.adminList({ search: query, role: 'customer', limit: 8, page: 1 }, session.accessToken)
-        const data = response?.data?.items || response?.data || response?.items || []
-        setCustomerResults(Array.isArray(data) ? data : [])
+        const raw = response?.data?.users || response?.data?.items || response?.data?.data || response?.data || response?.items || []
+        setCustomerResults(Array.isArray(raw) ? raw : [])
       } catch (error) {
-        console.error('Failed to search customers:', error)
+        logger.error('Failed to search customers:', error)
         setCustomerResults([])
       } finally {
         setCustomerLoading(false)
@@ -725,7 +732,8 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
     userAddressAPI
       .adminListByUser(customer._id, session.accessToken)
       .then((response) => {
-        const data = response.data || []
+        const raw = response?.data?.addresses || response?.data?.data || response?.data || []
+        const data = Array.isArray(raw) ? raw : []
         setCustomerAddresses(Array.isArray(data) ? data : [])
         if (!Array.isArray(data) || data.length === 0) {
           setCreateForm((prev) => ({
@@ -750,7 +758,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
         }
       })
       .catch((error) => {
-        console.error('Failed to load addresses:', error)
+        logger.error('Failed to load addresses:', error)
         setCustomerAddresses([])
       })
   }
@@ -788,7 +796,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
         handleSelectCustomer(customer)
       }
     } catch (error) {
-      console.error('Failed to fetch selected customer:', error)
+      logger.error('Failed to fetch selected customer:', error)
     }
   }
 
@@ -805,7 +813,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
         const data = response?.data?.items || response?.data || response?.items || []
         updateItemField(index, 'productOptions', Array.isArray(data) ? data : [])
       } catch (error) {
-        console.error('Failed to search products:', error)
+        logger.error('Failed to search products:', error)
         updateItemField(index, 'productOptions', [])
       }
     }, 300)
@@ -813,6 +821,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
 
   const handleSelectProduct = async (index, product) => {
     const { unitPrice, retailPrice, wholesalePrice } = resolveProductPriceByType(product, selectedCustomerType)
+    const stockQty = product.stockQty ?? product.stock ?? 0
     updateItemField(index, 'productId', product._id)
     updateItemField(index, 'productName', product.name)
     updateItemField(index, 'productOptions', [])
@@ -820,6 +829,9 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
     updateItemField(index, 'productRetailPrice', retailPrice)
     updateItemField(index, 'productWholesalePrice', wholesalePrice)
     updateItemField(index, 'productPrice', unitPrice)
+    updateItemField(index, 'stockQty', stockQty)
+    // Reset qty to 1 (or cap at stock if stock < 1)
+    updateItemField(index, 'quantity', stockQty > 0 ? 1 : 0)
   }
 
   const handleSelectProductById = async (index, productId) => {
@@ -923,7 +935,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
       const url = URL.createObjectURL(blob)
       window.open(url, '_blank')
     } catch (error) {
-      console.error('Failed to load invoice:', error)
+      logger.error('Failed to load invoice:', error)
       toast.error(error.message || 'Failed to load invoice. Ensure order is paid and confirmed.')
     }
   }
@@ -942,7 +954,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
       link.remove()
       URL.revokeObjectURL(url)
     } catch (error) {
-      console.error('Failed to download invoice:', error)
+      logger.error('Failed to download invoice:', error)
       toast.error(error.message || 'Failed to download invoice. Ensure order is paid and confirmed.')
     }
   }
@@ -958,7 +970,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
       popup.focus()
       popup.print()
     } catch (error) {
-      console.error('Failed to print invoice:', error)
+      logger.error('Failed to print invoice:', error)
       toast.error(error.message || 'Failed to print invoice. Ensure order is paid and confirmed.')
     }
   }
@@ -1166,12 +1178,23 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                   <Form.Control
                     type="number"
                     min="1"
+                    max={item.stockQty != null ? item.stockQty : undefined}
                     value={item.quantity}
-                    onChange={(e) => updateItemField(index, 'quantity', e.target.value)}
+                    onChange={(e) => {
+                      const raw = parseInt(e.target.value, 10)
+                      const maxQty = item.stockQty != null ? item.stockQty : Infinity
+                      const safeQty = isNaN(raw) ? 1 : Math.min(Math.max(1, raw), maxQty)
+                      updateItemField(index, 'quantity', safeQty)
+                    }}
                     placeholder="1"
                     required
                   />
                 </FloatingLabel>
+                {item.stockQty != null && (
+                  <div className="text-muted" style={{ fontSize: '11px', marginTop: 2 }}>
+                    Stock: {item.stockQty}
+                  </div>
+                )}
               </Col>
               <Col md={3}>
                 <FloatingLabel
@@ -1342,8 +1365,14 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                   <Col md={6}>
                     <FloatingLabel controlId="ship-phone" label={requiredLabel('Phone')}>
                       <Form.Control
+                        type="tel"
+                        inputMode="numeric"
+                        maxLength={10}
                         value={createForm.shippingAddress.phone}
-                        onChange={(e) => updateAddressField('shippingAddress', 'phone', e.target.value)}
+                        onChange={(e) => {
+                          const digits = e.target.value.replace(/\D/g, '').slice(0, 10)
+                          updateAddressField('shippingAddress', 'phone', digits)
+                        }}
                         placeholder="Phone"
                         required
                       />
@@ -1463,8 +1492,14 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                     <Col md={6}>
                       <FloatingLabel controlId="bill-phone" label={requiredLabel('Phone')}>
                         <Form.Control
+                          type="tel"
+                          inputMode="numeric"
+                          maxLength={10}
                           value={createForm.billingAddress.phone}
-                          onChange={(e) => updateAddressField('billingAddress', 'phone', e.target.value)}
+                          onChange={(e) => {
+                            const digits = e.target.value.replace(/\D/g, '').slice(0, 10)
+                            updateAddressField('billingAddress', 'phone', digits)
+                          }}
                           placeholder="Phone"
                           required
                         />
@@ -2014,7 +2049,8 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
               setShowCustomerModal(false)
               setCustomerCreateError('')
             }}
-            centered>
+            centered
+            contentClassName="create-modal">
             <Form onSubmit={handleCreateCustomer}>
               <Modal.Header closeButton>
                 <Modal.Title>Create Customer</Modal.Title>

@@ -1,6 +1,6 @@
 'use client'
 
-import PageTItle from '@/components/PageTItle'
+import PageTItle from '@/components/PageTitle'
 import SalespersonDashboard from '../components/SalespersonDashboard'
 import SalespersonFilter from '../components/SalespersonFilter'
 import { useState } from 'react'

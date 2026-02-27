@@ -1,3 +1,4 @@
+import logger from '@/lib/logger'
 import { useState, useCallback, useRef } from 'react';
 import { API_BASE_URL } from '@/helpers/apiBase';
 import { validateIndianPhone, validateEmail, isRequired } from '@/helpers/validationHelpers';
@@ -51,7 +52,7 @@ export const useFormValidation = (initialState = {}, validationRules = {}) => {
             return 'Email is already registered';
           }
         } catch (error) {
-          console.error('Duplicate check failed:', error);
+          logger.error('Duplicate check failed:', error);
         }
         setChecking(prev => ({ ...prev, [fieldName]: false }));
       }
@@ -78,7 +79,7 @@ export const useFormValidation = (initialState = {}, validationRules = {}) => {
             return 'Mobile number is already registered';
           }
         } catch (error) {
-          console.error('Duplicate check failed:', error);
+          logger.error('Duplicate check failed:', error);
         }
         setChecking(prev => ({ ...prev, [fieldName]: false }));
       }

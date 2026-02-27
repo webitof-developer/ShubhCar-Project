@@ -1,9 +1,10 @@
 'use client'
+import logger from '@/lib/logger'
 
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import PageTItle from '@/components/PageTItle'
+import PageTItle from '@/components/PageTitle'
 import { Button, Card, CardBody, CardFooter, CardHeader, CardTitle, Col, Row, Alert, Spinner, Form } from 'react-bootstrap'
 import couponService from '@/services/couponService'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
@@ -105,7 +106,7 @@ const Coupons = () => {
         router.push('/coupons')
       }, 2000)
     } catch (err) {
-      console.error('Error creating coupon:', err)
+      logger.error('Error creating coupon:', err)
       setError(err.message || 'Failed to create coupon')
     } finally {
       setSubmitting(false)

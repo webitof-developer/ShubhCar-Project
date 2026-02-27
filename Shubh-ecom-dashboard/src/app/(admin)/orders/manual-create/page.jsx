@@ -1,4 +1,4 @@
-import PageTItle from '@/components/PageTItle'
+import PageTitle from '@/components/PageTitle'
 import OrdersList from '../components/OrdersList'
 
 export const metadata = {
@@ -8,7 +8,7 @@ export const metadata = {
 const ManualCreatePage = () => {
   return (
     <>
-      <PageTItle title="CREATE MANUAL ORDER" />
+      <PageTitle title="CREATE MANUAL ORDER" />
       <OrdersList hideList />
     </>
   )

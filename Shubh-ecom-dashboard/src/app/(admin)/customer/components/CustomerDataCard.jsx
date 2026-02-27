@@ -1,4 +1,5 @@
 'use client'
+import logger from '@/lib/logger'
 import React, { useEffect, useState } from 'react'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import { Card, CardBody, Col, Row, Spinner } from 'react-bootstrap'
@@ -50,7 +51,7 @@ const CustomerDataCard = () => {
             setStats(response.data)
           }
         } catch (error) {
-          console.error("Failed to fetch customer stats", error)
+          logger.error("Failed to fetch customer stats", error)
         } finally {
           setLoading(false)
         }

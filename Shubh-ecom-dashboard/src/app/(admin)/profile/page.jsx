@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Card, CardBody, CardHeader, CardTitle, Col, Dropdown, DropdownMenu, DropdownToggle, Row } from 'react-bootstrap'
 
-import PageTItle from '@/components/PageTItle'
+import PageTItle from '@/components/PageTitle'
 export const metadata = {
   title: 'Profile',
 }
