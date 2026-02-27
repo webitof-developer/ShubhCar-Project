@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react'
 import { API_BASE_URL } from '@/helpers/apiBase'
 import { useSearchParams } from 'next/navigation'
 import { Card, CardBody, Col, Row, Button, Form, Alert, Spinner, Badge } from 'react-bootstrap'
-import PageTItle from '@/components/PageTitle'
+import PageTitle from '@/components/PageTitle'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import { rolesAPI } from '@/helpers/rolesApi'
 import { usePermissions } from '@/hooks/usePermissions'
@@ -260,7 +260,7 @@ const UsersPage = () => {
 
   return (
     <>
-      <PageTItle title="USERS LIST" />
+      <PageTitle title="USERS LIST" />
 
       {fetchError && (
         <Alert variant="danger" dismissible onClose={() => setFetchError(null)}>

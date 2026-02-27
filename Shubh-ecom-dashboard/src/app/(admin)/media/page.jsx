@@ -1,6 +1,6 @@
 'use client'
 import logger from '@/lib/logger'
-import PageTItle from '@/components/PageTitle'
+import PageTitle from '@/components/PageTitle'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import { mediaAPI } from '@/helpers/mediaApi'
 import { API_BASE_URL, API_ORIGIN } from '@/helpers/apiBase'
@@ -97,7 +97,7 @@ const MediaPage = () => {
 
   return (
     <>
-      <PageTItle title="MEDIA LIBRARY" />
+      <PageTitle title="MEDIA LIBRARY" />
       <Row className="g-3">
         <Col xs={12}>
           <Card>

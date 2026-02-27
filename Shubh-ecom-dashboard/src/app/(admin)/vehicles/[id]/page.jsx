@@ -1,6 +1,6 @@
 'use client'
 import logger from '@/lib/logger'
-import PageTItle from '@/components/PageTitle'
+import PageTitle from '@/components/PageTitle'
 import { Card, CardBody, Col, Row, Spinner, Table, Button } from 'react-bootstrap'
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
@@ -73,7 +73,7 @@ const VehicleDetailPage = () => {
 
   return (
     <>
-      <PageTItle title="VEHICLE DETAIL" />
+      <PageTitle title="VEHICLE DETAIL" />
       <Row className="mb-3">
         <Col xs={12}>
           <Card>

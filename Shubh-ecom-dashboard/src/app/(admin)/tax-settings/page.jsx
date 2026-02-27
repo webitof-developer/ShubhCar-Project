@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { Card, CardBody, CardHeader, CardTitle, Col, Row, Button, Form, Table, Spinner, InputGroup } from 'react-bootstrap'
 import { toast } from 'react-toastify'
-import PageTItle from '@/components/PageTitle'
+import PageTitle from '@/components/PageTitle'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import { settingsAPI } from '@/helpers/settingsApi'
 import { taxAPI } from '@/helpers/taxApi'
@@ -464,7 +464,7 @@ const TaxSettingsPage = () => {
 
   return (
     <>
-      <PageTItle title="TAX SETTINGS" />
+      <PageTitle title="TAX SETTINGS" />
       <Row className="g-4">
         <Col lg={12}>
           <Card>

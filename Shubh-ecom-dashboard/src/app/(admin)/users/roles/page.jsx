@@ -17,7 +17,7 @@ import {
   Spinner,
   Badge
 } from 'react-bootstrap'
-import PageTItle from '@/components/PageTitle'
+import PageTitle from '@/components/PageTitle'
 import { rolesAPI } from '@/helpers/rolesApi'
 import { PERMISSION_ACTIONS, PERMISSION_MATRIX } from '@/constants/permissions'
 import { toast } from 'react-toastify'
@@ -198,7 +198,7 @@ const RolesPage = () => {
   if (!canViewRoles) {
     return (
       <>
-        <PageTItle title="USER ROLES" />
+        <PageTitle title="USER ROLES" />
         <Alert variant="warning">You do not have permission to view roles.</Alert>
       </>
     )
@@ -206,7 +206,7 @@ const RolesPage = () => {
 
   return (
     <>
-      <PageTItle title="USER ROLES" />
+      <PageTitle title="USER ROLES" />
       <Row>
         <Col lg={12}>
           <Card>

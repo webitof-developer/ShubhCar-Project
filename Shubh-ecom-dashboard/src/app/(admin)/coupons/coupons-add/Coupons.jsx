@@ -4,7 +4,7 @@ import logger from '@/lib/logger'
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import PageTItle from '@/components/PageTitle'
+import PageTitle from '@/components/PageTitle'
 import { Button, Card, CardBody, CardFooter, CardHeader, CardTitle, Col, Row, Alert, Spinner, Form } from 'react-bootstrap'
 import couponService from '@/services/couponService'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
@@ -115,7 +115,7 @@ const Coupons = () => {
 
   return (
     <>
-      <PageTItle title="ADD COUPON" />
+      <PageTitle title="ADD COUPON" />
       
       {error && (
         <Alert variant="danger" dismissible onClose={() => setError(null)}>

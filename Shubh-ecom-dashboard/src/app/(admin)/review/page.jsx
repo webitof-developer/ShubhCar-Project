@@ -1,7 +1,7 @@
 'use client'
 import logger from '@/lib/logger'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
-import PageTItle from '@/components/PageTitle'
+import PageTitle from '@/components/PageTitle'
 import { getAllReviews } from '@/helpers/data'
 import { reviewAPI } from '@/helpers/reviewApi'
 import { getRatingStatus } from '@/utils/other'
@@ -150,7 +150,7 @@ const ReviewPage = () => {
   if (loading) {
     return (
       <>
-        <PageTItle title="REVIEWS" />
+        <PageTitle title="REVIEWS" />
         <Row>
           <Col xl={12}>
             <Card>
@@ -202,7 +202,7 @@ const ReviewPage = () => {
 
   return (
     <>
-      <PageTItle title="REVIEWS" />
+      <PageTitle title="REVIEWS" />
       <Row>
         <Col xl={12}>
           <Card>

@@ -1,6 +1,6 @@
 'use client'
 import logger from '@/lib/logger'
-import PageTItle from '@/components/PageTitle'
+import PageTitle from '@/components/PageTitle'
 import{ Card, CardBody, Col, Row, Spinner, Button, Form, Modal, Badge } from 'react-bootstrap'
 import { entriesAPI } from '@/helpers/entriesApi'
 import { useEffect, useState } from 'react'
@@ -176,7 +176,7 @@ const EntriesPage = () => {
 
     return (
         <>
-            <PageTItle title="Entries (Contact Form)" />
+            <PageTitle title="Entries (Contact Form)" />
 
             {/* Stats Cards */}
             <Row className="mb-1">

@@ -1,4 +1,4 @@
-import PageTItle from '@/components/PageTitle'
+import PageTitle from '@/components/PageTitle'
 import OrdersList from './components/OrdersList'
 export const dynamic = 'force-dynamic'
 export const metadata = {
@@ -7,7 +7,7 @@ export const metadata = {
 const page = () => {
   return (
     <>
-      <PageTItle title="ORDERS LIST" />
+      <PageTitle title="ORDERS LIST" />
       <OrdersList />
     </>
   )

@@ -1,4 +1,4 @@
-import PageTItle from '@/components/PageTitle'
+import PageTitle from '@/components/PageTitle'
 import { Row } from 'react-bootstrap'
 import AddProduct from './AddProduct'
 
@@ -9,7 +9,7 @@ export const metadata = {
 const ProductAddPage = () => {
   return (
     <>
-      <PageTItle title="ADD PRODUCT" />
+      <PageTitle title="ADD PRODUCT" />
       <Row>
         <AddProduct />
       </Row>

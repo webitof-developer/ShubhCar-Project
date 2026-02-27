@@ -1,4 +1,4 @@
-import PageTItle from '@/components/PageTitle'
+import PageTitle from '@/components/PageTitle'
 import InvoiceCard from './components/InvoiceCard'
 import InvoiceList from './components/InvoiceList'
 export const dynamic = 'force-dynamic'
@@ -8,7 +8,7 @@ export const metadata = {
 const InvoiceListPage = () => {
   return (
     <>
-      <PageTItle title="INVOICES LIST" />
+      <PageTitle title="INVOICES LIST" />
       <InvoiceCard />
       <InvoiceList />
     </>

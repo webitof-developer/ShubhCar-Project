@@ -1,5 +1,5 @@
 'use client'
-import PageTItle from '@/components/PageTitle'
+import PageTitle from '@/components/PageTitle'
 import StockData from './StockData'
 import WarehouseList from './WarehouseList'
 import { useMemo, useState } from 'react'
@@ -17,7 +17,7 @@ const WarehouseClient = () => {
 
   return (
     <>
-      <PageTItle title="Inventory" />
+      <PageTitle title="Inventory" />
       <StockData
         activeFilter={activeFilter}
         onFilterChange={setActiveFilter}

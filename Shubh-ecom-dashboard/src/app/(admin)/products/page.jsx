@@ -1,6 +1,6 @@
 import { Col, Row } from 'react-bootstrap'
 import ProductList from './components/ProductList'
-import PageTItle from '@/components/PageTitle'
+import PageTitle from '@/components/PageTitle'
 export const dynamic = 'force-dynamic'
 export const metadata = {
   title: 'Product List',
@@ -8,7 +8,7 @@ export const metadata = {
 const ProductListPage = () => {
   return (
     <>
-      <PageTItle title="PRODUCT LIST" />
+      <PageTitle title="PRODUCT LIST" />
       <Row>
         <Col xl={12}>
           <ProductList />

@@ -1,5 +1,5 @@
 'use client'
-import PageTItle from '@/components/PageTitle'
+import PageTitle from '@/components/PageTitle'
 import { Card, CardBody, Col, Row, Spinner, Table, Button, Form, Modal } from 'react-bootstrap'
 import { useEffect, useMemo, useState } from 'react'
 import { useSession } from 'next-auth/react'
@@ -447,7 +447,7 @@ const VehiclesPage = () => {
 
   return (
     <>
-      <PageTItle title="VEHICLE LIST" />
+      <PageTitle title="VEHICLE LIST" />
       <Row>
         <Col xs={12}>
           <Card>

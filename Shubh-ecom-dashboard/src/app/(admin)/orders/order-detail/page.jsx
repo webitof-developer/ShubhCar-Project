@@ -11,7 +11,7 @@ import ShippingAddressCard from './components/ShippingAddressCard';
 import OrderTotals from './components/OrderTotals';
 import { OrderNotes, ShipmentTracking, Documents } from './components/OrderDetails';
 import { Card, CardBody, Col, Placeholder, Row } from 'react-bootstrap';
-import PageTItle from '@/components/PageTitle';
+import PageTitle from '@/components/PageTitle';
 import { orderAPI } from '@/helpers/orderApi';
 import { API_BASE_URL } from '@/helpers/apiBase';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -234,7 +234,7 @@ const OrderDetailPage = () => {
         <Row className="mb-3">
           <Col xs={12}>
             <div className="d-flex align-items-center justify-content-between">
-              <PageTItle title="ORDER DETAILS" />
+              <PageTitle title="ORDER DETAILS" />
               <div className="d-flex gap-2">
                 <Placeholder.Button xs={3} size="sm" />
                 <Placeholder.Button xs={3} size="sm" />
@@ -325,7 +325,7 @@ const OrderDetailPage = () => {
   if (!orderData || !orderData.order) {
     return (
       <>
-        <PageTItle title="ORDER DETAILS" />
+        <PageTitle title="ORDER DETAILS" />
         <div className="text-center p-5">
           <p>Order not found</p>
         </div>
@@ -341,7 +341,7 @@ const OrderDetailPage = () => {
         <Col xs={12}>
           <div className="d-flex align-items-center justify-content-between">
             <div className="d-flex align-items-center gap-3 flex-wrap">
-              <PageTItle title={`Order #${order.orderNumber || order._id?.substring(0, 6).toUpperCase()}`} />
+              <PageTitle title={`Order #${order.orderNumber || order._id?.substring(0, 6).toUpperCase()}`} />
             </div>
           </div>
         </Col>

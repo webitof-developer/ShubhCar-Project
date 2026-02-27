@@ -19,7 +19,7 @@ import {
   Form,
 } from 'react-bootstrap'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
-import PageTItle from '@/components/PageTitle'
+import PageTitle from '@/components/PageTitle'
 import FormErrorModal from '@/components/forms/FormErrorModal'
 import DeleteConfirmModal from '@/components/shared/DeleteConfirmModal'
 import DataTable from '@/components/shared/DataTable'
@@ -310,7 +310,7 @@ const CategoriesPage = () => {
 
   return (
     <>
-      <PageTItle title="CATEGORY MANAGEMENT" />
+      <PageTitle title="CATEGORY MANAGEMENT" />
 
       {error && (
         <Alert variant="danger" dismissible onClose={() => setError(null)}>
