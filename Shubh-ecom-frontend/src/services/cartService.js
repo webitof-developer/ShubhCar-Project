@@ -25,6 +25,15 @@ import APP_CONFIG from '@/config/app.config';
  */
 
 const API_BASE = APP_CONFIG.api.baseUrl;
+const readResponseBody = async (response) => {
+  const text = await response.text();
+  if (!text) return { text: '', json: null };
+  try {
+    return { text, json: JSON.parse(text) };
+  } catch {
+    return { text, json: null };
+  }
+};
 
 // ============================================================================
 // PHASE 7: ACTIVE METHODS (READ + REPLACE ONLY)
@@ -49,15 +58,20 @@ export const getCart = async (accessToken) => {
       },
     });
 
+    const { text, json } = await readResponseBody(response);
+
     if (!response.ok) {
-      console.error('[CART_SERVICE] Failed to fetch cart');
+      console.error('[CART_SERVICE] Failed to fetch cart', {
+        status: response.status,
+        statusText: response.statusText,
+        message: json?.message || text || null,
+      });
       return null;
     }
-
-    const result = await response.json();
-    console.log('[CART_SERVICE] Cart fetched -', result.data?.items?.length || 0, 'items');
+    const cart = json?.data || json || null;
+    console.log('[CART_SERVICE] Cart fetched -', cart?.items?.length || 0, 'items');
     
-    return result.data; // Returns { items: [...], subtotal, etc. }
+    return cart; // Returns { items: [...], subtotal, etc. }
   } catch (error) {
     console.error('[CART_SERVICE] Fetch cart error:', error);
     return null;
@@ -245,12 +259,11 @@ export const getCartSummary = async (accessToken, shippingAddressId = null) => {
     body: JSON.stringify({ shippingAddressId }),
   });
 
+  const { text, json } = await readResponseBody(response);
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.message || 'Failed to fetch cart summary');
+    throw new Error(json?.message || text || 'Failed to fetch cart summary');
   }
-
-  return (await response.json()).data;
+  return json?.data || json || null;
 };
 
 /**
@@ -265,12 +278,11 @@ export const getGuestCartSummary = async ({ items = [], shippingAddress = null, 
     body: JSON.stringify({ items, shippingAddress, couponCode }),
   });
 
+  const { text, json } = await readResponseBody(response);
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.message || 'Failed to fetch cart summary');
+    throw new Error(json?.message || text || 'Failed to fetch cart summary');
   }
-
-  return (await response.json()).data;
+  return json?.data || json || null;
 };
 
 /**
@@ -286,12 +298,11 @@ export const applyCoupon = async (accessToken, code) => {
     body: JSON.stringify({ code }),
   });
 
+  const { text, json } = await readResponseBody(response);
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.message || 'Failed to apply coupon');
+    throw new Error(json?.message || text || 'Failed to apply coupon');
   }
-
-  return (await response.json()).data;
+  return json?.data || json || null;
 };
 
 /**
@@ -305,12 +316,11 @@ export const removeCoupon = async (accessToken) => {
     },
   });
 
+  const { text, json } = await readResponseBody(response);
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.message || 'Failed to remove coupon');
+    throw new Error(json?.message || text || 'Failed to remove coupon');
   }
-
-  return (await response.json()).data;
+  return json?.data || json || null;
 };
 
 /**
@@ -330,12 +340,11 @@ export const updateCartItem = async (accessToken, itemId, quantity) => {
     body: JSON.stringify({ quantity }),
   });
 
+  const { text, json } = await readResponseBody(response);
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to update cart item');
+    throw new Error(json?.message || text || 'Failed to update cart item');
   }
-
-  return (await response.json()).data;
+  return json?.data || json || null;
 };
 
 /**

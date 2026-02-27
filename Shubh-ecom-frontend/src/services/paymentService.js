@@ -1,14 +1,23 @@
 import APP_CONFIG from '@/config/app.config';
 
 const API_BASE = APP_CONFIG.api.baseUrl;
+const readResponseBody = async (response) => {
+  const text = await response.text();
+  if (!text) return { text: '', json: null };
+  try {
+    return { text, json: JSON.parse(text) };
+  } catch {
+    return { text, json: null };
+  }
+};
 
 export const getPaymentMethods = async () => {
   const response = await fetch(`${API_BASE}/payments/methods`);
+  const { text, json } = await readResponseBody(response);
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.message || 'Failed to load payment methods');
+    throw new Error(json?.message || text || 'Failed to load payment methods');
   }
-  return (await response.json()).data;
+  return json?.data || json || null;
 };
 
 export const initiatePayment = async (accessToken, { orderId, gateway }) => {
@@ -21,12 +30,12 @@ export const initiatePayment = async (accessToken, { orderId, gateway }) => {
     body: JSON.stringify({ orderId, gateway }),
   });
 
+  const { text, json } = await readResponseBody(response);
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.message || 'Failed to initiate payment');
+    throw new Error(json?.message || text || 'Failed to initiate payment');
   }
 
-  return (await response.json()).data;
+  return json?.data || json || null;
 };
 
 export const getPaymentStatus = async (accessToken, paymentId) => {
@@ -36,12 +45,12 @@ export const getPaymentStatus = async (accessToken, paymentId) => {
     },
   });
 
+  const { text, json } = await readResponseBody(response);
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.message || 'Failed to fetch payment status');
+    throw new Error(json?.message || text || 'Failed to fetch payment status');
   }
 
-  return (await response.json()).data;
+  return json?.data || json || null;
 };
 
 export const confirmPayment = async (accessToken, paymentId, transactionId = null) => {
@@ -56,10 +65,10 @@ export const confirmPayment = async (accessToken, paymentId, transactionId = nul
     body: JSON.stringify(body),
   });
 
+  const { text, json } = await readResponseBody(response);
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.message || 'Failed to confirm payment');
+    throw new Error(json?.message || text || 'Failed to confirm payment');
   }
 
-  return (await response.json()).data;
+  return json?.data || json || null;
 };

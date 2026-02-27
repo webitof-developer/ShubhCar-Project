@@ -15,6 +15,15 @@ import { orders as demoOrders } from '@/data/orders';
  */
 
 const API_BASE = APP_CONFIG.api.baseUrl;
+const readResponseBody = async (response) => {
+  const text = await response.text();
+  if (!text) return { text: '', json: null };
+  try {
+    return { text, json: JSON.parse(text) };
+  } catch {
+    return { text, json: null };
+  }
+};
 
 /**
  * Get data source configuration with fallback
@@ -26,6 +35,18 @@ const getDataSourceConfig = (source, fallback) => {
   const useDemo = source === 'demo';
   const useFallback = fallback === 'demo';
   return { useDemo, useFallback };
+};
+
+const extractOrdersArray = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (payload && typeof payload === 'object') {
+    if (Array.isArray(payload.data)) return payload.data;
+    if (Array.isArray(payload.orders)) return payload.orders;
+    if (Array.isArray(payload.items)) return payload.items;
+    if (Array.isArray(payload.results)) return payload.results;
+    if (Array.isArray(payload.docs)) return payload.docs;
+  }
+  return [];
 };
 
 /**
@@ -52,16 +73,6 @@ export const placeOrder = async (accessToken, orderData) => {
   console.log('[ORDER_SERVICE] Access token:', accessToken ? `${accessToken.substring(0, 20)}...` : 'NULL/UNDEFINED');
   
   try {
-    const readResponseBody = async (response) => {
-      const text = await response.text();
-      if (!text) return { text: '', json: null };
-      try {
-        return { text, json: JSON.parse(text) };
-      } catch {
-        return { text, json: null };
-      }
-    };
-
     const normalizeGateway = (method, gateway) => {
       if (gateway) return gateway;
       if (method === 'razorpay') return 'razorpay';
@@ -134,10 +145,15 @@ export const getMyOrders = async (accessToken, { includeItems } = {}) => {
   
   // Real mode
   logDataSource('getMyOrders', false);
+
+  if (!accessToken) {
+    console.warn('[ORDER_SERVICE] Missing access token for getMyOrders');
+    return useFallback ? [...demoOrders] : [];
+  }
   
   try {
     const params = new URLSearchParams();
-    if (includeItems) params.set('includeItems', '1');
+    if (typeof includeItems === 'boolean') params.set('includeItems', String(includeItems));
     const url = params.toString() ? `${API_BASE}/orders/my?${params.toString()}` : `${API_BASE}/orders/my`;
     const response = await fetch(url, {
       headers: {
@@ -145,8 +161,18 @@ export const getMyOrders = async (accessToken, { includeItems } = {}) => {
       },
     });
 
+    const { text, json } = await readResponseBody(response);
+
     if (!response.ok) {
-      console.error('[ORDER_SERVICE] Failed to fetch orders');
+      const details = {
+        status: Number.isFinite(response?.status) ? response.status : -1,
+        statusText: response?.statusText || 'Unknown',
+        message: json?.message || text || 'No error body',
+        url: response?.url || url,
+      };
+      console.error(
+        `[ORDER_SERVICE] Failed to fetch orders | status=${details.status} ${details.statusText} | message=${details.message} | url=${details.url}`
+      );
       
       // Fallback to demo if configured
       if (useFallback) {
@@ -157,12 +183,16 @@ export const getMyOrders = async (accessToken, { includeItems } = {}) => {
       return [];
     }
 
-    const result = await response.json();
-    console.log('[ORDER_SERVICE] Orders fetched -', result.data?.length || 0, 'orders');
-    
-    return result.data || [];
+    const orders = extractOrdersArray(json?.data ?? json);
+    const total =
+      json?.data?.pagination?.total ??
+      json?.pagination?.total ??
+      orders.length;
+    console.log('[ORDER_SERVICE] Orders fetched -', orders.length, 'orders (total:', total, ')');
+    return orders;
   } catch (error) {
-    console.error('[ORDER_SERVICE] Fetch orders error:', error);
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[ORDER_SERVICE] Fetch orders error: ${message}`);
     
     // Fallback to demo if configured
     if (useFallback) {
@@ -194,6 +224,14 @@ export const getOrder = async (accessToken, orderId) => {
   
   // Real mode
   logDataSource('getOrder', false);
+
+  if (!accessToken) {
+    console.warn('[ORDER_SERVICE] Missing access token for getOrder');
+    if (useFallback) {
+      return demoOrders.find(o => o._id === orderId || o.orderNumber === orderId) || null;
+    }
+    return null;
+  }
   
   try {
     const response = await fetch(`${API_BASE}/orders/${orderId}`, {
@@ -202,8 +240,18 @@ export const getOrder = async (accessToken, orderId) => {
       },
     });
 
+    const { text, json } = await readResponseBody(response);
+
     if (!response.ok) {
-      console.error('[ORDER_SERVICE] Failed to fetch order');
+      const details = {
+        status: Number.isFinite(response?.status) ? response.status : -1,
+        statusText: response?.statusText || 'Unknown',
+        message: json?.message || text || 'No error body',
+        url: response?.url || `${API_BASE}/orders/${orderId}`,
+      };
+      console.error(
+        `[ORDER_SERVICE] Failed to fetch order | status=${details.status} ${details.statusText} | message=${details.message} | url=${details.url}`
+      );
       
       // Fallback to demo if configured
       if (useFallback) {
@@ -215,12 +263,12 @@ export const getOrder = async (accessToken, orderId) => {
       return null;
     }
 
-    const result = await response.json();
     console.log('[ORDER_SERVICE] Order fetched successfully');
     
-    return result.data;
+    return json?.data || json || null;
   } catch (error) {
-    console.error('[ORDER_SERVICE] Fetch order error:', error);
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[ORDER_SERVICE] Fetch order error: ${message}`);
     
     // Fallback to demo if configured  
     if (useFallback) {
@@ -253,16 +301,20 @@ export const cancelOrder = async (accessToken, orderId, reason) => {
       body: JSON.stringify({ reason }),
     });
 
+    const { text, json } = await readResponseBody(response);
+
     if (!response.ok) {
-      const error = await response.json();
-      console.error('[ORDER_SERVICE] Cancel order failed:', error);
-      throw new Error(error.message || 'Failed to cancel order');
+      console.error('[ORDER_SERVICE] Cancel order failed:', {
+        status: response.status,
+        statusText: response.statusText,
+        message: json?.message || text || null,
+      });
+      throw new Error(json?.message || text || 'Failed to cancel order');
     }
 
-    const result = await response.json();
     console.log('[ORDER_SERVICE] Order cancelled successfully');
     
-    return result.data;
+    return json?.data || json || null;
   } catch (error) {
     console.error('[ORDER_SERVICE] Cancel order error:', error);
     throw error;

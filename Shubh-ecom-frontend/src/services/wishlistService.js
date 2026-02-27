@@ -15,8 +15,26 @@
 
 import APP_CONFIG, { getDataSourceConfig, logDataSource } from '@/config/app.config';
 import { handleDataSourceFallback } from '@/utils/dataSourceFallback';
+const readJsonSafe = async (response) => {
+  const text = await response.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+};
 
 const STORAGE_KEY = 'user_wishlist';
+
+const normalizeWishlistArray = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (payload && typeof payload === 'object') {
+    if (Array.isArray(payload.items)) return payload.items;
+    if (Array.isArray(payload.data)) return payload.data;
+  }
+  return [];
+};
 
 // ==================== PRIVATE HELPERS (Demo Mode) ====================
 
@@ -65,8 +83,8 @@ const fetchRealWishlist = async (accessToken) => {
       return null;
     }
 
-    const data = await response.json();
-    return data?.data || [];
+    const json = await readJsonSafe(response);
+    return normalizeWishlistArray(json?.data ?? json);
   } catch (error) {
     console.error('[WISHLIST_SERVICE] Wishlist fetch error:', error);
     return null;
@@ -91,7 +109,7 @@ const addToRealWishlist = async (accessToken, productId) => {
 
     if (!response.ok) return null;
 
-    const data = await response.json();
+    const data = await readJsonSafe(response);
     return data?.data || null;
   } catch (error) {
     console.error('[WISHLIST_SERVICE] Add to wishlist error:', error);
@@ -115,7 +133,7 @@ const removeFromRealWishlist = async (accessToken, productId) => {
 
     if (!response.ok) return null;
 
-    const data = await response.json();
+    const data = await readJsonSafe(response);
     return data?.data || null;
   } catch (error) {
     console.error('[WISHLIST_SERVICE] Remove from wishlist error:', error);
@@ -262,10 +280,10 @@ export const removeFromWishlist = async (productId, accessToken = null) => {
  * @returns {Promise<boolean>} - True if in wishlist
  */
 export const isInWishlist = async (productId, accessToken = null) => {
-  const wishlist = await getWishlist(accessToken);
+  const wishlist = normalizeWishlistArray(await getWishlist(accessToken));
   
   // Handle both array of IDs and array of objects
-  if (typeof wishlist[0] === 'string') {
+  if (wishlist.length > 0 && typeof wishlist[0] === 'string') {
     return wishlist.includes(productId);
   }
   
@@ -333,6 +351,6 @@ export const clearWishlist = async (accessToken = null) => {
  * @returns {Promise<number>} - Number of items in wishlist
  */
 export const getWishlistCount = async (accessToken = null) => {
-  const wishlist = await getWishlist(accessToken);
+  const wishlist = normalizeWishlistArray(await getWishlist(accessToken));
   return wishlist.length;
 };

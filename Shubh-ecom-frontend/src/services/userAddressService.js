@@ -15,6 +15,15 @@
 
 import APP_CONFIG, { getDataSourceConfig, logDataSource } from '@/config/app.config';
 import { handleDataSourceFallback } from '@/utils/dataSourceFallback';
+const readJsonSafe = async (response) => {
+  const text = await response.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+};
 
 // Demo user data
 const DEMO_USER = {
@@ -29,6 +38,15 @@ const DEMO_ADDRESSES = [];
 
 const STORAGE_KEY = 'user_addresses';
 const USER_KEY = 'current_user';
+const normalizeAddressList = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (payload && typeof payload === 'object') {
+    if (Array.isArray(payload.items)) return payload.items;
+    if (Array.isArray(payload.data)) return payload.data;
+    if (Array.isArray(payload.addresses)) return payload.addresses;
+  }
+  return [];
+};
 
 // ==================== PRIVATE HELPERS (Demo Mode) ====================
 
@@ -81,9 +99,8 @@ const fetchRealAddresses = async (accessToken) => {
       return null;
     }
 
-    const json = await response.json();
-    // Backend returns: {success: true, data: [...]}
-    return json?.data || json?.addresses || [];
+    const json = await readJsonSafe(response);
+    return normalizeAddressList(json?.data ?? json);
   } catch (error) {
     console.error('[ADDRESS_SERVICE] Address fetch error:', error);
     return null;
@@ -108,7 +125,7 @@ const addRealAddress = async (accessToken, addressData) => {
 
     if (!response.ok) return null;
 
-    const json = await response.json();
+    const json = await readJsonSafe(response);
     // Backend returns: {success: true, data: {...}}
     return json?.data || json?.address || null;
   } catch (error) {
@@ -135,7 +152,7 @@ const updateRealAddress = async (accessToken, id, addressData) => {
 
     if (!response.ok) return null;
 
-    const json = await response.json();
+    const json = await readJsonSafe(response);
     // Backend returns: {success: true, data: {...}}
     return json?.data || json?.address || null;
   } catch (error) {
@@ -193,7 +210,7 @@ export const getUserAddresses = async (accessToken = null) => {
   // Real mode: Fetch from backend
   logDataSource('PROFILE.ADDRESS', 'REAL');
   try {
-    const addresses = await fetchRealAddresses(accessToken);
+    const addresses = normalizeAddressList(await fetchRealAddresses(accessToken));
     
     if (!addresses || addresses.length === 0) {
       return handleDataSourceFallback('PROFILE.ADDRESS', config.fallback, []);

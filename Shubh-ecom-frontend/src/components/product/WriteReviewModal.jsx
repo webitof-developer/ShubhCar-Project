@@ -78,7 +78,7 @@ export const WriteReviewModal = ({ productId, productName, onSubmitted }) => {
           Write a Review
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md border border-zinc-200">
         <DialogHeader>
           <DialogTitle>Write a Review</DialogTitle>
         </DialogHeader>

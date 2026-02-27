@@ -7,43 +7,27 @@ import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
 import {
-  Package,
-  Calendar,
-  Truck,
-  MapPin,
-  CreditCard,
   Search,
-  FileText,
-  ChevronDown,
-  ChevronUp,
-  ChevronRight,
-  Clock,
-  CheckCircle2,
-  PackageCheck,
-  XCircle,
   ShoppingBag,
   SlidersHorizontal,
   X,
   ArrowLeft,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { getMyOrders, getOrder } from '@/services/orderService';
-import { getAddressById } from '@/services/userAddressService';
-import { OrderTimeline } from '@/components/orders/OrderTimeline';
+import { getMyOrders } from '@/services/orderService';
 import { OrderRow } from '@/components/orders/OrderRow';
-import { resolveProductImages } from '@/utils/media';
-import { formatPrice } from '@/services/pricingService';
 import {
-  ORDER_STATUS_FILTERS,
-  getOrderStatusBadgeClass,
-  getOrderStatusIcon,
   getOrderStatusLabel,
-  getPaymentStatusBadgeClass,
-  getPaymentStatusLabel,
-  ORDER_STATUS,
 } from '@/constants/orderStatus';
+import { OrdersFilterPanel } from '@/components/orders/OrdersFilterPanel';
+
+const SORT_OPTIONS = [
+  { value: 'date-desc', label: 'Newest First' },
+  { value: 'date-asc', label: 'Oldest First' },
+  { value: 'amount-desc', label: 'Amount: High to Low' },
+  { value: 'amount-asc', label: 'Amount: Low to High' },
+];
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 const OrdersV2 = () => {
@@ -138,54 +122,14 @@ const OrdersV2 = () => {
           {/* ── Sidebar filters (desktop) ── */}
           <aside className="hidden lg:block w-56 flex-shrink-0 space-y-4">
             <div className="bg-card rounded-xl border border-border/50 p-4 sticky top-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Filter by Status</p>
-              <ul className="space-y-1">
-                <li>
-                  <button
-                    onClick={() => setStatusFilter('all')}
-                    className={`w-full text-left text-sm px-2 py-1.5 rounded-lg transition-colors flex items-center justify-between
-                      ${statusFilter === 'all' ? 'bg-primary/10 text-primary font-semibold' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
-                  >
-                    <span>All Orders</span>
-                    <span className="text-xs">{orders.length}</span>
-                  </button>
-                </li>
-                {ORDER_STATUS_FILTERS.map((status) => {
-                  const count = orders.filter((o) => o.orderStatus === status).length;
-                  return (
-                    <li key={status}>
-                      <button
-                        onClick={() => setStatusFilter(status)}
-                        className={`w-full text-left text-sm px-2 py-1.5 rounded-lg transition-colors flex items-center justify-between
-                          ${statusFilter === status ? 'bg-primary/10 text-primary font-semibold' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
-                      >
-                        <span className="flex items-center gap-1.5">
-                          {getOrderStatusIcon(status, 'w-3.5 h-3.5')}
-                          {getOrderStatusLabel(status)}
-                        </span>
-                        <span className="text-xs">{count}</span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-
-              <Separator className="my-4" />
-
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Sort By</p>
-              <ul className="space-y-1">
-                {SORT_OPTIONS.map((opt) => (
-                  <li key={opt.value}>
-                    <button
-                      onClick={() => setSortBy(opt.value)}
-                      className={`w-full text-left text-sm px-2 py-1.5 rounded-lg transition-colors
-                        ${sortBy === opt.value ? 'bg-primary/10 text-primary font-semibold' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
-                    >
-                      {opt.label}
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              <OrdersFilterPanel
+                orders={orders}
+                statusFilter={statusFilter}
+                setStatusFilter={setStatusFilter}
+                sortBy={sortBy}
+                setSortBy={setSortBy}
+                sortOptions={SORT_OPTIONS}
+              />
             </div>
           </aside>
 
@@ -300,51 +244,15 @@ const OrdersV2 = () => {
               </Button>
             </div>
 
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Filter by Status</p>
-            <ul className="space-y-1 mb-4">
-              <li>
-                <button onClick={() => { setStatusFilter('all'); setSidebarOpen(false); }}
-                  className={`w-full text-left text-sm px-2 py-1.5 rounded-lg transition-colors flex items-center justify-between
-                    ${statusFilter === 'all' ? 'bg-primary/10 text-primary font-semibold' : 'text-muted-foreground hover:bg-muted'}`}
-                >
-                  <span>All Orders</span><span className="text-xs">{orders.length}</span>
-                </button>
-              </li>
-              {ORDER_STATUS_FILTERS.map((status) => {
-                const count = orders.filter((o) => o.orderStatus === status).length;
-                return (
-                  <li key={status}>
-                    <button onClick={() => { setStatusFilter(status); setSidebarOpen(false); }}
-                      className={`w-full text-left text-sm px-2 py-1.5 rounded-lg transition-colors flex items-center justify-between
-                        ${statusFilter === status ? 'bg-primary/10 text-primary font-semibold' : 'text-muted-foreground hover:bg-muted'}`}
-                    >
-                      <span className="flex items-center gap-1.5">
-                        {getOrderStatusIcon(status, 'w-3.5 h-3.5')}
-                        {getOrderStatusLabel(status)}
-                      </span>
-                      <span className="text-xs">{count}</span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-
-            <Separator className="my-4" />
-
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Sort By</p>
-            <ul className="space-y-1">
-              {SORT_OPTIONS.map((opt) => (
-                <li key={opt.value}>
-                  <button
-                    onClick={() => { setSortBy(opt.value); setSidebarOpen(false); }}
-                    className={`w-full text-left text-sm px-2 py-1.5 rounded-lg transition-colors
-                      ${sortBy === opt.value ? 'bg-primary/10 text-primary font-semibold' : 'text-muted-foreground hover:bg-muted'}`}
-                  >
-                    {opt.label}
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <OrdersFilterPanel
+              orders={orders}
+              statusFilter={statusFilter}
+              setStatusFilter={setStatusFilter}
+              sortBy={sortBy}
+              setSortBy={setSortBy}
+              sortOptions={SORT_OPTIONS}
+              onApplied={() => setSidebarOpen(false)}
+            />
           </div>
         </div>
       )}
@@ -353,3 +261,5 @@ const OrdersV2 = () => {
 };
 
 export default OrdersV2;
+
+

@@ -51,6 +51,11 @@ const normalizeProduct = (product) => {
 const normalizeProductList = (products = []) =>
   Array.isArray(products) ? products.map(normalizeProduct) : [];
 
+const unwrapPayload = (payload) =>
+  payload && typeof payload === 'object' && 'data' in payload
+    ? payload.data
+    : payload;
+
 /**
  * Apply fallback strategy
  */
@@ -185,7 +190,8 @@ export const getProducts = async ({
 
     const url = `${baseUrl}/products?${params.toString()}`;
     const data = await api.get(url, fetchOptions);
-    return normalizeProductList(data?.data?.items || []);
+    const payload = unwrapPayload(data);
+    return normalizeProductList(payload?.items || []);
   } catch (error) {
     const catchParams = new URLSearchParams();
     catchParams.set('page', String(page));
@@ -266,7 +272,8 @@ export const getProductsByCategory = async (categorySlug, options = {}) => {
     const url = `${baseUrl}/products?${params.toString()}`;
     requestUrl = url;
     const data = await api.get(url, options.fetchOptions);
-    return normalizeProductList(data?.data?.items || []);
+    const payload = unwrapPayload(data);
+    return normalizeProductList(payload?.items || []);
   } catch (error) {
     const url =
       requestUrl ||
@@ -328,7 +335,8 @@ export const searchProducts = async (query, options = {}) => {
 
     const url = `${baseUrl}/products?${params.toString()}`;
     const data = await api.get(url, options.fetchOptions);
-    return normalizeProductList(data?.data?.items || []);
+    const payload = unwrapPayload(data);
+    return normalizeProductList(payload?.items || []);
   } catch (error) {
     const params = new URLSearchParams();
     params.set('page', String(options.page || 1));
@@ -395,7 +403,8 @@ export const getRelatedProducts = async (
     const url = `${baseUrl}/products?${params.toString()}`;
     requestUrl = url;
     const data = await api.get(url, fetchOptions);
-    const items = data?.data?.items || [];
+    const payload = unwrapPayload(data);
+    const items = payload?.items || [];
     const filtered = items.filter((p) => p._id !== productId).slice(0, limit);
 
     return normalizeProductList(filtered);
@@ -426,7 +435,8 @@ export const getFeaturedProducts = async (limit = 8, fetchOptions) => {
 
     const url = `${baseUrl}/product/featured?${params.toString()}`;
     const data = await api.get(url, fetchOptions);
-    return normalizeProductList(data?.data || []);
+    const payload = unwrapPayload(data);
+    return normalizeProductList(payload || []);
   } catch (error) {
     const url = `${baseUrl}/product/featured?${params.toString()}`;
     console.error('[PRODUCT_SERVICE] getFeaturedProducts failed:', {
@@ -458,7 +468,8 @@ export const getProductBySlug = async (slug, fetchOptions) => {
     logDataSource('PRODUCTS', 'REAL');
     const url = `${baseUrl}/products/${slug}`;
     const data = await api.get(url, fetchOptions);
-    return normalizeProduct(data?.data || null);
+    const payload = unwrapPayload(data);
+    return normalizeProduct(payload || null);
   } catch (error) {
     const url = `${baseUrl}/products/${slug}`;
     console.error('[PRODUCT_SERVICE] getProductBySlug failed:', {
@@ -498,7 +509,8 @@ export const getProductById = async (id, fetchOptions) => {
     logDataSource('PRODUCTS', 'REAL');
     const url = `${baseUrl}/products/id/${id}`;
     const data = await api.get(url, fetchOptions);
-    return normalizeProduct(data?.data || null);
+    const payload = unwrapPayload(data);
+    return normalizeProduct(payload || null);
   } catch (error) {
     const url = `${baseUrl}/products/id/${id}`;
     if (!silent) {
@@ -518,7 +530,8 @@ export const getProductCompatibility = async (productId, fetchOptions) => {
   try {
     const url = `${baseUrl}/products/id/${productId}/compatibility`;
     const data = await api.get(url, fetchOptions);
-    return data?.data || {};
+    const payload = unwrapPayload(data);
+    return payload || {};
   } catch (error) {
     const url = `${baseUrl}/products/id/${productId}/compatibility`;
     console.error('[PRODUCT_SERVICE] getProductCompatibility failed:', {
@@ -535,9 +548,10 @@ export const getProductAlternatives = async (productId, fetchOptions) => {
   try {
     const url = `${baseUrl}/products/id/${productId}/alternatives`;
     const data = await api.get(url, fetchOptions);
+    const payload = unwrapPayload(data);
     return {
-      oem: normalizeProductList(data?.data?.oem),
-      aftermarket: normalizeProductList(data?.data?.aftermarket),
+      oem: normalizeProductList(payload?.oem),
+      aftermarket: normalizeProductList(payload?.aftermarket),
     };
   } catch (error) {
     const url = `${baseUrl}/products/id/${productId}/alternatives`;

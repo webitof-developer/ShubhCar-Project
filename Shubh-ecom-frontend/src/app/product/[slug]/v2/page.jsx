@@ -4,14 +4,13 @@
 // Route: /product/[slug]/v2
 
 "use client";
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { Layout } from '@/components/layout/Layout';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  ChevronRight, ShieldCheck, FileText, List, MessageSquare, Star,
+  ChevronRight, ShieldCheck, Star,
   Minus, Plus, Info, ChevronLeft, CheckCircle2, Share2, Truck,
   RotateCcw, CreditCard, Package, AlertTriangle, Copy,
 } from 'lucide-react';
@@ -25,8 +24,6 @@ import { toast } from 'sonner';
 import VehicleCompatibility from '@/components/product/VehicleCompatibility';
 import AlternativesSection from '@/components/product/AlternativesSection';
 import { RelatedProducts } from '@/components/product/RelatedProducts';
-import { WriteReviewModal } from '@/components/product/WriteReviewModal';
-import { getProductReviews, getReviewStats } from '@/services/reviewService';
 import { ImagePreviewModal } from '@/components/product/ImagePreviewModal';
 import WishlistButton from '@/components/product/WishlistButton';
 
@@ -36,6 +33,8 @@ import { resolveProductImages, resolveAssetUrl } from '@/utils/media';
 import { isOemProduct, getProductTypeBadge } from '@/utils/productType';
 import { ProductSkeleton } from '@/components/product/ProductSkeleton';
 import { ProductReviewsSectionV2 } from '@/components/product/ProductReviewsSectionV2';
+import { ProductDetailTabs } from '@/components/product/ProductDetailTabs';
+import { useProductReviews } from '@/hooks/useProductReviews';
 
 /* ── Trust Badges ────────────────────────────────────────────────────────── */
 const TRUST_BADGES = [
@@ -44,7 +43,6 @@ const TRUST_BADGES = [
   { icon: Truck,       label: 'Fast Dispatch' },
   { icon: CreditCard,  label: 'Secure Payment' },
 ];
-
 const ProductDetailV2 = () => {
   const { slug } = useParams();
   const router = useRouter();
@@ -55,12 +53,9 @@ const ProductDetailV2 = () => {
   const [loading, setLoading]         = useState(true);
   const [quantity, setQuantity]       = useState(1);
   const [activeImage, setActiveImage] = useState(0);
-  const [reviews, setReviews]         = useState([]);
-  const [reviewStats, setReviewStats] = useState({ average: 0, total: 0, breakdown: {} });
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [zoomed, setZoomed]           = useState(false);
   const [zoomPos, setZoomPos]         = useState({ x: 50, y: 50 });
-  const [showAllReviews, setShowAllReviews] = useState(false);
   const scrollContainerRef            = useRef(null);
   const mainImageRef                  = useRef(null);
 
@@ -80,19 +75,17 @@ const ProductDetailV2 = () => {
   }, [slug, user]);
 
   /* ── Load reviews ── */
-  const refreshReviews = useCallback(async () => {
-    if (!product?._id) return;
-    try {
-      const list = await getProductReviews(product._id);
-      const safe = Array.isArray(list) ? list : [];
-      const stats = getReviewStats(safe);
-      setReviews(safe);
-      setReviewStats(stats);
-      setProduct(prev => prev ? { ...prev, ratingAvg: stats.average, ratingCount: stats.total } : prev);
-    } catch { /* silent */ }
-  }, [product?._id]);
-
-  useEffect(() => { refreshReviews(); }, [product?._id]);
+  const {
+    reviews,
+    reviewStats,
+    ratingAvg,
+    ratingCount,
+    refreshReviews,
+  } = useProductReviews(product?._id, {
+    silent: true,
+    fallbackAvg: product?.ratingAvg,
+    fallbackCount: product?.ratingCount,
+  });
 
   /* ── Image scroll helpers ── */
   const scrollToImage = (idx) => {
@@ -148,8 +141,6 @@ const ProductDetailV2 = () => {
   const isInCart   = (cart?.items || []).some(i => i.product?._id === product._id || i.productId === product._id);
   const mrp        = product.mrp || product.retailPrice?.mrp || 0;
   const discountPct = mrp > unitPrice ? Math.round(((mrp - unitPrice) / mrp) * 100) : 0;
-  const ratingAvg  = reviewStats.average || product?.ratingAvg || 0;
-  const ratingCount = reviewStats.total || product?.ratingCount || 0;
   const isOem      = isOemProduct(product.productType);
 
   const specs = [
@@ -385,11 +376,10 @@ const ProductDetailV2 = () => {
                     <span className="text-xs font-semibold text-amber-800 ml-1">{Number(ratingAvg).toFixed(1)}</span>
                     <span className="text-xs text-amber-600">({ratingCount})</span>
                   </div>
-                  <span className="text-xs text-muted-foreground">SKU: {product.sku || 'N/A'}</span>
                 </div>
 
                 {/* Price block */}
-                <div className="bg-muted/40 rounded-xl p-4 border border-border/30">
+                <div className="bg-muted/40 rounded-xl p-4 border border-border/30 py-5 my-3">
                   <div className="flex items-end gap-3 mb-2">
                     <span className="text-3xl font-extrabold text-foreground tracking-tight">{formatPrice(unitPrice)}</span>
                     {mrp > unitPrice && (
@@ -438,7 +428,7 @@ const ProductDetailV2 = () => {
                 )}
 
                 {/* Qty + Add to Cart */}
-                <div className="flex items-center gap-3 pt-1">
+                <div className="flex items-center gap-3 mb-4 pt-1">
                   {/* Qty stepper */}
                   <div className="flex items-center border border-border rounded-xl bg-background overflow-hidden shrink-0">
                     <button
@@ -482,7 +472,7 @@ const ProductDetailV2 = () => {
                 </div>
 
                 {/* Trust badge strip */}
-                <div className="grid grid-cols-4 gap-2 pt-1 border-t border-border/30">
+                <div className="grid grid-cols-4 gap-2 pt-1 border-t border-border/30 pt-6">
                   {TRUST_BADGES.map(({ icon: Icon, label }) => (
                     <div key={label} className="flex flex-col items-center gap-1 text-center">
                       <div className="w-8 h-8 rounded-xl bg-primary/8 flex items-center justify-center">
@@ -499,149 +489,23 @@ const ProductDetailV2 = () => {
 
           {/* ── Tabs: Description · Specs · Reviews ── */}
           <div className="mb-10 bg-card border border-border/50 rounded-2xl p-4 md:p-7">
-            <Tabs defaultValue="desc" className="w-full">
-              <TabsList className="h-auto p-1 bg-muted/40 border border-border/30 rounded-xl flex justify-start gap-1 overflow-x-auto whitespace-nowrap no-scrollbar mb-6 w-full">
-                {[
-                  { value: 'desc',    icon: FileText,     label: 'Description' },
-                  { value: 'specs',   icon: List,         label: 'Specifications' },
-                  { value: 'reviews', icon: MessageSquare, label: `Reviews (${reviews.length})` },
-                ].map(({ value, icon: Icon, label }) => (
-                  <TabsTrigger
-                    key={value}
-                    value={value}
-                    className="rounded-lg px-5 py-2.5 text-sm font-semibold gap-1.5 flex-none data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary text-muted-foreground"
-                  >
-                    <Icon className="w-4 h-4 opacity-70" /> {label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-
-              {/* Description */}
-              <TabsContent value="desc" className="mt-0 animate-in fade-in-50 duration-300 px-1">
-                <div className="prose prose-slate max-w-none text-muted-foreground leading-relaxed text-sm">
-                  {product.longDescription || product.shortDescription || (
-                    <p className="text-muted-foreground/60 italic">No detailed description available.</p>
-                  )}
-                </div>
-              </TabsContent>
-
-              {/* Specs */}
-              <TabsContent value="specs" className="mt-0 animate-in fade-in-50 duration-300">
-                <div className="rounded-xl border border-border/50 overflow-hidden">
-                  <table className="w-full text-sm text-left">
-                    <tbody className="divide-y divide-border/30">
-                      {specs.map((s) => (
-                        <tr key={s.label} className="hover:bg-muted/30 transition-colors">
-                          <td className="px-5 py-3 font-medium text-muted-foreground bg-muted/20 w-1/3">{s.label}</td>
-                          <td className="px-5 py-3 font-semibold text-foreground">{s.value}</td>
-                        </tr>
-                      ))}
-                      {specs.length === 0 && (
-                        <tr><td colSpan={2} className="px-5 py-10 text-center text-muted-foreground">No specifications listed.</td></tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </TabsContent>
-
-              {/* Reviews */}
-              <TabsContent value="reviews" className="mt-0 animate-in fade-in-50 duration-300">
-                <div className="flex flex-col md:flex-row gap-8">
-                  {/* Summary sidebar */}
-                  <div className="md:w-52 shrink-0">
-                    <div className="bg-muted/30 rounded-xl p-4 border border-border/30 mb-4">
-                      <div className="text-4xl font-extrabold text-foreground text-center mb-1">
-                        {ratingCount > 0 ? Number(ratingAvg).toFixed(1) : '—'}
-                      </div>
-                      <div className="flex justify-center mb-1">
-                        {[1,2,3,4,5].map(s => (
-                          <Star key={s} className={`w-4 h-4 ${ratingCount > 0 && s <= Math.round(ratingAvg) ? 'text-amber-400 fill-amber-400' : 'text-muted-foreground/20'}`} />
-                        ))}
-                      </div>
-                      <p className="text-xs text-center text-muted-foreground">
-                        {ratingCount > 0 ? `${ratingCount} review${ratingCount !== 1 ? 's' : ''}` : 'No ratings yet'}
-                      </p>
-                    </div>
-                    {ratingCount > 0 ? (
-                      <div className="space-y-1.5">
-                        {[5,4,3,2,1].map(s => (
-                          <RatingBar
-                            key={s}
-                            star={s}
-                            count={reviewStats.breakdown?.[s] || 0}
-                            total={ratingCount}
-                          />
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-center text-muted-foreground/60 italic py-2">Be the first to review!</p>
-                    )}
-                    <div className="mt-4">
-                      <WriteReviewModal
-                        productId={product._id}
-                        productName={product.name}
-                        onSubmitted={refreshReviews}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Review list */}
-                  <div className="flex-1">
-                    <div
-                      className={`space-y-4 transition-all ${!showAllReviews && reviews.length > REVIEW_PREVIEW ? 'max-h-[480px] overflow-y-auto pr-1' : ''}`}
-                      style={!showAllReviews && reviews.length > REVIEW_PREVIEW ? { scrollbarWidth: 'thin' } : {}}
-                    >
-                      {(showAllReviews ? reviews : reviews.slice(0, REVIEW_PREVIEW)).map((r, i) => (
-                        <div key={i} className="bg-muted/20 border border-border/30 p-4 rounded-xl">
-                          <div className="flex items-start justify-between mb-2">
-                            <div>
-                              <div className="flex items-center gap-2 mb-0.5">
-                                <div className="flex">
-                                  {[1,2,3,4,5].map(s => (
-                                    <Star key={s} className={`w-3.5 h-3.5 ${s <= r.rating ? 'text-amber-400 fill-amber-400' : 'text-muted-foreground/20'}`} />
-                                  ))}
-                                </div>
-                                {r.title && <span className="text-sm font-semibold">{r.title}</span>}
-                              </div>
-                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                <span className="font-medium text-foreground/70">{r.author || 'Anonymous'}</span>
-                                <span>·</span>
-                                <span>{r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '-'}</span>
-                              </div>
-                            </div>
-                            {r.verified && (
-                              <Badge className="bg-green-50 text-green-700 border-green-200 text-[10px] font-bold px-2 py-0.5 shrink-0">
-                                <ShieldCheck className="w-3 h-3 mr-1" /> Verified
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground leading-relaxed">{r.content || r.comment}</p>
-                        </div>
-                      ))}
-                    </div>
-
-                    {reviews.length > REVIEW_PREVIEW && (
-                      <button
-                        onClick={() => setShowAllReviews(v => !v)}
-                        className="mt-3 text-sm text-primary hover:underline font-medium"
-                      >
-                        {showAllReviews
-                          ? 'Show fewer reviews'
-                          : `Show all ${reviews.length} reviews`}
-                      </button>
-                    )}
-
-                    {reviews.length === 0 && (
-                      <div className="text-center py-14 bg-muted/20 rounded-2xl border border-dashed border-border">
-                        <MessageSquare className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
-                        <p className="font-medium text-muted-foreground">No reviews yet</p>
-                        <p className="text-sm text-muted-foreground/60 mt-1">Be the first to review this product.</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </TabsContent>
-            </Tabs>
+                        <ProductDetailTabs
+              variant="v2"
+              reviewsCount={reviews.length}
+              specs={specs}
+              description={product.longDescription || product.shortDescription}
+              reviewsContent={(
+                <ProductReviewsSectionV2
+                  reviews={reviews}
+                  ratingAvg={ratingAvg}
+                  ratingCount={ratingCount}
+                  reviewStats={reviewStats}
+                  product={product}
+                  refreshReviews={refreshReviews}
+                  previewCount={4}
+                />
+              )}
+            />
           </div>
 
           {/* ── Vehicle Compatibility ── */}
@@ -704,3 +568,6 @@ const ProductDetailV2 = () => {
 };
 
 export default ProductDetailV2;
+
+
+

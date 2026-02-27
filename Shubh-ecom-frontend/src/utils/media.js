@@ -6,12 +6,27 @@ export const resolveAssetUrl = (url) => {
     return ''
   }
   const trimmed = url.trim()
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('//')) {
+  if (trimmed.startsWith('/api/proxy/')) {
     return trimmed
   }
-
   const origin = APP_CONFIG.api.origin
   const isProd = process.env.NODE_ENV === 'production'
+  const toRawProxy = (path) => `/api/proxy/__raw__${path.startsWith('/') ? '' : '/'}${path}`
+
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    try {
+      const parsed = new URL(trimmed)
+      if (origin && parsed.origin === origin) {
+        return toRawProxy(`${parsed.pathname}${parsed.search}`)
+      }
+    } catch {
+      return trimmed
+    }
+    return trimmed
+  }
+  if (trimmed.startsWith('//')) {
+    return `https:${trimmed}`
+  }
 
   if (!origin) {
     console.error('[MEDIA] Missing API origin for asset resolution', { url: trimmed })
@@ -21,6 +36,10 @@ export const resolveAssetUrl = (url) => {
   if (isProd && origin.includes('localhost')) {
     console.error('[MEDIA] Refusing to use localhost origin in production', { origin, url: trimmed })
     return ''
+  }
+
+  if (trimmed.startsWith('/uploads/')) {
+    return toRawProxy(trimmed)
   }
 
   return `${origin}${trimmed}`

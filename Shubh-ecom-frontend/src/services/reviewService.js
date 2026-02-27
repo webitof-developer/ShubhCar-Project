@@ -8,6 +8,16 @@ import {
 } from '@/data/reviews'
 
 const baseUrl = APP_CONFIG.api.baseUrl
+const normalizeList = (payload) => {
+  if (Array.isArray(payload)) return payload
+  if (payload && typeof payload === 'object') {
+    if (Array.isArray(payload.items)) return payload.items
+    if (Array.isArray(payload.data)) return payload.data
+  }
+  return []
+}
+const normalizeObject = (payload) =>
+  payload && typeof payload === 'object' && 'data' in payload ? payload.data : payload
 
 const applyFallback = (fallback, demoData, domain) => {
   if (fallback === 'demo') {
@@ -31,7 +41,7 @@ export const getProductReviews = async (productId) => {
   try {
     logDataSource('REVIEWS', 'REAL')
     const data = await api.get(`${baseUrl}/reviews/product/${productId}`)
-    return data || []
+    return normalizeList(data)
   } catch (error) {
     console.error('[REVIEW_SERVICE] getProductReviews failed:', error.message)
     return applyFallback(config.fallback, getDemoProductReviews(productId), 'REVIEWS')
@@ -49,7 +59,7 @@ export const getProductReviewAggregate = async (productId) => {
   try {
     logDataSource('REVIEWS', 'REAL')
     const data = await api.get(`${baseUrl}/reviews/product/${productId}/aggregate`)
-    return data || { averageRating: 0, reviewCount: 0 }
+    return normalizeObject(data) || { averageRating: 0, reviewCount: 0 }
   } catch (error) {
     console.error('[REVIEW_SERVICE] getProductReviewAggregate failed:', error.message)
     const stats = getDemoReviewStats(getDemoProductReviews(productId))

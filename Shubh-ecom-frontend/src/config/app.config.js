@@ -379,11 +379,11 @@ export function logDataSource(domain, source, reason) {
 
   const message = `[DATA] ${safeDomain}: USING ${safeSource}`;
 
-  if (reason) {
-    console.log(`${message} - ${reason}`);
-  } else {
-    console.log(message);
-  }
+  // if (reason) {
+  //   console.log(`${message} - ${reason}`);
+  // } else {
+  //   console.log(message);
+  // }
 }
 
 /**

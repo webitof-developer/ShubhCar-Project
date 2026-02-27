@@ -12,6 +12,15 @@ import APP_CONFIG from '@/config/app.config';
  */
 
 const API_BASE = APP_CONFIG.api.baseUrl;
+const readResponseBody = async (response) => {
+  const text = await response.text();
+  if (!text) return { text: '', json: null };
+  try {
+    return { text, json: JSON.parse(text) };
+  } catch {
+    return { text, json: null };
+  }
+};
 
 /**
  * Login with email and password
@@ -31,17 +40,18 @@ export const login = async (email, password) => {
       body: JSON.stringify({ identifier: email, password }), // Backend expects "identifier" field
     });
 
+    const { text, json } = await readResponseBody(response);
     if (!response.ok) {
-      const error = await response.json();
-      console.error('[AUTH_SERVICE] Login failed:', error);
-      throw new Error(error.message || 'Login failed');
+      console.error('[AUTH_SERVICE] Login failed:', {
+        status: response.status,
+        message: json?.message || text || null,
+      });
+      throw new Error(json?.message || text || 'Login failed');
     }
-
-    const result = await response.json();
     console.log('[AUTH_SERVICE] Login successful - USING REAL BACKEND');
     
     // Backend returns { success, data: { accessToken, refreshToken, user }, message }
-    return result.data;
+    return json?.data || json;
   } catch (error) {
     console.error('[AUTH_SERVICE] Login error:', error);
     throw error;
@@ -65,16 +75,17 @@ export const register = async (userData) => {
       body: JSON.stringify(userData),
     });
 
+    const { text, json } = await readResponseBody(response);
     if (!response.ok) {
-      const error = await response.json();
-      console.error('[AUTH_SERVICE] Registration failed:', error);
-      throw new Error(error.message || 'Registration failed');
+      console.error('[AUTH_SERVICE] Registration failed:', {
+        status: response.status,
+        message: json?.message || text || null,
+      });
+      throw new Error(json?.message || text || 'Registration failed');
     }
-
-    const result = await response.json();
     console.log('[AUTH_SERVICE] Registration successful - USING REAL BACKEND');
     
-    return result.data;
+    return json?.data || json;
   } catch (error) {
     console.error('[AUTH_SERVICE] Registration error:', error);
     throw error;
@@ -124,15 +135,14 @@ export const getCurrentUser = async (accessToken) => {
       },
     });
 
+    const { json } = await readResponseBody(response);
     if (!response.ok) {
       console.error('[AUTH_SERVICE] Failed to fetch user');
       return null;
     }
-
-    const result = await response.json();
     console.log('[AUTH_SERVICE] User fetched successfully');
     
-    return result.data;
+    return json?.data || json || null;
   } catch (error) {
     console.error('[AUTH_SERVICE] Get user error:', error);
     return null;
@@ -156,15 +166,14 @@ export const refreshAccessToken = async (refreshToken) => {
       body: JSON.stringify({ refreshToken }),
     });
 
+    const { text, json } = await readResponseBody(response);
     if (!response.ok) {
       console.error('[AUTH_SERVICE] Token refresh failed');
-      throw new Error('Token refresh failed');
+      throw new Error(json?.message || text || 'Token refresh failed');
     }
-
-    const result = await response.json();
     console.log('[AUTH_SERVICE] Token refreshed successfully');
     
-    return result.data;
+    return json?.data || json;
   } catch (error) {
     console.error('[AUTH_SERVICE] Refresh token error:', error);
     throw error;
@@ -187,17 +196,18 @@ export const googleLogin = async (idToken) => {
       body: JSON.stringify({ idToken }),
     });
 
+    const { text, json } = await readResponseBody(response);
     if (!response.ok) {
-      const error = await response.json();
-      console.error('[AUTH_SERVICE] Google login failed:', error);
-      throw new Error(error.message || 'Google login failed');
+      console.error('[AUTH_SERVICE] Google login failed:', {
+        status: response.status,
+        message: json?.message || text || null,
+      });
+      throw new Error(json?.message || text || 'Google login failed');
     }
-
-    const result = await response.json();
     console.log('[AUTH_SERVICE] Google login successful - USING REAL BACKEND');
     
     // Backend returns { success, data: { accessToken, refreshToken, user }, message }
-    return result.data;
+    return json?.data || json;
   } catch (error) {
     console.error('[AUTH_SERVICE] Google login error:', error);
     throw error;

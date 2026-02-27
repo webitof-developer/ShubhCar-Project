@@ -99,11 +99,11 @@ export default function ThankYouPage() {
           </div>
 
           {/* Order Details Card */}
-          <Card className="p-6 mb-6">
+          <Card className="p-6 mb-6 border-zinc-200">
             <div className="space-y-4">
               {/* Order Number */}
               {orderData?.orderNumber && (
-                <div className="pb-4 border-b">
+                <div className="pb-4 border-b border-zinc-200">
                   <p className="text-sm text-muted-foreground mb-1">Order Number</p>
                   <p className="text-xl font-semibold">{orderData.orderNumber}</p>
                 </div>
@@ -111,7 +111,7 @@ export default function ThankYouPage() {
 
               {/* Payment Method */}
               {orderData?.paymentMethod && (
-                <div className="pb-4 border-b">
+                <div className="pb-4 border-b border-zinc-200">
                   <p className="text-sm text-muted-foreground mb-1">Payment Method</p>
                   <p className="font-medium capitalize">
                     {orderData.paymentMethod === 'cod' 
@@ -126,7 +126,7 @@ export default function ThankYouPage() {
 
               {/* Total Amount */}
               {orderData?.total && (
-                <div className="pb-4 border-b">
+                <div className="pb-4 border-b border-zinc-200">
                   <p className="text-sm text-muted-foreground mb-1">Total Amount</p>
                   <p className="text-2xl font-bold">Rs. {orderData.total.toLocaleString()}</p>
                 </div>

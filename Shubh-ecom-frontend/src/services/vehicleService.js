@@ -2,6 +2,14 @@ import APP_CONFIG from '@/config/app.config'
 import { api } from '@/utils/apiClient'
 
 const baseUrl = APP_CONFIG.api.baseUrl
+const normalizeList = (payload) => {
+  if (Array.isArray(payload)) return payload
+  if (payload && typeof payload === 'object') {
+    if (Array.isArray(payload.items)) return payload.items
+    if (Array.isArray(payload.data)) return payload.data
+  }
+  return []
+}
 
 const cache = {
   brands: null,
@@ -32,7 +40,7 @@ export const getModelYears = async (modelId) => {
   if (!modelId) return []
   if (cache.yearsByModel.has(modelId)) return cache.yearsByModel.get(modelId)
   const data = await api.get(`${baseUrl}/vehicles/filters/years?modelId=${modelId}`)
-  const list = Array.isArray(data) ? data : []
+  const list = normalizeList(data)
   cache.yearsByModel.set(modelId, list)
   return list
 }

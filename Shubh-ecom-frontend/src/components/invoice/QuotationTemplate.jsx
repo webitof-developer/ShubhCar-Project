@@ -1,5 +1,6 @@
 ﻿"use client";
 import { forwardRef } from 'react';
+import Image from 'next/image';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
 import { formatPrice, getDisplayPrice } from '@/services/pricingService';
 import { formatTaxBreakdown } from '@/services/taxDisplayService';

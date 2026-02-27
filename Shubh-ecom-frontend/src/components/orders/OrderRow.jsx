@@ -1,13 +1,24 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Calendar, Truck, MapPin, CreditCard, ChevronDown, ChevronUp, FileText, Package } from 'lucide-react';
 import { getOrder } from '@/services/orderService';
 import { getAddressById } from '@/services/userAddressService';
 import { resolveProductImages } from '@/utils/media';
 import { formatPrice } from '@/services/pricingService';
+import APP_CONFIG from '@/config/app.config';
 import { OrderTimeline } from './OrderTimeline';
 import {
   getOrderStatusBadgeClass,
@@ -22,9 +33,25 @@ export function OrderRow({ order, accessToken }) {
   const [detail, setDetail] = useState(null);
   const [address, setAddress] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [requestOpen, setRequestOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('ordered_by_mistake');
+  const [cancelDetails, setCancelDetails] = useState('');
+  const [confirmRequest, setConfirmRequest] = useState(false);
+  const [requestSubmitted, setRequestSubmitted] = useState(false);
 
   const displayItems = (order.items || []).slice(0, 3);
   const remainingCount = (order.items || []).length - 3;
+  const displayOrder = detail || order;
+  const supportEmail = APP_CONFIG?.site?.contact?.email || 'support@autospares.com';
+  const requestKey = `cancel_request_${order?._id}`;
+  const cancellableStatuses = new Set(['created', 'pending_payment', 'confirmed', 'on_hold']);
+  const isCancellationEligible = cancellableStatuses.has(displayOrder?.orderStatus);
+
+  useEffect(() => {
+    if (!order?._id || typeof window === 'undefined') return;
+    const stored = window.localStorage.getItem(requestKey);
+    setRequestSubmitted(Boolean(stored));
+  }, [order?._id, requestKey]);
 
   const handleExpand = async () => {
     if (!expanded) {
@@ -49,7 +76,45 @@ export function OrderRow({ order, accessToken }) {
     setExpanded((p) => !p);
   };
 
-  const displayOrder = detail || order;
+  const submitCancellationRequest = () => {
+    if (typeof window === 'undefined') return;
+
+    const reasonMap = {
+      ordered_by_mistake: 'Ordered by mistake',
+      address_issue: 'Address issue',
+      delayed_delivery: 'Delayed delivery',
+      duplicate_order: 'Duplicate order',
+      other: 'Other',
+    };
+
+    const subject = `Cancellation Request: Order #${displayOrder?.orderNumber || displayOrder?._id}`;
+    const body = [
+      'Hello Team,',
+      '',
+      'I want to request cancellation for this order:',
+      `Order Number: ${displayOrder?.orderNumber || 'N/A'}`,
+      `Order ID: ${displayOrder?._id || 'N/A'}`,
+      `Order Status: ${displayOrder?.orderStatus || 'N/A'}`,
+      `Reason: ${reasonMap[cancelReason] || cancelReason}`,
+      `Details: ${cancelDetails?.trim() || 'N/A'}`,
+      '',
+      'I understand this is a cancellation request and will be reviewed by admin.',
+    ].join('\n');
+
+    const mailtoUrl = `mailto:${supportEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(mailtoUrl, '_blank');
+    window.localStorage.setItem(
+      requestKey,
+      JSON.stringify({
+        requestedAt: new Date().toISOString(),
+        reason: cancelReason,
+      }),
+    );
+    setRequestSubmitted(true);
+    setRequestOpen(false);
+    setConfirmRequest(false);
+    setCancelDetails('');
+  };
 
   return (
     <div className="border border-border/60 rounded-xl overflow-hidden bg-card hover:border-primary/30 transition-colors">
@@ -278,6 +343,37 @@ export function OrderRow({ order, accessToken }) {
                   </div>
                 )}
 
+                {/* Cancellation request */}
+                <div className="p-3 rounded-lg bg-background border border-border/40">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                    Cancellation
+                  </p>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Cancellation is available before shipment and requires admin approval.
+                  </p>
+                  {requestSubmitted ? (
+                    <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-600 border-blue-500/30">
+                      Cancellation Requested
+                    </Badge>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs px-3"
+                      disabled={!isCancellationEligible}
+                      onClick={() => setRequestOpen(true)}
+                    >
+                      Request Cancellation
+                    </Button>
+                  )}
+                  {!isCancellationEligible && !requestSubmitted && (
+                    <p className="text-[11px] text-muted-foreground mt-2">
+                      Request is disabled once order is shipped.
+                    </p>
+                  )}
+                </div>
+
                 {/* Customer notes */}
                 {(displayOrder.notes || []).filter((n) => n.noteType === 'customer').length > 0 && (
                   <div className="p-3 rounded-lg bg-background border border-border/40">
@@ -294,6 +390,79 @@ export function OrderRow({ order, accessToken }) {
           )}
         </div>
       )}
+
+      <AlertDialog open={requestOpen} onOpenChange={setRequestOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Request Order Cancellation</AlertDialogTitle>
+            <AlertDialogDescription>
+              This sends a cancellation request to support. Admin will review and cancel from dashboard.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-foreground" htmlFor={`cancel-reason-${order?._id}`}>
+                Reason
+              </label>
+              <select
+                id={`cancel-reason-${order?._id}`}
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="ordered_by_mistake">Ordered by mistake</option>
+                <option value="address_issue">Address issue</option>
+                <option value="delayed_delivery">Delayed delivery</option>
+                <option value="duplicate_order">Duplicate order</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-foreground" htmlFor={`cancel-details-${order?._id}`}>
+                Additional Details (Optional)
+              </label>
+              <textarea
+                id={`cancel-details-${order?._id}`}
+                rows={3}
+                maxLength={500}
+                value={cancelDetails}
+                onChange={(e) => setCancelDetails(e.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                placeholder="Add any extra details for admin review"
+              />
+            </div>
+
+            <label className="flex items-start gap-2 text-xs text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={confirmRequest}
+                onChange={(e) => setConfirmRequest(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-input"
+              />
+              <span>I understand this is a request, not an instant cancellation.</span>
+            </label>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel>Close</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!confirmRequest}
+              onClick={(e) => {
+                if (!confirmRequest) {
+                  e.preventDefault();
+                  return;
+                }
+                submitCancellationRequest();
+              }}
+              className={!confirmRequest ? 'opacity-60' : ''}
+            >
+              Submit Request
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -4,9 +4,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { Layout } from '@/components/layout/Layout';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { ChevronRight, ShieldCheck, FileText, List, MessageSquare, Star, Minus, Plus, Info, ChevronLeft, CheckCircle2 } from 'lucide-react';
+import { ChevronRight, ShieldCheck, Star, Minus, Plus, Info, ChevronLeft, CheckCircle2 } from 'lucide-react';
 import { getProductBySlug } from '@/services/productService';
 import { useAuth } from '@/context/AuthContext';
 import { isProductVisible } from '@/services/productAccessService';
@@ -18,8 +17,6 @@ import { toast } from 'sonner';
 import VehicleCompatibility from '@/components/product/VehicleCompatibility';
 import AlternativesSection from '@/components/product/AlternativesSection';
 import { RelatedProducts } from '@/components/product/RelatedProducts';
-import { WriteReviewModal } from '@/components/product/WriteReviewModal';
-import { getProductReviews, getReviewStats } from '@/services/reviewService';
 import { ImagePreviewModal } from '@/components/product/ImagePreviewModal';
 import WishlistButton from '@/components/product/WishlistButton';
 
@@ -31,6 +28,8 @@ import { useSiteConfig } from '@/hooks/useSiteConfig';
 import { getProductTypeBadge, isOemProduct } from '@/utils/productType';
 import { ProductSkeleton } from '@/components/product/ProductSkeleton';
 import { ProductReviewsSection } from '@/components/product/ProductReviewsSection';
+import { ProductDetailTabs } from '@/components/product/ProductDetailTabs';
+import { useProductReviews } from '@/hooks/useProductReviews';
 
 const ProductDetail = () => {
   const { slug } = useParams();
@@ -45,8 +44,6 @@ const ProductDetail = () => {
   // States
   const [quantity, setQuantity] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
-  const [reviews, setReviews] = useState([]);
-  const [reviewStats, setReviewStats] = useState({ average: 0, total: 0, breakdown: {} });
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const scrollContainerRef = useRef(null);
@@ -69,25 +66,15 @@ const ProductDetail = () => {
     if (slug) loadProduct();
   }, [slug, user]);
 
-  const refreshReviews = async () => {
-    if (!product?._id) return;
-    try {
-      const list = await getProductReviews(product._id);
-      const safeList = Array.isArray(list) ? list : [];
-      const stats = getReviewStats(safeList);
-      setReviews(safeList);
-      setReviewStats(stats);
-      setProduct((prev) =>
-        prev ? { ...prev, ratingAvg: stats.average, ratingCount: stats.total } : prev,
-      );
-    } catch (error) {
-      console.error('Failed to load reviews', error);
-    }
-  };
-
-  useEffect(() => {
-    refreshReviews();
-  }, [product?._id]);
+  const {
+    reviews,
+    ratingAvg,
+    ratingCount,
+    refreshReviews,
+  } = useProductReviews(product?._id, {
+    fallbackAvg: product?.ratingAvg,
+    fallbackCount: product?.ratingCount,
+  });
 
   if (!product && !loading) {
     return (
@@ -169,9 +156,6 @@ const ProductDetail = () => {
   const displayShop = tax.displayShop || 'including';
   const taxLabel = getTaxSuffix(displayShop);
   const taxHelpText = getTaxHelpText(displayShop);
-
-  const ratingAvg = reviewStats.average || product?.ratingAvg || 0;
-  const ratingCount = reviewStats.total || product?.ratingCount || 0;
 
   const handleAddToCart = () => {
     if (isInCart) {
@@ -475,64 +459,21 @@ const ProductDetail = () => {
 
         {/* Tabs: Description, Specs, Reviews */}
         <div className="mb-16 bg-white border border-slate-100 rounded-2xl p-4 md:p-8">
-          <Tabs defaultValue="desc" className="w-full">
-            <div className="mb-8">
-              <TabsList className="w-full h-auto p-1 bg-slate-50/50 border border-slate-100 rounded-xl flex justify-start gap-2 overflow-x-auto whitespace-nowrap no-scrollbar scroll-smooth">
-                <TabsTrigger
-                  value="desc"
-                  className="rounded-lg border border-transparent data-[state=active]:border-blue-200 data-[state=active]:bg-white data-[state=active]:text-slate-900 px-6 py-3 text-sm font-bold tracking-wide uppercase transition-all hover:text-slate-900 hover:bg-white/50 bg-transparent text-slate-500 gap-2 flex-none shadow-none data-[state=active]:shadow-none"
-                >
-                  <FileText className="w-4 h-4 opacity-70" /> Description
-                </TabsTrigger>
-                <TabsTrigger
-                  value="specs"
-                  className="rounded-lg border border-transparent data-[state=active]:border-blue-200 data-[state=active]:bg-white data-[state=active]:text-slate-900 px-6 py-3 text-sm font-bold tracking-wide uppercase transition-all hover:text-slate-900 hover:bg-white/50 bg-transparent text-slate-500 gap-2 flex-none shadow-none data-[state=active]:shadow-none"
-                >
-                  <List className="w-4 h-4 opacity-70" /> Specifications
-                </TabsTrigger>
-                <TabsTrigger
-                  value="reviews"
-                  className="rounded-lg border border-transparent data-[state=active]:border-blue-200 data-[state=active]:bg-white data-[state=active]:text-slate-900 px-6 py-3 text-sm font-bold tracking-wide uppercase transition-all hover:text-slate-900 hover:bg-white/50 bg-transparent text-slate-500 gap-2 flex-none shadow-none data-[state=active]:shadow-none"
-                >
-                  <MessageSquare className="w-4 h-4 opacity-70" /> Reviews ({reviews.length})
-                </TabsTrigger>
-              </TabsList>
-            </div>
-
-            <TabsContent value="desc" className="mt-0 animate-in fade-in-50 duration-300 px-2">
-              <div className="prose prose-slate max-w-none text-slate-600 leading-relaxed">
-                {product.longDescription || product.shortDescription || <p className="text-slate-400 italic">No detailed description available for this product.</p>}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="specs" className="mt-0 animate-in fade-in-50 duration-300">
-              <div className="rounded-xl border border-slate-100 overflow-hidden">
-                <table className="w-full text-sm text-left">
-                  <thead className="bg-slate-50/50">
-                    <tr>
-                      <th className="px-6 py-4 font-semibold text-slate-900 w-1/3 border-b border-slate-100">Specification</th>
-                      <th className="px-8 py-4 font-semibold text-slate-900 border-b border-slate-100">Details</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {specs.map((spec, i) => (
-                      <tr key={spec.label} className="hover:bg-blue-50/30 border-slate-50 transition-colors">
-                        <td className="px-6 py-4 font-medium text-slate-500 bg-slate-50/30">{spec.label}</td>
-                        <td className="px-8 py-4 font-semibold text-slate-700">{spec.value}</td>
-                      </tr>
-                    ))}
-                    {specs.length === 0 && (
-                      <tr><td colSpan={2} className="px-6 py-8 text-center text-slate-400 bg-slate-50/30">No specifications listed.</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="reviews" className="mt-0 animate-in fade-in-50 duration-300">
-              <ProductReviewsSection reviews={reviews} ratingAvg={ratingAvg} ratingCount={ratingCount} product={product} refreshReviews={refreshReviews} />
-            </TabsContent>
-          </Tabs>
+          <ProductDetailTabs
+            variant="classic"
+            reviewsCount={reviews.length}
+            specs={specs}
+            description={product.longDescription || product.shortDescription}
+            reviewsContent={(
+              <ProductReviewsSection
+                reviews={reviews}
+                ratingAvg={ratingAvg}
+                ratingCount={ratingCount}
+                product={product}
+                refreshReviews={refreshReviews}
+              />
+            )}
+          />
         </div>
         {/* Vehicle Compatibility */}
         <div className="mb-12">

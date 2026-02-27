@@ -28,6 +28,33 @@
 import APP_CONFIG from '@/config/app.config';
 
 const BASE_URL = APP_CONFIG.api.baseUrl;
+const BASE_PATHNAME = (() => {
+  try {
+    return new URL(BASE_URL).pathname.replace(/\/$/, '');
+  } catch {
+    return '/api/v1';
+  }
+})();
+
+function resolveRequestUrl(url) {
+  if (typeof window === 'undefined') return url;
+  if (!url?.startsWith('http')) return url;
+
+  try {
+    const parsed = new URL(url);
+    if (parsed.origin === window.location.origin) return url;
+
+    let relativePath = parsed.pathname;
+    if (relativePath.startsWith(BASE_PATHNAME)) {
+      relativePath = relativePath.slice(BASE_PATHNAME.length);
+    }
+    relativePath = relativePath.replace(/^\/+/, '');
+
+    return `/api/proxy/${relativePath}${parsed.search}`;
+  } catch {
+    return url;
+  }
+}
 
 // ── Error type ───────────────────────────────────────────────────────────────
 export class ApiError extends Error {
@@ -42,12 +69,13 @@ export class ApiError extends Error {
 // ── Core fetch wrapper ───────────────────────────────────────────────────────
 async function request(path, options = {}) {
   const url = path.startsWith('http') ? path : `${BASE_URL}${path}`;
+  const requestUrl = resolveRequestUrl(url);
 
   let response;
   try {
-    response = await fetch(url, options);
+    response = await fetch(requestUrl, options);
   } catch (networkError) {
-    throw new ApiError('Network error — could not reach server', 0, {});
+    throw new ApiError('Network error: could not reach server', 0, { url: requestUrl, originalUrl: url });
   }
 
   // Try to parse JSON regardless of status (errors often have a body)

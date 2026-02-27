@@ -4,9 +4,7 @@ import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { ChevronRight } from 'lucide-react';
 import { getManufacturerBrands } from '@/services/brandService';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
-const API_ORIGIN = API_BASE_URL.replace(/\/api\/v1\/?$/, '');
+import { resolveAssetUrl } from '@/utils/media';
 
 export const revalidate = 60;
 
@@ -24,9 +22,7 @@ const BrandsList = async ({ searchParams }) => {
             <div className="grid grid-cols-3 md:grid-cols-6 lg:grid-cols-9 gap-6">
                 {brands.map((brand, index) => {
                     const imageUrl = brand.logo || brand.image;
-                    const finalImage = imageUrl
-                        ? (imageUrl.startsWith('http') ? imageUrl : `${API_ORIGIN}${imageUrl}`)
-                        : null;
+                    const finalImage = imageUrl ? resolveAssetUrl(imageUrl) : null;
 
                     return (
                         <Link

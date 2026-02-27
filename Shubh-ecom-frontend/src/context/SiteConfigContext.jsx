@@ -17,8 +17,28 @@ export const useSiteConfigContext = () => {
 export const SiteConfigProvider = ({ children }) => {
     const resolveMediaUrl = (url) => {
         if (!url) return url;
-        if (url.startsWith('http://') || url.startsWith('https://')) return url;
+        if (url.startsWith('/api/proxy/')) return url;
         const apiOrigin = (APP_CONFIG.api.baseUrl || '').replace(/\/api\/v1\/?$/, '');
+        const toRawProxy = (path) => `/api/proxy/__raw__${path.startsWith('/') ? '' : '/'}${path}`;
+
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+            try {
+                const parsed = new URL(url);
+                if (apiOrigin && parsed.origin === apiOrigin) {
+                    return toRawProxy(`${parsed.pathname}${parsed.search}`);
+                }
+            } catch {
+                // keep original url below
+            }
+            return url;
+        }
+
+        // Keep frontend static favicon local to avoid CSP cross-origin issues.
+        if (url.startsWith('/favicon')) return '/favicon.ico';
+
+        // Backend media paths are served through same-origin proxy.
+        if (url.startsWith('/uploads/')) return toRawProxy(url);
+
         if (!apiOrigin) return url;
         return `${apiOrigin}${url.startsWith('/') ? '' : '/'}${url}`;
     };

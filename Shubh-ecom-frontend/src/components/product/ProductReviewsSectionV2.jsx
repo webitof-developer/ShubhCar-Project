@@ -3,8 +3,6 @@ import { Star, ShieldCheck, MessageSquare } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { WriteReviewModal } from '@/components/product/WriteReviewModal';
 
-const REVIEW_PREVIEW = 5;
-
 const RatingBar = ({ star, count, total }) => {
   const pct = total > 0 ? Math.round((count / total) * 100) : 0;
   return (
@@ -26,6 +24,7 @@ export const ProductReviewsSectionV2 = ({
   reviewStats,
   product,
   refreshReviews,
+  previewCount = 5,
 }) => {
   const [showAllReviews, setShowAllReviews] = useState(false);
 
@@ -72,10 +71,10 @@ export const ProductReviewsSectionV2 = ({
       {/* Review list */}
       <div className="flex-1">
         <div
-          className={`space-y-4 transition-all ${!showAllReviews && reviews.length > REVIEW_PREVIEW ? 'max-h-[480px] overflow-y-auto pr-1' : ''}`}
-          style={!showAllReviews && reviews.length > REVIEW_PREVIEW ? { scrollbarWidth: 'thin' } : {}}
+          className={`space-y-4 transition-all ${!showAllReviews && reviews.length > previewCount ? 'max-h-[480px] overflow-y-auto pr-1' : ''}`}
+          style={!showAllReviews && reviews.length > previewCount ? { scrollbarWidth: 'thin' } : {}}
         >
-          {(showAllReviews ? reviews : reviews.slice(0, REVIEW_PREVIEW)).map((r, i) => (
+          {(showAllReviews ? reviews : reviews.slice(0, previewCount)).map((r, i) => (
             <div key={i} className="bg-muted/20 border border-border/30 p-4 rounded-xl">
               <div className="flex items-start justify-between mb-2">
                 <div>
@@ -104,7 +103,7 @@ export const ProductReviewsSectionV2 = ({
           ))}
         </div>
 
-        {reviews.length > REVIEW_PREVIEW && (
+        {reviews.length > previewCount && (
           <button
             onClick={() => setShowAllReviews(v => !v)}
             className="mt-3 text-sm text-primary hover:underline font-medium"

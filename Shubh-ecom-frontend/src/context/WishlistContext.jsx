@@ -10,6 +10,14 @@ import { getProductById } from '@/services/productService';
 import { resolveProductImages } from '@/utils/media';
 
 const WishlistContext = createContext(undefined);
+const normalizeWishlistEntries = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (payload && typeof payload === 'object') {
+    if (Array.isArray(payload.items)) return payload.items;
+    if (Array.isArray(payload.data)) return payload.data;
+  }
+  return [];
+};
 
 export const WishlistProvider = ({ children }) => {
   const { accessToken, isAuthenticated } = useAuth();
@@ -34,8 +42,9 @@ export const WishlistProvider = ({ children }) => {
     setLoading(true);
     try {
       const data = await wishlistService.getWishlist(accessToken);
+      const entries = normalizeWishlistEntries(data);
       const normalized = [];
-      for (const entry of data || []) {
+      for (const entry of entries) {
         if (entry?.product) {
           normalized.push(normalizeProduct(entry.product));
           continue;

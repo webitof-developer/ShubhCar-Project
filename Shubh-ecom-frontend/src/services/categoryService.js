@@ -29,6 +29,10 @@ const writeCache = (entry, value) => {
   entry.value = value;
   entry.expiresAt = Date.now() + CACHE_TTL_MS;
 };
+const unwrapPayload = (payload) =>
+  payload && typeof payload === 'object' && 'data' in payload
+    ? payload.data
+    : payload;
 
 // ==================== PRIVATE HELPERS ====================
 
@@ -82,7 +86,8 @@ export const getCategories = async (fetchOptions) => {
     logDataSource('CATEGORIES', 'REAL');
     const url = `${baseUrl}/categories/hierarchy`;
     const data = await api.get(url, fetchOptions);
-    const result = data?.data || [];
+    const payload = unwrapPayload(data);
+    const result = payload || [];
     writeCache(cache.hierarchy, result);
     return result;
   } catch (error) {
@@ -109,7 +114,8 @@ export const getRootCategories = async (fetchOptions) => {
     logDataSource('CATEGORIES', 'REAL');
     const url = `${baseUrl}/categories/roots`;
     const data = await api.get(url, fetchOptions);
-    const result = data?.data || [];
+    const payload = unwrapPayload(data);
+    const result = payload || [];
     writeCache(cache.roots, result);
     return result;
   } catch (error) {
@@ -139,7 +145,8 @@ export const getChildCategories = async (parentId, fetchOptions) => {
     logDataSource('CATEGORIES', 'REAL');
     const url = `${baseUrl}/categories/children/${parentId}`;
     const data = await api.get(url, fetchOptions);
-    const result = data?.data || [];
+    const payload = unwrapPayload(data);
+    const result = payload || [];
     cache.children.set(parentId, { value: result, expiresAt: Date.now() + CACHE_TTL_MS });
     return result;
   } catch (error) {
@@ -170,7 +177,8 @@ export const getCategoryBySlug = async (slug, fetchOptions) => {
     logDataSource('CATEGORIES', 'REAL');
     const url = `${baseUrl}/categories/${slug}`;
     const data = await api.get(url, fetchOptions);
-    const result = data?.data || null;
+    const payload = unwrapPayload(data);
+    const result = payload || null;
     cache.bySlug.set(slugKey, { value: result, expiresAt: Date.now() + CACHE_TTL_MS });
     return result;
   } catch (error) {

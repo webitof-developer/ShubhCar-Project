@@ -1,8 +1,7 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
-const API_ORIGIN = API_BASE_URL.replace(/\/api\/v1\/?$/, '');
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ChevronRight } from 'lucide-react';
+import { resolveAssetUrl } from '@/utils/media';
 
 export const BrandsStrip = ({ brands = [] }) => {
   // Use real brands if available, take top 18 for 2 rows x 9 cols (grid)
@@ -27,9 +26,7 @@ export const BrandsStrip = ({ brands = [] }) => {
         <div className="grid grid-cols-3 md:grid-cols-6 lg:grid-cols-9 gap-2 sm:gap-4 md:gap-6">
           {displayBrands.map((brand, index) => {
             const imageUrl = brand.logo || brand.image;
-            const finalImage = imageUrl
-              ? (imageUrl.startsWith('http') ? imageUrl : `${API_ORIGIN}${imageUrl}`)
-              : null;
+            const finalImage = imageUrl ? resolveAssetUrl(imageUrl) : null;
 
             return (
               <Link

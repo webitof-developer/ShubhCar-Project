@@ -13,6 +13,15 @@
 import APP_CONFIG from '@/config/app.config';
 
 const API_BASE_URL = APP_CONFIG.api.baseUrl;
+const readJsonSafe = async (response) => {
+  const text = await response.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+};
 
 /**
  * Fetch tax settings from backend
@@ -20,7 +29,6 @@ const API_BASE_URL = APP_CONFIG.api.baseUrl;
  */
 export async function fetchTaxSettings() {
   try {
-    console.log('[DATA] TAX.SETTINGS: Fetching from backend...');
 
     const response = await fetch(`${API_BASE_URL}/settings/public`, {
       method: 'GET',
@@ -34,17 +42,12 @@ export async function fetchTaxSettings() {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
-    const data = await response.json();
+    const data = await readJsonSafe(response);
 
     // Backend returns { success: true, data: { key: value, ... } }
-    const settings = data.data || data;
+    const settings = data?.data || data || {};
 
-    console.log('[DATA] TAX.SETTINGS: USING REAL', {
-      tax_rate: settings.tax_rate,
-      tax_price_display_shop: settings.tax_price_display_shop,
-      tax_price_display_cart: settings.tax_price_display_cart,
-      prices_include_tax: settings.prices_include_tax,
-    });
+   
 
     return normalizeTaxSettings(settings);
   } catch (error) {

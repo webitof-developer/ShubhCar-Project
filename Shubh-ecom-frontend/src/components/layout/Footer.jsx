@@ -128,13 +128,13 @@ const Footer = () => {
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-3">
                 <div className="h-8 bg-white/10 rounded px-2 flex items-center justify-center border border-white/10">
-                  <Image src="https://upload.wikimedia.org/wikipedia/commons/4/41/Visa_Logo.png" alt="Visa" width={0} height={0} sizes="100vw" className="h-4 w-auto object-contain brightness-0 invert" />
+                  <Image src="/payments/visa.svg" alt="Visa" width={56} height={16} className="h-4 w-auto object-contain" />
                 </div>
                 <div className="h-8 bg-white/10 rounded px-2 flex items-center justify-center border border-white/10">
-                  <Image src="https://upload.wikimedia.org/wikipedia/commons/b/b7/MasterCard_Logo.svg" alt="Mastercard" width={0} height={0} sizes="100vw" className="h-5 w-auto object-contain" />
+                  <Image src="/payments/mastercard.svg" alt="Mastercard" width={72} height={20} className="h-5 w-auto object-contain" />
                 </div>
                 <div className="h-8 bg-white/10 rounded px-2 flex items-center justify-center border border-white/10">
-                  <Image src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/UPI-Logo-vector.svg/1280px-UPI-Logo-vector.svg.png" alt="UPI" width={0} height={0} sizes="100vw" className="h-3 w-auto object-contain brightness-0 invert" />
+                  <Image src="/payments/upi.svg" alt="UPI" width={40} height={12} className="h-3 w-auto object-contain" />
                 </div>
               </div>
             </div>
