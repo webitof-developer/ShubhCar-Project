@@ -4,11 +4,11 @@ import EcommerceSettings from './components/EcommerceSettings'
 import LocalizationSettings from './components/LocalizationSettings'
 import InvoiceSettings from './components/InvoiceSettings'
 import StorageSettings from './components/StorageSettings'
-import PageTItle from '@/components/PageTItle'
+import PageTitle from '@/components/PageTitle'
 const SettingsPage = () => {
   return (
     <>
-      <PageTItle title="SETTINGS" />
+      <PageTitle title="SETTINGS" />
       <GeneralSettings />
       <EcommerceSettings />
       <StorageSettings />

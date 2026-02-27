@@ -1,6 +1,7 @@
 'use client'
+import logger from '@/lib/logger'
 
-import PageTItle from '@/components/PageTItle'
+import PageTitle from '@/components/PageTitle'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import { analyticsAPI } from '@/helpers/analyticsApi'
 import { currency } from '@/context/constants'
@@ -163,7 +164,7 @@ const AnalyticsPage = () => {
         setTopBrands(toArray(topBrandsResponse))
         setInventoryTurnover(inventoryTurnoverResponse || {})
       } catch (error) {
-        console.error('Failed to fetch analytics', error)
+        logger.error('Failed to fetch analytics', error)
       } finally {
         setLoading(false)
       }
@@ -225,7 +226,7 @@ const AnalyticsPage = () => {
 
   return (
     <>
-      <PageTItle title="ANALYTICS" />
+      <PageTitle title="ANALYTICS" />
       <Row className="g-3 align-items-center mb-3">
         <Col xl={8} className="d-flex flex-wrap gap-2">
           {['today', 'week', 'month', 'custom'].map((key) => (

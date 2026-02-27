@@ -1,4 +1,5 @@
 'use client';
+import logger from '@/lib/logger'
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
@@ -10,7 +11,7 @@ import ShippingAddressCard from './components/ShippingAddressCard';
 import OrderTotals from './components/OrderTotals';
 import { OrderNotes, ShipmentTracking, Documents } from './components/OrderDetails';
 import { Card, CardBody, Col, Placeholder, Row } from 'react-bootstrap';
-import PageTItle from '@/components/PageTItle';
+import PageTitle from '@/components/PageTitle';
 import { orderAPI } from '@/helpers/orderApi';
 import { API_BASE_URL } from '@/helpers/apiBase';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -44,7 +45,7 @@ const OrderDetailPage = () => {
       setLoading(true);
       const token = session?.accessToken;
       if (!token) {
-        console.error('No authentication token available');
+        logger.error('No authentication token available');
         setLoading(false);
         return;
       }
@@ -55,7 +56,7 @@ const OrderDetailPage = () => {
       setShipments(payload.shipments || []);
       setNotes((payload.events || []).filter((event) => event.type === 'NOTE_ADDED' || event.noteContent));
     } catch (error) {
-      console.error('Failed to fetch order details:', error);
+      logger.error('Failed to fetch order details:', error);
       toast.error(error.message || 'Failed to fetch order details');
     } finally {
       setLoading(false);
@@ -71,7 +72,7 @@ const OrderDetailPage = () => {
       toast.success('Order status updated');
       await fetchOrderDetail();
     } catch (error) {
-      console.error('Failed to update status:', error);
+      logger.error('Failed to update status:', error);
       const message = error?.data?.message || error?.message || 'Failed to update order status';
       toast.error(message);
     } finally {
@@ -89,7 +90,7 @@ const OrderDetailPage = () => {
       await fetchOrderDetail();
       return true;
     } catch (error) {
-      console.error('Failed to update payment status:', error);
+      logger.error('Failed to update payment status:', error);
       const message = error?.data?.message || error?.message || 'Failed to update payment status';
       toast.error(message);
       return false;
@@ -108,7 +109,7 @@ const OrderDetailPage = () => {
       await fetchOrderDetail();
       return true;
     } catch (error) {
-      console.error('Failed to add note:', error);
+      logger.error('Failed to add note:', error);
       toast.error(error.message || 'Failed to add note');
       return false;
     } finally {
@@ -129,7 +130,7 @@ const OrderDetailPage = () => {
       link.remove();
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Failed to download invoice:', error);
+      logger.error('Failed to download invoice:', error);
       toast.error(error.message || 'Failed to download invoice');
     }
   };
@@ -168,7 +169,7 @@ const OrderDetailPage = () => {
       await fetchOrderDetail();
       return true;
     } catch (error) {
-      console.error('Failed to update shipment:', error);
+      logger.error('Failed to update shipment:', error);
       toast.error(error.message || 'Failed to update shipment');
       return false;
     } finally {
@@ -216,7 +217,7 @@ const OrderDetailPage = () => {
       await fetchOrderDetail();
       return true;
     } catch (error) {
-      console.error('Failed to sync payment:', error);
+      logger.error('Failed to sync payment:', error);
       const message = error?.data?.message || error?.message || 'Failed to sync payment status';
       toast.error(message);
       return false;
@@ -233,7 +234,7 @@ const OrderDetailPage = () => {
         <Row className="mb-3">
           <Col xs={12}>
             <div className="d-flex align-items-center justify-content-between">
-              <PageTItle title="ORDER DETAILS" />
+              <PageTitle title="ORDER DETAILS" />
               <div className="d-flex gap-2">
                 <Placeholder.Button xs={3} size="sm" />
                 <Placeholder.Button xs={3} size="sm" />
@@ -324,7 +325,7 @@ const OrderDetailPage = () => {
   if (!orderData || !orderData.order) {
     return (
       <>
-        <PageTItle title="ORDER DETAILS" />
+        <PageTitle title="ORDER DETAILS" />
         <div className="text-center p-5">
           <p>Order not found</p>
         </div>
@@ -340,7 +341,7 @@ const OrderDetailPage = () => {
         <Col xs={12}>
           <div className="d-flex align-items-center justify-content-between">
             <div className="d-flex align-items-center gap-3 flex-wrap">
-              <PageTItle title={`Order #${order.orderNumber || order._id?.substring(0, 6).toUpperCase()}`} />
+              <PageTitle title={`Order #${order.orderNumber || order._id?.substring(0, 6).toUpperCase()}`} />
             </div>
           </div>
         </Col>

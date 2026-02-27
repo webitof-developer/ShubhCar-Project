@@ -1,3 +1,4 @@
+import logger from '@/lib/logger'
 import { useEffect, useMemo, useState } from 'react'
 import { Button, Modal, Placeholder, Spinner } from 'react-bootstrap'
 import { useSession } from 'next-auth/react'
@@ -65,7 +66,7 @@ const MediaPickerModal = ({
         setSelectedIds([])
       }
     } catch (error) {
-      console.error('Failed to load media', error)
+      logger.error('Failed to load media', error)
       if (isInitial) setMediaItems([])
     } finally {
       setLoading(false)

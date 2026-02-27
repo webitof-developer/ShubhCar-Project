@@ -1,4 +1,5 @@
 'use client'
+import logger from '@/lib/logger'
 
 import { useEffect, useMemo, useState } from 'react'
 import { useSession } from 'next-auth/react'
@@ -18,7 +19,7 @@ import {
   Form,
 } from 'react-bootstrap'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
-import PageTItle from '@/components/PageTItle'
+import PageTitle from '@/components/PageTitle'
 import FormErrorModal from '@/components/forms/FormErrorModal'
 import DeleteConfirmModal from '@/components/shared/DeleteConfirmModal'
 import DataTable from '@/components/shared/DataTable'
@@ -99,7 +100,7 @@ const CategoriesPage = () => {
       setCategories(flattenCategories(treeData))
       setError(null)
     } catch (err) {
-      console.error(err)
+      logger.error(err)
       setError(err.message)
     } finally {
       setLoading(false)
@@ -211,7 +212,7 @@ const CategoriesPage = () => {
       setShowModal(false)
       fetchCategories()
     } catch (err) {
-      console.error(err)
+      logger.error(err)
       setError(err.message)
     } finally {
       setSubmitting(false)
@@ -239,7 +240,7 @@ const CategoriesPage = () => {
       setSuccessMessage('Category status updated')
       fetchCategories()
     } catch (err) {
-      console.error(err)
+      logger.error(err)
       setError(err.message)
     } finally {
       setTogglingId(null)
@@ -278,7 +279,7 @@ const CategoriesPage = () => {
       setShowDeleteModal(false)
       setCategoryToDelete(null)
     } catch (err) {
-      console.error(err)
+      logger.error(err)
       setError(err.message)
     } finally {
       setDeletingId(null)
@@ -309,7 +310,7 @@ const CategoriesPage = () => {
 
   return (
     <>
-      <PageTItle title="CATEGORY MANAGEMENT" />
+      <PageTitle title="CATEGORY MANAGEMENT" />
 
       {error && (
         <Alert variant="danger" dismissible onClose={() => setError(null)}>

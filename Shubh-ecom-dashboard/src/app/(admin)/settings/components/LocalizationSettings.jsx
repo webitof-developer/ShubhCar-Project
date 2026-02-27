@@ -1,4 +1,5 @@
 'use client'
+import logger from '@/lib/logger'
 import ChoicesFormInput from '@/components/form/ChoicesFormInput'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import { settingsAPI } from '@/helpers/settingsApi'
@@ -36,7 +37,7 @@ const LocalizationSettings = () => {
           localization_weight_unit: data.localization_weight_unit || 'Kilogram',
         }))
       } catch (error) {
-        console.error('Failed to fetch localization settings', error)
+        logger.error('Failed to fetch localization settings', error)
       } finally {
         setLoading(false)
       }
@@ -50,7 +51,7 @@ const LocalizationSettings = () => {
       await settingsAPI.update(formData, session.accessToken)
       toast.success('Localization settings saved successfully!')
     } catch (error) {
-      console.error(error)
+      logger.error(error)
       toast.error('Failed to save localization settings')
     }
   }

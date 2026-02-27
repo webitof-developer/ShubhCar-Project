@@ -1,5 +1,6 @@
 'use client'
-import PageTItle from '@/components/PageTItle'
+import logger from '@/lib/logger'
+import PageTitle from '@/components/PageTitle'
 import { Card, CardBody, Col, Row, Button } from 'react-bootstrap'
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
@@ -22,7 +23,7 @@ const VehicleYearsPage = () => {
         () => fetch(`${API_BASE_URL}/vehicle-years?limit=200`, {
             headers: { Authorization: `Bearer ${session?.accessToken}` }
         }).then(res => res.json()).then(res => res.data?.items || res.items || []),
-        { onError: (err) => console.error('Fetch failed:', err) }
+        { onError: (err) => logger.error('Fetch failed:', err) }
     )
 
     useEffect(() => {
@@ -95,7 +96,7 @@ const VehicleYearsPage = () => {
 
     return (
         <>
-            <PageTItle title="VEHICLE YEARS" />
+            <PageTitle title="VEHICLE YEARS" />
             <Row>
                 <Col xs={12}>
                     <Card>

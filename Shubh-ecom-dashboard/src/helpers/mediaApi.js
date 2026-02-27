@@ -1,19 +1,6 @@
 // API helper functions for media management
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'
-
-const fetchWithAuth = async (url, options = {}) => {
-  const headers = {
-    'Content-Type': 'application/json',
-    ...options.headers,
-  }
-
-  const response = await fetch(url, { ...options, headers })
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}))
-    throw new Error(error.message || `API Error: ${response.statusText}`)
-  }
-  return response.json()
-}
+import { fetchWithAuth } from '@/lib/apiClient'
+import { API_BASE_URL } from '@/helpers/apiBase'
 
 export const mediaAPI = {
   presign: async (data, token) => {

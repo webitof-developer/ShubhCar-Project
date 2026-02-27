@@ -1,5 +1,6 @@
 'use client'
-import PageTItle from '@/components/PageTItle'
+import logger from '@/lib/logger'
+import PageTitle from '@/components/PageTitle'
 import { Card, CardBody, Col, Row, Spinner, Button } from 'react-bootstrap'
 import { useEffect, useMemo, useState } from 'react'
 import { useSession } from 'next-auth/react'
@@ -76,7 +77,7 @@ const VehicleModelYearsPage = () => {
         setYears(data.items || [])
       }
     } catch (error) {
-      console.error(error)
+      logger.error(error)
     } finally {
       setLoading(false)
     }
@@ -105,7 +106,7 @@ const VehicleModelYearsPage = () => {
       setEditingItem(null)
       fetchYears()
     } catch (error) {
-      console.error('Save failed:', error)
+      logger.error('Save failed:', error)
       setError(error.message || 'Failed to save')
     }
   }
@@ -123,7 +124,7 @@ const VehicleModelYearsPage = () => {
       setShowDeleteModal(false)
       setDeletingId(null)
     } catch (error) {
-      console.error('Delete failed:', error)
+      logger.error('Delete failed:', error)
       // Error toast already shown by useAPI
     }
   }
@@ -132,7 +133,7 @@ const VehicleModelYearsPage = () => {
 
   return (
     <>
-      <PageTItle title="VEHICLE MODEL YEARS" />
+      <PageTitle title="VEHICLE MODEL YEARS" />
       <Row>
         <Col xs={12}>
           <Card>

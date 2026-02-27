@@ -1,12 +1,16 @@
 'use client'
-import PageTItle from '@/components/PageTItle'
+import PageTitle from '@/components/PageTitle'
 import { Card, CardBody, Col, Row, Spinner, Table, Button, Form, Modal } from 'react-bootstrap'
 import { useEffect, useMemo, useState } from 'react'
 import { useSession } from 'next-auth/react'
-import { API_BASE_URL } from '@/helpers/apiBase'
+import { API_BASE_URL, API_ORIGIN } from '@/helpers/apiBase'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import Link from 'next/link'
 import { toast } from 'react-toastify'
+import { mediaAPI } from '@/helpers/mediaApi'
+import VehicleBrandModal from '@/components/vehicles/VehicleBrandModal'
+import VehicleModelModal from '@/components/vehicles/VehicleModelModal'
+import VehicleYearModal from '@/components/vehicles/VehicleYearModal'
 
 const VehiclesPage = () => {
   const { data: session } = useSession()
@@ -35,8 +39,23 @@ const VehiclesPage = () => {
   const [attributeSelections, setAttributeSelections] = useState({})
   const [vehicleFormSnapshot, setVehicleFormSnapshot] = useState(null)
   const [attributeSelectionsSnapshot, setAttributeSelectionsSnapshot] = useState(null)
+  const [showBrandModal, setShowBrandModal] = useState(false)
+  const [showModelModal, setShowModelModal] = useState(false)
+  const [showYearModal, setShowYearModal] = useState(false)
+  const [brandForm, setBrandForm] = useState({ name: '', description: '', logo: '', status: 'active' })
+  const [modelForm, setModelForm] = useState({ brandId: '', name: '', image: '', status: 'active' })
+  const [yearForm, setYearForm] = useState({ year: '', status: 'active' })
+  const [brandUploading, setBrandUploading] = useState(false)
+  const [modelUploading, setModelUploading] = useState(false)
 
   const totalPages = Math.max(1, Math.ceil(total / limit))
+  const mediaBaseUrl = API_ORIGIN
+
+  const resolveMediaUrl = (url) => {
+    if (!url) return ''
+    if (url.startsWith('http://') || url.startsWith('https://')) return url
+    return `${mediaBaseUrl}${url.startsWith('/') ? '' : '/'}${url}`
+  }
 
   const brandMap = useMemo(() => {
     const map = new Map()
@@ -173,6 +192,159 @@ const VehiclesPage = () => {
     await fetchModels(brandId)
   }
 
+  const openBrandModal = () => {
+    setBrandForm({ name: '', description: '', logo: '', status: 'active' })
+    setShowBrandModal(true)
+  }
+
+  const openModelModal = () => {
+    setModelForm({
+      brandId: vehicleForm.brandId || '',
+      name: '',
+      image: '',
+      status: 'active',
+    })
+    setShowModelModal(true)
+  }
+
+  const openYearModal = () => {
+    setYearForm({ year: '', status: 'active' })
+    setShowYearModal(true)
+  }
+
+  const handleBrandLogoUpload = async (files) => {
+    const file = Array.isArray(files) ? files[files.length - 1] : null
+    if (!file || !session?.accessToken) return
+    setBrandUploading(true)
+    try {
+      const uploaded = await mediaAPI.upload([file], 'product', session.accessToken)
+      const items = uploaded?.data || []
+      const logoUrl = Array.isArray(items) && items.length ? items[0].url : ''
+      setBrandForm((prev) => ({ ...prev, logo: logoUrl }))
+    } catch (error) {
+      toast.error('Failed to upload image')
+    } finally {
+      setBrandUploading(false)
+    }
+  }
+
+  const handleModelImageUpload = async (files) => {
+    const file = Array.isArray(files) ? files[files.length - 1] : null
+    if (!file || !session?.accessToken) return
+    setModelUploading(true)
+    try {
+      const uploaded = await mediaAPI.upload([file], 'product', session.accessToken)
+      const items = uploaded?.data || []
+      const imageUrl = Array.isArray(items) && items.length ? items[0].url : ''
+      setModelForm((prev) => ({ ...prev, image: imageUrl }))
+    } catch (error) {
+      toast.error('Failed to upload image')
+    } finally {
+      setModelUploading(false)
+    }
+  }
+
+  const handleCreateBrand = async () => {
+    if (!session?.accessToken) return
+    if (!brandForm.name.trim()) {
+      toast.error('Please enter a name')
+      return
+    }
+    if (!brandForm.logo) {
+      toast.error('Please upload a brand logo')
+      return
+    }
+    const response = await fetch(`${API_BASE_URL}/vehicle-brands`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(brandForm),
+    })
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}))
+      toast.error(err?.message || 'Failed to save brand')
+      return
+    }
+    const result = await response.json().catch(() => ({}))
+    const created = result?.data?.item || result?.data || result?.item || result?.brand || result
+    await fetchBrands()
+    if (created?._id) {
+      await fetchModels(created._id)
+      setVehicleForm((prev) => ({ ...prev, brandId: created._id, modelId: '' }))
+    }
+    setShowBrandModal(false)
+    toast.success('Brand saved successfully')
+  }
+
+  const handleCreateModel = async () => {
+    if (!session?.accessToken) return
+    if (!modelForm.brandId) {
+      toast.error('Please select a brand')
+      return
+    }
+    if (!modelForm.name.trim()) {
+      toast.error('Please enter a model name')
+      return
+    }
+    const response = await fetch(`${API_BASE_URL}/vehicle-models`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(modelForm),
+    })
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}))
+      toast.error(err?.message || 'Failed to save model')
+      return
+    }
+    const result = await response.json().catch(() => ({}))
+    const created = result?.data?.item || result?.data || result?.item || result?.model || result
+    await fetchModels(modelForm.brandId)
+    if (created?._id) {
+      setVehicleForm((prev) => ({
+        ...prev,
+        brandId: modelForm.brandId,
+        modelId: created._id,
+      }))
+    }
+    setShowModelModal(false)
+    toast.success('Model saved successfully')
+  }
+
+  const handleCreateYear = async () => {
+    if (!session?.accessToken) return
+    if (!yearForm.year) {
+      toast.error('Please enter a year')
+      return
+    }
+    const payload = { ...yearForm, year: Number(yearForm.year) }
+    const response = await fetch(`${API_BASE_URL}/vehicle-years`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}))
+      toast.error(err?.message || 'Failed to save year')
+      return
+    }
+    const result = await response.json().catch(() => ({}))
+    const created = result?.data?.item || result?.data || result?.item || result?.year || result
+    await fetchYears()
+    if (created?._id) {
+      setVehicleForm((prev) => ({ ...prev, yearId: created._id }))
+    }
+    setShowYearModal(false)
+    toast.success('Year saved successfully')
+  }
+
   const handleSave = async () => {
     if (!session?.accessToken) return
     if (!vehicleForm.brandId || !vehicleForm.modelId || !vehicleForm.yearId) {
@@ -275,7 +447,7 @@ const VehiclesPage = () => {
 
   return (
     <>
-      <PageTItle title="VEHICLE LIST" />
+      <PageTitle title="VEHICLE LIST" />
       <Row>
         <Col xs={12}>
           <Card>
@@ -423,7 +595,12 @@ const VehiclesPage = () => {
             <Row>
               <Col md={4}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Brand</Form.Label>
+                  <Form.Label className="d-flex align-items-center justify-content-between">
+                    <span>Brand</span>
+                    <Button variant="link" size="sm" className="p-0" onClick={openBrandModal}>
+                      + Add Brand
+                    </Button>
+                  </Form.Label>
                   <Form.Select
                     value={vehicleForm.brandId}
                     onChange={(e) => handleBrandChange(e.target.value)}
@@ -437,7 +614,12 @@ const VehiclesPage = () => {
               </Col>
               <Col md={4}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Model</Form.Label>
+                  <Form.Label className="d-flex align-items-center justify-content-between">
+                    <span>Model</span>
+                    <Button variant="link" size="sm" className="p-0" onClick={openModelModal}>
+                      + Add Model
+                    </Button>
+                  </Form.Label>
                   <Form.Select
                     value={vehicleForm.modelId}
                     onChange={(e) => setVehicleForm((prev) => ({ ...prev, modelId: e.target.value }))}
@@ -451,7 +633,12 @@ const VehiclesPage = () => {
               </Col>
               <Col md={4}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Model Year</Form.Label>
+                  <Form.Label className="d-flex align-items-center justify-content-between">
+                    <span>Model Year</span>
+                    <Button variant="link" size="sm" className="p-0" onClick={openYearModal}>
+                      + Add Year
+                    </Button>
+                  </Form.Label>
                   <Form.Select
                     value={vehicleForm.yearId}
                     onChange={(e) => setVehicleForm((prev) => ({ ...prev, yearId: e.target.value }))}
@@ -511,11 +698,42 @@ const VehiclesPage = () => {
             </Form.Group>
           </Form>
         </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowModal(false)}>Close</Button>
-          <Button variant="primary" onClick={handleSave}>Save</Button>
-        </Modal.Footer>
-      </Modal>
+      <Modal.Footer>
+        <Button variant="secondary" onClick={() => setShowModal(false)}>Close</Button>
+        <Button variant="primary" onClick={handleSave}>Save</Button>
+      </Modal.Footer>
+    </Modal>
+
+      <VehicleBrandModal
+        show={showBrandModal}
+        onHide={() => setShowBrandModal(false)}
+        form={brandForm}
+        setForm={setBrandForm}
+        uploading={brandUploading}
+        onUpload={handleBrandLogoUpload}
+        onSave={handleCreateBrand}
+        resolveMediaUrl={resolveMediaUrl}
+      />
+
+      <VehicleModelModal
+        show={showModelModal}
+        onHide={() => setShowModelModal(false)}
+        form={modelForm}
+        setForm={setModelForm}
+        uploading={modelUploading}
+        onUpload={handleModelImageUpload}
+        onSave={handleCreateModel}
+        resolveMediaUrl={resolveMediaUrl}
+        brands={brands}
+      />
+
+      <VehicleYearModal
+        show={showYearModal}
+        onHide={() => setShowYearModal(false)}
+        form={yearForm}
+        setForm={setYearForm}
+        onSave={handleCreateYear}
+      />
     </>
   )
 }

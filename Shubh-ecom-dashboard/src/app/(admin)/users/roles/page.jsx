@@ -1,4 +1,5 @@
 'use client'
+import logger from '@/lib/logger'
 import { useEffect, useMemo, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import {
@@ -16,7 +17,7 @@ import {
   Spinner,
   Badge
 } from 'react-bootstrap'
-import PageTItle from '@/components/PageTItle'
+import PageTitle from '@/components/PageTitle'
 import { rolesAPI } from '@/helpers/rolesApi'
 import { PERMISSION_ACTIONS, PERMISSION_MATRIX } from '@/constants/permissions'
 import { toast } from 'react-toastify'
@@ -78,7 +79,7 @@ const RolesPage = () => {
       setRoles(extractItems(response?.data || response))
       setError(null)
     } catch (err) {
-      console.error(err)
+      logger.error(err)
       setError(err.message)
     } finally {
       setLoading(false)
@@ -162,7 +163,7 @@ const RolesPage = () => {
       handleClose()
       fetchRoles()
     } catch (err) {
-      console.error(err)
+      logger.error(err)
       toast.error(err.message || 'Failed to save role')
     } finally {
       setSubmitting(false)
@@ -185,7 +186,7 @@ const RolesPage = () => {
       setShowDeleteModal(false)
       setRoleToDelete(null)
     } catch (err) {
-      console.error(err)
+      logger.error(err)
       toast.error(err.message || 'Failed to delete role')
     } finally {
       setDeleting(false)
@@ -197,7 +198,7 @@ const RolesPage = () => {
   if (!canViewRoles) {
     return (
       <>
-        <PageTItle title="USER ROLES" />
+        <PageTitle title="USER ROLES" />
         <Alert variant="warning">You do not have permission to view roles.</Alert>
       </>
     )
@@ -205,7 +206,7 @@ const RolesPage = () => {
 
   return (
     <>
-      <PageTItle title="USER ROLES" />
+      <PageTitle title="USER ROLES" />
       <Row>
         <Col lg={12}>
           <Card>

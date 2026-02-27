@@ -1,11 +1,12 @@
 'use client'
+import logger from '@/lib/logger'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import { orderAPI, getStatusBadge } from '@/helpers/orderApi'
 import { userAPI } from '@/helpers/userApi'
 import Image from 'next/image'
 import { Card, CardBody, CardFooter, CardHeader, CardTitle, Col, Dropdown, DropdownMenu, DropdownToggle, Row, Spinner, Alert, Button } from 'react-bootstrap'
 import CustomerDetailsCard from './components/CustomerDetailsCard'
-import PageTItle from '@/components/PageTItle'
+import PageTitle from '@/components/PageTitle'
 import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState, Suspense } from 'react'
@@ -112,7 +113,7 @@ const CustomerDetailContent = () => {
         })
 
       } catch (err) {
-        console.error(err)
+        logger.error(err)
         setError(err.message || 'Failed to fetch data')
       } finally {
         setLoading(false)
@@ -148,7 +149,7 @@ const CustomerDetailContent = () => {
           setOrderItems(items)
         }
       } catch (error) {
-        console.error('Failed to fetch order items:', error)
+        logger.error('Failed to fetch order items:', error)
       } finally {
         if (isActive) setLoadingTopProducts(false)
       }
@@ -196,7 +197,7 @@ const CustomerDetailContent = () => {
         verifiedAt: updated.verifiedAt || prev.verifiedAt
       }))
     } catch (err) {
-      console.error(err)
+      logger.error(err)
       setError(err.message || 'Failed to approve wholesale customer')
     } finally {
       setApproving(false)
@@ -221,7 +222,7 @@ const CustomerDetailContent = () => {
 
   return (
     <>
-      <PageTItle title="CUSTOMER DETAILS" />
+      <PageTitle title="CUSTOMER DETAILS" />
       <Row>
         <Col lg={4}>
           <ProfileCard customer={customer} onApproveWholesale={handleApproveWholesale} approving={approving} />
@@ -338,7 +339,7 @@ const CustomerDetailContent = () => {
 const CustomerDetailSkeleton = () => {
   return (
     <div className="animate-pulse">
-      <PageTItle title="CUSTOMER DETAILS" />
+      <PageTitle title="CUSTOMER DETAILS" />
       <Row>
         <Col lg={4}>
           <Card>

@@ -1,9 +1,10 @@
 'use client'
+import logger from '@/lib/logger'
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import PageTItle from '@/components/PageTItle'
-import CouponsBoxs from './components/CouponsBoxs'
+import PageTitle from '@/components/PageTitle'
+import CouponsBoxs from './components/CouponsBoxes'
 import CouponsDataList from './components/CouponsDataList'
 import couponService from '@/services/couponService'
 
@@ -33,7 +34,7 @@ const CouponsListPage = () => {
       const response = await couponService.getCoupons(session.accessToken)
       setCoupons(extractItems(response?.data || response))
     } catch (err) {
-      console.error('Error fetching coupons:', err)
+      logger.error('Error fetching coupons:', err)
     } finally {
       setLoading(false)
     }
@@ -41,7 +42,7 @@ const CouponsListPage = () => {
 
   return (
     <>
-      <PageTItle title="COUPONS" />
+      <PageTitle title="COUPONS" />
       <CouponsBoxs coupons={coupons} loading={loading} />
       <CouponsDataList 
         coupons={coupons} 

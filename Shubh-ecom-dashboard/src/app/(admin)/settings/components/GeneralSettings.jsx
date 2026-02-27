@@ -1,4 +1,5 @@
 'use client'
+import logger from '@/lib/logger'
 import { settingsAPI } from '@/helpers/settingsApi'
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
@@ -39,7 +40,7 @@ const GeneralSettings = () => {
           seo_keywords: data.seo_keywords || ''
         }))
       } catch (error) {
-        console.error("Failed to fetch settings", error)
+        logger.error("Failed to fetch settings", error)
       } finally {
         setLoading(false)
       }
@@ -58,7 +59,7 @@ const GeneralSettings = () => {
       await settingsAPI.update(formData, session.accessToken)
       toast.success("Settings saved successfully!")
     } catch (error) {
-      console.error(error)
+      logger.error(error)
       toast.error("Failed to save settings")
     }
   }

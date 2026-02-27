@@ -1,4 +1,5 @@
 'use client'
+import logger from '@/lib/logger'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import { settingsAPI } from '@/helpers/settingsApi'
 import { mediaAPI } from '@/helpers/mediaApi'
@@ -99,7 +100,7 @@ const EcommerceSettings = () => {
           site_favicon: data.site_favicon || '',
         }))
       } catch (error) {
-        console.error('Failed to fetch ecommerce settings', error)
+        logger.error('Failed to fetch ecommerce settings', error)
       } finally {
         setLoading(false)
       }
@@ -145,7 +146,7 @@ const EcommerceSettings = () => {
       )
       toast.success('Ecommerce settings saved successfully!')
     } catch (error) {
-      console.error(error)
+      logger.error(error)
       toast.error('Failed to save ecommerce settings')
     }
   }
@@ -168,7 +169,7 @@ const EcommerceSettings = () => {
       setFormData(prev => ({ ...prev, [field]: logoUrl }))
       toast.success('Image uploaded')
     } catch (error) {
-      console.error(error)
+      logger.error(error)
       toast.error('Failed to upload image')
     }
   }

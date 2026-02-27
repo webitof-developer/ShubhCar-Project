@@ -1,4 +1,5 @@
 'use client'
+import logger from '@/lib/logger'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import { settingsAPI } from '@/helpers/settingsApi'
 import { useSession } from 'next-auth/react'
@@ -67,7 +68,7 @@ const InvoiceSettings = () => {
           }, {})
         }))
       } catch (error) {
-        console.error('Failed to fetch invoice settings', error)
+        logger.error('Failed to fetch invoice settings', error)
       } finally {
         setLoading(false)
       }
@@ -129,7 +130,7 @@ const InvoiceSettings = () => {
       setFormData(prev => ({ ...prev, ...updates }))
       toast.success(`Copied ${Object.keys(updates).length} fields from store address. Please review and add GSTIN.`)
     } catch (error) {
-      console.error('Copy failed:', error)
+      logger.error('Copy failed:', error)
       toast.error('Failed to copy store details. Please try again.')
     } finally {
       setCopying(false)
@@ -187,7 +188,7 @@ const InvoiceSettings = () => {
       setFormData(prev => ({ ...prev, ...payload }))
       toast.success('Invoice settings saved successfully!')
     } catch (error) {
-      console.error(error)
+      logger.error(error)
       toast.error('Failed to save invoice settings')
     } finally {
       setSaving(false)

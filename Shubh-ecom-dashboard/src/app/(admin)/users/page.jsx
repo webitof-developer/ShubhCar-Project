@@ -1,10 +1,11 @@
 'use client'
+import logger from '@/lib/logger'
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { API_BASE_URL } from '@/helpers/apiBase'
 import { useSearchParams } from 'next/navigation'
 import { Card, CardBody, Col, Row, Button, Form, Alert, Spinner, Badge } from 'react-bootstrap'
-import PageTItle from '@/components/PageTItle'
+import PageTitle from '@/components/PageTitle'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import { rolesAPI } from '@/helpers/rolesApi'
 import { usePermissions } from '@/hooks/usePermissions'
@@ -142,7 +143,7 @@ const UsersPage = () => {
       setUsers(extractItems(data?.data || data))
       setFetchError(null)
     } catch (err) {
-      console.error(err)
+      logger.error(err)
       setFetchError(err.message)
     } finally {
       setUsersLoading(false)
@@ -157,7 +158,7 @@ const UsersPage = () => {
       const response = await rolesAPI.list(token)
       setRoles(extractItems(response?.data || response))
     } catch (err) {
-      console.error('Failed to fetch roles', err)
+      logger.error('Failed to fetch roles', err)
     }
   }
 
@@ -259,7 +260,7 @@ const UsersPage = () => {
 
   return (
     <>
-      <PageTItle title="USERS LIST" />
+      <PageTitle title="USERS LIST" />
 
       {fetchError && (
         <Alert variant="danger" dismissible onClose={() => setFetchError(null)}>

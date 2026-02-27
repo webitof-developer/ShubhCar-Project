@@ -1,4 +1,5 @@
 'use client'
+import logger from '@/lib/logger'
 
 import { userAPI } from '@/helpers/userApi'
 import { useEffect, useState } from 'react'
@@ -33,7 +34,7 @@ const SalespersonFilter = ({ filters, onChange, onReset }) => {
         }))
         setSalesmen(options)
       } catch (error) {
-        console.error('Failed to fetch salesmen', error)
+        logger.error('Failed to fetch salesmen', error)
       } finally {
         setLoading(false)
       }

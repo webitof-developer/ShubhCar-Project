@@ -1,4 +1,4 @@
-import PageTItle from '@/components/PageTItle'
+import PageTitle from '@/components/PageTitle'
 import { Row } from 'react-bootstrap'
 import AddProduct from '../product-add/components/AddProduct'
 // import VehicleVariantCreator from '@/components/VehicleVariantCreator'
@@ -14,7 +14,7 @@ const ProductEditPage = async ({ searchParams }) => {
 
   return (
     <>
-      <PageTItle title="EDIT PRODUCT" />
+      <PageTitle title="EDIT PRODUCT" />
       <Row>
         <AddProduct />
       </Row>

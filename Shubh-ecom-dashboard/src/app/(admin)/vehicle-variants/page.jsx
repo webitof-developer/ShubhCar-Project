@@ -1,5 +1,6 @@
 'use client'
-import PageTItle from '@/components/PageTItle'
+import logger from '@/lib/logger'
+import PageTitle from '@/components/PageTitle'
 import { Card, CardBody, Col, Row, Spinner, Button } from 'react-bootstrap'
 import { useEffect, useMemo, useState } from 'react'
 import { useSession } from 'next-auth/react'
@@ -93,7 +94,7 @@ const VehicleVariantsPage = () => {
         setVariants(data.items || [])
       }
     } catch (error) {
-      console.error(error)
+      logger.error(error)
     } finally {
       setLoading(false)
     }
@@ -123,7 +124,7 @@ const VehicleVariantsPage = () => {
       setEditingItem(null)
       fetchVariants()
     } catch (error) {
-      console.error('Save failed:', error)
+      logger.error('Save failed:', error)
       setError(error.message || 'Failed to save')
     }
   }
@@ -141,7 +142,7 @@ const VehicleVariantsPage = () => {
       setShowDeleteModal(false)
       setDeletingId(null)
     } catch (error) {
-      console.error('Delete failed:', error)
+      logger.error('Delete failed:', error)
       // Error toast already shown by useAPI
     }
   }
@@ -157,7 +158,7 @@ const VehicleVariantsPage = () => {
 
   return (
     <>
-      <PageTItle title="VEHICLE VARIANTS" />
+      <PageTitle title="VEHICLE VARIANTS" />
       <Row>
         <Col xs={12}>
           <Card>

@@ -1,4 +1,5 @@
 'use client'
+import logger from '@/lib/logger'
 import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
@@ -44,7 +45,7 @@ const ProductCard = ({ product, onDelete, onToggleFeatured, isSelected, onSelect
     try {
       await onDelete(product._id, 'restore')
     } catch (error) {
-      console.error(error)
+      logger.error(error)
     } finally {
       setDeleting(false)
     }
@@ -57,7 +58,7 @@ const ProductCard = ({ product, onDelete, onToggleFeatured, isSelected, onSelect
     try {
       await onDelete(product._id, 'publish')
     } catch (error) {
-      console.error(error)
+      logger.error(error)
     } finally {
       setDeleting(false)
     }
@@ -70,7 +71,7 @@ const ProductCard = ({ product, onDelete, onToggleFeatured, isSelected, onSelect
     try {
       await onDuplicate(product._id)
     } catch (error) {
-      console.error(error)
+      logger.error(error)
     } finally {
       setDuplicating(false)
     }
@@ -253,7 +254,9 @@ const ProductCard = ({ product, onDelete, onToggleFeatured, isSelected, onSelect
       <td>
         {productType === 'OEM'
           ? (product.oemNumber || product.oemPartNumber || 'N/A')
-          : (product.manufacturerBrand || product.brand || 'N/A')}
+          : productType === 'OES'
+            ? (product.oesNumber || 'N/A')
+            : (product.manufacturerBrand || product.brand || 'N/A')}
       </td>
 
       {/* Featured Toggle */}
@@ -468,7 +471,7 @@ const ProductList = () => {
         setManufacturerBrands(Array.isArray(list) ? list : [])
       }
     } catch (err) {
-      console.error('Failed to load filters', err)
+      logger.error('Failed to load filters', err)
     }
   }
 
@@ -512,7 +515,7 @@ const ProductList = () => {
       else if (payload.total) setTotalPages(Math.ceil(payload.total / itemsPerPage))
       else setTotalPages(1)
     } catch (err) {
-      console.error('Error fetching products:', err)
+      logger.error('Error fetching products:', err)
       toast.error(err.message || 'Failed to load products')
     } finally {
       setLoading(false)
@@ -616,7 +619,7 @@ const ProductList = () => {
       setShowDeleteModal(false)
       setProductToDelete(null)
     } catch (error) {
-      console.error(error)
+      logger.error(error)
     } finally {
       setDeleting(false)
     }
@@ -630,7 +633,7 @@ const ProductList = () => {
       setShowTrashModal(false)
       setProductToTrash(null)
     } catch (error) {
-      console.error(error)
+      logger.error(error)
     } finally {
       setDeleting(false)
     }

@@ -4,14 +4,14 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Card, CardBody, CardHeader, CardTitle, Col, Dropdown, DropdownMenu, DropdownToggle, Row } from 'react-bootstrap'
 
-import PageTItle from '@/components/PageTItle'
+import PageTitle from '@/components/PageTitle'
 export const metadata = {
   title: 'Profile',
 }
 const ProfilePage = () => {
   return (
     <>
-      <PageTItle title="PROFILE" />
+      <PageTitle title="PROFILE" />
 
     <Row>
       <Col xl={9} lg={8}>

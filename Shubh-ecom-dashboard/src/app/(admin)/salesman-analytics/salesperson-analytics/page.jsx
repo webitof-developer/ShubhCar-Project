@@ -1,6 +1,6 @@
 'use client'
 
-import PageTItle from '@/components/PageTItle'
+import PageTitle from '@/components/PageTitle'
 import SalespersonDashboard from '../components/SalespersonDashboard'
 import SalespersonFilter from '../components/SalespersonFilter'
 import { useState } from 'react'
@@ -11,7 +11,7 @@ const SalespersonAnalyticsPage = () => {
 
   return (
     <>
-      <PageTItle title="Salesperson Analytics" />
+      <PageTitle title="Salesperson Analytics" />
       <Row>
         <Col xs={12}>
           <SalespersonFilter onSelect={setSelectedSalesmanId} selectedSalesmanId={selectedSalesmanId} />

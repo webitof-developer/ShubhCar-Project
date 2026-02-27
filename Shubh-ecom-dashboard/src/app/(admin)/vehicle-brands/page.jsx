@@ -1,5 +1,6 @@
 'use client'
-import PageTItle from '@/components/PageTItle'
+import logger from '@/lib/logger'
+import PageTitle from '@/components/PageTitle'
 import { Card, CardBody, Col, Row, Spinner, Button, Form, Modal, CardHeader, CardTitle } from 'react-bootstrap'
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
@@ -46,7 +47,7 @@ const VehicleBrandsPage = () => {
                 setBrands(data.items || data.brands || [])
             }
         } catch (error) {
-            console.error(error)
+            logger.error(error)
         } finally {
             setLoading(false)
         }
@@ -87,7 +88,7 @@ const VehicleBrandsPage = () => {
             const logoUrl = Array.isArray(items) && items.length ? items[0].url : ''
             setNewItem(prev => ({ ...prev, logo: logoUrl }))
         } catch (error) {
-            console.error(error)
+            logger.error(error)
             toast.error('Failed to upload image')
         } finally {
             setUploading(false)
@@ -139,7 +140,7 @@ const VehicleBrandsPage = () => {
                 toast.error('Failed to save brand')
             }
         } catch (error) {
-            console.error(error)
+            logger.error(error)
             toast.error('Failed to save brand')
         }
     }
@@ -171,7 +172,7 @@ const VehicleBrandsPage = () => {
                 toast.error('Failed to delete')
             }
         } catch (error) {
-            console.error(error)
+            logger.error(error)
             toast.error('Failed to delete')
         }
     }
@@ -180,7 +181,7 @@ const VehicleBrandsPage = () => {
 
     return (
         <>
-            <PageTItle title="VEHICLE BRANDS" />
+            <PageTitle title="VEHICLE BRANDS" />
             <Row>
                 <Col xs={12}>
                     <Card>

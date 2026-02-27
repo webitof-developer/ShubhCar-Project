@@ -3,7 +3,7 @@
 import logoDark from '@/assets/images/logo-dark.png'
 import logoLight from '@/assets/images/logo-light.png'
 import Image from 'next/image'
-import LoginFrom from './LoginFrom'
+import LoginFrom from './LoginForm'
 import { Col, Row } from 'react-bootstrap'
 
 const SignIn = () => {

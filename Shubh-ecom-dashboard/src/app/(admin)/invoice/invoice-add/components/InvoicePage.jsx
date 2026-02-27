@@ -1,6 +1,6 @@
 'use client'
 
-import PageTItle from '@/components/PageTItle'
+import PageTitle from '@/components/PageTitle'
 import dynamic from 'next/dynamic'
 const InvoiceAdd = dynamic(() => import('./InvoiceAdd'), {
   ssr: false,
@@ -8,7 +8,7 @@ const InvoiceAdd = dynamic(() => import('./InvoiceAdd'), {
 const InvoicePage = () => {
   return (
     <>
-      <PageTItle title="INVOICES CREATE" />
+      <PageTitle title="INVOICES CREATE" />
       <InvoiceAdd />
     </>
   )

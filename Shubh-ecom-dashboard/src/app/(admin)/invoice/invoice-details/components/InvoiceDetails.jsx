@@ -1,5 +1,5 @@
 'use client'
-import PageTItle from '@/components/PageTItle'
+import PageTitle from '@/components/PageTitle'
 import { currency } from '@/context/constants'
 import { invoiceAPI } from '@/helpers/invoiceApi'
 import { useSession } from 'next-auth/react'
@@ -75,7 +75,7 @@ const InvoiceDetails = () => {
   if (loading) {
     return (
       <>
-        <PageTItle title="INVOICE DETAILS" />
+        <PageTitle title="INVOICE DETAILS" />
         <div className="text-center py-5">
           <Spinner animation="border" />
         </div>
@@ -86,7 +86,7 @@ const InvoiceDetails = () => {
   if (!invoice) {
     return (
       <>
-        <PageTItle title="INVOICE DETAILS" />
+        <PageTitle title="INVOICE DETAILS" />
         <div className="text-center py-5 text-muted">Invoice not found</div>
       </>
     )
@@ -94,7 +94,7 @@ const InvoiceDetails = () => {
 
   return (
     <>
-      <PageTItle title="INVOICE DETAILS" />
+      <PageTitle title="INVOICE DETAILS" />
       <Row className="justify-content-center">
         <Col lg={9}>
           {error && <Alert variant="danger">{error}</Alert>}

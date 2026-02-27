@@ -1,5 +1,5 @@
 'use client'
-import PageTItle from '@/components/PageTItle'
+import PageTitle from '@/components/PageTitle'
 import { Card, CardBody, Col, Row, Spinner, Table, Button, Form, Modal } from 'react-bootstrap'
 import { useEffect, useMemo, useState } from 'react'
 import { useSession } from 'next-auth/react'
@@ -228,7 +228,7 @@ const VehicleVariantAttributesPage = () => {
 
   return (
     <>
-      <PageTItle title="VEHICLE VARIANT ATTRIBUTES" />
+      <PageTitle title="VEHICLE VARIANT ATTRIBUTES" />
       <Row>
         <Col xl={6}>
           <Card>

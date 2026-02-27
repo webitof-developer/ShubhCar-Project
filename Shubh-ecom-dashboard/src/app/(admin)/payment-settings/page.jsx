@@ -1,4 +1,5 @@
 'use client'
+import logger from '@/lib/logger'
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { toast } from 'react-toastify'
@@ -42,7 +43,7 @@ const PaymentSettingsPage = () => {
           razorpay_key_secret: data.razorpay_key_secret || '',
         }))
       } catch (err) {
-        console.error('Failed to load payment settings', err)
+        logger.error('Failed to load payment settings', err)
         setError(err.message || 'Failed to load payment settings')
       } finally {
         setLoading(false)
@@ -67,7 +68,7 @@ const PaymentSettingsPage = () => {
       )
       toast.success('Payment settings saved successfully!')
     } catch (err) {
-      console.error(err)
+      logger.error(err)
       toast.error('Failed to save payment settings')
     } finally {
       setSaving(false)

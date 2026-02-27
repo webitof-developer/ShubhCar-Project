@@ -1,5 +1,5 @@
 import ModernDashboard from './components/ModernDashboard'
-import PageTItle from '@/components/PageTItle'
+import PageTitle from '@/components/PageTitle'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,7 +10,7 @@ export const metadata = {
 const DashboardPage = () => {
   return (
     <>
-      <PageTItle title="DASHBOARD" />
+      <PageTitle title="DASHBOARD" />
       <ModernDashboard />
     </>
   )

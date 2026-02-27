@@ -1,5 +1,6 @@
 'use client'
-import PageTItle from '@/components/PageTItle'
+import logger from '@/lib/logger'
+import PageTitle from '@/components/PageTitle'
 import { Card, CardBody, Col, Row, Spinner, Button, Form, Modal, Pagination } from 'react-bootstrap'
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
@@ -49,7 +50,7 @@ const ManufacturerBrandsPage = () => {
                 setTotal(data.total || 0)
             }
         } catch (error) {
-            console.error(error)
+            logger.error(error)
         } finally {
             setLoading(false)
         }
@@ -89,7 +90,7 @@ const ManufacturerBrandsPage = () => {
             const logoUrl = Array.isArray(items) && items.length ? items[0].url : ''
             setNewItem(prev => ({ ...prev, logo: logoUrl }))
         } catch (error) {
-            console.error(error)
+            logger.error(error)
             toast.error('Failed to upload image')
         } finally {
             setUploading(false)
@@ -137,7 +138,7 @@ const ManufacturerBrandsPage = () => {
                 toast.error('Failed to save brand')
             }
         } catch (error) {
-            console.error(error)
+            logger.error(error)
             toast.error('Failed to save brand')
         }
     }
@@ -169,7 +170,7 @@ const ManufacturerBrandsPage = () => {
                 toast.error('Failed to delete')
             }
         } catch (error) {
-            console.error(error)
+            logger.error(error)
             toast.error('Failed to delete')
         }
     }
@@ -183,7 +184,7 @@ const ManufacturerBrandsPage = () => {
 
     return (
         <>
-            <PageTItle title="MANUFACTURER BRANDS" />
+            <PageTitle title="MANUFACTURER BRANDS" />
             <Row>
                 <Col xs={12}>
                     <Card>

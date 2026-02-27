@@ -1,30 +1,6 @@
 // API helper functions for users/customers
 import { API_BASE_URL } from '@/helpers/apiBase';
-
-const getAuthToken = () => {
-    if (typeof window !== 'undefined') {
-        return localStorage.getItem('authToken') || '';
-    }
-    return '';
-};
-
-const fetchWithAuth = async (url, options = {}) => {
-    const token = getAuthToken();
-    const headers = {
-        'Content-Type': 'application/json',
-        ...(token && { Authorization: `Bearer ${token}` }),
-        ...options.headers,
-    };
-
-    const response = await fetch(url, { ...options, headers });
-
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.message || `API Error: ${response.statusText}`);
-    }
-
-    return response.json();
-};
+import { fetchWithAuth } from '@/lib/apiClient'
 
 export const userAPI = {
     /**

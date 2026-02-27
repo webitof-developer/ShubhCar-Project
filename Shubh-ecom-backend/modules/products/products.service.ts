@@ -65,7 +65,8 @@ const normalizeProductFields = (product) => {
   const legacyOem = product.oemPartNumber;
 
   const rawType = product.productType || legacyType || 'AFTERMARKET';
-  const productType = String(rawType).toUpperCase() === 'AFTERMARKET' ? 'AFTERMARKET' : 'OEM';
+  const upper = String(rawType).toUpperCase();
+  const productType = upper === 'AFTERMARKET' ? 'AFTERMARKET' : upper === 'OES' ? 'OES' : 'OEM';
   const normalized: MutableProductDoc = {
     ...product,
     productType,
@@ -78,6 +79,9 @@ const normalizeProductFields = (product) => {
   // Ensure mutually exclusive identifiers
   if (productType === 'OEM') {
     normalized.manufacturerBrand = null;
+  } else if (productType === 'OES') {
+    normalized.manufacturerBrand = null;
+    normalized.oemNumber = null;
   } else if (productType === 'AFTERMARKET') {
     normalized.vehicleBrand = null;
     normalized.oemNumber = null;
@@ -127,12 +131,17 @@ const ensureListProductCodes = async (products: MutableProductDoc[] = []) => {
   }
 };
 
-const ensureProductTypeFields = ({ productType, vehicleBrand, oemNumber, manufacturerBrand }) => {
+const ensureProductTypeFields = ({ productType, vehicleBrand, oemNumber, oesNumber, manufacturerBrand }) => {
   if (!productType) error('Product type is required', 400);
 
   if (productType === 'OEM') {
     if (!String(vehicleBrand || '').trim()) error('Vehicle brand is required for OEM products', 400);
     if (!String(oemNumber || '').trim()) error('OEM number is required for OEM products', 400);
+  }
+
+  if (productType === 'OES') {
+    if (!String(vehicleBrand || '').trim()) error('Vehicle brand is required for OES products', 400);
+    if (!String(oesNumber || '').trim()) error('OES number is required for OES products', 400);
   }
 
   if (productType === 'AFTERMARKET') {
@@ -303,14 +312,21 @@ class ProductService {
       productType: safePayload.productType,
       vehicleBrand: safePayload.vehicleBrand,
       oemNumber: safePayload.oemNumber,
+      oesNumber: safePayload.oesNumber,
       manufacturerBrand: safePayload.manufacturerBrand,
     });
     if (safePayload.productType === 'OEM') {
       safePayload.manufacturerBrand = null;
+      safePayload.oesNumber = null;
+    }
+    if (safePayload.productType === 'OES') {
+      safePayload.manufacturerBrand = null;
+      safePayload.oemNumber = null;
     }
     if (safePayload.productType === 'AFTERMARKET') {
       safePayload.vehicleBrand = null;
       safePayload.oemNumber = null;
+      safePayload.oesNumber = null;
     }
     [
       'shortDescription',
@@ -387,6 +403,7 @@ class ProductService {
         productType: nextType,
         vehicleBrand: nextVehicleBrand,
         oemNumber: nextOemNumber,
+        oesNumber: safePayload.oesNumber ?? product.oesNumber ?? null,
         manufacturerBrand: nextManufacturerBrand,
       });
 
@@ -395,12 +412,20 @@ class ProductService {
         safePayload.vehicleBrand = nextVehicleBrand;
         safePayload.oemNumber = nextOemNumber;
         safePayload.manufacturerBrand = null;
-        safePayload.hlaapNo = null; // Clear HLAAP No for OEM products
+        safePayload.oesNumber = null;
+        safePayload.hlaapNo = null;
+      } else if (nextType === 'OES') {
+        safePayload.vehicleBrand = nextVehicleBrand;
+        safePayload.oesNumber = safePayload.oesNumber ?? product.oesNumber ?? null;
+        safePayload.manufacturerBrand = null;
+        safePayload.oemNumber = null;
+        safePayload.hlaapNo = null;
       } else if (nextType === 'AFTERMARKET') {
         safePayload.manufacturerBrand = nextManufacturerBrand;
-        safePayload.hlaapNo = nextHlaapNo; // Preserve HLAAP No for AFTERMARKET products
+        safePayload.hlaapNo = nextHlaapNo;
         safePayload.vehicleBrand = null;
         safePayload.oemNumber = null;
+        safePayload.oesNumber = null;
       }
     }
 
@@ -563,7 +588,7 @@ class ProductService {
         .split(',')
         .map((t) => t.trim().toUpperCase())
         .filter(Boolean)
-        .map((t) => (t === 'AFTERMARKET' ? 'AFTERMARKET' : 'OEM'));
+        .filter((t) => ['OEM', 'OES', 'AFTERMARKET'].includes(t));
       if (types.length) filter.productType = { $in: types };
     }
     if (stockStatus === 'instock') filter.stockQty = { $gt: 0 };
@@ -599,6 +624,8 @@ class ProductService {
         'categoryId',
         'productType',
         'oemNumber',
+        'oesNumber',
+        'vehicleBrand',
         'manufacturerBrand',
         'isFeatured',
         'status',
@@ -1018,7 +1045,7 @@ class ProductService {
     const baseSlug = slugify(sourceProduct.name, { lower: true, strict: true, trim: true });
     let newSlug = `${baseSlug}-aftermarket`;
     let counter = 1;
-    
+
     // Ensure slug uniqueness
     while (await repo.findAnyBySlug(newSlug)) {
       newSlug = `${baseSlug}-aftermarket-${counter}`;
@@ -1067,9 +1094,9 @@ class ProductService {
     const newProduct = await repo.create(duplicateData);
 
     // Copy images
-    const sourceImages = await ProductImage.find({ 
-      productId: sourceProduct._id, 
-      isDeleted: false 
+    const sourceImages = await ProductImage.find({
+      productId: sourceProduct._id,
+      isDeleted: false
     }).lean();
 
     if (sourceImages.length) {
