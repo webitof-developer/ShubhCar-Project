@@ -1,0 +1,46 @@
+﻿On branch main
+Your branch is ahead of 'origin/main' by 1 commit.
+  (use "git push" to publish your local commits)
+
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+	new file:   Shubh-ecom-frontend/src/components/layout/GlobalLoggerInit.jsx
+	new file:   Shubh-ecom-frontend/src/utils/apiClient.js
+	new file:   Shubh-ecom-frontend/src/utils/logger.js
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   Shubh-ecom-frontend/next.config.mjs
+	modified:   Shubh-ecom-frontend/package-lock.json
+	modified:   Shubh-ecom-frontend/package.json
+	modified:   Shubh-ecom-frontend/src/app/categories/[slug]/page.jsx
+	modified:   Shubh-ecom-frontend/src/app/categories/page.jsx
+	modified:   Shubh-ecom-frontend/src/app/layout.js
+	modified:   Shubh-ecom-frontend/src/app/product/[slug]/page.jsx
+	modified:   Shubh-ecom-frontend/src/app/product/[slug]/v2/page.jsx
+	modified:   Shubh-ecom-frontend/src/components/invoice/InvoiceTemplate.jsx
+	modified:   Shubh-ecom-frontend/src/components/invoice/QuotationTemplate.jsx
+	modified:   Shubh-ecom-frontend/src/components/layout/Footer.jsx
+	modified:   Shubh-ecom-frontend/src/components/product/ProductHero.jsx
+	modified:   Shubh-ecom-frontend/src/services/brandService.js
+	modified:   Shubh-ecom-frontend/src/services/categoryService.js
+	modified:   Shubh-ecom-frontend/src/services/productService.js
+	modified:   Shubh-ecom-frontend/src/services/reviewService.js
+	modified:   Shubh-ecom-frontend/src/services/vehicleService.js
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	status.txt
+
+77e135c feat(frontend): V2 pages, cookie storage, edge case fixes
+444251c feat: Implement new service modules for products, settings, wishlist, and orders.
+45ad530 Tighten types and sanitize analytics input
+fc420a6 Added some changes on Customer creation from Orders.
+ba036e2 Add cookie auth, normalize vehicle IDs, UI fixes
+---
+444251c feat: Implement new service modules for products, settings, wishlist, and orders.
+45ad530 Tighten types and sanitize analytics input
+fc420a6 Added some changes on Customer creation from Orders.
+ba036e2 Add cookie auth, normalize vehicle IDs, UI fixes
+a54ee30 ts conversion half completed. need to specify types
