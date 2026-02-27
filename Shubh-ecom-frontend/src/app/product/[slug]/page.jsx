@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { Layout } from '@/components/layout/Layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -28,6 +29,8 @@ import { resolveProductImages, resolveAssetUrl } from '@/utils/media';
 import { getTaxSuffix, getTaxHelpText } from '@/services/taxDisplayService';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
 import { getProductTypeBadge, isOemProduct } from '@/utils/productType';
+import { ProductSkeleton } from '@/components/product/ProductSkeleton';
+import { ProductReviewsSection } from '@/components/product/ProductReviewsSection';
 
 const ProductDetail = () => {
   const { slug } = useParams();
@@ -96,77 +99,6 @@ const ProductDetail = () => {
       </Layout>
     );
   }
-
-  const ProductSkeleton = () => (
-    <Layout>
-      <div className="container mx-auto px-4 py-6 pb-32 md:pb-6">
-        {/* Breadcrumb Skeleton */}
-        <div className="flex gap-2 mb-6 overflow-hidden">
-          <div className="h-4 w-12 bg-slate-200 rounded animate-pulse shrink-0"></div>
-          <div className="h-4 w-4 bg-slate-200 rounded animate-pulse shrink-0"></div>
-          <div className="h-4 w-24 bg-slate-200 rounded animate-pulse shrink-0"></div>
-          <div className="h-4 w-4 bg-slate-200 rounded animate-pulse shrink-0"></div>
-          <div className="h-4 w-32 bg-slate-200 rounded animate-pulse shrink-0"></div>
-        </div>
-
-        <div className="grid lg:grid-cols-12 gap-6 lg:gap-10 mb-12">
-          {/* Image Gallery Skeleton (Left) */}
-          <div className="lg:col-span-12 xl:col-span-5 flex flex-col-reverse md:flex-row gap-4">
-            {/* Thumbs */}
-            <div className="hidden md:flex md:flex-col gap-2 overflow-hidden">
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className="w-16 h-16 md:w-20 md:h-20 bg-slate-100 rounded-lg animate-pulse"></div>
-              ))}
-            </div>
-            {/* Main Image */}
-            <div className="flex-1 aspect-square bg-slate-100 rounded-2xl animate-pulse w-full"></div>
-            {/* Mobile Thumbs */}
-            <div className="flex md:hidden gap-2 overflow-x-auto pb-2">
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className="w-16 h-16 bg-slate-100 rounded-lg animate-pulse shrink-0"></div>
-              ))}
-            </div>
-          </div>
-
-          {/* Product Info Skeleton (Right) */}
-          <div className="lg:col-span-12 xl:col-span-7 flex flex-col h-full">
-            <div className="mb-auto">
-              <div className="h-6 w-24 bg-slate-200 rounded mb-4 animate-pulse"></div>
-              <div className="h-8 md:h-10 w-full md:w-3/4 bg-slate-200 rounded mb-4 animate-pulse"></div>
-
-              <div className="flex gap-4 mb-6">
-                <div className="h-6 w-32 bg-slate-100 rounded animate-pulse"></div>
-                <div className="h-6 w-24 bg-slate-100 rounded animate-pulse"></div>
-              </div>
-
-              <div className="h-auto md:h-40 w-full bg-slate-50 rounded-xl mb-8 animate-pulse border border-slate-100 p-6">
-                <div className="h-8 w-40 bg-slate-200 rounded mb-2"></div>
-                <div className="h-4 w-24 bg-slate-200 rounded"></div>
-              </div>
-
-              <div className="space-y-2 mb-8">
-                <div className="h-4 w-full bg-slate-100 rounded animate-pulse"></div>
-                <div className="h-4 w-full bg-slate-100 rounded animate-pulse"></div>
-                <div className="h-4 w-2/3 bg-slate-100 rounded animate-pulse"></div>
-              </div>
-            </div>
-
-            <div className="hidden md:flex items-center gap-4 mt-auto pt-6 border-t border-slate-100">
-              <div className="h-12 w-32 bg-slate-100 rounded-lg animate-pulse"></div>
-              <div className="h-12 flex-1 bg-slate-200 rounded-lg animate-pulse"></div>
-              <div className="h-12 w-12 bg-slate-100 rounded-lg animate-pulse"></div>
-            </div>
-
-            {/* Mobile Sticky Skeleton */}
-            <div className="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-200 z-50 flex gap-4">
-              <div className="h-12 flex-1 bg-slate-200 rounded-lg animate-pulse"></div>
-            </div>
-
-          </div>
-        </div>
-      </div>
-    </Layout>
-  );
 
   if (loading || !product) {
     return <ProductSkeleton />;
@@ -330,7 +262,9 @@ const ProductDetail = () => {
                     onClick={() => scrollToImage(i)}
                     className={`w-16 h-16 md:w-20 md:h-20 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all snap-center ${i === activeImage ? 'border-primary' : 'border-border hover:border-primary/50'}`}
                   >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    <div className="relative w-full h-full">
+                      <Image src={img} alt="" fill className="object-cover" />
+                    </div>
                   </button>
                 ))}
               </div>
@@ -418,7 +352,7 @@ const ProductDetail = () => {
                 {product.manufacturerBrand && !isOemProduct(product.productType) && (
                   <div className="flex items-center gap-2">
                     {product.brandLogo ? (
-                      <img src={resolveAssetUrl(product.brandLogo)} alt={product.manufacturerBrand} className="h-8 w-auto object-contain" />
+                      <Image src={resolveAssetUrl(product.brandLogo)} alt={product.manufacturerBrand} width={0} height={0} sizes="100vw" className="h-8 w-auto object-contain" />
                     ) : (
                       <span className="font-bold text-slate-800 uppercase tracking-wide text-xs bg-slate-100 px-2 py-1 rounded">
                         {product.manufacturerBrand}
@@ -596,65 +530,7 @@ const ProductDetail = () => {
             </TabsContent>
 
             <TabsContent value="reviews" className="mt-0 animate-in fade-in-50 duration-300">
-              <div className="flex flex-col md:flex-row gap-12">
-                <div className="flex-1">
-                  <div className="flex justify-between items-center mb-8 pb-6 border-b border-slate-100">
-                    <div>
-                      <h3 className="text-xl font-bold text-slate-900">Customer Reviews</h3>
-                      <div className="flex items-center gap-2 mt-2">
-                        <div className="flex text-amber-500">
-                          {[...Array(5)].map((_, i) => (
-                            <Star key={i} className={`w-5 h-5 ${i < Math.round(ratingAvg) ? 'fill-current' : 'text-slate-200'}`} />
-                          ))}
-                        </div>
-                        <p className="font-semibold text-slate-700">{Number(ratingAvg || 0).toFixed(1)} out of 5</p>
-                        <span className="text-slate-400 mx-2">•</span>
-                        <p className="text-slate-500">{ratingCount} ratings</p>
-                      </div>
-                    </div>
-                    <WriteReviewModal
-                      productId={product._id}
-                      productName={product.name}
-                      onSubmitted={refreshReviews}
-                    />
-                  </div>
-
-                  <div className="space-y-6">
-                    {reviews.map((r, i) => (
-                      <div key={i} className="bg-white border border-slate-100 p-6 rounded-xl hover:shadow-sm transition-all">
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <div className="flex text-amber-400">
-                                {[...Array(5)].map((_, stars) => <Star key={stars} className={`w-3.5 h-3.5 ${stars < r.rating ? 'fill-current' : 'text-slate-200'}`} />)}
-                              </div>
-                              <span className="font-bold text-slate-900 text-sm ml-1">{r.title}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-xs text-slate-400">
-                              <span className="font-medium text-slate-600">{r.author || 'Anonymous'}</span>
-                              <span>•</span>
-                              <span>
-                                {(r.createdAt || r.date)
-                                  ? new Date(r.createdAt || r.date).toLocaleDateString()
-                                  : '-'}
-                              </span>
-                            </div>
-                          </div>
-                          {r.verified && <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-100 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5"><ShieldCheck className="w-3 h-3 mr-1" /> Verified</Badge>}
-                        </div>
-                        <p className="text-slate-600 text-sm leading-relaxed">{r.content || r.comment}</p>
-                      </div>
-                    ))}
-                    {reviews.length === 0 && (
-                      <div className="text-center py-16 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                        <MessageSquare className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                        <p className="text-slate-500 font-medium mb-1">No reviews yet</p>
-                        <p className="text-sm text-slate-400">Be the first to share your experience with this product.</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
+              <ProductReviewsSection reviews={reviews} ratingAvg={ratingAvg} ratingCount={ratingCount} product={product} refreshReviews={refreshReviews} />
             </TabsContent>
           </Tabs>
         </div>

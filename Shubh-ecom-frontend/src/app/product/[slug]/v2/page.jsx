@@ -6,6 +6,7 @@
 "use client";
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { Layout } from '@/components/layout/Layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -33,6 +34,8 @@ import { useCart } from '@/context/CartContext';
 import { getDisplayPrice, formatPrice } from '@/services/pricingService';
 import { resolveProductImages, resolveAssetUrl } from '@/utils/media';
 import { isOemProduct, getProductTypeBadge } from '@/utils/productType';
+import { ProductSkeleton } from '@/components/product/ProductSkeleton';
+import { ProductReviewsSectionV2 } from '@/components/product/ProductReviewsSectionV2';
 
 /* ── Trust Badges ────────────────────────────────────────────────────────── */
 const TRUST_BADGES = [
@@ -41,47 +44,6 @@ const TRUST_BADGES = [
   { icon: Truck,       label: 'Fast Dispatch' },
   { icon: CreditCard,  label: 'Secure Payment' },
 ];
-
-/* ── Rating Bar ─────────────────────────────────────────────────────────── */
-const RatingBar = ({ star, count, total }) => {
-  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-  return (
-    <div className="flex items-center gap-2 text-xs">
-      <span className="w-3 text-right text-muted-foreground shrink-0">{star}</span>
-      <Star className="w-3 h-3 text-amber-400 fill-amber-400 shrink-0" />
-      <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-        <div className="h-full bg-amber-400 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
-      </div>
-      <span className="w-5 text-muted-foreground shrink-0">{count}</span>
-    </div>
-  );
-};
-
-/* ── Page skeleton ───────────────────────────────────────────────────────── */
-const PageSkeleton = () => (
-  <Layout>
-    <div className="container mx-auto px-4 py-6 animate-pulse">
-      <div className="flex gap-2 mb-6">
-        {[12, 4, 24, 4, 32].map((w, i) => (
-          <div key={i} className={`h-4 w-${w} bg-muted rounded`} />
-        ))}
-      </div>
-      <div className="grid lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-6 aspect-square bg-muted rounded-2xl" />
-        <div className="lg:col-span-6 space-y-4">
-          <div className="h-6 w-24 bg-muted rounded" />
-          <div className="h-10 w-3/4 bg-muted rounded" />
-          <div className="h-4 w-1/2 bg-muted rounded" />
-          <div className="h-32 bg-muted rounded-xl" />
-          <div className="h-12 bg-muted rounded-xl" />
-        </div>
-      </div>
-    </div>
-  </Layout>
-);
-
-/* ── Main Component ──────────────────────────────────────────────────────── */
-const REVIEW_PREVIEW = 5; // show this many before Show All
 
 const ProductDetailV2 = () => {
   const { slug } = useParams();
@@ -158,7 +120,7 @@ const ProductDetailV2 = () => {
   };
 
   /* ── Guard states ── */
-  if (loading || !product) return <PageSkeleton />;
+  if (loading || !product) return <ProductSkeleton />;
 
   if (!isProductVisible(product, user)) return (
     <Layout>
@@ -268,7 +230,9 @@ const ProductDetailV2 = () => {
                         i === activeImage ? 'border-primary shadow-md' : 'border-border/50 hover:border-primary/40'
                       }`}
                     >
-                      <img src={img} alt="" className="w-full h-full object-cover" />
+                      <div className="relative w-full h-full">
+                        <Image src={img} alt="" fill className="object-cover" />
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -377,7 +341,7 @@ const ProductDetailV2 = () => {
                   <div className="flex items-center gap-2">
                     {!isOem && product.manufacturerBrand && (
                       product.brandLogo
-                        ? <img src={resolveAssetUrl(product.brandLogo)} alt={product.manufacturerBrand} className="h-7 w-auto object-contain" />
+                        ? <Image src={resolveAssetUrl(product.brandLogo)} alt={product.manufacturerBrand} width={0} height={0} sizes="100vw" className="h-7 w-auto object-contain" />
                         : <span className="text-[11px] font-bold uppercase tracking-widest text-primary/80 bg-primary/10 px-2 py-1 rounded-md">{product.manufacturerBrand}</span>
                     )}
                     {isOem && product.vehicleBrand && (

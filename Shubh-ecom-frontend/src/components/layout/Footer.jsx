@@ -1,5 +1,6 @@
 "use client";
 import Link from 'next/link';
+import Image from 'next/image';
 import { Mail, Phone, MapPin, Facebook, Instagram, Twitter, Linkedin, ArrowRight } from 'lucide-react';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
 import { Button } from '@/components/ui/button';
@@ -20,7 +21,7 @@ const Footer = () => {
           <div className="col-span-2 lg:col-span-4 space-y-6">
             <Link href="/" className="inline-block">
               <div className="h-16 w-56 relative md:h-20 md:w-80">
-                <img src="/logo.png" alt="ShubhCars" className="object-contain object-left w-full h-full" onError={(e) => e.target.style.display = 'none'} />
+                <Image src="/logo.png" alt="ShubhCars" fill className="object-contain object-left" onError={(e) => e.currentTarget.style.display = 'none'} />
               </div>
             </Link>
             <p className="text-slate-400 leading-relaxed max-w-sm">
@@ -127,13 +128,13 @@ const Footer = () => {
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-3">
                 <div className="h-8 bg-white/10 rounded px-2 flex items-center justify-center border border-white/10">
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/Visa_Logo.png" alt="Visa" className="h-4 object-contain brightness-0 invert" />
+                  <Image src="https://upload.wikimedia.org/wikipedia/commons/4/41/Visa_Logo.png" alt="Visa" width={0} height={0} sizes="100vw" className="h-4 w-auto object-contain brightness-0 invert" />
                 </div>
                 <div className="h-8 bg-white/10 rounded px-2 flex items-center justify-center border border-white/10">
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/b/b7/MasterCard_Logo.svg" alt="Mastercard" className="h-5 object-contain" />
+                  <Image src="https://upload.wikimedia.org/wikipedia/commons/b/b7/MasterCard_Logo.svg" alt="Mastercard" width={0} height={0} sizes="100vw" className="h-5 w-auto object-contain" />
                 </div>
                 <div className="h-8 bg-white/10 rounded px-2 flex items-center justify-center border border-white/10">
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/UPI-Logo-vector.svg/1280px-UPI-Logo-vector.svg.png" alt="UPI" className="h-3 object-contain brightness-0 invert" />
+                  <Image src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/UPI-Logo-vector.svg/1280px-UPI-Logo-vector.svg.png" alt="UPI" width={0} height={0} sizes="100vw" className="h-3 w-auto object-contain brightness-0 invert" />
                 </div>
               </div>
             </div>

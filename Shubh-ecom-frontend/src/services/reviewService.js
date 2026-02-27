@@ -1,4 +1,5 @@
 import APP_CONFIG, { getDataSourceConfig, logDataSource } from '@/config/app.config'
+import { api } from '@/utils/apiClient'
 import {
   getProductReviews as getDemoProductReviews,
   getReviewStats as getDemoReviewStats,
@@ -7,31 +8,6 @@ import {
 } from '@/data/reviews'
 
 const baseUrl = APP_CONFIG.api.baseUrl
-
-const getJson = async (url, options = {}) => {
-  const response = await fetch(url, options)
-  if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({}))
-    const message = errorBody.message || `Request failed: ${response.statusText}`
-    const error = new Error(message)
-    error.status = response.status
-    error.data = errorBody
-    throw error
-  }
-  return response.json()
-}
-
-const fetchWithAuth = async (url, token, options = {}) => {
-  if (!token) throw new Error('Missing access token')
-  return getJson(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      ...(options.headers || {}),
-    },
-  })
-}
 
 const applyFallback = (fallback, demoData, domain) => {
   if (fallback === 'demo') {
@@ -54,8 +30,8 @@ export const getProductReviews = async (productId) => {
   }
   try {
     logDataSource('REVIEWS', 'REAL')
-    const data = await getJson(`${baseUrl}/reviews/product/${productId}`)
-    return data?.data || []
+    const data = await api.get(`${baseUrl}/reviews/product/${productId}`)
+    return data || []
   } catch (error) {
     console.error('[REVIEW_SERVICE] getProductReviews failed:', error.message)
     return applyFallback(config.fallback, getDemoProductReviews(productId), 'REVIEWS')
@@ -72,8 +48,8 @@ export const getProductReviewAggregate = async (productId) => {
   }
   try {
     logDataSource('REVIEWS', 'REAL')
-    const data = await getJson(`${baseUrl}/reviews/product/${productId}/aggregate`)
-    return data?.data || { averageRating: 0, reviewCount: 0 }
+    const data = await api.get(`${baseUrl}/reviews/product/${productId}/aggregate`)
+    return data || { averageRating: 0, reviewCount: 0 }
   } catch (error) {
     console.error('[REVIEW_SERVICE] getProductReviewAggregate failed:', error.message)
     const stats = getDemoReviewStats(getDemoProductReviews(productId))
@@ -82,11 +58,8 @@ export const getProductReviewAggregate = async (productId) => {
 }
 
 export const createReview = async (accessToken, payload) => {
-  const data = await fetchWithAuth(`${baseUrl}/reviews`, accessToken, {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  })
-  return data?.data || null
+  const data = await api.authPost(`${baseUrl}/reviews`, payload, accessToken)
+  return data || null
 }
 
 export const getReviewStats = (reviewList = []) => {

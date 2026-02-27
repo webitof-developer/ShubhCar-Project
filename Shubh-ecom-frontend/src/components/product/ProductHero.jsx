@@ -1,6 +1,7 @@
-"use client";
+﻿"use client";
 import { useState, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -98,7 +99,9 @@ const ProductHero = ({ product }) => {
                                 onClick={() => scrollToImage(i)}
                                 className={`w-16 h-16 md:w-20 md:h-20 flex-shrink-0 rounded-lg overflow-hidden border transition-all snap-center ${i === activeImage ? 'border-blue-600 ring-2 ring-blue-100' : 'border-gray-200 hover:border-gray-300'}`}
                             >
-                                <img src={img} alt="" className="w-full h-full object-cover bg-white" />
+                                <div className="relative w-full h-full">
+                                  <Image src={img} alt="" fill className="object-cover bg-white" />
+                                </div>
                             </button>
                         ))}
                     </div>
@@ -157,7 +160,7 @@ const ProductHero = ({ product }) => {
                         {product.manufacturerBrand && !isOemProduct(product.productType) && (
                             <div className="flex items-center gap-2">
                                 {product.brandLogo ? (
-                                    <img src={resolveAssetUrl(product.brandLogo)} alt={product.manufacturerBrand} className="h-8 w-auto object-contain" />
+                                    <Image src={resolveAssetUrl(product.brandLogo)} alt={product.manufacturerBrand} width={0} height={0} sizes="100vw" className="h-8 w-auto object-contain" />
                                 ) : (
                                     <span className="font-bold text-slate-800 uppercase tracking-wide text-xs bg-slate-100 px-2 py-1 rounded">
                                         {product.manufacturerBrand}
@@ -267,7 +270,7 @@ const ProductHero = ({ product }) => {
                         onClick={handleAddToCart}
                         disabled={!inStock}
                     >
-                        {isInCart ? 'GO TO CART' : `ADD TO CART • ${formatPrice(unitPrice * quantity)}`}
+                        {isInCart ? 'GO TO CART' : `ADD TO CART â€¢ ${formatPrice(unitPrice * quantity)}`}
                     </Button>
 
                     <div className="h-12 w-12 shrink-0">

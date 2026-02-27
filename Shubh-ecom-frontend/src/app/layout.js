@@ -8,6 +8,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import { GlobalLoader } from '@/components/layout/GlobalLoader';
 import { DynamicFavicon } from '@/components/layout/DynamicFavicon';
 import { SiteConfigProvider } from '@/context/SiteConfigContext';
+import { GlobalLoggerInit } from '@/components/layout/GlobalLoggerInit';
 
 // export const metadata = {
 //   title: 'Shubh Car Spares',
@@ -30,6 +31,7 @@ export default function RootLayout({ children }) {
                   <WishlistProvider>
                     <DynamicFavicon />
                     <GlobalLoader />
+                    <GlobalLoggerInit />
                     {children}
                     <Toaster 
                       theme="light" 

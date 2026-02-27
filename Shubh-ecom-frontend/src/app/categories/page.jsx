@@ -1,15 +1,16 @@
-// src/app/categories/page.jsx
+﻿// src/app/categories/page.jsx
 // Route: /categories
 
 import { Suspense } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Layout } from '@/components/layout/Layout';
 import { getRootCategories } from '@/services/categoryService';
 import { ChevronRight, Folder, Search, Home, LayoutGrid } from 'lucide-react';
 
 export const revalidate = 60;
 
-// ── Sidebar ───────────────────────────────────────────────────────────────────
+// â”€â”€ Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const Sidebar = ({ categories }) => (
   <aside className="w-56 flex-shrink-0 hidden lg:block">
     <div className="bg-card rounded-xl border border-border/50 overflow-hidden sticky top-4">
@@ -40,7 +41,7 @@ const Sidebar = ({ categories }) => (
   </aside>
 );
 
-// ── Main Content ──────────────────────────────────────────────────────────────
+// â”€â”€ Main Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const CategoriesContent = async () => {
   let categories = [];
   try {
@@ -85,7 +86,9 @@ const CategoriesContent = async () => {
                 {/* Category image / icon */}
                 <div className="w-20 h-20 mb-3 rounded-xl bg-muted/40 flex items-center justify-center overflow-hidden group-hover:bg-primary/10 transition-colors">
                   {cat.image ? (
-                    <img src={cat.image} alt={cat.name} className="w-full h-full object-contain p-2" />
+                    <div className="relative w-full h-full">
+                      <Image src={cat.image} alt={cat.name} fill className="object-contain p-2" />
+                    </div>
                   ) : (
                     <Folder className="w-9 h-9 text-muted-foreground/50 group-hover:text-primary/70 transition-colors" />
                   )}

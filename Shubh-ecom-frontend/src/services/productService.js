@@ -1,4 +1,4 @@
-//src/services/productService.js
+﻿//src/services/productService.js
 
 /**
  * Product Service - Config-Driven Architecture
@@ -17,11 +17,12 @@ import APP_CONFIG, {
 import { products as demoProducts } from '@/data/products';
 import { resolveProductImages } from '@/utils/media';
 import { getCategoryBySlug } from './categoryService';
+import { api } from '@/utils/apiClient';
 
 const baseUrl = APP_CONFIG.api.baseUrl;
 const isProd = process.env.NODE_ENV === 'production';
 
-// Map frontend-friendly sort aliases → backend enum values
+// Map frontend-friendly sort aliases â†’ backend enum values
 // Backend accepts: created_desc | created_asc | price_asc | price_desc
 const SORT_MAP = {
   newest: 'created_desc',
@@ -38,31 +39,6 @@ const SORT_MAP = {
 const resolveSort = (sort) =>
   sort ? (SORT_MAP[sort] ?? undefined) : undefined;
 
-// ==================== PRIVATE HELPERS ====================
-
-const getJson = async (url, options = {}) => {
-  let response;
-  try {
-    response = await fetch(url, options);
-  } catch (networkErr) {
-    // Attach extra context so SSR catch blocks can log a meaningful object
-    networkErr.url = url;
-    networkErr.cause = networkErr.cause
-      ? String(networkErr.cause)
-      : networkErr.message;
-    throw networkErr;
-  }
-  if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({}));
-    const message =
-      errorBody.message || `Request failed: ${response.statusText}`;
-    const err = new Error(message);
-    err.url = url;
-    err.status = response.status;
-    throw err;
-  }
-  return response.json();
-};
 
 const normalizeProduct = (product) => {
   if (!product) return product;
@@ -208,7 +184,7 @@ export const getProducts = async ({
     if (bestSeller) params.set('isBestSeller', 'true');
 
     const url = `${baseUrl}/products?${params.toString()}`;
-    const data = await getJson(url, fetchOptions);
+    const data = await api.get(url, fetchOptions);
     return normalizeProductList(data?.data?.items || []);
   } catch (error) {
     const catchParams = new URLSearchParams();
@@ -289,7 +265,7 @@ export const getProductsByCategory = async (categorySlug, options = {}) => {
 
     const url = `${baseUrl}/products?${params.toString()}`;
     requestUrl = url;
-    const data = await getJson(url, options.fetchOptions);
+    const data = await api.get(url, options.fetchOptions);
     return normalizeProductList(data?.data?.items || []);
   } catch (error) {
     const url =
@@ -351,7 +327,7 @@ export const searchProducts = async (query, options = {}) => {
     if (options.productType) params.set('productType', options.productType);
 
     const url = `${baseUrl}/products?${params.toString()}`;
-    const data = await getJson(url, options.fetchOptions);
+    const data = await api.get(url, options.fetchOptions);
     return normalizeProductList(data?.data?.items || []);
   } catch (error) {
     const params = new URLSearchParams();
@@ -418,7 +394,7 @@ export const getRelatedProducts = async (
 
     const url = `${baseUrl}/products?${params.toString()}`;
     requestUrl = url;
-    const data = await getJson(url, fetchOptions);
+    const data = await api.get(url, fetchOptions);
     const items = data?.data?.items || [];
     const filtered = items.filter((p) => p._id !== productId).slice(0, limit);
 
@@ -449,7 +425,7 @@ export const getFeaturedProducts = async (limit = 8, fetchOptions) => {
     params.set('limit', String(limit));
 
     const url = `${baseUrl}/product/featured?${params.toString()}`;
-    const data = await getJson(url, fetchOptions);
+    const data = await api.get(url, fetchOptions);
     return normalizeProductList(data?.data || []);
   } catch (error) {
     const url = `${baseUrl}/product/featured?${params.toString()}`;
@@ -481,7 +457,7 @@ export const getProductBySlug = async (slug, fetchOptions) => {
   try {
     logDataSource('PRODUCTS', 'REAL');
     const url = `${baseUrl}/products/${slug}`;
-    const data = await getJson(url, fetchOptions);
+    const data = await api.get(url, fetchOptions);
     return normalizeProduct(data?.data || null);
   } catch (error) {
     const url = `${baseUrl}/products/${slug}`;
@@ -521,7 +497,7 @@ export const getProductById = async (id, fetchOptions) => {
     }
     logDataSource('PRODUCTS', 'REAL');
     const url = `${baseUrl}/products/id/${id}`;
-    const data = await getJson(url, fetchOptions);
+    const data = await api.get(url, fetchOptions);
     return normalizeProduct(data?.data || null);
   } catch (error) {
     const url = `${baseUrl}/products/id/${id}`;
@@ -541,7 +517,7 @@ export const getProductCompatibility = async (productId, fetchOptions) => {
   if (!productId) return {};
   try {
     const url = `${baseUrl}/products/id/${productId}/compatibility`;
-    const data = await getJson(url, fetchOptions);
+    const data = await api.get(url, fetchOptions);
     return data?.data || {};
   } catch (error) {
     const url = `${baseUrl}/products/id/${productId}/compatibility`;
@@ -558,7 +534,7 @@ export const getProductAlternatives = async (productId, fetchOptions) => {
   if (!productId) return { oem: [], aftermarket: [] };
   try {
     const url = `${baseUrl}/products/id/${productId}/alternatives`;
-    const data = await getJson(url, fetchOptions);
+    const data = await api.get(url, fetchOptions);
     return {
       oem: normalizeProductList(data?.data?.oem),
       aftermarket: normalizeProductList(data?.data?.aftermarket),

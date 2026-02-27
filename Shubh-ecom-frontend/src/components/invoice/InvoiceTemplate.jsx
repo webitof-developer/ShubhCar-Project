@@ -1,6 +1,7 @@
-//src/components/invoice/InvoiceTemplate.jsx
+﻿//src/components/invoice/InvoiceTemplate.jsx
 "use client";
 import { forwardRef } from 'react';
+import Image from 'next/image';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
 import { formatPrice } from '@/services/pricingService';
 import { formatTaxBreakdown } from '@/services/taxDisplayService';
@@ -51,7 +52,7 @@ const InvoiceTemplate = forwardRef(({ order, items = [], address, settings = {} 
         <div>
           <div className="flex items-center gap-3 mb-2">
             {logo ? (
-              <img src={logo} alt={companyName} className="h-15 w-auto object-contain" />
+              <Image src={logo} alt={companyName} width={0} height={0} sizes="100vw" className="h-14 w-auto object-contain" />
             ) : (
               <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-lg">{companyName.substring(0, 2).toUpperCase()}</span>

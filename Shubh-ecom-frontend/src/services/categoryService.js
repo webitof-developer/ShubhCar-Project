@@ -1,4 +1,4 @@
-//src/services/categoryService.js
+﻿//src/services/categoryService.js
 
 /**
  * Category Service - Config-Driven Architecture
@@ -12,6 +12,7 @@
 
 import APP_CONFIG, { getDataSourceConfig, logDataSource } from '@/config/app.config';
 import { categories as demoCategories } from '@/data/categories';
+import { api } from '@/utils/apiClient';
 
 const baseUrl = APP_CONFIG.api.baseUrl;
 const isProd = process.env.NODE_ENV === 'production';
@@ -30,19 +31,6 @@ const writeCache = (entry, value) => {
 };
 
 // ==================== PRIVATE HELPERS ====================
-
-const getJson = async (url, options = {}) => {
-  const response = await fetch(url, options);
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    const message = error.message || `Request failed: ${response.statusText}`;
-    const err = new Error(message);
-    err.url = url;
-    err.status = response.status;
-    throw err;
-  }
-  return response.json();
-};
 
 /**
  * Apply fallback strategy
@@ -93,7 +81,7 @@ export const getCategories = async (fetchOptions) => {
   try {
     logDataSource('CATEGORIES', 'REAL');
     const url = `${baseUrl}/categories/hierarchy`;
-    const data = await getJson(url, fetchOptions);
+    const data = await api.get(url, fetchOptions);
     const result = data?.data || [];
     writeCache(cache.hierarchy, result);
     return result;
@@ -120,7 +108,7 @@ export const getRootCategories = async (fetchOptions) => {
   try {
     logDataSource('CATEGORIES', 'REAL');
     const url = `${baseUrl}/categories/roots`;
-    const data = await getJson(url, fetchOptions);
+    const data = await api.get(url, fetchOptions);
     const result = data?.data || [];
     writeCache(cache.roots, result);
     return result;
@@ -150,7 +138,7 @@ export const getChildCategories = async (parentId, fetchOptions) => {
   try {
     logDataSource('CATEGORIES', 'REAL');
     const url = `${baseUrl}/categories/children/${parentId}`;
-    const data = await getJson(url, fetchOptions);
+    const data = await api.get(url, fetchOptions);
     const result = data?.data || [];
     cache.children.set(parentId, { value: result, expiresAt: Date.now() + CACHE_TTL_MS });
     return result;
@@ -181,7 +169,7 @@ export const getCategoryBySlug = async (slug, fetchOptions) => {
   try {
     logDataSource('CATEGORIES', 'REAL');
     const url = `${baseUrl}/categories/${slug}`;
-    const data = await getJson(url, fetchOptions);
+    const data = await api.get(url, fetchOptions);
     const result = data?.data || null;
     cache.bySlug.set(slugKey, { value: result, expiresAt: Date.now() + CACHE_TTL_MS });
     return result;

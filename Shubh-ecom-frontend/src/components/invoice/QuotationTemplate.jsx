@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { forwardRef } from 'react';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
 import { formatPrice, getDisplayPrice } from '@/services/pricingService';
@@ -40,7 +40,7 @@ const QuotationTemplate = forwardRef(({ items = [], summary = {}, profile = {} }
   const showIncludingTax = taxDisplayMode === 'including';
 
   // Summary values from backend (same source as cart page)
-  const subtotal = summary?.subtotal || 0;                       // product price × qty
+  const subtotal = summary?.subtotal || 0;                       // product price Ã— qty
   const discount = summary?.discountAmount || 0;
   const taxAmount = summary?.taxAmount || 0;
   const shippingFee = summary?.shippingFee || 0;
@@ -81,7 +81,7 @@ const QuotationTemplate = forwardRef(({ items = [], summary = {}, profile = {} }
         <div className="flex flex-col">
            <div className="mb-4">
              {logo ? (
-              <img src={logo} alt={companyName} className="h-15 w-auto object-contain" />
+              <Image src={logo} alt={companyName} width={0} height={0} sizes="100vw" className="h-14 w-auto object-contain" />
             ) : (
               <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-lg">{companyName.substring(0, 2).toUpperCase()}</span>
@@ -180,7 +180,7 @@ const QuotationTemplate = forwardRef(({ items = [], summary = {}, profile = {} }
                 // Price shown as-is (it's the product's selling price, tax conceptually inside)
                 displayUnitPrice = unitPrice;
                 lineTotal = unitPrice * itemQty;
-                // Tax shown informational — back-calculate from inclusive price
+                // Tax shown informational â€” back-calculate from inclusive price
                 const netUnit = taxRate > 0 ? unitPrice / (1 + taxRate / 100) : unitPrice;
                 lineTax = (unitPrice - netUnit) * itemQty;
               } else {
@@ -228,7 +228,7 @@ const QuotationTemplate = forwardRef(({ items = [], summary = {}, profile = {} }
               </div>
             )}
             
-            {/* Tax — separate line when excluding, informational when including */}
+            {/* Tax â€” separate line when excluding, informational when including */}
             {showIncludingTax ? (
               <div className="flex justify-between text-gray-500">
                 <span>Tax (incl. in price)</span>
