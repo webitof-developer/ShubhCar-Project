@@ -1,7 +1,6 @@
 ﻿"use client";
 import { useState, useRef } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +13,8 @@ import { ImagePreviewModal } from '@/components/product/ImagePreviewModal';
 import { getDisplayPrice, formatPrice } from '@/services/pricingService';
 import { resolveProductImages, resolveAssetUrl } from '@/utils/media';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { getProductTypeBadge, isOemProduct } from '@/utils/productType';
+import { getProductTypeBadge, isOemProduct, isVehicleBasedProduct } from '@/utils/productType';
+import { SafeImage } from '@/components/common/SafeImage';
 
 const ProductHero = ({ product }) => {
     const router = useRouter();
@@ -100,7 +100,7 @@ const ProductHero = ({ product }) => {
                                 className={`w-16 h-16 md:w-20 md:h-20 flex-shrink-0 rounded-lg overflow-hidden border transition-all snap-center ${i === activeImage ? 'border-blue-600 ring-2 ring-blue-100' : 'border-gray-200 hover:border-gray-300'}`}
                             >
                                 <div className="relative w-full h-full">
-                                  <Image src={img} alt="" fill className="object-cover bg-white" />
+                                  <SafeImage src={img} alt="" fill className="object-cover bg-white" />
                                 </div>
                             </button>
                         ))}
@@ -141,12 +141,16 @@ const ProductHero = ({ product }) => {
                                 className="w-full h-full flex-shrink-0 snap-center flex items-center justify-center p-0"
                                 onClick={() => setIsPreviewOpen(true)}
                             >
-                                <img
-                                    src={img}
-                                    alt={`${product.name} - View ${i + 1}`}
-                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 ease-in-out"
-                                    draggable={false}
-                                />
+                                <div className="relative w-full h-full">
+                                    <SafeImage
+                                        src={img}
+                                        alt={`${product.name} - View ${i + 1}`}
+                                        fill
+                                        sizes="(max-width: 768px) 100vw, 50vw"
+                                        className="object-cover transition-transform duration-500 group-hover:scale-110 ease-in-out bg-white"
+                                        draggable={false}
+                                    />
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -157,10 +161,10 @@ const ProductHero = ({ product }) => {
             <div className="lg:col-span-7 flex flex-col h-full">
                 <div className="mb-auto">
                     <div className="flex items-center gap-2 mb-3">
-                        {product.manufacturerBrand && !isOemProduct(product.productType) && (
+                        {product.manufacturerBrand && !isVehicleBasedProduct(product.productType) && (
                             <div className="flex items-center gap-2">
                                 {product.brandLogo ? (
-                                    <Image src={resolveAssetUrl(product.brandLogo)} alt={product.manufacturerBrand} width={0} height={0} sizes="100vw" className="h-8 w-auto object-contain" />
+                                    <SafeImage src={resolveAssetUrl(product.brandLogo)} alt={product.manufacturerBrand} width={0} height={0} sizes="100vw" className="h-8 w-auto object-contain" />
                                 ) : (
                                     <span className="font-bold text-slate-800 uppercase tracking-wide text-xs bg-slate-100 px-2 py-1 rounded">
                                         {product.manufacturerBrand}
@@ -168,7 +172,7 @@ const ProductHero = ({ product }) => {
                                 )}
                             </div>
                         )}
-                        {isOemProduct(product.productType) && product.vehicleBrand && (
+                        {isVehicleBasedProduct(product.productType) && product.vehicleBrand && (
                             <span className="font-bold text-slate-800 uppercase tracking-wide text-xs bg-slate-100 px-2 py-1 rounded">
                                 {product.vehicleBrand}
                             </span>

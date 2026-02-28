@@ -16,7 +16,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
 import { searchProducts } from '@/services/productService';
 import { getDisplayPrice, formatPrice } from '@/services/pricingService';
-import { getProductTypeLabel, isOemProduct } from '@/utils/productType';
+import { getProductIdentifier, getProductTypeLabel, isOemProduct, isVehicleBasedProduct } from '@/utils/productType';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -93,9 +93,13 @@ const SearchResultsDropdown = ({ results, isLoading, isVisible, onClose, query, 
 
                       {/* Details: Brand • Part Number */}
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                        <span className="truncate max-w-[100px]">{product.manufacturerBrand}</span>
+                        <span className="truncate max-w-[100px]">
+                          {isVehicleBasedProduct(product.productType)
+                            ? (product.vehicleBrand || product.manufacturerBrand || 'N/A')
+                            : (product.manufacturerBrand || 'N/A')}
+                        </span>
                         <span>•</span>
-                        <span className="font-mono bg-muted px-1 rounded">{product.oemNumber}</span>
+                        <span className="font-mono bg-muted px-1 rounded">{getProductIdentifier(product)}</span>
                       </div>
 
                       {/* Category */}

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getDisplayPrice, formatPrice } from '@/services/pricingService';
@@ -22,11 +23,15 @@ export const CartSuggestionsSidebar = ({ products, user, onAddToCart }) => {
             return (
               <div key={product._id || product.id || index} className="group p-2 hover:bg-secondary/50 rounded-lg transition-colors">
                 <Link href={productLink} className="flex gap-2">
-                  <img
-                    src={resolveProductImages(product.images || [])[0]}
-                    alt={product.name || 'Product'}
-                    className="w-16 h-16 object-cover rounded bg-secondary shrink-0"
-                  />
+                  <div className="relative w-16 h-16 shrink-0 rounded bg-secondary overflow-hidden">
+                    <Image
+                      src={resolveProductImages(product.images || [])[0] || '/placeholder.jpg'}
+                      alt={product.name || 'Product'}
+                      fill
+                      sizes="64px"
+                      className="object-cover"
+                    />
+                  </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium line-clamp-2 group-hover:text-primary transition-colors mb-1">
                       {product.name || 'Unnamed product'}

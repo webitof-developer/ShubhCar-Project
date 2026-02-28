@@ -132,9 +132,9 @@ export const getProducts = async ({
     }
 
     if (bestSeller) {
-      // Fallback: Use isBestSeller flag or productType=OEM as proxy if flag missing in demo data
+      // Fallback: Use isBestSeller flag or productType in OEM/OES as proxy if flag missing in demo data
       filtered = filtered.filter(
-        (p) => p.isBestSeller || p.productType === 'OEM',
+        (p) => p.isBestSeller || p.productType === 'OEM' || p.productType === 'OES',
       );
     }
 
@@ -145,7 +145,8 @@ export const getProducts = async ({
         (p) =>
           p.name?.toLowerCase().includes(query) ||
           p.manufacturerBrand?.toLowerCase().includes(query) ||
-          p.oemNumber?.toLowerCase().includes(query),
+          p.oemNumber?.toLowerCase().includes(query) ||
+          p.oesNumber?.toLowerCase().includes(query),
       );
     }
 
@@ -308,7 +309,8 @@ export const searchProducts = async (query, options = {}) => {
       (p) =>
         p.name?.toLowerCase().includes(lowerQuery) ||
         p.manufacturerBrand?.toLowerCase().includes(lowerQuery) ||
-        p.oemNumber?.toLowerCase().includes(lowerQuery),
+        p.oemNumber?.toLowerCase().includes(lowerQuery) ||
+        p.oesNumber?.toLowerCase().includes(lowerQuery),
     );
     if (options.productType) {
       const types = String(options.productType)
@@ -354,7 +356,9 @@ export const searchProducts = async (query, options = {}) => {
     const demoResults = demoProducts.filter(
       (p) =>
         p.name?.toLowerCase().includes(lowerQuery) ||
-        p.manufacturerBrand?.toLowerCase().includes(lowerQuery),
+        p.manufacturerBrand?.toLowerCase().includes(lowerQuery) ||
+        p.oemNumber?.toLowerCase().includes(lowerQuery) ||
+        p.oesNumber?.toLowerCase().includes(lowerQuery),
     );
     return applyFallback(
       config.fallback,

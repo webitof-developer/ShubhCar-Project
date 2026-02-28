@@ -5,9 +5,10 @@ import { useCart } from '@/context/CartContext';
 import { toast } from 'sonner';
 import { getDisplayPrice, formatPrice } from '@/services/pricingService';
 import { resolveProductImages } from '@/utils/media';
-import { isOemProduct } from '@/utils/productType';
+import { getProductIdentifier, getProductTypeShortTag, isOemProduct, isVehicleBasedProduct } from '@/utils/productType';
 import WishlistButton from '@/components/product/WishlistButton';
 import { Button } from '@/components/ui/button';
+import { SafeImage } from '@/components/common/SafeImage';
 
 export const ProductGridCard = ({ product }) => {
   const { user } = useAuth();
@@ -41,14 +42,16 @@ export const ProductGridCard = ({ product }) => {
     >
       {/* Image */}
       <div className="relative aspect-square bg-muted/40 overflow-hidden">
-        <img
+        <SafeImage
           src={img}
           alt={product.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          fill
+          sizes="(max-width: 768px) 50vw, 33vw"
+          className="object-cover group-hover:scale-105 transition-transform duration-300"
         />
         {/* Type badge */}
         <span className={`absolute top-2 left-2 text-[10px] font-bold px-1.5 py-0.5 rounded-md text-white ${isOem ? 'bg-blue-600' : 'bg-slate-600'}`}>
-          {isOem ? 'OEM' : 'AM'}
+          {getProductTypeShortTag(product.productType)}
         </span>
         {/* Discount badge */}
         {discountPct > 0 && (
@@ -88,9 +91,11 @@ export const ProductGridCard = ({ product }) => {
         </h3>
 
         {/* SKU / Part# */}
-        {(product.sku || product.oemNumber) && (
+        {(product.sku || getProductIdentifier(product) !== 'N/A') && (
           <p className="text-[10px] font-mono text-muted-foreground truncate">
-            {product.oemNumber ? `Part# ${product.oemNumber}` : `SKU: ${product.sku}`}
+            {getProductIdentifier(product) !== 'N/A'
+              ? `${isVehicleBasedProduct(product.productType) ? 'Part#' : 'Brand'} ${getProductIdentifier(product)}`
+              : `SKU: ${product.sku}`}
           </p>
         )}
 

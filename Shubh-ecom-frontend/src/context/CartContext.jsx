@@ -33,6 +33,13 @@ const CartContext = createContext(undefined);
 
 const CART_STORAGE_KEY = 'cart_items';
 const COUPON_STORAGE_KEY = 'applied_coupon';
+const resolveMinQtyForUser = (product, user) => {
+  const isWholesaleUser = user?.customerType === 'wholesale';
+  if (isWholesaleUser) {
+    return Math.max(1, Number(product?.minWholesaleQty || product?.minOrderQty || 1) || 1);
+  }
+  return Math.max(1, Number(product?.minOrderQty || 1) || 1);
+};
 
 export const CartProvider = ({ children }) => {
   const { isAuthenticated, accessToken, loading: authLoading, user } = useAuth();
@@ -287,6 +294,11 @@ export const CartProvider = ({ children }) => {
       return;
     }
     const safeQuantity = Math.max(1, Number(quantity) || 1);
+    const minQty = resolveMinQtyForUser(product, user);
+    const normalizedQuantity = Math.max(minQty, safeQuantity);
+    if (normalizedQuantity !== safeQuantity) {
+      toast.info(`Minimum order quantity is ${minQty}. Quantity adjusted.`);
+    }
 
     // Optimistic update
     setItems(prev => {
@@ -311,13 +323,13 @@ export const CartProvider = ({ children }) => {
         updated = [...prev];
         updated[existingIndex] = {
           ...updated[existingIndex],
-          quantity: updated[existingIndex].quantity + safeQuantity,
+          quantity: updated[existingIndex].quantity + normalizedQuantity,
         };
       } else {
         updated = [...prev, {
           id: `${productId}-${Date.now()}`,
           product,
-          quantity: safeQuantity,
+          quantity: normalizedQuantity,
         }];
       }
 
@@ -334,7 +346,7 @@ export const CartProvider = ({ children }) => {
       try {
         await cartService.addToCart(accessToken, {
           productId,
-          quantity: safeQuantity,
+          quantity: normalizedQuantity,
         });
 
         // FETCH FRESH CART to ensure full consistency (avoid partial response issues)
@@ -350,7 +362,7 @@ export const CartProvider = ({ children }) => {
         // console.log('[CART_CONTEXT] Skipping backend sync for demo product');
       }
     }
-  }, [persistGuestCart, cartSource, accessToken, syncWithBackend]);
+  }, [persistGuestCart, cartSource, accessToken, syncWithBackend, user]);
 
   /**
    * UI-facing API: Remove from cart
@@ -393,19 +405,18 @@ export const CartProvider = ({ children }) => {
    * UI-facing API: Update quantity
    */
   const updateQuantity = useCallback(async (itemId, quantity) => {
-    if (quantity < 1) return;
+    if (quantity < 1 || itemId === undefined) return;
 
-    let backendItemId = null;
+    const backendItemId = cartSource === 'backend' ? itemId : null;
+    let enforcedQuantity = quantity;
 
     setItems(prev => {
-      // Find the item to get its backend ID
       const item = prev.find(i => i.id === itemId);
-      if (item && cartSource === 'backend') {
-        backendItemId = item.id;
-      }
+      const minQty = resolveMinQtyForUser(item?.product, user);
+      enforcedQuantity = Math.max(minQty, quantity);
 
       const updated = prev.map(item =>
-        item.id === itemId ? { ...item, quantity } : item
+        item.id === itemId ? { ...item, quantity: enforcedQuantity } : item
       );
       persistGuestCart(updated);
 
@@ -415,7 +426,7 @@ export const CartProvider = ({ children }) => {
     // Phase 8: Call backend for authenticated users
     if (cartSource === 'backend' && accessToken && backendItemId) {
       try {
-        const updatedCart = await cartService.updateCartItem(accessToken, backendItemId, quantity);
+        const updatedCart = await cartService.updateCartItem(accessToken, backendItemId, enforcedQuantity);
         console.log('[CART_CONTEXT] Quantity updated in backend cart');
 
         // SYNC
@@ -428,7 +439,7 @@ export const CartProvider = ({ children }) => {
     } else {
       console.log('[CART_CONTEXT] Quantity updated (guest - localStorage only)');
     }
-  }, [persistGuestCart, cartSource, accessToken, syncWithBackend]);
+  }, [persistGuestCart, cartSource, accessToken, syncWithBackend, user]);
 
   /**
    * UI-facing API: Clear cart

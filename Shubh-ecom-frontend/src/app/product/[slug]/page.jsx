@@ -25,11 +25,12 @@ import { getDisplayPrice, formatPrice } from '@/services/pricingService';
 import { resolveProductImages, resolveAssetUrl } from '@/utils/media';
 import { getTaxSuffix, getTaxHelpText } from '@/services/taxDisplayService';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
-import { getProductTypeBadge, isOemProduct } from '@/utils/productType';
+import { PRODUCT_TYPES, getProductTypeBadge, isOemProduct, isVehicleBasedProduct } from '@/utils/productType';
 import { ProductSkeleton } from '@/components/product/ProductSkeleton';
 import { ProductReviewsSection } from '@/components/product/ProductReviewsSection';
 import { ProductDetailTabs } from '@/components/product/ProductDetailTabs';
 import { useProductReviews } from '@/hooks/useProductReviews';
+import { SafeImage } from '@/components/common/SafeImage';
 
 const ProductDetail = () => {
   const { slug } = useParams();
@@ -114,10 +115,13 @@ const ProductDetail = () => {
     { label: 'Sub Category', value: product.subCategory?.name },
     { label: 'SKU', value: product.sku },
     { label: 'HSN', value: product.hsnCode },
-    ...(isOemProduct(product.productType)
+    ...(isVehicleBasedProduct(product.productType)
       ? [
         { label: 'Vehicle Brand', value: product.vehicleBrand },
-        { label: 'OEM Number', value: product.oemNumber },
+        {
+          label: product.productType === PRODUCT_TYPES.OES ? 'OES Number' : 'OEM Number',
+          value: product.productType === PRODUCT_TYPES.OES ? product.oesNumber : product.oemNumber,
+        },
       ]
       : [
         { label: 'Manufacturer Brand', value: product.manufacturerBrand },
@@ -247,7 +251,7 @@ const ProductDetail = () => {
                     className={`w-16 h-16 md:w-20 md:h-20 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all snap-center ${i === activeImage ? 'border-primary' : 'border-border hover:border-primary/50'}`}
                   >
                     <div className="relative w-full h-full">
-                      <Image src={img} alt="" fill className="object-cover" />
+                      <SafeImage src={img} alt="" fill className="object-cover" />
                     </div>
                   </button>
                 ))}
@@ -284,13 +288,15 @@ const ProductDetail = () => {
                   {displayImages.map((img, i) => (
                     <div
                       key={img}
-                      className="w-full h-full flex-shrink-0 snap-center"
+                      className="relative w-full h-full flex-shrink-0 snap-center"
                       onClick={() => setIsPreviewOpen(true)}
                     >
-                      <img
+                      <Image
                         src={img}
                         alt={`${product.name} - Image ${i + 1}`}
-                        className="w-full h-full object-cover select-none pointer-events-none"
+                        fill
+                        sizes="(max-width: 768px) 100vw, 50vw"
+                        className="object-cover select-none pointer-events-none"
                         draggable={false}
                       />
                     </div>
@@ -333,10 +339,18 @@ const ProductDetail = () => {
           <div className="lg:col-span-7 flex flex-col h-full">
             <div className="mb-auto">
               <div className="flex items-center gap-2 mb-3">
-                {product.manufacturerBrand && !isOemProduct(product.productType) && (
+                {product.manufacturerBrand && !isVehicleBasedProduct(product.productType) && (
                   <div className="flex items-center gap-2">
                     {product.brandLogo ? (
-                      <Image src={resolveAssetUrl(product.brandLogo)} alt={product.manufacturerBrand} width={0} height={0} sizes="100vw" className="h-8 w-auto object-contain" />
+                      <SafeImage
+                        src={resolveAssetUrl(product.brandLogo)}
+                        fallbackSrc="/placeholder.jpg"
+                        alt={product.manufacturerBrand}
+                        width={0}
+                        height={0}
+                        sizes="100vw"
+                        className="h-8 w-auto object-contain"
+                      />
                     ) : (
                       <span className="font-bold text-slate-800 uppercase tracking-wide text-xs bg-slate-100 px-2 py-1 rounded">
                         {product.manufacturerBrand}
@@ -344,7 +358,7 @@ const ProductDetail = () => {
                     )}
                   </div>
                 )}
-                {isOemProduct(product.productType) && product.vehicleBrand && (
+                {isVehicleBasedProduct(product.productType) && product.vehicleBrand && (
                   <span className="font-bold text-slate-800 uppercase tracking-wide text-xs bg-slate-100 px-2 py-1 rounded">
                     {product.vehicleBrand}
                   </span>

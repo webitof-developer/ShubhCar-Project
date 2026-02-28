@@ -49,12 +49,20 @@ export const isProductVisible = (product, user = null) => {
 export const getProductTypeBadge = (product, user = null) => {
   if (!product) return null;
   
-  // OEM products get special badge
+  // OEM / OES products get special badge
   if (product.productType === 'OEM') {
     return {
       label: 'OEM',
       variant: 'default', // Maps to badge variant
       description: 'Original Equipment Manufacturer'
+    };
+  }
+
+  if (product.productType === 'OES') {
+    return {
+      label: 'OES',
+      variant: 'default',
+      description: 'Original Equipment Supplier'
     };
   }
   
@@ -107,8 +115,8 @@ export const sortProductsByType = (products, sortType = 'default') => {
   
   if (sortType === 'oem-first') {
     return [...products].sort((a, b) => {
-      const aIsOEM = a.productType === 'OEM';
-      const bIsOEM = b.productType === 'OEM';
+      const aIsOEM = a.productType === 'OEM' || a.productType === 'OES';
+      const bIsOEM = b.productType === 'OEM' || b.productType === 'OES';
       
       if (aIsOEM && !bIsOEM) return -1;
       if (!aIsOEM && bIsOEM) return 1;
@@ -127,8 +135,8 @@ export const getCompatibilityInfo = (product) => {
   
   return {
     vehicles: product.compatibleVehicles || [],
-    oemCode: product.oemNumber || product.partNumber,
+    oemCode: product.oemNumber || product.oesNumber || product.partNumber,
     fitmentNotes: product.fitmentNotes || null,
-    hasCompatibilityData: Boolean(product.compatibleVehicles?.length || product.oemNumber)
+    hasCompatibilityData: Boolean(product.compatibleVehicles?.length || product.oemNumber || product.oesNumber)
   };
 };

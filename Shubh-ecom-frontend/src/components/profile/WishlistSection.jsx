@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Heart, ChevronRight, ShoppingCart } from 'lucide-react';
 import { useWishlist } from '@/context/WishlistContext';
@@ -7,6 +8,7 @@ import { toast } from 'sonner';
 import { getDisplayPrice, formatPrice } from '@/services/pricingService';
 import { resolveProductImages } from '@/utils/media';
 import { useAuth } from '@/context/AuthContext';
+import { getProductIdentifier } from '@/utils/productType';
 
 export const WishlistSection = () => {
   const { items, removeFromWishlist } = useWishlist();
@@ -52,11 +54,13 @@ export const WishlistSection = () => {
                 className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-secondary/20 hover:border-primary/30 transition-colors"
               >
                 <Link href={`/product/${product.slug}`} className="flex-shrink-0">
-                  <div className="w-14 h-14 rounded-lg bg-secondary overflow-hidden">
-                    <img
-                      src={resolveProductImages(product.images || [])[0]}
+                  <div className="relative w-14 h-14 rounded-lg bg-secondary overflow-hidden">
+                    <Image
+                      src={resolveProductImages(product.images || [])[0] || '/placeholder.jpg'}
                       alt={product.name}
-                      className="w-full h-full object-cover"
+                      fill
+                      sizes="56px"
+                      className="object-cover"
                     />
                   </div>
                 </Link>
@@ -67,9 +71,7 @@ export const WishlistSection = () => {
                     </p>
                   </Link>
                   <p className="text-xs text-muted-foreground">
-                    {product.productType === 'OEM'
-                      ? (product.oemNumber || 'N/A')
-                      : (product.manufacturerBrand || 'N/A')}
+                    {getProductIdentifier(product)}
                   </p>
                   <p className="text-sm font-semibold flex items-center mt-1">
                     {formatPrice(getDisplayPrice(product, user).price)}

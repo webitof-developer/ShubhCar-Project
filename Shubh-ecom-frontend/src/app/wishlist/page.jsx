@@ -4,6 +4,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { getDisplayPrice, formatPrice } from '@/services/pricingService';
 import { resolveProductImages } from '@/utils/media';
+import { getProductIdentifier } from '@/utils/productType';
 
 const Wishlist = () => {
   const router = useRouter();
@@ -31,10 +33,7 @@ const Wishlist = () => {
   const { isAuthenticated, user } = useAuth();
 
   const getIdentifier = (product) => {
-    if (!product) return '';
-    return product.productType === 'OEM'
-      ? (product.oemNumber || 'N/A')
-      : (product.manufacturerBrand || 'N/A');
+    return getProductIdentifier(product);
   };
 
   const handleAddToCart = (product) => {
@@ -181,11 +180,13 @@ const Wishlist = () => {
                 >
                   <div className="col-span-12 md:col-span-1">
                     <Link href={`/product/${product.slug}`}>
-                      <div className="w-20 h-20 md:w-16 md:h-16 bg-secondary rounded-lg overflow-hidden">
-                        <img
-                          src={resolveProductImages(product.images || [])[0]}
+                      <div className="relative w-20 h-20 md:w-16 md:h-16 bg-secondary rounded-lg overflow-hidden">
+                        <Image
+                          src={resolveProductImages(product.images || [])[0] || '/placeholder.jpg'}
                           alt={product.name}
-                          className="w-full h-full object-cover"
+                          fill
+                          sizes="80px"
+                          className="object-cover"
                         />
                       </div>
                     </Link>

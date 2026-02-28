@@ -20,6 +20,19 @@ const ProductsList = async ({ searchParams }) => {
     const isBestSeller = searchParams?.isBestSeller;
 
     const products = await getProducts({ page, limit, manufacturerBrand, search, sort, productType, isOnSale, isFeatured, isBestSeller });
+    const queryParams = new URLSearchParams();
+    if (manufacturerBrand) queryParams.set('manufacturerBrand', manufacturerBrand);
+    if (search) queryParams.set('search', search);
+    if (sort) queryParams.set('sort', sort);
+    if (productType) queryParams.set('productType', productType);
+    if (typeof isOnSale !== 'undefined') queryParams.set('isOnSale', String(isOnSale));
+    if (typeof isFeatured !== 'undefined') queryParams.set('isFeatured', String(isFeatured));
+    if (typeof isBestSeller !== 'undefined') queryParams.set('isBestSeller', String(isBestSeller));
+    const withPage = (targetPage) => {
+        const next = new URLSearchParams(queryParams);
+        next.set('page', String(targetPage));
+        return `/products?${next.toString()}`;
+    };
 
     return (
         <>
@@ -37,12 +50,12 @@ const ProductsList = async ({ searchParams }) => {
 
             <div className="flex justify-center gap-2 mt-8">
                 {page > 1 && (
-                    <Link href={`/products?page=${page - 1}`}>
+                    <Link href={withPage(page - 1)}>
                         <Button variant="outline">Previous</Button>
                     </Link>
                 )}
                 {products.length === limit && (
-                    <Link href={`/products?page=${page + 1}`}>
+                    <Link href={withPage(page + 1)}>
                         <Button variant="outline">Next</Button>
                     </Link>
                 )}

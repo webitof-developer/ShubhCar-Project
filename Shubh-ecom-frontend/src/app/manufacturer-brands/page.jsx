@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
 import { Layout } from '@/components/layout/Layout';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { ChevronRight } from 'lucide-react';
 import { getManufacturerBrands } from '@/services/brandService';
@@ -32,11 +33,15 @@ const BrandsList = async ({ searchParams }) => {
                         >
                             <div className="w-24 h-24 flex items-center justify-center overflow-hidden">
                                 {finalImage ? (
-                                    <img
-                                        src={finalImage}
-                                        alt={brand.name}
-                                        className="w-full h-full object-contain grayscale group-hover:grayscale-0 transition-all duration-300 opacity-80 group-hover:opacity-100"
-                                    />
+                                    <div className="relative w-full h-full">
+                                        <Image
+                                            src={finalImage}
+                                            alt={brand.name}
+                                            fill
+                                            sizes="96px"
+                                            className="object-contain grayscale group-hover:grayscale-0 transition-all duration-300 opacity-80 group-hover:opacity-100"
+                                        />
+                                    </div>
                                 ) : (
                                     <span className="text-2xl font-bold text-muted-foreground group-hover:text-primary transition-colors uppercase">
                                         {(brand.name || 'BR').substring(0, 2)}

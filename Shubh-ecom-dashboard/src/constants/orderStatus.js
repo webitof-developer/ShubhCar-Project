@@ -1,6 +1,7 @@
 export const ORDER_STATUS = {
   CREATED: 'created',
   PENDING_PAYMENT: 'pending_payment',
+  PLACED: 'placed',
   CONFIRMED: 'confirmed',
   SHIPPED: 'shipped',
   OUT_FOR_DELIVERY: 'out_for_delivery',
@@ -14,7 +15,7 @@ export const ORDER_STATUS = {
 
 export const ORDER_STATUS_LIST = [
   ORDER_STATUS.CREATED,
-  ORDER_STATUS.PENDING_PAYMENT,
+  ORDER_STATUS.PLACED,
   ORDER_STATUS.CONFIRMED,
   ORDER_STATUS.SHIPPED,
   ORDER_STATUS.OUT_FOR_DELIVERY,
@@ -27,7 +28,7 @@ export const ORDER_STATUS_LIST = [
 ];
 
 export const ADMIN_STATUS_UPDATES = [
-  ORDER_STATUS.PENDING_PAYMENT,
+  ORDER_STATUS.PLACED,
   ORDER_STATUS.CONFIRMED,
   ORDER_STATUS.SHIPPED,
   ORDER_STATUS.OUT_FOR_DELIVERY,
@@ -40,8 +41,9 @@ export const ADMIN_STATUS_UPDATES = [
 ];
 
 export const ORDER_STATUS_LABELS = {
-  [ORDER_STATUS.CREATED]: 'Order Placed',
+  [ORDER_STATUS.CREATED]: 'Pending',
   [ORDER_STATUS.PENDING_PAYMENT]: 'Pending Payment',
+  [ORDER_STATUS.PLACED]: 'Placed',
   [ORDER_STATUS.CONFIRMED]: 'Confirmed',
   [ORDER_STATUS.SHIPPED]: 'Shipped',
   [ORDER_STATUS.OUT_FOR_DELIVERY]: 'Out for Delivery',
@@ -54,9 +56,10 @@ export const ORDER_STATUS_LABELS = {
 };
 
 export const ORDER_STATUS_BADGE = {
-  [ORDER_STATUS.CREATED]: { bg: 'secondary', text: 'Order Placed' },
+  [ORDER_STATUS.CREATED]: { bg: 'secondary', text: 'Pending' },
   [ORDER_STATUS.PENDING_PAYMENT]: { bg: 'warning', text: 'Pending Payment' },
-  [ORDER_STATUS.CONFIRMED]: { bg: 'info', text: 'Confirmed' },
+  [ORDER_STATUS.PLACED]: { bg: 'info', text: 'Placed' },
+  [ORDER_STATUS.CONFIRMED]: { bg: 'primary', text: 'Confirmed' },
   [ORDER_STATUS.SHIPPED]: { bg: 'primary', text: 'Shipped' },
   [ORDER_STATUS.OUT_FOR_DELIVERY]: { bg: 'primary', text: 'Out for Delivery' },
   [ORDER_STATUS.DELIVERED]: { bg: 'success', text: 'Delivered' },
@@ -101,8 +104,8 @@ export const getOrderStatusLabel = (status) =>
   ORDER_STATUS_LABELS[status] || status?.replace(/_/g, ' ') || ORDER_STATUS_LABELS[ORDER_STATUS.CREATED];
 
 export const DASHBOARD_STATUS_CARDS = [
-  { status: ORDER_STATUS.CREATED, title: 'Order Placed', icon: 'solar:clock-circle-broken', variant: 'warning' },
-  { status: ORDER_STATUS.CONFIRMED, title: 'Confirmed', icon: 'solar:refresh-circle-broken', variant: 'info' },
-  { status: ORDER_STATUS.SHIPPED, title: 'Shipped', icon: 'solar:box-broken', variant: 'primary' },
+  { status: ORDER_STATUS.CREATED, title: 'Pending', icon: 'solar:clock-circle-broken', variant: 'warning' },
+  { status: ORDER_STATUS.PLACED, title: 'Placed', icon: 'solar:cart-large-minimalistic-broken', variant: 'info' },
+  { status: ORDER_STATUS.CONFIRMED, title: 'Confirmed', icon: 'solar:refresh-circle-broken', variant: 'primary' },
   { status: ORDER_STATUS.DELIVERED, title: 'Delivered', icon: 'solar:check-circle-broken', variant: 'success' },
 ];

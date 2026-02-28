@@ -1,13 +1,20 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Star, ShieldCheck, Trash2, Minus, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { getProductTypeLabel, isOemProduct } from '@/utils/productType';
+import { getProductIdentifier, getProductTypeLabel, isOemProduct, isVehicleBasedProduct } from '@/utils/productType';
 import { getDisplayPrice, formatPrice } from '@/services/pricingService';
 import { resolveProductImages } from '@/utils/media';
 
 export const CartItem = ({ item, index, user, removeFromCart, updateQuantity, summary, cartTaxLabel }) => {
   const product = item?.product;
   if (!product) return null;
+  const isWholesaleUser = user?.customerType === 'wholesale';
+  const minQty = isWholesaleUser
+    ? Math.max(1, Number(product.minWholesaleQty || product.minOrderQty || 1) || 1)
+    : Math.max(1, Number(product.minOrderQty || 1) || 1);
+  const stockQty = Number(product.stockQty || 0);
+  const canIncrease = stockQty > 0 ? item.quantity < stockQty : true;
 
   const pricing = getDisplayPrice(product, user);
   const { price: unitPrice, originalPrice, savingsPercent, type } = pricing;
@@ -18,10 +25,12 @@ export const CartItem = ({ item, index, user, removeFromCart, updateQuantity, su
       <div className="flex gap-4">
         {/* Image Container with Badges */}
         <Link href={productLink} className="w-24 h-24 md:w-32 md:h-32 bg-secondary rounded-lg overflow-hidden shrink-0 group relative block">
-          <img
-            src={resolveProductImages(product.images || [])[0]}
+          <Image
+            src={resolveProductImages(product.images || [])[0] || '/placeholder.jpg'}
             alt={product.name || 'Product'}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            fill
+            sizes="(max-width: 768px) 96px, 128px"
+            className="object-cover group-hover:scale-105 transition-transform duration-500"
           />
 
           {/* Badges Overlay */}
@@ -56,9 +65,12 @@ export const CartItem = ({ item, index, user, removeFromCart, updateQuantity, su
 
                 {/* Vehicle Brand / Brand - Value Only */}
                 <p className="text-xs font-medium text-muted-foreground mb-1.5">
-                  {product.productType === 'OEM'
+                  {isVehicleBasedProduct(product.productType)
                     ? (product.vehicleBrand || 'N/A')
                     : (product.manufacturerBrand || 'N/A')}
+                </p>
+                <p className="text-[11px] text-muted-foreground -mt-1 mb-1.5">
+                  {getProductIdentifier(product)}
                 </p>
 
                 {/* Tags Row: Rating, Stock, Type */}
@@ -126,11 +138,19 @@ export const CartItem = ({ item, index, user, removeFromCart, updateQuantity, su
             </div>
 
             <div className="flex items-center bg-secondary/50 rounded-lg border border-border/50">
-              <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="p-2.5 hover:bg-secondary rounded-l-lg transition-colors disabled:opacity-50" disabled={item.quantity <= 1}>
+              <button
+                onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                className="p-2.5 hover:bg-secondary rounded-l-lg transition-colors disabled:opacity-50"
+                disabled={item.quantity <= minQty}
+              >
                 <Minus className="w-3.5 h-3.5" />
               </button>
               <span className="w-10 text-center text-sm font-medium">{item.quantity}</span>
-              <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="p-2.5 hover:bg-secondary rounded-r-lg transition-colors">
+              <button
+                onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                className="p-2.5 hover:bg-secondary rounded-r-lg transition-colors disabled:opacity-50"
+                disabled={!canIncrease}
+              >
                 <Plus className="w-3.5 h-3.5" />
               </button>
             </div>

@@ -142,6 +142,12 @@ export default function ThankYouPage() {
                   <Package className="w-5 h-5 text-primary" />
                   What&apos;s Next?
                 </h3>
+                {orderData?.orderStatus === 'placed' && (
+                  <div className="mb-3 p-3 bg-warning/10 border border-warning/20 rounded-md text-sm text-warning-foreground">
+                    <strong className="block mb-1">Order Placed - Awaiting Confirmation</strong>
+                    Your order has been placed successfully and will be confirmed by our team within 6 hours.
+                  </div>
+                )}
                 <ul className="space-y-2 text-sm text-muted-foreground">
                   <li className="flex items-start gap-2">
                     <ArrowRight className="w-4 h-4 mt-0.5 flex-shrink-0 text-primary" />
@@ -160,6 +166,23 @@ export default function ThankYouPage() {
                     </span>
                   </li>
                 </ul>
+              </div>
+
+              {/* Support Notice */}
+              <div className="mt-6 text-sm text-muted-foreground text-center bg-zinc-50 p-4 rounded-lg border border-zinc-100">
+                <p>
+                  Need help with your order? Contact our support team at{' '}
+                  <a href={`mailto:${APP_CONFIG.site.contact.email}`} className="text-primary hover:underline font-medium">
+                    {APP_CONFIG.site.contact.email}
+                  </a>{' '}
+                  or call{' '}
+                  <a href={`tel:${APP_CONFIG.site.contact.phone.replace(/\D/g, '')}`} className="text-primary hover:underline font-medium">
+                    {APP_CONFIG.site.contact.phone}
+                  </a>.
+                </p>
+                <p className="mt-1 text-xs opacity-75">
+                  If your payment was deducted but the order failed or is on hold, please reach out to us with your Transaction ID.
+                </p>
               </div>
             </div>
           </Card>

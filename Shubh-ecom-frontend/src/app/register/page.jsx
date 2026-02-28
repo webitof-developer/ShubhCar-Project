@@ -38,9 +38,13 @@ const RegisterPage = () => {
 
   const handleChange = (e) => {
     const { id, value, type, checked } = e.target;
+    const nextValue =
+      id === 'phone'
+        ? String(value || '').replace(/\D/g, '').slice(0, 10)
+        : value;
     setFormData((prev) => ({
       ...prev,
-      [id]: type === 'checkbox' ? checked : value,
+      [id]: type === 'checkbox' ? checked : nextValue,
     }));
     // Clear error when user types
     if (errors[id]) {
@@ -69,14 +73,12 @@ const RegisterPage = () => {
       newErrors.email = 'Please enter a valid email address';
     }
 
-    // Phone validation (>= 10 digits)
-    const phoneRegex = /^\d{10,}$/;
-    // Remove non-digits for length check
+    // Phone validation (exactly 10 digits)
     const cleanPhone = formData.phone.replace(/\D/g, '');
     if (!formData.phone.trim()) {
       newErrors.phone = 'Phone number is required';
-    } else if (cleanPhone.length < 10) {
-      newErrors.phone = 'Phone number must be at least 10 digits';
+    } else if (cleanPhone.length !== 10) {
+      newErrors.phone = 'Phone number must be exactly 10 digits';
     }
 
     if (!formData.password) {
@@ -105,7 +107,7 @@ const RegisterPage = () => {
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
-        phone: formData.phone,
+        phone: formData.phone.replace(/\D/g, ''),
         password: formData.password,
         customerType: formData.customerType,
       });

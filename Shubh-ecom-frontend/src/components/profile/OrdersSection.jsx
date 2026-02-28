@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Package, ChevronRight, Calendar } from 'lucide-react';
@@ -69,13 +70,15 @@ export const OrdersSection = () => {
             {displayItems.map((item, index) => (
               <div
                 key={item._id}
-                className="w-10 h-10 rounded-md bg-secondary overflow-hidden border-2 border-card flex-shrink-0"
+                className="relative w-10 h-10 rounded-md bg-secondary overflow-hidden border-2 border-card flex-shrink-0"
                 style={{ zIndex: displayItems.length - index }}
               >
-                <img
-                  src={resolveProductImages(item.product?.images || [])[0]}
+                <Image
+                  src={resolveProductImages(item.product?.images || [])[0] || '/placeholder.jpg'}
                   alt={item.product?.name || 'Product'}
-                  className="w-full h-full object-cover"
+                  fill
+                  sizes="40px"
+                  className="object-cover"
                 />
               </div>
             ))}

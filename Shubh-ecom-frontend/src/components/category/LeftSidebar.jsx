@@ -5,6 +5,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useCallback } from 'react';
 
 export const LeftSidebar = ({ currentSlug, sidebarCategories, sidebarTitle, filterType, onToggleFilter, products, clearFilters }) => {
+  const PRODUCT_TYPE_OPTIONS = ['OEM', 'OES', 'AFTERMARKET'];
   // Scroll the active item into view inside the bounded <ul> on mount
   const activeItemRef = useCallback((node) => {
     if (node) node.scrollIntoView({ block: 'nearest', behavior: 'instant' });
@@ -64,7 +65,7 @@ export const LeftSidebar = ({ currentSlug, sidebarCategories, sidebarTitle, filt
             )}
           </div>
           <div className="space-y-2.5">
-            {['OEM', 'AFTERMARKET'].map((type) => (
+            {PRODUCT_TYPE_OPTIONS.map((type) => (
               <label key={type} className="flex items-center gap-2.5 cursor-pointer group">
                 <Checkbox
                   checked={filterType.includes(type)}

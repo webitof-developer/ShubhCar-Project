@@ -191,7 +191,14 @@ async function _removeFromCartInternal(accessToken, itemId) {
   const payload = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(payload.message || 'Failed to remove item from cart');
+    const errorMessage =
+      payload &&
+      typeof payload === 'object' &&
+      typeof payload.message === 'string' &&
+      payload.message.trim()
+        ? payload.message
+        : 'Failed to remove item from cart';
+    throw new Error(errorMessage);
   }
 
   return payload.data ?? payload;

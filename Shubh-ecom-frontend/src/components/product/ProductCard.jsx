@@ -7,11 +7,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Star, ShieldCheck, ShoppingCart } from 'lucide-react';
 import WishlistButton from '@/components/product/WishlistButton';
+import { SafeImage } from '@/components/common/SafeImage';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { getDisplayPrice, formatPrice } from '@/services/pricingService';
 import { resolveProductImages } from '@/utils/media';
-import { getProductTypeLabel, isOemProduct } from '@/utils/productType';
+import { getProductTypeLabel, isOemProduct, isVehicleBasedProduct } from '@/utils/productType';
 import { toast } from 'sonner';
 
 
@@ -44,10 +45,12 @@ export const ProductCard = ({ product, className = '', compact = false }) => {
       {/* Image Container */}
       <div className="relative aspect-[4/3] bg-secondary overflow-hidden">
         {/* Main Image with Blur on Hover */}
-        <img
+        <SafeImage
           src={imageUrl}
           alt={productName}
-          className="w-full h-full object-cover group-hover:scale-105  transition-all duration-500"
+          fill
+          sizes="(max-width: 768px) 50vw, 33vw"
+          className="object-cover group-hover:scale-105 transition-all duration-500"
         />
 
         {/* Badges */}
@@ -100,7 +103,9 @@ export const ProductCard = ({ product, className = '', compact = false }) => {
           <p className="text-[10px] md:text-xs text-muted-foreground mb-1.5 line-clamp-1">
             {isOemProduct(product.productType)
               ? (product.vehicleBrand || 'N/A')
-              : (product.manufacturerBrand || 'N/A')}
+              : (isVehicleBasedProduct(product.productType)
+                ? (product.vehicleBrand || product.manufacturerBrand || 'N/A')
+                : (product.manufacturerBrand || 'N/A'))}
           </p>
         )}
 

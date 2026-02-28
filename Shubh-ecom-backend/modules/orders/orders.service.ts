@@ -287,7 +287,7 @@ class OrderService {
           error('Access denied', 403, 'FORBIDDEN');
         }
         if (
-          order.orderStatus !== ORDER_STATUS.CREATED ||
+          (order.orderStatus !== ORDER_STATUS.CREATED && order.orderStatus !== ORDER_STATUS.PLACED) ||
           order.paymentStatus !== PAYMENT_STATUS.PENDING
         ) {
           error('Order is not eligible for checkout update', 409, 'ORDER_INVALID_STATE');
@@ -296,6 +296,7 @@ class OrderService {
         order.shippingAddressId = payload.shippingAddressId;
         order.billingAddressId = payload.billingAddressId;
         order.paymentMethod = payload.paymentMethod;
+        order.orderStatus = ORDER_STATUS.PLACED;
         order.placedAt = new Date();
         await order.save({ session });
 
@@ -504,7 +505,7 @@ class OrderService {
           shippingFee,
           grandTotal,
           paymentStatus: PAYMENT_STATUS.PENDING,
-          orderStatus: ORDER_STATUS.CREATED,
+          orderStatus: ORDER_STATUS.PLACED,
           paymentMethod: payload.paymentMethod,
           placedAt: new Date(),
         },

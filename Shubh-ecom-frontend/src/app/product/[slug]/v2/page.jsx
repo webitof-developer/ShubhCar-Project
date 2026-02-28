@@ -30,11 +30,12 @@ import WishlistButton from '@/components/product/WishlistButton';
 import { useCart } from '@/context/CartContext';
 import { getDisplayPrice, formatPrice } from '@/services/pricingService';
 import { resolveProductImages, resolveAssetUrl } from '@/utils/media';
-import { isOemProduct, getProductTypeBadge } from '@/utils/productType';
+import { PRODUCT_TYPES, getProductIdentifier, getProductTypeShortTag, isOemProduct, isVehicleBasedProduct } from '@/utils/productType';
 import { ProductSkeleton } from '@/components/product/ProductSkeleton';
 import { ProductReviewsSectionV2 } from '@/components/product/ProductReviewsSectionV2';
 import { ProductDetailTabs } from '@/components/product/ProductDetailTabs';
 import { useProductReviews } from '@/hooks/useProductReviews';
+import { SafeImage } from '@/components/common/SafeImage';
 
 /* ── Trust Badges ────────────────────────────────────────────────────────── */
 const TRUST_BADGES = [
@@ -148,8 +149,14 @@ const ProductDetailV2 = () => {
     { label: 'Sub Category', value: product.subCategory?.name },
     { label: 'SKU',         value: product.sku },
     { label: 'HSN Code',    value: product.hsnCode },
-    ...(isOem
-      ? [{ label: 'Vehicle Brand', value: product.vehicleBrand }, { label: 'OEM Number', value: product.oemNumber }]
+    ...(isVehicleBasedProduct(product.productType)
+      ? [
+        { label: 'Vehicle Brand', value: product.vehicleBrand },
+        {
+          label: product.productType === PRODUCT_TYPES.OES ? 'OES Number' : 'OEM Number',
+          value: product.productType === PRODUCT_TYPES.OES ? product.oesNumber : product.oemNumber,
+        },
+      ]
       : [{ label: 'Manufacturer', value: product.manufacturerBrand }]),
     { label: 'Weight',  value: product.weight ? `${product.weight} kg` : null },
     { label: 'Width',   value: product.width  ? `${product.width} cm`  : null },
@@ -222,7 +229,7 @@ const ProductDetailV2 = () => {
                       }`}
                     >
                       <div className="relative w-full h-full">
-                        <Image src={img} alt="" fill className="object-cover" />
+                        <SafeImage src={img} alt="" fill className="object-cover" />
                       </div>
                     </button>
                   ))}
@@ -246,11 +253,13 @@ const ProductDetailV2 = () => {
                 >
                   <div className="flex h-full">
                     {images.map((img, i) => (
-                      <div key={img} className="w-full h-full flex-shrink-0 snap-center">
-                        <img
+                      <div key={img} className="relative w-full h-full flex-shrink-0 snap-center">
+                        <Image
                           src={img}
                           alt={`${product.name} ${i + 1}`}
-                          className="w-full h-full object-contain select-none pointer-events-none"
+                          fill
+                          sizes="(max-width: 768px) 100vw, 50vw"
+                          className="object-contain select-none pointer-events-none"
                           draggable={false}
                         />
                       </div>
@@ -273,7 +282,7 @@ const ProductDetailV2 = () => {
 
                 {/* Type badge */}
                 <span className={`absolute top-3 left-3 z-20 text-[11px] font-bold px-2 py-1 rounded-lg text-white shadow ${isOem ? 'bg-blue-600' : 'bg-slate-600'}`}>
-                  {isOem ? 'OEM' : 'AM'}
+                  {getProductTypeShortTag(product.productType)}
                 </span>
 
                 {/* Discount badge */}
@@ -330,12 +339,12 @@ const ProductDetailV2 = () => {
                 {/* Brand row */}
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    {!isOem && product.manufacturerBrand && (
+                    {!isVehicleBasedProduct(product.productType) && product.manufacturerBrand && (
                       product.brandLogo
-                        ? <Image src={resolveAssetUrl(product.brandLogo)} alt={product.manufacturerBrand} width={0} height={0} sizes="100vw" className="h-7 w-auto object-contain" />
+                        ? <SafeImage src={resolveAssetUrl(product.brandLogo)} alt={product.manufacturerBrand} width={0} height={0} sizes="100vw" className="h-7 w-auto object-contain" />
                         : <span className="text-[11px] font-bold uppercase tracking-widest text-primary/80 bg-primary/10 px-2 py-1 rounded-md">{product.manufacturerBrand}</span>
                     )}
-                    {isOem && product.vehicleBrand && (
+                    {isVehicleBasedProduct(product.productType) && product.vehicleBrand && (
                       <span className="text-[11px] font-bold uppercase tracking-widest text-primary/80 bg-primary/10 px-2 py-1 rounded-md">{product.vehicleBrand}</span>
                     )}
                   </div>
@@ -349,12 +358,12 @@ const ProductDetailV2 = () => {
                   <h1 className="text-xl md:text-2xl font-bold text-foreground leading-snug mb-1.5">{product.name}</h1>
                   {/* Part# / SKU chip */}
                   <div className="flex flex-wrap gap-2">
-                    {product.oemNumber && (
+                    {getProductIdentifier(product) !== 'N/A' && (
                       <span
                         className="font-mono text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-1 rounded-lg max-w-[180px] truncate"
-                        title={`Part# ${product.oemNumber}`}
+                        title={`${isVehicleBasedProduct(product.productType) ? 'Part#' : 'Code'} ${getProductIdentifier(product)}`}
                       >
-                        Part# {product.oemNumber.length > 20 ? product.oemNumber.slice(0, 20) + '…' : product.oemNumber}
+                        {isVehicleBasedProduct(product.productType) ? 'Part#' : 'Code'} {getProductIdentifier(product).length > 20 ? `${getProductIdentifier(product).slice(0, 20)}...` : getProductIdentifier(product)}
                       </span>
                     )}
                     {product.sku && (

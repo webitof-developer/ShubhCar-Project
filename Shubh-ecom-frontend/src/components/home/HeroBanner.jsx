@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
@@ -147,10 +148,13 @@ export const HeroBanner = () => {
     <section className="relative min-h-[550px] md:min-h-[600px] h-auto py-20 md:py-0 flex items-center justify-center overflow-hidden">
       {/* Background Image with Overlay */}
       <div className="absolute inset-0 z-0">
-        <img
+        <Image
           src="https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?q=80&w=2672&auto=format&fit=crop"
           alt="Car Parts Background"
-          className="h-full w-full object-cover object-center"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-center"
         />
         {/* Dark Overlay */}
         <div className="absolute inset-0 bg-slate-900/70" />

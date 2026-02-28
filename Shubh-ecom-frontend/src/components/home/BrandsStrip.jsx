@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { ChevronRight } from 'lucide-react';
 import { resolveAssetUrl } from '@/utils/media';
@@ -34,12 +35,14 @@ export const BrandsStrip = ({ brands = [] }) => {
                 key={`${brand._id || brand.name}-${index}`}
                 className="flex flex-col items-center gap-3 cursor-pointer group"
               >
-                <div className="w-20 h-20 md:w-24 md:h-24 rounded-xl bg-card flex items-center justify-center overflow-hidden border border-border group-hover:border-primary/50 transition-all duration-300 p-4">
+                <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-xl bg-card flex items-center justify-center overflow-hidden border border-border group-hover:border-primary/50 transition-all duration-300">
                   {finalImage ? (
-                    <img
+                    <Image
                       src={finalImage}
                       alt={brand.name}
-                      className="w-full h-full object-contain grayscale group-hover:grayscale-0 transition-all duration-300 opacity-70 group-hover:opacity-100"
+                      fill
+                      sizes="(max-width: 768px) 80px, 96px"
+                      className="object-contain p-4 grayscale group-hover:grayscale-0 transition-all duration-300 opacity-70 group-hover:opacity-100"
                     />
                   ) : (
                     <span className="text-lg font-bold text-muted-foreground group-hover:text-primary transition-colors uppercase">

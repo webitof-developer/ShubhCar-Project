@@ -5,9 +5,10 @@ import { useCart } from '@/context/CartContext';
 import { toast } from 'sonner';
 import { getDisplayPrice, formatPrice } from '@/services/pricingService';
 import { resolveProductImages } from '@/utils/media';
-import { isOemProduct } from '@/utils/productType';
+import { getProductIdentifier, getProductTypeShortTag, isOemProduct, isVehicleBasedProduct } from '@/utils/productType';
 import WishlistButton from '@/components/product/WishlistButton';
 import { Button } from '@/components/ui/button';
+import { SafeImage } from '@/components/common/SafeImage';
 
 export const ProductListItem = ({ product }) => {
   const { user } = useAuth();
@@ -40,15 +41,17 @@ export const ProductListItem = ({ product }) => {
       className="group flex gap-0 bg-card border border-border/50 rounded-2xl overflow-hidden hover:border-primary/40 hover:shadow-lg transition-all duration-200"
     >
       {/* ── Image panel ── */}
-      <div className="relative w-36 md:w-44 flex-shrink-0 bg-muted/40 overflow-hidden">
-        <img
+      <div className="relative w-36 md:w-44 flex-shrink-0 bg-muted/40 overflow-hidden min-h-[120px]">
+        <SafeImage
           src={img}
           alt={product.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 min-h-[120px]"
+          fill
+          sizes="(max-width: 768px) 144px, 176px"
+          className="object-cover group-hover:scale-105 transition-transform duration-300"
         />
         {/* Type badge pinned to top-left */}
         <span className={`absolute top-2 left-2 text-[10px] font-bold px-1.5 py-0.5 rounded-md text-white ${isOem ? 'bg-blue-600' : 'bg-slate-600'}`}>
-          {isOem ? 'OEM' : 'AM'}
+          {getProductTypeShortTag(product.productType)}
         </span>
         {/* Discount badge pinned to top-right */}
         {discountPct > 0 && (
@@ -92,9 +95,9 @@ export const ProductListItem = ({ product }) => {
             {product.sku && (
               <span className="bg-muted/60 px-1.5 py-0.5 rounded font-mono">SKU: {product.sku}</span>
             )}
-            {product.oemNumber && (
+            {getProductIdentifier(product) !== 'N/A' && (
               <span className="bg-muted/60 px-1.5 py-0.5 rounded font-mono text-foreground/60">
-                Part# {product.oemNumber}
+                {isVehicleBasedProduct(product.productType) ? 'Part#' : 'Brand'} {getProductIdentifier(product)}
               </span>
             )}
           </div>

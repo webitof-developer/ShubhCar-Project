@@ -23,15 +23,28 @@ const ContactPage = () => {
 
   const handleChange = (e) => {
     const { id, value } = e.target;
-    setFormData(prev => ({ ...prev, [id]: value }));
+    const nextValue =
+      id === 'phone'
+        ? String(value || '').replace(/\D/g, '').slice(0, 10)
+        : value;
+    setFormData(prev => ({ ...prev, [id]: nextValue }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const cleanPhone = formData.phone.replace(/\D/g, '');
+    if (cleanPhone && cleanPhone.length !== 10) {
+      toast.error('Phone number must be exactly 10 digits');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      await submitContactForm(formData);
+      await submitContactForm({
+        ...formData,
+        phone: cleanPhone,
+      });
       toast.success('Message sent successfully!', {
         description: 'We will get back to you within 24 hours.'
       });
@@ -166,11 +179,17 @@ const ContactPage = () => {
                       <Input
                         id="phone"
                         type="tel"
-                        placeholder="+91 98765 00000"
+                        placeholder="9876500000"
                         value={formData.phone}
                         onChange={handleChange}
-                        className="pl-10 h-12 bg-slate-50 border-slate-200 focus:bg-white transition-colors"
+                        inputMode="numeric"
+                        pattern="[0-9]{10}"
+                        maxLength={10}
+                        className="pl-16 h-12 bg-slate-50 border-slate-200 focus:bg-white transition-colors"
                       />
+                      <span className="absolute left-10 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-500 select-none">
+                        +91
+                      </span>
                     </div>
                   </div>
                 </div>

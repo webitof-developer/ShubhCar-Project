@@ -5,6 +5,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
 import { Dialog, DialogTitle, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import Image from 'next/image';
 
 export function ImagePreviewModal({ images, initialIndex = 0, isOpen, onClose }) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
@@ -118,14 +119,16 @@ export function ImagePreviewModal({ images, initialIndex = 0, isOpen, onClose })
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
         >
-          <img
-            ref={imageRef}
-            src={images[currentIndex]}
-            alt={`Product image ${currentIndex + 1}`}
-            className="max-w-full max-h-full object-contain transition-transform duration-300 select-none"
-            style={{ transform: `scale(${scale})` }}
-            draggable={false}
-          />
+          <div className="relative w-full h-full max-w-full max-h-full">
+            <Image
+              src={images[currentIndex] || '/placeholder.jpg'}
+              alt={`Product image ${currentIndex + 1}`}
+              fill
+              className="object-contain transition-transform duration-300 select-none"
+              style={{ transform: `scale(${scale})` }}
+              draggable={false}
+            />
+          </div>
         </div>
 
         {/* Navigation Arrows */}

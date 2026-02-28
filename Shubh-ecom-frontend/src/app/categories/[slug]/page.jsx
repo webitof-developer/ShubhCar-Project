@@ -43,6 +43,7 @@ import { useCart } from '@/context/CartContext';
 import { toast } from 'sonner';
 
 const PAGE_SIZE = 12;
+const PRODUCT_TYPE_OPTIONS = ['OEM', 'OES', 'AFTERMARKET'];
 
 import { LeftSidebar } from '@/components/category/LeftSidebar';
 import { ProductListItem } from '@/components/category/ProductListItem';
@@ -163,7 +164,9 @@ const CategoryContent = () => {
       result = result.filter((p) =>
         p.name?.toLowerCase().includes(q) ||
         p.manufacturerBrand?.toLowerCase().includes(q) ||
-        p.oemNumber?.toLowerCase().includes(q)
+        p.oemNumber?.toLowerCase().includes(q) ||
+        p.oesNumber?.toLowerCase().includes(q) ||
+        p.sku?.toLowerCase().includes(q)
       );
     }
     const getPrice = (p) => getDisplayPrice(p, user).price || 0;
@@ -344,7 +347,7 @@ const CategoryContent = () => {
                           </SheetHeader>
                           <div className="px-5 py-5 space-y-4">
                             <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Product Type</h4>
-                            {['OEM', 'AFTERMARKET'].map((type) => (
+                            {PRODUCT_TYPE_OPTIONS.map((type) => (
                               <label key={type} className="flex items-center gap-3 cursor-pointer">
                                 <Checkbox
                                   checked={filterType.includes(type)}

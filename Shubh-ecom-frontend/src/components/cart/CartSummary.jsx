@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Check, X, Tag, Ticket, Copy, Info, Truck, Shield, Package } from 'lucide-react';
+import { Check, X, Tag, Ticket, Copy, Info, Truck, Shield, Package, Loader2 } from 'lucide-react';
 import QuotationButton from '@/components/cart/QuotationButton';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { formatPrice } from '@/services/pricingService';
@@ -31,6 +31,8 @@ export const CartSummary = ({
   formatCouponValue,
   onProceedToCheckout,
   proceedLoading = false,
+  couponLoading = false,
+  summaryLoading = false,
 }) => {
   return (
     <div className="bg-card rounded-xl border border-border/50 overflow-hidden sticky top-20">
@@ -61,8 +63,13 @@ export const CartSummary = ({
                   size="icon"
                   className="h-8 w-8 hover:bg-red-100 dark:hover:bg-red-900/20"
                   onClick={handleRemoveCoupon}
+                  disabled={couponLoading}
                 >
-                  <X className="w-4 h-4 text-red-600 dark:text-red-400" />
+                  {couponLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                  ) : (
+                    <X className="w-4 h-4 text-red-600 dark:text-red-400" />
+                  )}
                 </Button>
               </div>
 
@@ -127,8 +134,15 @@ export const CartSummary = ({
                                 size="sm"
                                 className="text-xs"
                                 onClick={() => handleApplyCouponFromDialog(coupon)}
+                                disabled={couponLoading}
                               >
-                                Apply
+                                {couponLoading ? (
+                                  <span className="inline-flex items-center gap-1">
+                                    <Loader2 className="w-3 h-3 animate-spin" /> Applying
+                                  </span>
+                                ) : (
+                                  'Apply'
+                                )}
                               </Button>
                             )}
                             <Button
@@ -171,10 +185,19 @@ export const CartSummary = ({
                 <Button
                   onClick={handleApplyCoupon}
                   className="h-8 px-6"
-                  disabled={!couponCode.trim()}
+                  disabled={!couponCode.trim() || couponLoading}
                 >
-                  <Tag className="w-4 h-4 mr-2" />
-                  Apply
+                  {couponLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Applying...
+                    </>
+                  ) : (
+                    <>
+                      <Tag className="w-4 h-4 mr-2" />
+                      Apply
+                    </>
+                  )}
                 </Button>
               </div>
 
@@ -223,8 +246,15 @@ export const CartSummary = ({
                               size="sm"
                               className="text-xs"
                               onClick={() => handleApplyCouponFromDialog(coupon)}
+                              disabled={couponLoading}
                             >
-                              Apply
+                              {couponLoading ? (
+                                <span className="inline-flex items-center gap-1">
+                                  <Loader2 className="w-3 h-3 animate-spin" /> Applying
+                                </span>
+                              ) : (
+                                'Apply'
+                              )}
                             </Button>
                             <Button
                               size="sm"
@@ -256,6 +286,15 @@ export const CartSummary = ({
         </div>
         
         <div className="space-y-3 pt-2">
+          {summaryLoading ? (
+            <div className="space-y-3 animate-pulse">
+              <div className="h-4 bg-muted rounded" />
+              <div className="h-4 bg-muted rounded w-5/6" />
+              <div className="h-4 bg-muted rounded w-3/4" />
+              <div className="h-10 bg-muted rounded mt-1" />
+            </div>
+          ) : (
+            <>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">
               {showIncludingTax ? 'Subtotal (incl. tax)' : 'Subtotal (excl. tax)'}
@@ -332,6 +371,8 @@ export const CartSummary = ({
               </div>
             </div>
           </div>
+            </>
+          )}
         </div>
         
         <Button

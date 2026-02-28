@@ -3,6 +3,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -13,6 +14,7 @@ import { getAddressById } from '@/services/userAddressService';
 import { getDisplayPrice, formatPrice } from '@/services/pricingService';
 import { resolveProductImages } from '@/utils/media';
 import { getTaxSuffix } from '@/services/taxDisplayService';
+import { getProductIdentifier } from '@/utils/productType';
 
 /**
  * Purely Presentational Order Preview
@@ -83,17 +85,19 @@ export function OrderPreview({
                 const unitPrice = getDisplayPrice(item.product, user).price;
                 return (
                   <div key={item.id} className="flex gap-4 pb-4 border-b border-border/30 last:border-0 last:pb-0">
-                    <img
-                      src={resolveProductImages(item.product?.images || [])[0]}
-                      alt={item.product?.name || 'Product'}
-                      className="w-20 h-20 object-cover rounded-lg bg-secondary shrink-0"
-                    />
+                    <div className="relative w-20 h-20 rounded-lg bg-secondary shrink-0 overflow-hidden">
+                      <Image
+                        src={resolveProductImages(item.product?.images || [])[0] || '/placeholder.jpg'}
+                        alt={item.product?.name || 'Product'}
+                        fill
+                        sizes="80px"
+                        className="object-cover"
+                      />
+                    </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="font-medium text-sm line-clamp-2 mb-1">{item.product?.name || 'Product'}</h4>
                       <p className="text-xs text-muted-foreground">
-                        {item.product?.productType === 'OEM'
-                          ? (item.product?.oemNumber || 'N/A')
-                          : (item.product?.manufacturerBrand || 'N/A')}
+                        {getProductIdentifier(item.product)}
                       </p>
                       <div className="flex items-center justify-between mt-2">
                         <span className="text-sm text-muted-foreground">

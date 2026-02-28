@@ -14,6 +14,9 @@ const {
 const {
   startCheckoutDraftExpiryCron,
 } = require('./crons/checkout-draft-expiry.cron');
+const {
+  startAutoConfirmCron,
+} = require('./crons/auto-confirm.cron');
 const { startKeepAlive } = require('./services/keepAlive.service');
 const {
   ensureVehicleAttributeDefaults,
@@ -34,6 +37,7 @@ const start = async () => {
   scheduleCouponExpiry();
   startPaymentReconciliationCron();
   startCheckoutDraftExpiryCron();
+  startAutoConfirmCron();
   await ensureVehicleAttributeDefaults();
   await migrateVariantNameAttribute();
 

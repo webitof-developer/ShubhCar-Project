@@ -3,6 +3,7 @@ module.exports = {
   ORDER_STATUS: {
     CREATED: 'created',
     PENDING_PAYMENT: 'pending_payment',
+    PLACED: 'placed',
     CONFIRMED: 'confirmed',
     SHIPPED: 'shipped',
     OUT_FOR_DELIVERY: 'out_for_delivery',
@@ -16,6 +17,7 @@ module.exports = {
   ORDER_STATUS_LIST: [
     'created',
     'pending_payment',
+    'placed',
     'confirmed',
     'shipped',
     'out_for_delivery',
@@ -28,6 +30,7 @@ module.exports = {
   ],
   ADMIN_STATUS_UPDATES: [
     'pending_payment',
+    'placed',
     'confirmed',
     'shipped',
     'out_for_delivery',
@@ -39,7 +42,8 @@ module.exports = {
     'refunded',
   ],
   ORDER_ITEM_TRANSITIONS: {
-    created: ['confirmed', 'cancelled', 'on_hold'],
+    created: ['placed', 'cancelled', 'on_hold'],
+    placed: ['confirmed', 'cancelled', 'on_hold'],
     confirmed: ['packed', 'cancelled', 'on_hold'],
     packed: ['shipped', 'on_hold'],
     shipped: ['out_for_delivery', 'delivered', 'returned', 'on_hold'],

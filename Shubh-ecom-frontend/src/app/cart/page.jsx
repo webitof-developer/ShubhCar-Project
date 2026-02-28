@@ -32,6 +32,7 @@ const Cart = () => {
   const { user, isAuthenticated, accessToken } = useAuth();
   const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
+  const [couponLoading, setCouponLoading] = useState(false);
   const [creatingCheckoutDraft, setCreatingCheckoutDraft] = useState(false);
   const [availableCoupons, setAvailableCoupons] = useState([]);
 
@@ -119,12 +120,15 @@ const Cart = () => {
     }
 
     try {
+      setCouponLoading(true);
       await cartService.applyCoupon(accessToken, code);
       setCouponCode('');
       await fetchSummary();
       toast.success(`Coupon "${code}" applied!`);
     } catch (error) {
       toast.error(error.message || 'Failed to apply coupon');
+    } finally {
+      setCouponLoading(false);
     }
   };
 
@@ -133,12 +137,15 @@ const Cart = () => {
     if (!isAuthenticated || !accessToken || cartSource !== 'backend') return;
 
     try {
+      setCouponLoading(true);
       await cartService.removeCoupon(accessToken);
       setCouponCode('');
       await fetchSummary();
       toast.success(`Coupon "${summary.couponCode}" removed`);
     } catch (error) {
       toast.error(error.message || 'Failed to remove coupon');
+    } finally {
+      setCouponLoading(false);
     }
   };
 
@@ -150,12 +157,15 @@ const Cart = () => {
     }
 
     try {
+      setCouponLoading(true);
       await cartService.applyCoupon(accessToken, coupon.code);
       setCouponDialogOpen(false);
       await fetchSummary();
       toast.success(`Coupon "${coupon.code}" applied!`);
     } catch (error) {
       toast.error(error.message || 'Failed to apply coupon');
+    } finally {
+      setCouponLoading(false);
     }
   };
 
@@ -235,10 +245,13 @@ const Cart = () => {
       const cartProductIds = items
         .map((item) => item?.product?._id || item?.product?.id)
         .filter(Boolean);
-      const allProducts = await getProducts({ limit: 20 });
-      const suggestions = allProducts
-        .filter(p => !cartProductIds.includes(p._id || p.id))
-        .slice(0, 4);
+      const allProducts = await getProducts({ limit: 50 }); // Fetch a bit more to have a good pool
+      const eligibleProducts = allProducts.filter(p => !cartProductIds.includes(p._id || p.id));
+      
+      // Shuffle the eligible products
+      const shuffled = eligibleProducts.sort(() => 0.5 - Math.random());
+      
+      const suggestions = shuffled.slice(0, 4);
       setSuggestedProducts(suggestions);
     };
     loadSuggestions();
@@ -293,7 +306,7 @@ const Cart = () => {
           </div>
 
           <div className="lg:col-span-1">
-            <CartSummary items={items} summary={summary} user={user} cartTaxLabel={cartTaxLabel} showIncludingTax={showIncludingTax} summarySubtotal={summarySubtotal} summaryDiscount={summaryDiscount} summaryTax={summaryTax} summaryTotal={summaryTotal} couponCode={couponCode} setCouponCode={setCouponCode} handleApplyCoupon={handleApplyCoupon} handleRemoveCoupon={handleRemoveCoupon} couponDialogOpen={couponDialogOpen} setCouponDialogOpen={setCouponDialogOpen} availableCoupons={availableCoupons} handleApplyCouponFromDialog={handleApplyCouponFromDialog} handleCopyCouponCode={handleCopyCouponCode} copiedCoupon={copiedCoupon} formatCouponValue={formatCouponValue} onProceedToCheckout={handleProceedToCheckout} proceedLoading={creatingCheckoutDraft} />
+            <CartSummary items={items} summary={summary} user={user} cartTaxLabel={cartTaxLabel} showIncludingTax={showIncludingTax} summarySubtotal={summarySubtotal} summaryDiscount={summaryDiscount} summaryTax={summaryTax} summaryTotal={summaryTotal} couponCode={couponCode} setCouponCode={setCouponCode} handleApplyCoupon={handleApplyCoupon} handleRemoveCoupon={handleRemoveCoupon} couponDialogOpen={couponDialogOpen} setCouponDialogOpen={setCouponDialogOpen} availableCoupons={availableCoupons} handleApplyCouponFromDialog={handleApplyCouponFromDialog} handleCopyCouponCode={handleCopyCouponCode} copiedCoupon={copiedCoupon} formatCouponValue={formatCouponValue} onProceedToCheckout={handleProceedToCheckout} proceedLoading={creatingCheckoutDraft} couponLoading={couponLoading} summaryLoading={summaryLoading} />
           </div>
         </div>
 

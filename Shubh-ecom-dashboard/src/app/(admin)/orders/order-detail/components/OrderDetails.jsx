@@ -462,11 +462,16 @@ const CustomerDetails = ({ user, order }) => {
 export const PaymentInformation = ({ order, onPaymentUpdate, updatingPayment, onSyncPayment, syncingPayment, canManage = true }) => {
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
+  const [selectedStatus, setSelectedStatus] = useState(order.paymentStatus || 'pending')
 
   useEffect(() => {
     const remaining = order.paymentSummary?.remainingAmount
     setAmount(remaining != null ? remaining : '')
   }, [order.paymentSummary?.remainingAmount])
+
+  useEffect(() => {
+    setSelectedStatus(order.paymentStatus || 'pending')
+  }, [order.paymentStatus])
 
   const isCOD = (order.paymentMethod || '').toLowerCase() === 'cod'
   const paymentUpdates = Array.isArray(order.codPayments)
@@ -474,17 +479,30 @@ export const PaymentInformation = ({ order, onPaymentUpdate, updatingPayment, on
     : []
   const numericAmount = Number(amount)
   const isCancelled = order.orderStatus === 'cancelled'
-  const canSubmit = Number.isFinite(numericAmount) && numericAmount > 0 && !updatingPayment && !isCancelled
+  const canSubmit = !updatingPayment && !isCancelled && (selectedStatus !== order.paymentStatus || (Number.isFinite(numericAmount) && numericAmount > 0))
 
   const handleSubmit = async () => {
     if (!onPaymentUpdate) return
-    const payload = {
-      amount: amount === '' ? undefined : Number(amount),
-      note: note.trim(),
+    const payload = {}
+    if (selectedStatus !== order.paymentStatus) {
+      payload.status = selectedStatus
     }
-    const success = await onPaymentUpdate(payload)
-    if (success) {
-      setNote('')
+    if (amount !== '') {
+      payload.amount = Number(amount)
+    }
+    if (note.trim()) {
+      payload.note = note.trim()
+    }
+    
+    // Only submit if there's an actual update
+    if (Object.keys(payload).length > 0) {
+      const success = await onPaymentUpdate(payload)
+      if (success) {
+        setNote('')
+        if (payload.amount) {
+           setAmount('')
+        }
+      }
     }
   }
 
@@ -527,35 +545,57 @@ export const PaymentInformation = ({ order, onPaymentUpdate, updatingPayment, on
             )}
           </div>
         )}
-        {isCOD && canManage && (
+        {canManage && (
           <div className="mt-3 pt-3 border-top">
-            <Form.Label className="text-muted fs-13 mb-2">Update COD Payment</Form.Label>
-            <Form.Group className="mb-2">
-              <Form.Label className="fs-12 text-muted">Amount Received</Form.Label>
-              <Form.Control
-                type="number"
-                min="0"
-                step="0.01"
-                value={amount}
-                onChange={(event) => setAmount(event.target.value)}
-                placeholder="0"
-              />
-            </Form.Group>
+            <Form.Label className="text-muted fs-13 mb-2">Update Payment Status</Form.Label>
             <Form.Group className="mb-3">
-              <Form.Label className="fs-12 text-muted">Note</Form.Label>
+              <Form.Select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                disabled={isCancelled}
+              >
+                <option value="pending">Pending</option>
+                <option value="paid">Paid</option>
+                <option value="failed">Failed</option>
+                <option value="refunded">Refunded</option>
+                <option value="expired">Expired</option>
+                <option value="cancelled">Cancelled</option>
+              </Form.Select>
+            </Form.Group>
+
+            {isCOD && (
+              <>
+                <Form.Label className="fs-12 text-muted">Amount Received (Optional)</Form.Label>
+                <Form.Group className="mb-2">
+                  <Form.Control
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={amount}
+                    onChange={(event) => setAmount(event.target.value)}
+                    placeholder="0"
+                    disabled={isCancelled}
+                  />
+                </Form.Group>
+              </>
+            )}
+
+            <Form.Group className="mb-3">
+              <Form.Label className="fs-12 text-muted">Note (Optional)</Form.Label>
               <Form.Control
                 as="textarea"
                 rows={2}
                 value={note}
                 onChange={(event) => setNote(event.target.value)}
-                placeholder="Payment received by cash, any remark..."
+                placeholder="Payment reference, transaction ID, or remark..."
+                disabled={isCancelled}
               />
             </Form.Group>
             <Button variant="primary" size="sm" disabled={!canSubmit} onClick={handleSubmit}>
               {updatingPayment ? 'Saving...' : 'Update Payment'}
             </Button>
 
-            {paymentUpdates.length > 0 && (
+            {isCOD && paymentUpdates.length > 0 && (
               <div className="mt-4">
                 <div className="text-muted fs-12 mb-2">Payment Updates</div>
                 <div className="vstack gap-2">
@@ -644,6 +684,19 @@ const OrderDetails = ({ order, shipments, items, notes, onStatusUpdate, updating
   if (!order) return null;
   return (
     <div>
+      {order.orderStatus === 'placed' && canManage && (
+        <Card className="mb-3 border-0 bg-warning-subtle text-warning-emphasis shadow-sm">
+          <CardBody className="p-3">
+            <div className="d-flex gap-2">
+              <IconifyIcon icon="solar:info-circle-broken" className="fs-20 mt-1 flex-shrink-0" />
+              <div>
+                <CardTitle as={'h6'} className="mb-1 fw-bold text-warning-emphasis">Auto-Confirm Pending</CardTitle>
+                <p className="mb-0 fs-13">This order is currently Placed. It will automatically be marked as Confirmed 6 hours after placement if no action is taken.</p>
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+      )}
       {canManage && <OrderActions order={order} onStatusUpdate={onStatusUpdate} updatingStatus={updatingStatus} />}
       {canManage && (
         <PaymentInformation

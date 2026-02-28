@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -127,14 +128,15 @@ export function OrderRow({ order, accessToken }) {
             {displayItems.map((item, i) => (
               <div
                 key={item._id || i}
-                className="w-14 h-14 rounded-lg bg-muted/50 overflow-hidden border-2 border-card flex-shrink-0"
+                className="relative w-14 h-14 rounded-lg bg-muted/50 overflow-hidden border-2 border-card flex-shrink-0"
                 style={{ zIndex: displayItems.length - i }}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={resolveProductImages(item.product?.images || [])[0]}
+                <Image
+                  src={resolveProductImages(item.product?.images || [])[0] || '/placeholder.jpg'}
                   alt={item.product?.name || 'Product'}
-                  className="w-full h-full object-cover"
+                  fill
+                  sizes="56px"
+                  className="object-cover"
                 />
               </div>
             ))}
@@ -236,12 +238,13 @@ export function OrderRow({ order, accessToken }) {
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Items Ordered</p>
                 {(displayOrder.items || []).map((item, i) => (
                   <div key={item._id || i} className="flex items-center gap-3 p-2 rounded-lg bg-background border border-border/40">
-                    <div className="w-12 h-12 rounded-md bg-muted/50 overflow-hidden flex-shrink-0">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={resolveProductImages(item.product?.images || [])[0]}
+                    <div className="relative w-12 h-12 rounded-md bg-muted/50 overflow-hidden flex-shrink-0">
+                      <Image
+                        src={resolveProductImages(item.product?.images || [])[0] || '/placeholder.jpg'}
                         alt={item.product?.name || 'Product'}
-                        className="w-full h-full object-cover"
+                        fill
+                        sizes="48px"
+                        className="object-cover"
                       />
                     </div>
                     <div className="flex-1 min-w-0">

@@ -1,8 +1,6 @@
 /** @type {import('next').NextConfig} */
 
 // ─── Domains ──────────────────────────────────────────────────────────────────
-// Add your production API and CDN domains here.
-// These are injected into Content-Security-Policy at build time.
 const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL
   ? new URL(process.env.NEXT_PUBLIC_API_URL).origin
   : 'http://localhost:5000';
@@ -12,20 +10,15 @@ const securityHeaders = [
   // Prevent MIME-type sniffing
   { key: 'X-Content-Type-Options', value: 'nosniff' },
 
-  // Disallow embedding this site in iframes (except Razorpay uses iframes
-  // from its own origin — handled separately via CSP frame-ancestors)
   { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
 
-  // Limit referrer information sent to third parties
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
 
-  // Force HTTPS for 2 years (only effective in production behind HTTPS)
   {
     key: 'Strict-Transport-Security',
     value: 'max-age=63072000; includeSubDomains; preload',
   },
 
-  // Disable browser features we don't use
   {
     key: 'Permissions-Policy',
     value: [
@@ -34,14 +27,10 @@ const securityHeaders = [
       'geolocation=()',
       'payment=(self "https://checkout.razorpay.com")',
       'usb=()',
-      'interest-cohort=()',   // disable FLoC
+      'interest-cohort=()',
     ].join(', '),
   },
 
-  // ── Content Security Policy ────────────────────────────────────────────────
-  // NOTE: 'unsafe-inline' and 'unsafe-eval' are required by Next.js
-  // for its internal script injection in dev AND production (until nonce
-  // middleware is added). Tighten once nonce-based CSP is implemented.
   {
     key: 'Content-Security-Policy',
     value: [
@@ -82,11 +71,41 @@ const securityHeaders = [
 ];
 
 const nextConfig = {
-  /**
-   * Allow next/image to load images from any HTTPS host.
-   * Product images can come from arbitrary CDN/S3 buckets.
-   * Tighten this to specific hostnames once CDN domains are stable.
-   */
+  experimental: {
+    optimizePackageImports: [
+      'lucide-react',
+      'date-fns',
+      'recharts',
+      '@radix-ui/react-accordion',
+      '@radix-ui/react-alert-dialog',
+      '@radix-ui/react-aspect-ratio',
+      '@radix-ui/react-avatar',
+      '@radix-ui/react-checkbox',
+      '@radix-ui/react-collapsible',
+      '@radix-ui/react-context-menu',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-hover-card',
+      '@radix-ui/react-label',
+      '@radix-ui/react-menubar',
+      '@radix-ui/react-navigation-menu',
+      '@radix-ui/react-popover',
+      '@radix-ui/react-progress',
+      '@radix-ui/react-radio-group',
+      '@radix-ui/react-scroll-area',
+      '@radix-ui/react-select',
+      '@radix-ui/react-separator',
+      '@radix-ui/react-slider',
+      '@radix-ui/react-slot',
+      '@radix-ui/react-switch',
+      '@radix-ui/react-tabs',
+      '@radix-ui/react-toast',
+      '@radix-ui/react-toggle',
+      '@radix-ui/react-toggle-group',
+      '@radix-ui/react-tooltip'
+    ],
+  },
+  
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: '**' }, // all HTTPS sources
