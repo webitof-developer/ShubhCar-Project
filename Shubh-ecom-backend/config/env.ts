@@ -49,6 +49,7 @@ const schema = Joi.object({
   GST_DEFAULT_RATE: Joi.number().min(0).max(1).default(0.18),
   GST_ORIGIN_STATE: Joi.string().default('KA'),
   SHIPPING_FLAT_RATE: Joi.number().min(0).default(0),
+  CHECKOUT_DRAFT_TTL_MINUTES: Joi.number().integer().min(1).default(20),
 
   METRICS_TOKEN: Joi.string().optional(),
 

@@ -13,6 +13,7 @@ const { payoutQueue } = require('../queues/payout.queue');
 const { enqueueEmail } = require('../queues/email.queue');
 const userRepo = require('../modules/users/user.repo'); // or wherever user lookup is
 const notificationsService = require('../modules/notifications/notifications.service');
+const checkoutDraftService = require('../modules/checkout-drafts/checkoutDrafts.service');
 
 const EmailDispatch = require('../models/EmailDispatch');
 
@@ -76,6 +77,7 @@ const processAutoCancel = async (orderId) => {
 
     // PAYMENT RECORD
     await paymentRepo.markFailedByOrder(orderId, 'auto_cancel', session);
+    await checkoutDraftService.markExpiredByOrderId(orderId, session);
 
     // COUPON ROLLBACK
     if (order.couponId) {

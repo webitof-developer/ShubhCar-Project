@@ -11,6 +11,31 @@ type QuantityUpdate = {
 };
 
 class CartRepository {
+  async getByUserId(userId) {
+    if (!userId) return null;
+    return Cart.findOne({ userId }).lean();
+  }
+
+  async clearCartByUserId(userId) {
+    const cart = await this.getByUserId(userId);
+    if (!cart?._id) {
+      return { cleared: false, cartId: null, removedItems: 0 };
+    }
+
+    const deleteResult = await CartItem.deleteMany({ cartId: cart._id });
+    await Cart.findByIdAndUpdate(cart._id, {
+      couponId: null,
+      couponCode: null,
+      discountAmount: 0,
+    });
+
+    return {
+      cleared: true,
+      cartId: cart._id,
+      removedItems: Number(deleteResult?.deletedCount || 0),
+    };
+  }
+
   async getOrCreateCart({ userId, sessionId }) {
     // Fix: Find by userId if available, regardless of sessionId mismatch
     // This solves the issue where finding by {userId, sessionId} fails if the stored sessionId differs

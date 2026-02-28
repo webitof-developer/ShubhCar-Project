@@ -118,6 +118,10 @@ module.exports = function registerRoutes(app) {
      CART & ORDERS
   ===================================================== */
   app.use('/v1/cart', require('../modules/cart/cart.routes'));
+  app.use(
+    '/v1/checkout-drafts',
+    require('../modules/checkout-drafts/checkoutDrafts.routes'),
+  );
   app.use('/v1/orders', require('../modules/orders/orders.routes'));
   app.use(
     '/v1/order-items',

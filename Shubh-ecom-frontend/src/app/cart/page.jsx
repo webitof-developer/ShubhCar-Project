@@ -3,6 +3,7 @@
 "use client";
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Layout } from '@/components/layout/Layout';
 import { ChevronRight, Sparkles } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
@@ -11,6 +12,7 @@ import { ProductCard } from '@/components/product/ProductCard';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import * as cartService from '@/services/cartService';
+import * as checkoutDraftService from '@/services/checkoutDraftService';
 import { getPublicCoupons } from '@/services/couponService';
 import { getTaxSuffix } from '@/services/taxDisplayService';
 import { CartSkeleton } from '@/components/cart/CartSkeleton';
@@ -20,6 +22,7 @@ import { EmptyCartState } from '@/components/cart/EmptyCartState';
 import { CartSuggestionsSidebar } from '@/components/cart/CartSuggestionsSidebar';
 
 const Cart = () => {
+  const router = useRouter();
   const [couponCode, setCouponCode] = useState('');
   const [couponDialogOpen, setCouponDialogOpen] = useState(false);
   const [copiedCoupon, setCopiedCoupon] = useState(null);
@@ -29,6 +32,7 @@ const Cart = () => {
   const { user, isAuthenticated, accessToken } = useAuth();
   const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
+  const [creatingCheckoutDraft, setCreatingCheckoutDraft] = useState(false);
   const [availableCoupons, setAvailableCoupons] = useState([]);
 
   /* ... fetchSummary ... */
@@ -194,6 +198,38 @@ const Cart = () => {
     }
   };
 
+  const handleProceedToCheckout = async () => {
+    if (creatingCheckoutDraft) return;
+
+    if (!isAuthenticated || !accessToken) {
+      toast.error('Please login to continue checkout');
+      router.push('/login?returnTo=/checkout');
+      return;
+    }
+
+    try {
+      setCreatingCheckoutDraft(true);
+
+      if (cartSource !== 'backend' && items.length > 0) {
+        await cartService.replaceCart(accessToken, items);
+      }
+
+      const draft = await checkoutDraftService.createDraft(accessToken, {});
+      const draftId = draft?.draftId || draft?._id || draft?.id;
+
+      if (!draftId) {
+        throw new Error('Draft id missing in response');
+      }
+
+      router.push(`/checkout?draftId=${draftId}`);
+    } catch (error) {
+      console.error('[CART] Failed to create checkout draft', error);
+      toast.error(error.message || 'Unable to start checkout right now');
+    } finally {
+      setCreatingCheckoutDraft(false);
+    }
+  };
+
   useEffect(() => {
     const loadSuggestions = async () => {
       const cartProductIds = items
@@ -257,7 +293,7 @@ const Cart = () => {
           </div>
 
           <div className="lg:col-span-1">
-            <CartSummary items={items} summary={summary} user={user} cartTaxLabel={cartTaxLabel} showIncludingTax={showIncludingTax} summarySubtotal={summarySubtotal} summaryDiscount={summaryDiscount} summaryTax={summaryTax} summaryTotal={summaryTotal} couponCode={couponCode} setCouponCode={setCouponCode} handleApplyCoupon={handleApplyCoupon} handleRemoveCoupon={handleRemoveCoupon} couponDialogOpen={couponDialogOpen} setCouponDialogOpen={setCouponDialogOpen} availableCoupons={availableCoupons} handleApplyCouponFromDialog={handleApplyCouponFromDialog} handleCopyCouponCode={handleCopyCouponCode} copiedCoupon={copiedCoupon} formatCouponValue={formatCouponValue} />
+            <CartSummary items={items} summary={summary} user={user} cartTaxLabel={cartTaxLabel} showIncludingTax={showIncludingTax} summarySubtotal={summarySubtotal} summaryDiscount={summaryDiscount} summaryTax={summaryTax} summaryTotal={summaryTotal} couponCode={couponCode} setCouponCode={setCouponCode} handleApplyCoupon={handleApplyCoupon} handleRemoveCoupon={handleRemoveCoupon} couponDialogOpen={couponDialogOpen} setCouponDialogOpen={setCouponDialogOpen} availableCoupons={availableCoupons} handleApplyCouponFromDialog={handleApplyCouponFromDialog} handleCopyCouponCode={handleCopyCouponCode} copiedCoupon={copiedCoupon} formatCouponValue={formatCouponValue} onProceedToCheckout={handleProceedToCheckout} proceedLoading={creatingCheckoutDraft} />
           </div>
         </div>
 

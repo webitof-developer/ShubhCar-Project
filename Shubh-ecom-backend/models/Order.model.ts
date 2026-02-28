@@ -13,13 +13,15 @@ const orderSchema = new mongoose.Schema(
     shippingAddressId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'UserAddress',
-      required: true,
+      required: false,
+      default: null,
     },
 
     billingAddressId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'UserAddress',
-      required: true,
+      required: false,
+      default: null,
     },
 
     orderNumber: {
@@ -94,7 +96,7 @@ const orderSchema = new mongoose.Schema(
       default: 'created',
     },
 
-    paymentMethod: { type: String, immutable: true },
+    paymentMethod: { type: String, default: null },
     paymentSnapshot: {
       paymentId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -157,7 +159,6 @@ const IMMUTABLE_FINANCIAL_FIELDS = [
   'orderSource',
   'grandTotal',
   'totalItems',
-  'paymentMethod',
   'orderNumber',
   'couponId',
   'couponCode',

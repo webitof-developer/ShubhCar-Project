@@ -12,6 +12,7 @@ export const useCheckoutOrderPlacement = ({
   clearCart,
   checkoutData,
   summary,
+  checkoutDraftId,
   router,
   setCurrentStep,
 }) => {
@@ -115,6 +116,7 @@ export const useCheckoutOrderPlacement = ({
         paymentMethod,
         shippingAddressId: checkoutData.addressId,
         billingAddressId: checkoutData.addressId,
+        checkoutDraftId: checkoutDraftId || undefined,
         notes: '',
         cartId: summary.cartId,
         totals,
@@ -140,6 +142,7 @@ export const useCheckoutOrderPlacement = ({
             orderId: order._id,
             orderNumber: order.orderNumber,
             paymentMethod,
+            checkoutDraftId: checkoutDraftId || null,
             total: summary?.grandTotal || 0,
             items: items.length,
           }),
@@ -149,7 +152,8 @@ export const useCheckoutOrderPlacement = ({
 
         console.log('[CHECKOUT] Redirecting to payment processing...');
         setRedirectingAfterOrder(true);
-        router.push(`/payment/process?orderId=${order._id}&method=${paymentMethod}`);
+        const draftQuery = checkoutDraftId ? `&draftId=${encodeURIComponent(checkoutDraftId)}` : '';
+        router.push(`/payment/process?orderId=${order._id}&method=${paymentMethod}${draftQuery}`);
       } else {
         console.log('[CHECKOUT] Placing COD order...');
 
@@ -192,7 +196,7 @@ export const useCheckoutOrderPlacement = ({
     } finally {
       setPlacingOrder(false);
     }
-  }, [placingOrder, items, checkoutData.addressId, summary, accessToken, cartSource, router, clearCart, setCurrentStep]);
+  }, [placingOrder, items, checkoutData.addressId, summary, accessToken, cartSource, checkoutDraftId, router, clearCart, setCurrentStep]);
 
   return {
     placingOrder,

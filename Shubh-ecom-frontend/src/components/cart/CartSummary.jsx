@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +29,8 @@ export const CartSummary = ({
   handleCopyCouponCode,
   copiedCoupon,
   formatCouponValue,
+  onProceedToCheckout,
+  proceedLoading = false,
 }) => {
   return (
     <div className="bg-card rounded-xl border border-border/50 overflow-hidden sticky top-20">
@@ -333,9 +334,14 @@ export const CartSummary = ({
           </div>
         </div>
         
-        <Link href="/checkout">
-          <Button className="w-full h-12 rounded-lg text-base font-semibold mb-3" size="lg">Proceed to Checkout</Button>
-        </Link>
+        <Button
+          className="w-full h-12 rounded-lg text-base font-semibold mb-3"
+          size="lg"
+          onClick={onProceedToCheckout}
+          disabled={proceedLoading}
+        >
+          {proceedLoading ? 'Preparing checkout...' : 'Proceed to Checkout'}
+        </Button>
         <div className="w-full flex justify-center mb-4">
           <QuotationButton cartItems={items} summary={summary} profile={user} />
         </div>

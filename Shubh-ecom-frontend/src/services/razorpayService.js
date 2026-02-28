@@ -1,6 +1,5 @@
-import { toast } from 'sonner';
 import APP_CONFIG from '@/config/app.config';
-import { initiatePayment } from '@/services/paymentService';
+import { getPaymentMethods, initiatePayment } from '@/services/paymentService';
 
 /**
  * Dynamically load Razorpay SDK
@@ -25,16 +24,13 @@ const loadRazorpayScript = () => {
  * @param {object} orderData - { orderId, total, ... }
  * @param {object} userDetails - { name, email, phone }
  */
-export const processRazorpayPayment = async (accessToken, orderData, userDetails) => {
+export const processRazorpayPayment = async (
+  accessToken,
+  orderData,
+  userDetails,
+  preInitiation = null,
+) => {
   const config = APP_CONFIG.payments.gateways.razorpay;
-
-  if (!config.enabled) {
-    throw new Error('Razorpay is currently disabled');
-  }
-
-  if (!config.keyId) {
-    throw new Error('Payment configuration missing (Key ID)');
-  }
 
   // 1. Load SDK
   const isLoaded = await loadRazorpayScript();
@@ -44,17 +40,47 @@ export const processRazorpayPayment = async (accessToken, orderData, userDetails
 
   // 2. Initiate Payment (Get Order ID from Backend)
   // Note: Backend handles amounts, we just pass the order ID
-  const initiation = await initiatePayment(accessToken, {
-    orderId: orderData.orderId,
-    gateway: 'razorpay'
-  });
+  const initiation =
+    preInitiation ||
+    (await initiatePayment(accessToken, {
+      orderId: orderData.orderId,
+      gateway: 'razorpay',
+    }));
 
   const { gatewayPayload, paymentId } = initiation;
+
+  if (!gatewayPayload?.id || !paymentId) {
+    throw new Error('Invalid payment initiation response');
+  }
+
+  let razorpayKeyId =
+    initiation?.keyId ||
+    config?.keyId ||
+    null;
+
+  if (!razorpayKeyId) {
+    try {
+      const methods = await getPaymentMethods();
+      const razorpayMethod = (methods?.methods || []).find(
+        (method) => method?.code === 'razorpay',
+      );
+      if (!razorpayMethod?.enabled) {
+        throw new Error('Razorpay is currently disabled');
+      }
+      razorpayKeyId = methods?.razorpay?.keyId || null;
+    } catch (err) {
+      throw new Error(err?.message || 'Unable to load payment configuration');
+    }
+  }
+
+  if (!razorpayKeyId) {
+    throw new Error('Payment configuration missing (Key ID)');
+  }
 
   // 3. Open Razorpay Modal
   return new Promise((resolve, reject) => {
     const options = {
-      key: config.keyId,
+      key: razorpayKeyId,
       amount: gatewayPayload.amount, // from backend
       currency: gatewayPayload.currency, // from backend
       name: APP_CONFIG.site.name,

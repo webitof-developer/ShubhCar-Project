@@ -1,12 +1,20 @@
 
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/storage';
 
 const STORAGE_KEY = 'vehicleSelection';
 
-const VehicleContext = createContext(null);
+const defaultVehicleContext = {
+  selection: null,
+  setSelection: () => { },
+  clearSelection: () => { },
+  isActive: false,
+  summary: '',
+};
+
+const VehicleContext = createContext(defaultVehicleContext);
 
 const buildSummary = (selection) => {
   if (!selection) return '';
@@ -41,14 +49,7 @@ const writeSelection = (selection) => {
 };
 
 export const VehicleProvider = ({ children }) => {
-  const [selection, setSelectionState] = useState(null);
-
-  useEffect(() => {
-    const stored = readSelection();
-    if (stored) {
-      setSelectionState(stored);
-    }
-  }, []);
+  const [selection, setSelectionState] = useState(() => readSelection());
 
   const setSelection = useCallback((next) => {
     const normalized = next && typeof next === 'object' ? {
@@ -90,8 +91,5 @@ export const VehicleProvider = ({ children }) => {
 
 export const useVehicleSelection = () => {
   const ctx = useContext(VehicleContext);
-  if (!ctx) {
-    throw new Error('useVehicleSelection must be used within VehicleProvider');
-  }
-  return ctx;
+  return ctx || defaultVehicleContext;
 };

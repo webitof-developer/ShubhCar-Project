@@ -79,9 +79,16 @@ class PaymentsService {
         if (!session._isStandalone && session.inTransaction()) {
           await session.commitTransaction();
         }
+        let existingKeyId = null;
+        if (gateway === 'razorpay') {
+          const settings = await getPaymentSettings();
+          existingKeyId =
+            settings?.razorpayKeyId || process.env.RAZORPAY_KEY_ID || null;
+        }
         return {
           paymentId: existing._id,
           gatewayPayload: existing.gatewayResponse,
+          keyId: existingKeyId,
         };
       }
 
@@ -95,6 +102,7 @@ class PaymentsService {
     ====================== */
       let gatewayResponse;
       let gatewayOrderId;
+      let gatewayKeyId = null;
 
       if (gateway === 'razorpay') {
         const paymentSettings = await getPaymentSettings();
@@ -107,6 +115,7 @@ class PaymentsService {
           paymentSettings.razorpayKeyId || process.env.RAZORPAY_KEY_ID;
         const keySecret =
           paymentSettings.razorpayKeySecret || process.env.RAZORPAY_KEY_SECRET;
+        gatewayKeyId = keyId;
 
         if (!keyId || !keySecret) {
           error('Razorpay credentials are missing (DB or Env)', 500);
@@ -179,6 +188,7 @@ class PaymentsService {
       return {
         paymentId: payment._id,
         gatewayPayload: gatewayResponse,
+        keyId: gatewayKeyId || null,
       };
     } catch (e) {
       if (!session._isStandalone && session.inTransaction()) {
@@ -192,9 +202,16 @@ class PaymentsService {
           gateway,
         );
         if (existing) {
+          let existingKeyId = null;
+          if (gateway === 'razorpay') {
+            const settings = await getPaymentSettings();
+            existingKeyId =
+              settings?.razorpayKeyId || process.env.RAZORPAY_KEY_ID || null;
+          }
           return {
             paymentId: existing._id,
             gatewayPayload: existing.gatewayResponse,
+            keyId: existingKeyId,
           };
         }
       }
@@ -334,7 +351,25 @@ class PaymentsService {
       transactionId: payment.transactionId,
     });
 
-    const gatewayStatus = await paymentGatewayService.fetchStatus(payment);
+    let gatewayStatus: any = null;
+    try {
+      gatewayStatus = await paymentGatewayService.fetchStatus(payment);
+    } catch (gatewayErr) {
+      const fallbackStatus =
+        order.paymentStatus === PAYMENT_STATUS.PAID ? 'success' : payment.status;
+      logger.warn('confirm_payment_gateway_status_error', {
+        paymentId: payment._id,
+        orderId: order._id,
+        error: gatewayErr?.message || String(gatewayErr),
+        fallbackStatus,
+      });
+      return {
+        paymentId: payment._id,
+        status: fallbackStatus,
+        orderId: order._id,
+        orderPaymentStatus: order.paymentStatus,
+      };
+    }
     logger.info('confirm_payment_gateway_status_response', {
       paymentId: payment._id,
       gatewayStatus,
@@ -343,9 +378,11 @@ class PaymentsService {
       logger.warn('confirm_payment_gateway_status_missing', {
         paymentId: payment._id,
       });
+      const fallbackStatus =
+        order.paymentStatus === PAYMENT_STATUS.PAID ? 'success' : payment.status;
       return {
         paymentId: payment._id,
-        status: payment.status,
+        status: fallbackStatus,
         orderId: order._id,
         orderPaymentStatus: order.paymentStatus,
       };
@@ -372,9 +409,10 @@ class PaymentsService {
           reason: 'gateway_failure',
         });
       }
-      if (order.paymentStatus !== PAYMENT_STATUS.FAILED) {
-        await orderService.failOrder(order._id);
-      }
+      logger.info('payment_marked_failed_order_kept_pending', {
+        orderId: order._id,
+        paymentId: payment._id,
+      });
     } else if (normalized === 'refunded') {
       await paymentRepo.finalizeRefund(
         payment._id,

@@ -27,6 +27,7 @@ export interface OrdersBody {
   amount?: unknown;
   billingAddressId?: unknown;
   city?: unknown;
+  checkoutDraftId?: unknown;
   country?: unknown;
   couponCode?: unknown;
   discountPercent?: unknown;
@@ -172,6 +173,7 @@ export interface PlaceOrderInput {
   shippingAddressId: string;
   billingAddressId: string;
   paymentMethod: PaymentMethod;
+  checkoutDraftId?: string;
   gateway?: string;
   paymentCompleted?: boolean;
 }

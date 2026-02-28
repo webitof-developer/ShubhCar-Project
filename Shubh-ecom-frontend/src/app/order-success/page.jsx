@@ -47,14 +47,18 @@ export default function ThankYouPage() {
 
     if (!paymentData?.paymentId) return;
 
-    setVerifyingPayment(true);
     let cancelled = false;
 
     const retryConfirm = async () => {
+      setVerifyingPayment(true);
       for (let attempt = 0; attempt < 3; attempt += 1) {
         if (cancelled) return;
         try {
-          const confirmation = await confirmPayment(accessToken, paymentData.paymentId);
+          const confirmation = await confirmPayment(
+            accessToken,
+            paymentData.paymentId,
+            paymentData.transactionId || null,
+          );
           const status = confirmation?.status || '';
           if (status === 'success') {
             sessionStorage.removeItem('lastPayment');

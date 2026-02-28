@@ -22,8 +22,8 @@
  * - addressId is valid and exists in UserAddress collection
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState, useEffect, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Layout } from '@/components/layout/Layout';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
@@ -35,7 +35,9 @@ import { Button } from '@/components/ui/button';
 import { ShoppingCart, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import * as cartService from '@/services/cartService';
+import * as checkoutDraftService from '@/services/checkoutDraftService';
 import { useCheckoutOrderPlacement } from '@/hooks/useCheckoutOrderPlacement';
+import { toast } from 'sonner';
 
 // Step definitions - owned by page
 const CHECKOUT_STEPS = [
@@ -44,8 +46,10 @@ const CHECKOUT_STEPS = [
   { id: 3, name: 'Payment', label: 'Payment' },
 ];
 
-const Checkout = () => {
+const CheckoutInner = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const draftId = searchParams.get('draftId');
   const { items, clearCart, cartSource } = useCart();
   const { isAuthenticated, accessToken, loading: authLoading } = useAuth();
   
@@ -57,6 +61,7 @@ const Checkout = () => {
   });
   const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
+  const [draftLoading, setDraftLoading] = useState(false);
   const { placingOrder, redirectingAfterOrder, handlePaymentConfirm } = useCheckoutOrderPlacement({
     items,
     accessToken,
@@ -64,6 +69,7 @@ const Checkout = () => {
     clearCart,
     checkoutData,
     summary,
+    checkoutDraftId: draftId,
     router,
     setCurrentStep,
   });
@@ -72,9 +78,37 @@ const Checkout = () => {
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       console.log('[CHECKOUT] User not authenticated, redirecting to login');
-      router.push('/login?returnTo=/checkout');
+      const returnTo = draftId ? `/checkout?draftId=${draftId}` : '/checkout';
+      router.push(`/login?returnTo=${encodeURIComponent(returnTo)}`);
     }
-  }, [isAuthenticated, authLoading, router]);
+  }, [isAuthenticated, authLoading, router, draftId]);
+
+  useEffect(() => {
+    const loadDraft = async () => {
+      if (!draftId || !isAuthenticated || !accessToken) return;
+
+      setDraftLoading(true);
+      try {
+        const draft = await checkoutDraftService.getDraft(accessToken, draftId);
+        const shippingAddressId = draft?.addressIds?.shippingAddressId || null;
+
+        if (shippingAddressId) {
+          setCheckoutData((prev) => ({
+            ...prev,
+            addressId: prev.addressId || shippingAddressId,
+          }));
+        }
+      } catch (error) {
+        console.error('[CHECKOUT] Failed to load checkout draft:', error);
+        toast.error(error.message || 'Checkout draft is unavailable');
+        router.push('/cart');
+      } finally {
+        setDraftLoading(false);
+      }
+    };
+
+    loadDraft();
+  }, [draftId, isAuthenticated, accessToken, router]);
 
   const fetchSummary = useCallback(async () => {
     if (!accessToken) return;
@@ -118,7 +152,7 @@ const Checkout = () => {
   };
 
   const renderContent = () => {
-    if (authLoading) {
+    if (authLoading || draftLoading) {
       return (
         <div className="container mx-auto px-4 py-16 flex items-center justify-center min-h-[60vh]">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -200,12 +234,22 @@ const Checkout = () => {
     );
   };
 
-  return (
-    <Layout>
-      {renderContent()}
-    </Layout>
-  );
+  return renderContent();
 };
 
-export default Checkout;
+export default function CheckoutPage() {
+  return (
+    <Layout>
+      <Suspense
+        fallback={
+          <div className="container mx-auto px-4 py-16 flex items-center justify-center min-h-[60vh]">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        }
+      >
+        <CheckoutInner />
+      </Suspense>
+    </Layout>
+  );
+}
 

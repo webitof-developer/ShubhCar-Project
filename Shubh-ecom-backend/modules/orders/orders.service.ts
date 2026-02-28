@@ -43,6 +43,7 @@ const ROLES = require('../../constants/roles');
 const { generateOrderNumber } = require('../../utils/numbering');
 const { ADMIN_STATUS_UPDATES } = require('../../constants/orderStatus');
 const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
+const checkoutDraftService = require('../checkout-drafts/checkoutDrafts.service');
 
 type CouponPayload = {
   couponId: unknown;
@@ -191,6 +192,18 @@ const allocateRoundedComponent = (items, totalAmount, rawTotals, field) => {
   });
 };
 
+const clearUserCartAfterOrderDone = async ({
+  userId,
+  sessionId = null,
+}: {
+  userId: string;
+  sessionId?: string | null;
+}) => {
+  if (!userId) return;
+  await cartRepo.clearCartByUserId(userId);
+  await cartCache.clearCart(userId, sessionId);
+};
+
 function assertOrderIsPaid(order) {
   if (order.paymentStatus !== PAYMENT_STATUS.PAID) {
     error(
@@ -230,17 +243,25 @@ class OrderService {
       // @ts-ignore
       userId: context.userId || user?.id || null,
     });
-    const cart = await cartRepo.getOrCreateCart({ userId: user.id, sessionId });
-    const cartItems = await cartRepo.getCartWithItems(cart._id);
-    if (!cartItems.length) error('Cart is empty', 400);
+    const checkoutDraft = payload.checkoutDraftId
+      ? await checkoutDraftService.getDraft({
+        user,
+        draftId: payload.checkoutDraftId,
+      })
+      : null;
+    const draftOrderId = checkoutDraft?.orderId || null;
+
+    if (
+      checkoutDraft &&
+      String(checkoutDraft.status || '').toLowerCase() !== 'draft'
+    ) {
+      error('Checkout draft already processed', 409, 'DRAFT_INVALID');
+    }
+    if (checkoutDraft && !draftOrderId) {
+      error('Draft is missing linked order. Please start checkout again.', 409, 'DRAFT_ORDER_MISSING');
+    }
 
     await assertPaymentMethodEnabled(payload.paymentMethod, payload.gateway);
-    if (payload.paymentMethod === 'razorpay' && !payload.paymentCompleted) {
-      error(
-        'Razorpay order can only be created after payment is completed',
-        400,
-      );
-    }
 
     const [shippingAddress, billingAddress] = await Promise.all([
       addressRepo.findById(payload.shippingAddressId),
@@ -252,6 +273,74 @@ class OrderService {
 
     if (!billingAddress || String(billingAddress.userId) !== String(user.id))
       error('Invalid billing address', 400);
+
+    if (draftOrderId) {
+      const session = await createSafeSession();
+      if (!session._isStandalone) {
+        session.startTransaction({ readPreference: 'primary' });
+      }
+
+      try {
+        const order = await orderRepo.findById(draftOrderId, session);
+        if (!order) error('Draft order not found', 404, 'ORDER_NOT_FOUND');
+        if (String(order.userId) !== String(user.id)) {
+          error('Access denied', 403, 'FORBIDDEN');
+        }
+        if (
+          order.orderStatus !== ORDER_STATUS.CREATED ||
+          order.paymentStatus !== PAYMENT_STATUS.PENDING
+        ) {
+          error('Order is not eligible for checkout update', 409, 'ORDER_INVALID_STATE');
+        }
+
+        order.shippingAddressId = payload.shippingAddressId;
+        order.billingAddressId = payload.billingAddressId;
+        order.paymentMethod = payload.paymentMethod;
+        order.placedAt = new Date();
+        await order.save({ session });
+
+        await checkoutDraftService.markPendingFromOrder({
+          draftId: checkoutDraft._id || payload.checkoutDraftId,
+          userId: user.id,
+          orderId: order._id,
+          shippingAddressId: payload.shippingAddressId,
+          billingAddressId: payload.billingAddressId,
+          paymentMethod: payload.paymentMethod,
+          couponCode: order.couponCode || null,
+          session,
+        });
+
+        if (!session._isStandalone && session.inTransaction()) {
+          await session.commitTransaction();
+        }
+
+        if (payload.paymentMethod === 'cod') {
+          await clearUserCartAfterOrderDone({ userId: user.id, sessionId });
+        } else {
+          await cartCache.clearCart(user.id, sessionId);
+        }
+
+        log.info('order_checkout_updated', {
+          type: 'order_event',
+          entityId: order._id.toString(),
+          orderId: order._id.toString(),
+          paymentMethod: payload.paymentMethod,
+        });
+
+        return order;
+      } catch (e) {
+        if (!session._isStandalone && session.inTransaction()) {
+          await session.abortTransaction();
+        }
+        throw e;
+      } finally {
+        session.endSession();
+      }
+    }
+
+    const cart = await cartRepo.getOrCreateCart({ userId: user.id, sessionId });
+    const cartItems = await cartRepo.getCartWithItems(cart._id);
+    if (!cartItems.length) error('Cart is empty', 400);
 
     // Coupon lock is acquired before starting the transaction
     const session = await createSafeSession();
@@ -436,10 +525,27 @@ class OrderService {
         );
       }
 
+      if (checkoutDraft) {
+        await checkoutDraftService.markPendingFromOrder({
+          draftId: checkoutDraft._id || payload.checkoutDraftId,
+          userId: user.id,
+          orderId: order._id,
+          shippingAddressId: payload.shippingAddressId,
+          billingAddressId: payload.billingAddressId,
+          paymentMethod: payload.paymentMethod,
+          couponCode: couponPayload.couponCode,
+          session,
+        });
+      }
+
       if (!session._isStandalone && session.inTransaction()) {
         await session.commitTransaction();
       }
-      await cartCache.clearCart(user.id, sessionId);
+      if (payload.paymentMethod === 'cod') {
+        await clearUserCartAfterOrderDone({ userId: user.id, sessionId });
+      } else {
+        await cartCache.clearCart(user.id, sessionId);
+      }
       await orderJobs.scheduleAutoCancel(order._id);
 
       log.info('order_created', {
@@ -512,6 +618,7 @@ class OrderService {
       order.isLocked = true;
 
       await order.save({ session });
+      await checkoutDraftService.markPaidByOrderId(order._id, session);
       await invoiceService.generateFromOrder(order);
 
       if (order.couponId) {
@@ -529,7 +636,9 @@ class OrderService {
         await session.commitTransaction();
       }
 
-      // 🔥 SIDE EFFECTS (OUTSIDE TX)
+      await clearUserCartAfterOrderDone({ userId: String(order.userId) });
+
+      // Side effects (outside transaction)
       await orderJobs.enqueueStatusNotification(order._id, 'confirmed');
       await orderJobs.dispatchShipmentPrep(order._id);
       await orderJobs.cancelAutoCancel(order._id);
@@ -592,6 +701,7 @@ class OrderService {
       order.orderStatus = ORDER_STATUS.CANCELLED;
       order.paymentStatus = PAYMENT_STATUS.FAILED;
       await order.save({ session });
+      await checkoutDraftService.markExpiredByOrderId(order._id, session);
 
       // Release coupon usage + lock
       if (order.couponId) {

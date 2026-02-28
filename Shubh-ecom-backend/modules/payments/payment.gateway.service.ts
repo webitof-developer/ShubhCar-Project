@@ -1,6 +1,7 @@
 const Stripe = require('stripe');
 const Razorpay = require('razorpay');
 const env = require('../../config/env');
+const { getPaymentSettings } = require('../../utils/paymentSettings');
 
 const stripe = env.STRIPE_SECRET_KEY
   ? new Stripe(env.STRIPE_SECRET_KEY, {
@@ -8,12 +9,21 @@ const stripe = env.STRIPE_SECRET_KEY
     })
   : null;
 
-const razorpay = env.RAZORPAY_KEY_ID
-  ? new Razorpay({
-      key_id: env.RAZORPAY_KEY_ID,
-      key_secret: env.RAZORPAY_KEY_SECRET,
-    })
-  : null;
+const getRazorpayClient = async () => {
+  const settings = await getPaymentSettings();
+  const keyId = settings?.razorpayKeyId || env.RAZORPAY_KEY_ID || null;
+  const keySecret =
+    settings?.razorpayKeySecret || env.RAZORPAY_KEY_SECRET || null;
+
+  if (!keyId || !keySecret) {
+    return null;
+  }
+
+  return new Razorpay({
+    key_id: keyId,
+    key_secret: keySecret,
+  });
+};
 
 class PaymentGatewayService {
   async refund({ payment, amount, reason }) {
@@ -28,6 +38,7 @@ class PaymentGatewayService {
     }
 
     if (payment.paymentGateway === 'razorpay') {
+      const razorpay = await getRazorpayClient();
       if (!razorpay) throw new Error('Razorpay not configured');
       return razorpay.payments.refund(
         payment.transactionId || payment.gatewayOrderId,
@@ -79,6 +90,7 @@ class PaymentGatewayService {
     }
 
     if (payment.paymentGateway === 'razorpay') {
+      const razorpay = await getRazorpayClient();
       if (!razorpay) throw new Error('Razorpay not configured');
       const id = payment.transactionId || payment.gatewayOrderId;
       if (!id) return null;

@@ -24,6 +24,7 @@ import { toast } from 'sonner';
 import APP_CONFIG from '@/config/app.config';
 import { processRazorpayPayment } from '@/services/razorpayService';
 import { confirmPayment } from '@/services/paymentService';
+import * as checkoutDraftService from '@/services/checkoutDraftService';
 
 function PaymentProcessInner() {
   const router = useRouter();
@@ -39,6 +40,7 @@ function PaymentProcessInner() {
 
   const orderId = searchParams.get('orderId');
   const paymentMethod = searchParams.get('method');
+  const draftId = searchParams.get('draftId');
 
   useEffect(() => {
    // 1. Validation
@@ -111,6 +113,7 @@ function PaymentProcessInner() {
           paymentId: details.internalPaymentId,
           orderId: orderData?.orderId,
           gateway: 'razorpay',
+          transactionId: details.razorpay_payment_id || null,
           createdAt: new Date().toISOString(),
         }));
         // Extract Razorpay payment ID and send it to backend
@@ -145,17 +148,54 @@ function PaymentProcessInner() {
     initiatedRef.current = false; // Allow retry
   };
 
-  const handleRetry = () => {
+  const handleRetry = async () => {
     setError(null);
-    setStatus('initializing');
-    initiatedRef.current = false; 
-    // Effect will re-run or we can manually trigger logic if needed
-    // But since access dependencies might not change, better to reload or re-trigger logic
-    window.location.reload(); 
+    setStatus('processing');
+    initiatedRef.current = false;
+
+    try {
+      const storedOrder = sessionStorage.getItem('pendingOrder');
+      if (!storedOrder) {
+        throw new Error('Session expired. Please try checking out again.');
+      }
+
+      const orderData = JSON.parse(storedOrder);
+      if (orderData.orderId !== orderId) {
+        throw new Error('Order mismatch. Please try again.');
+      }
+
+      let initiation = null;
+      if (draftId && accessToken) {
+        initiation = await checkoutDraftService.retryPayment(accessToken, draftId);
+      }
+
+      const userDetails = {
+        name: user?.firstName ? `${user.firstName} ${user.lastName}` : '',
+        email: user?.email,
+        phone: user?.phoneNumber,
+      };
+
+      const result = await processRazorpayPayment(
+        accessToken,
+        orderData,
+        userDetails,
+        initiation,
+      );
+
+      if (result.success) {
+        handleSuccess(result.details, orderData);
+      }
+    } catch (err) {
+      console.error('[PAYMENT] Retry failed:', err);
+      handleFailure(err.message);
+    }
   };
 
   const handleCancel = () => {
-    router.push('/checkout');
+    const checkoutUrl = draftId
+      ? `/checkout?draftId=${encodeURIComponent(draftId)}`
+      : '/checkout';
+    router.push(checkoutUrl);
   };
 
   return (

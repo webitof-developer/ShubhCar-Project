@@ -8,6 +8,7 @@ const placeOrderSchema = Joi.object({
   gateway: Joi.string()
     .valid('razorpay')
     .when('paymentMethod', { is: 'cod', then: Joi.optional(), otherwise: Joi.required() }),
+  checkoutDraftId: Joi.string().optional(),
   shippingAddressId: Joi.string().required(),
   billingAddressId: Joi.string().required(),
   taxPercent: Joi.number().min(0).default(0),

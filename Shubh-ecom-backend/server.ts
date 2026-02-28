@@ -11,6 +11,9 @@ const { scheduleCouponExpiry } = require('./modules/coupons/coupon.cron');
 const {
   startPaymentReconciliationCron,
 } = require('./crons/payment-reconciliation.cron');
+const {
+  startCheckoutDraftExpiryCron,
+} = require('./crons/checkout-draft-expiry.cron');
 const { startKeepAlive } = require('./services/keepAlive.service');
 const {
   ensureVehicleAttributeDefaults,
@@ -19,6 +22,7 @@ const {
   migrateVariantNameAttribute,
 } = require('./modules/vehicle-management/migrations/vehicle-management.migration');
 const paymentWebhookWorker = require('./workers/payment-webhook.worker');
+const orderWorker = require('./workers/order.worker');
 
 const start = async () => {
   try {
@@ -29,11 +33,15 @@ const start = async () => {
   }
   scheduleCouponExpiry();
   startPaymentReconciliationCron();
+  startCheckoutDraftExpiryCron();
   await ensureVehicleAttributeDefaults();
   await migrateVariantNameAttribute();
 
   logger.info('payment_webhook_worker_status', {
     disabled: Boolean(paymentWebhookWorker?.disabled),
+  });
+  logger.info('order_worker_status', {
+    disabled: Boolean(orderWorker?.disabled),
   });
 
   const server = app.listen(env.PORT, () => {
