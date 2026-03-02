@@ -49,11 +49,14 @@ const securityHeaders = [
       // Fonts: self only (using local/system fonts, no Google Fonts)
       `font-src 'self' data:`,
 
-      // API calls + WebSocket (Next.js HMR in dev) + Razorpay telemetry/status endpoints
-      `connect-src 'self' ${API_ORIGIN} https://checkout.razorpay.com https://api.razorpay.com https://lumberjack.razorpay.com wss: ws:`,
+      // API calls + WebSocket (Next.js HMR in dev) + Razorpay telemetry/status endpoints + blob
+      `connect-src 'self' blob: data: ${API_ORIGIN} https://checkout.razorpay.com https://api.razorpay.com https://lumberjack.razorpay.com wss: ws:`,
 
-      // Razorpay opens its own iframes for 3DS / OTP screens
-      `frame-src 'self' https://checkout.razorpay.com https://api.razorpay.com`,
+      // Razorpay opens its own iframes for 3DS / OTP screens + blobs for PDFs
+      `frame-src 'self' blob: data: https://checkout.razorpay.com https://api.razorpay.com`,
+
+      // Allow web workers to load from blob URLs (often used by html2canvas/pdf libraries)
+      `worker-src 'self' blob:`,
 
       // Prevent other sites from framing us
       `frame-ancestors 'self'`,
