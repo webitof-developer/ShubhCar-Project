@@ -119,13 +119,28 @@ const VehicleCompatibilitySection = ({ token, value = [], onChange }) => {
         })
         if (!response.ok) throw new Error('Failed to load vehicle years')
         const data = await response.json()
-        const list = data?.data || []
+        const list = data?.data || data?.items || []
         const sorted = Array.isArray(list)
           ? list.sort((a, b) => Number(b.year || 0) - Number(a.year || 0))
           : []
         setYears(sorted)
+        setError(null)
       } catch (err) {
-        setError(err.message || 'Failed to load vehicle years')
+        try {
+          const response = await fetch(`${API_BASE_URL}/vehicle-years?limit=200`, {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+          if (!response.ok) throw new Error('Failed to load vehicle years')
+          const data = await response.json()
+          const list = data?.data?.items || data?.items || data?.data || []
+          const sorted = Array.isArray(list)
+            ? list.sort((a, b) => Number(b.year || 0) - Number(a.year || 0))
+            : []
+          setYears(sorted)
+          setError(null)
+        } catch (fallbackError) {
+          setError(fallbackError.message || 'Failed to load vehicle years')
+        }
       } finally {
         setLoading((prev) => ({ ...prev, years: false }))
       }

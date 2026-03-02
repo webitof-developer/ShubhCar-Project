@@ -1111,7 +1111,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                   }
                   required>
                   {paymentPolicy.codEnabled && <option value="cod">Cash on Delivery</option>}
-                  {paymentPolicy.razorpayEnabled && <option value="razorpay">Razorpay</option>}
+                  {/* {paymentPolicy.razorpayEnabled && <option value="razorpay">Razorpay</option>} */}
                   {!paymentPolicy.codEnabled && !paymentPolicy.razorpayEnabled && (
                     <option value="">No payment method enabled</option>
                   )}
@@ -1179,11 +1179,25 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                     type="number"
                     min="1"
                     max={item.stockQty != null ? item.stockQty : undefined}
-                    value={item.quantity}
+                    value={item.quantity ?? ''}
                     onChange={(e) => {
-                      const raw = parseInt(e.target.value, 10)
+                      const inputValue = e.target.value
+                      if (inputValue === '') {
+                        updateItemField(index, 'quantity', '')
+                        return
+                      }
+                      const raw = parseInt(inputValue, 10)
+                      if (Number.isNaN(raw)) {
+                        return
+                      }
                       const maxQty = item.stockQty != null ? item.stockQty : Infinity
-                      const safeQty = isNaN(raw) ? 1 : Math.min(Math.max(1, raw), maxQty)
+                      const safeQty = Math.min(Math.max(1, raw), maxQty)
+                      updateItemField(index, 'quantity', safeQty)
+                    }}
+                    onBlur={() => {
+                      const raw = parseInt(String(item.quantity), 10)
+                      const maxQty = item.stockQty != null ? item.stockQty : Infinity
+                      const safeQty = Number.isNaN(raw) ? 1 : Math.min(Math.max(1, raw), maxQty)
                       updateItemField(index, 'quantity', safeQty)
                     }}
                     placeholder="1"

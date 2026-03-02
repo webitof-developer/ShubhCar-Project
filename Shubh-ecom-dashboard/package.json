@@ -7,7 +7,13 @@
     "build": "next build",
     "start": "next start -H 0.0.0.0 -p ${PORT:-3000}",
     "lint": "next lint",
-    "format": "prettier --write 'src/**/*.{ts,tsx,js,jsx}'"
+    "format": "prettier --write 'src/**/*.{ts,tsx,js,jsx}'",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",
@@ -44,14 +50,25 @@
     "yup": "^1.4.0"
   },
   "devDependencies": {
+    "@babel/core": "^7.29.0",
+    "@babel/preset-env": "^7.29.0",
+    "@babel/preset-react": "^7.28.5",
     "@iconify/react": "^6.0.2",
+    "@playwright/test": "^1.58.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^25.0.10",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/react-flatpickr": "^3.8.11",
     "@types/react-input-mask": "^3.0.6",
+    "babel-jest": "^30.2.0",
     "eslint": "^9.39.3",
     "eslint-config-next": "^16.0.11",
+    "identity-obj-proxy": "^3.0.0",
+    "jest": "^30.2.0",
+    "jest-environment-jsdom": "^30.2.0",
     "prettier": "^3.3.3",
     "typescript": "^5.9.3"
   }

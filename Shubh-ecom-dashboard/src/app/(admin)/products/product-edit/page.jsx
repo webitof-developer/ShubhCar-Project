@@ -1,6 +1,6 @@
 import PageTitle from '@/components/PageTitle'
 import { Row } from 'react-bootstrap'
-import AddProduct from '../product-add/components/AddProduct'
+import AddProduct from '../product-add/AddProduct'
 // import VehicleVariantCreator from '@/components/VehicleVariantCreator'
 
 export const metadata = {
