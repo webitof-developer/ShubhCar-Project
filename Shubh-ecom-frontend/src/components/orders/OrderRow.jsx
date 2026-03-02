@@ -15,7 +15,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Calendar, Truck, MapPin, CreditCard, ChevronDown, ChevronUp, FileText, Package } from 'lucide-react';
-import { getOrder } from '@/services/orderService';
+import { getOrder, cancelOrder } from '@/services/orderService';
+import { toast } from 'sonner';
 import { getAddressById } from '@/services/userAddressService';
 import { resolveProductImages } from '@/utils/media';
 import { formatPrice } from '@/services/pricingService';
@@ -38,15 +39,23 @@ export function OrderRow({ order, accessToken }) {
   const [cancelReason, setCancelReason] = useState('ordered_by_mistake');
   const [cancelDetails, setCancelDetails] = useState('');
   const [confirmRequest, setConfirmRequest] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [requestSubmitted, setRequestSubmitted] = useState(false);
 
-  const displayItems = (order.items || []).slice(0, 3);
-  const remainingCount = (order.items || []).length - 3;
   const displayOrder = detail || order;
+  const displayItems = (displayOrder.items || []).slice(0, 3);
+  const remainingCount = (displayOrder.items || []).length - 3;
   const supportEmail = APP_CONFIG?.site?.contact?.email || 'support@autospares.com';
   const requestKey = `cancel_request_${order?._id}`;
   const cancellableStatuses = new Set(['created', 'pending_payment', 'confirmed', 'on_hold']);
   const isCancellationEligible = cancellableStatuses.has(displayOrder?.orderStatus);
+  const isPostShipment = ['shipped', 'out_for_delivery', 'delivered'].includes(displayOrder?.orderStatus);
+  const paymentMethodNormalized = String(displayOrder?.paymentMethod || '').toLowerCase();
+  const isCodOrder = paymentMethodNormalized.includes('cod') || paymentMethodNormalized.includes('cash');
+  const isRazorpayOrder = paymentMethodNormalized.includes('razor');
+  const normalizedPaymentStatus = displayOrder?.orderStatus === 'cancelled' && displayOrder?.paymentStatus === 'pending'
+    ? 'failed'
+    : displayOrder?.paymentStatus;
 
   useEffect(() => {
     if (!order?._id || typeof window === 'undefined') return;
@@ -77,44 +86,32 @@ export function OrderRow({ order, accessToken }) {
     setExpanded((p) => !p);
   };
 
-  const submitCancellationRequest = () => {
+  const handleCancelOrder = async () => {
     if (typeof window === 'undefined') return;
 
-    const reasonMap = {
-      ordered_by_mistake: 'Ordered by mistake',
-      address_issue: 'Address issue',
-      delayed_delivery: 'Delayed delivery',
-      duplicate_order: 'Duplicate order',
-      other: 'Other',
-    };
-
-    const subject = `Cancellation Request: Order #${displayOrder?.orderNumber || displayOrder?._id}`;
-    const body = [
-      'Hello Team,',
-      '',
-      'I want to request cancellation for this order:',
-      `Order Number: ${displayOrder?.orderNumber || 'N/A'}`,
-      `Order ID: ${displayOrder?._id || 'N/A'}`,
-      `Order Status: ${displayOrder?.orderStatus || 'N/A'}`,
-      `Reason: ${reasonMap[cancelReason] || cancelReason}`,
-      `Details: ${cancelDetails?.trim() || 'N/A'}`,
-      '',
-      'I understand this is a cancellation request and will be reviewed by admin.',
-    ].join('\n');
-
-    const mailtoUrl = `mailto:${supportEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.open(mailtoUrl, '_blank');
-    window.localStorage.setItem(
-      requestKey,
-      JSON.stringify({
-        requestedAt: new Date().toISOString(),
-        reason: cancelReason,
-      }),
-    );
-    setRequestSubmitted(true);
-    setRequestOpen(false);
-    setConfirmRequest(false);
-    setCancelDetails('');
+    try {
+      setIsCancelling(true);
+      await cancelOrder(accessToken, displayOrder._id, cancelReason);
+      
+      toast.success('Order cancelled successfully.');
+      
+      // Instantly update the UI local state
+      setDetail((prev) => ({
+        ...(prev || displayOrder),
+        orderStatus: 'cancelled',
+        paymentStatus:
+          ['paid', 'partially_paid'].includes(String(displayOrder?.paymentStatus || '').toLowerCase())
+            ? 'refunded'
+            : 'failed',
+      }));
+      
+      setRequestOpen(false);
+    } catch (err) {
+      toast.error(err.message || 'Failed to cancel the order. Please try again.');
+    } finally {
+      setIsCancelling(false);
+      setConfirmRequest(false);
+    }
   };
 
   return (
@@ -150,59 +147,61 @@ export function OrderRow({ order, accessToken }) {
           {/* Order meta */}
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-1">
-              <span className="font-bold text-foreground text-sm">#{order.orderNumber}</span>
+              <span className="font-bold text-foreground text-sm">#{displayOrder.orderNumber}</span>
               <Badge
                 variant="outline"
-                className={`${getOrderStatusBadgeClass(order.orderStatus)} flex items-center gap-1 text-xs`}
+                className={`${getOrderStatusBadgeClass(displayOrder.orderStatus)} flex items-center gap-1 text-xs`}
               >
-                {getOrderStatusIcon(order.orderStatus, 'w-3 h-3')}
-                {getOrderStatusLabel(order.orderStatus)}
+                {getOrderStatusIcon(displayOrder.orderStatus, 'w-3 h-3')}
+                {getOrderStatusLabel(displayOrder.orderStatus)}
               </Badge>
-              <Badge
-                variant="outline"
-                className={`${getPaymentStatusBadgeClass(order.paymentStatus)} text-xs`}
-              >
-                {getPaymentStatusLabel(order.paymentStatus)}
-              </Badge>
+              {!isCodOrder && (
+                <Badge
+                  variant="outline"
+                  className={`${getPaymentStatusBadgeClass(normalizedPaymentStatus)} text-xs`}
+                >
+                  {getPaymentStatusLabel(normalizedPaymentStatus)}
+                </Badge>
+              )}
             </div>
 
             {/* Product names */}
             <p className="text-sm text-foreground font-medium truncate">
-              {(order.items || []).map((i) => i.product?.name).filter(Boolean).slice(0, 2).join(', ')}
-              {(order.items || []).length > 2 && ` +${(order.items || []).length - 2} more`}
+               {(displayOrder.items || []).map((i) => i.product?.name).filter(Boolean).slice(0, 2).join(', ')}
+               {(displayOrder.items || []).length > 2 && ` +${(displayOrder.items || []).length - 2} more`}
             </p>
 
             <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground flex-wrap">
               <span className="flex items-center gap-1">
                 <Calendar className="w-3.5 h-3.5" />
-                {new Date(order.placedAt || order.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                {new Date(displayOrder.placedAt || displayOrder.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
               </span>
               <span className="flex items-center gap-1">
                 <Package className="w-3.5 h-3.5" />
-                {(order.items || []).length} {(order.items || []).length === 1 ? 'item' : 'items'}
+                {(displayOrder.items || []).length} {(displayOrder.items || []).length === 1 ? 'item' : 'items'}
               </span>
-              {order.shipment?.trackingNumber && (
+              {displayOrder.shipment?.trackingNumber && (
                 <span className="flex items-center gap-1">
                   <Truck className="w-3.5 h-3.5" />
-                  {order.shipment.trackingNumber}
+                  {displayOrder.shipment.trackingNumber}
                 </span>
               )}
             </div>
 
             {/* Compact timeline */}
             <div className="mt-3">
-              <OrderTimeline status={order.orderStatus} />
+              <OrderTimeline status={displayOrder.orderStatus} />
             </div>
           </div>
 
           {/* Price + actions */}
           <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 flex-shrink-0">
             <div className="text-right">
-              <p className="font-bold text-lg text-foreground leading-tight">{formatPrice(order.grandTotal || 0)}</p>
-              <p className="text-xs text-muted-foreground">{order.paymentMethod}</p>
+              <p className="font-bold text-lg text-foreground leading-tight">{formatPrice(displayOrder.grandTotal || 0)}</p>
+              <p className="text-xs text-muted-foreground">{displayOrder.paymentMethod}</p>
             </div>
             <div className="flex items-center gap-2">
-              <Link href={`/invoice/${order._id}`} target="_blank">
+              <Link href={`/invoice/${displayOrder._id}`} target="_blank">
                 <Button variant="ghost" size="sm" className="h-8 text-xs px-2">
                   <FileText className="w-3.5 h-3.5 mr-1" />
                   Invoice
@@ -307,12 +306,14 @@ export function OrderRow({ order, accessToken }) {
                       <span className="text-muted-foreground text-xs">Method</span>
                       <span className="font-medium text-xs">{displayOrder.paymentMethod}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground text-xs">Status</span>
-                      <span className={`text-xs font-medium ${getPaymentStatusBadgeClass(displayOrder.paymentStatus)}`}>
-                        {getPaymentStatusLabel(displayOrder.paymentStatus)}
-                      </span>
-                    </div>
+                    {!isCodOrder && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground text-xs">Status</span>
+                        <span className={`text-xs font-medium ${getPaymentStatusBadgeClass(normalizedPaymentStatus)}`}>
+                          {getPaymentStatusLabel(normalizedPaymentStatus)}
+                        </span>
+                      </div>
+                    )}
                     {displayOrder.paymentSummary && (
                       <>
                         <div className="flex justify-between">
@@ -346,35 +347,57 @@ export function OrderRow({ order, accessToken }) {
                   </div>
                 )}
 
-                {/* Cancellation request */}
+                {/* Cancellation & Support Block */}
                 <div className="p-3 rounded-lg bg-background border border-border/40">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                    Cancellation
-                  </p>
-                  <p className="text-xs text-muted-foreground mb-2">
-                    Cancellation is available before shipment and requires admin approval.
-                  </p>
-                  {requestSubmitted ? (
-                    <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-600 border-blue-500/30">
-                      Cancellation Requested
-                    </Badge>
-                  ) : (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-8 text-xs px-3"
-                      disabled={!isCancellationEligible}
-                      onClick={() => setRequestOpen(true)}
-                    >
-                      Request Cancellation
-                    </Button>
-                  )}
-                  {!isCancellationEligible && !requestSubmitted && (
-                    <p className="text-[11px] text-muted-foreground mt-2">
-                      Request is disabled once order is shipped.
-                    </p>
-                  )}
+                  {isCancellationEligible ? (
+                    <>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                        Cancellation
+                      </p>
+                      <p className="text-[11px] text-muted-foreground mb-3">
+                        You can cancel your order directly before it ships.
+                      </p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-8 text-xs px-3 border-destructive/20 text-destructive hover:bg-destructive/10 transition-colors"
+                        onClick={() => setRequestOpen(true)}
+                      >
+                        Cancel Order
+                      </Button>
+                    </>
+                  ) : displayOrder?.orderStatus === 'cancelled' || displayOrder?.orderStatus === 'returned' ? (
+                    <>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                        Support
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        This order has been {displayOrder?.orderStatus}. Please contact support if you need assistance.
+                      </p>
+                      {displayOrder?.orderStatus === 'cancelled' && isRazorpayOrder && (
+                        <p className="text-[11px] text-muted-foreground mt-2">
+                          Razorpay orders: if payment was debited, refund is processed to the original payment source. Contact support for a status update.
+                        </p>
+                      )}
+                    </>
+                  ) : isPostShipment ? (
+                    <>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                        Contact Support
+                      </p>
+                      <p className="text-[11px] text-muted-foreground mb-3">
+                        This order has already been shipped or delivered. For any returns or cancellations, please contact our support team.
+                      </p>
+                      <div className="flex gap-2">
+                        <Link href={`mailto:${supportEmail}?subject=Support for Order #${displayOrder?.orderNumber}`} target="_blank">
+                          <Button size="sm" variant="secondary" className="h-8 text-[11px] px-3">
+                            Email Support
+                          </Button>
+                        </Link>
+                      </div>
+                    </>
+                  ) : null}
                 </div>
 
                 {/* Customer notes */}
@@ -397,16 +420,16 @@ export function OrderRow({ order, accessToken }) {
       <AlertDialog open={requestOpen} onOpenChange={setRequestOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Request Order Cancellation</AlertDialogTitle>
+            <AlertDialogTitle>Cancel Your Order</AlertDialogTitle>
             <AlertDialogDescription>
-              This sends a cancellation request to support. Admin will review and cancel from dashboard.
+              Are you sure you want to cancel this order? This action is immediate and cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
 
           <div className="space-y-3">
             <div className="space-y-1">
               <label className="text-xs font-medium text-foreground" htmlFor={`cancel-reason-${order?._id}`}>
-                Reason
+                Reason for cancellation
               </label>
               <select
                 id={`cancel-reason-${order?._id}`}
@@ -415,9 +438,9 @@ export function OrderRow({ order, accessToken }) {
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
                 <option value="ordered_by_mistake">Ordered by mistake</option>
-                <option value="address_issue">Address issue</option>
-                <option value="delayed_delivery">Delayed delivery</option>
-                <option value="duplicate_order">Duplicate order</option>
+                <option value="found_better_price">Found a better price</option>
+                <option value="delivery_too_long">Delivery taking too long</option>
+                <option value="change_of_mind">Change of mind</option>
                 <option value="other">Other</option>
               </select>
             </div>
@@ -433,7 +456,7 @@ export function OrderRow({ order, accessToken }) {
                 value={cancelDetails}
                 onChange={(e) => setCancelDetails(e.target.value)}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                placeholder="Add any extra details for admin review"
+                placeholder="Let us know more details..."
               />
             </div>
 
@@ -444,24 +467,24 @@ export function OrderRow({ order, accessToken }) {
                 onChange={(e) => setConfirmRequest(e.target.checked)}
                 className="mt-0.5 h-4 w-4 rounded border-input"
               />
-              <span>I understand this is a request, not an instant cancellation.</span>
+              <span>I understand that checking this box will cancel my order immediately.</span>
             </label>
           </div>
 
           <AlertDialogFooter>
             <AlertDialogCancel>Close</AlertDialogCancel>
             <AlertDialogAction
-              disabled={!confirmRequest}
+              disabled={!confirmRequest || isCancelling}
               onClick={(e) => {
                 if (!confirmRequest) {
                   e.preventDefault();
                   return;
                 }
-                submitCancellationRequest();
+                handleCancelOrder();
               }}
-              className={!confirmRequest ? 'opacity-60' : ''}
+              className={!confirmRequest || isCancelling ? 'opacity-60' : 'bg-destructive/90 text-destructive-foreground hover:bg-destructive'}
             >
-              Submit Request
+              {isCancelling ? 'Cancelling...' : 'Confirm Cancellation'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

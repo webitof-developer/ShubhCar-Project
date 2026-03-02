@@ -128,6 +128,21 @@ export const orderAPI = {
   },
 
   /**
+   * Get credit note PDF by order ID
+   */
+  getCreditNotePdfByOrder: async (orderId, token, download = false) => {
+    const url = `${API_BASE_URL}/invoices/order/${orderId}/credit-note/pdf${download ? '?download=true' : ''}`;
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || `API Error: ${response.statusText}`);
+    }
+    return response.blob();
+  },
+
+  /**
    * Create shipment for an order item
    * @param {string} orderItemId - Order item ID
    * @param {Object} payload - Shipment payload

@@ -742,6 +742,77 @@ class OrderService {
     }
   }
 
+  async cancelByUser({ user, orderId, payload }) {
+    const session = await createSafeSession();
+    if (!session._isStandalone) {
+      session.startTransaction({ readPreference: 'primary' });
+    }
+
+    try {
+      const order = await orderRepo.findById(orderId, session);
+      if (!order) error('Order not found', 404);
+
+      if (String(order.userId) !== String(user.id)) {
+        error('Not authorized to cancel this order', 403);
+      }
+
+      const cancellableStatuses = ['created', 'pending_payment', 'placed', 'confirmed', 'on_hold'];
+      if (!cancellableStatuses.includes(order.orderStatus)) {
+        error('Order cannot be cancelled at this stage', 400);
+      }
+
+      const items = await orderRepo.findItemsByOrder(orderId, session);
+      for (const item of items) {
+        await inventoryService.release(item.productId, item.quantity, session, {
+          orderId,
+          reason: 'user_cancel',
+        });
+      }
+
+      if (order.paymentStatus === PAYMENT_STATUS.PAID) {
+        order.paymentStatus = PAYMENT_STATUS.REFUNDED;
+      } else if (order.paymentStatus === PAYMENT_STATUS.PENDING) {
+        order.paymentStatus = PAYMENT_STATUS.FAILED;
+      }
+
+      order.orderStatus = ORDER_STATUS.CANCELLED;
+      await order.save({ session });
+
+      if (orderVersionRepo.createVersion) {
+        await orderVersionRepo.createVersion({
+          orderId: order._id,
+          snapshot: order.toObject ? order.toObject() : order,
+          reason: 'user_cancel',
+          actor: { id: user.id, type: 'user' },
+          session,
+        });
+      }
+
+      if (!session._isStandalone && session.inTransaction()) {
+        await session.commitTransaction();
+      }
+
+      // Send cancellation email
+      if (typeof this.sendOrderCancellationEmail === 'function') {
+        this.sendOrderCancellationEmail(order).catch((err) => {
+          logger.error('Order cancellation email failed', {
+            orderId: order._id,
+            error: err.message,
+          });
+        });
+      }
+
+      return await this.getOrderDetail(user, order._id);
+    } catch (e) {
+      if (!session._isStandalone && session.inTransaction()) {
+        await session.abortTransaction();
+      }
+      throw e;
+    } finally {
+      session.endSession();
+    }
+  }
+
   async markRefunded(orderId, isFullRefund, context: Record<string, unknown> = {}) {
     const session = await createSafeSession();
     if (!session._isStandalone) {

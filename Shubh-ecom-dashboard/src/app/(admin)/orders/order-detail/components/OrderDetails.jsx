@@ -657,7 +657,7 @@ export const PaymentInformation = ({ order, onPaymentUpdate, updatingPayment, on
   )
 }
 
-export const Documents = ({ onDownloadInvoice, invoiceDisabled }) => {
+export const Documents = ({ onDownloadInvoice, invoiceDisabled, onDownloadCreditNote, creditNoteDisabled }) => {
   return (
     <Card className="mb-3 border-0 shadow-sm">
       <CardHeader className="bg-light-subtle border-bottom border-light">
@@ -674,13 +674,22 @@ export const Documents = ({ onDownloadInvoice, invoiceDisabled }) => {
             <span className="d-flex align-items-center gap-2"> <IconifyIcon icon="solar:file-text-broken" /> Invoice</span>
             <IconifyIcon icon="solar:download-minimalistic-broken" />
           </Button>
+          <Button
+            variant="light"
+            className="w-100 d-flex align-items-center justify-content-between gap-2 text-dark bg-white border mt-2"
+            onClick={onDownloadCreditNote}
+            disabled={creditNoteDisabled}
+          >
+            <span className="d-flex align-items-center gap-2"> <IconifyIcon icon="solar:document-medicine-broken" /> Credit Note</span>
+            <IconifyIcon icon="solar:download-minimalistic-broken" />
+          </Button>
         </div>
       </CardBody>
     </Card>
   )
 }
 
-const OrderDetails = ({ order, shipments, items, notes, onStatusUpdate, updatingStatus, onAddNote, addingNote, onDownloadInvoice, onUpsertShipment, savingShipment, canManage = true, onPaymentUpdate, updatingPayment, onSyncPayment, syncingPayment }) => {
+const OrderDetails = ({ order, shipments, items, notes, onStatusUpdate, updatingStatus, onAddNote, addingNote, onDownloadInvoice, onDownloadCreditNote, onUpsertShipment, savingShipment, canManage = true, onPaymentUpdate, updatingPayment, onSyncPayment, syncingPayment }) => {
   if (!order) return null;
   return (
     <div>

@@ -33,7 +33,7 @@ export const ProductReviewsSectionV2 = ({
       {/* Summary sidebar */}
       <div className="md:w-52 shrink-0">
         <div className="bg-muted/30 rounded-xl p-4 border border-border/30 mb-4">
-          <div className="text-4xl font-extrabold text-foreground text-center mb-1">
+          <div className="text-4xl text-muted font-extrabold text-foreground text-center mb-1">
             {ratingCount > 0 ? Number(ratingAvg).toFixed(1) : '—'}
           </div>
           <div className="flex justify-center mb-1">

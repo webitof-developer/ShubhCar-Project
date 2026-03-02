@@ -480,5 +480,58 @@ router.get(
   }),
 );
 
+/**
+ * @openapi
+ * /api/v1/invoices/order/{orderId}/credit-note/pdf:
+ *   get:
+ *     summary: Get credit note PDF by order id (Admin)
+ *     tags: [Invoices]
+ *     security: [ { bearerAuth: [] } ]
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema: { type: string }
+ *       - in: query
+ *         name: download
+ *         schema: { type: string, enum: [ "true", "false" ] }
+ *     responses:
+ *       200:
+ *         description: PDF stream
+ *       404:
+ *         description: Credit note not found
+ */
+router.get(
+  '/order/:orderId/credit-note/pdf',
+  adminLimiter,
+  auth([ROLES.ADMIN]),
+  validateId('orderId'),
+  validate(pdfQuerySchema, 'query'),
+  asyncHandler(async (req, res) => {
+    let creditNote = await Invoice.findOne({ orderId: req.params.orderId, type: 'credit_note' }).lean();
+
+    if (!creditNote) {
+      // In case it hasn't been generated but the order is cancelled, we might generate it here.
+      // Easiest is to just check if original invoice exists and attempt generation:
+      const order = await Order.findById(req.params.orderId);
+      if (order && order.orderStatus === 'cancelled') {
+        const originalInvoice = await Invoice.findOne({ orderId: order._id, type: 'invoice' });
+        if (originalInvoice) {
+           creditNote = await invoiceService.generateCreditNote(order, originalInvoice);
+           if (creditNote && typeof creditNote.toObject === 'function') {
+             creditNote = creditNote.toObject();
+           }
+        }
+      }
+    }
+
+    if (!creditNote) {
+      return res.fail('Credit note not found for this order', 404);
+    }
+    const download = String(req.query.download || '').toLowerCase() === 'true';
+    return streamInvoicePdf(creditNote, res, { download });
+  }),
+);
+
 module.exports = router;
 

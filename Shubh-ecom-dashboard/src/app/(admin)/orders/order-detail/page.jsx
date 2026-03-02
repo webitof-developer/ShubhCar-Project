@@ -135,6 +135,24 @@ const OrderDetailPage = () => {
     }
   };
 
+  const handleDownloadCreditNote = async () => {
+    if (!orderId || !session?.accessToken) return;
+    try {
+      const blob = await orderAPI.getCreditNotePdfByOrder(orderId, session.accessToken, true);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `credit-note-${orderId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      logger.error('Failed to download credit note:', error);
+      toast.error(error.message || 'Failed to download credit note');
+    }
+  };
+
   const handleUpsertShipment = async (orderItemId, payload, hasExisting) => {
     if (!canManageOrders) return false;
     if (!orderId || !session?.accessToken) return false;
@@ -380,6 +398,8 @@ const OrderDetailPage = () => {
               <Documents
                 onDownloadInvoice={handleDownloadInvoice}
                 invoiceDisabled={order.paymentStatus !== 'paid'}
+                onDownloadCreditNote={handleDownloadCreditNote}
+                creditNoteDisabled={order.orderStatus !== 'cancelled' && order.orderStatus !== 'returned'}
               />
             </Col>
             <Col md={6}>
@@ -400,6 +420,7 @@ const OrderDetailPage = () => {
             onAddNote={handleAddNote}
             addingNote={addingNote}
             onDownloadInvoice={handleDownloadInvoice}
+            onDownloadCreditNote={handleDownloadCreditNote}
             onUpsertShipment={handleUpsertShipment}
             savingShipment={savingShipment}
             canManage={canManageOrders}

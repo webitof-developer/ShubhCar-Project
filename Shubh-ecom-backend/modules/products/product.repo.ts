@@ -69,7 +69,7 @@ class ProductRepository {
         .split(',')
         .map((t) => t.trim().toUpperCase())
         .filter(Boolean)
-        .map((t) => (t === 'AFTERMARKET' ? 'AFTERMARKET' : 'OEM'));
+        .filter((t) => ['OEM', 'OES', 'AFTERMARKET'].includes(t));
       if (types.length) filter.productType = { $in: types };
     }
     if (search) {

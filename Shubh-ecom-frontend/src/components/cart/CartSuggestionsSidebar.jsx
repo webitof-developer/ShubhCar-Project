@@ -1,11 +1,11 @@
 "use client";
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getDisplayPrice, formatPrice } from '@/services/pricingService';
 import { resolveProductImages } from '@/utils/media';
+import { SafeImage } from '@/components/common/SafeImage';
 
 export const CartSuggestionsSidebar = ({ products, user, onAddToCart }) => {
   return (
@@ -22,9 +22,9 @@ export const CartSuggestionsSidebar = ({ products, user, onAddToCart }) => {
             const productLink = product.slug ? `/product/${product.slug}` : '/products';
             return (
               <div key={product._id || product.id || index} className="group p-2 hover:bg-secondary/50 rounded-lg transition-colors">
-                <Link href={productLink} className="flex gap-2">
+                <Link href={productLink} className="flex items-start gap-2">
                   <div className="relative w-16 h-16 shrink-0 rounded bg-secondary overflow-hidden">
-                    <Image
+                    <SafeImage
                       src={resolveProductImages(product.images || [])[0] || '/placeholder.jpg'}
                       alt={product.name || 'Product'}
                       fill
@@ -43,7 +43,7 @@ export const CartSuggestionsSidebar = ({ products, user, onAddToCart }) => {
                 </Link>
                 <Button
                   size="sm"
-                  className="w-40 mt-2 h-8 text-xs "
+                  className="w-full mt-2 h-8 text-xs"
                   onClick={(e) => {
                     e.preventDefault();
                     onAddToCart(product);
