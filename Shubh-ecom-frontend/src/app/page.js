@@ -43,7 +43,7 @@ const HomeSkeleton = () => {
       </div>
 
       {/* Product Carousel Skeleton */}
-      <div className="container mx-auto px-4">
+      <div className="container mx-auto px-6">
         <div className="flex justify-between items-end mb-6">
           <div className="space-y-2">
             <div className="h-8 w-48 bg-slate-200 rounded animate-pulse"></div>

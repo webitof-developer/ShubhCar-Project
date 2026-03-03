@@ -76,10 +76,10 @@ export const ProductCarousel = ({ title, subtitle, products, viewAllLink }) => {
         {/* Scroll container aligned with header */}
         <div className="relative group/carousel">
           {/* Left Navigation Button */}
-          <Button 
-            variant="outline" 
-            size="icon" 
-            className="absolute -left-2 md:-left-4 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-background/95 backdrop-blur-sm shadow-md border border-border opacity-0 group-hover/carousel:opacity-100 transition-all duration-200 hidden md:flex disabled:opacity-40 disabled:cursor-not-allowed" 
+          <Button
+            variant="outline"
+            size="icon"
+            className={`absolute left-1 md:left-2 lg:-left-4 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-background/95 backdrop-blur-sm shadow-md border border-border opacity-0 group-hover/carousel:opacity-100 transition-all duration-200 ${canScrollLeft ? 'hidden md:flex' : 'hidden'}`}
             onClick={() => scroll('left')}
             aria-label="Scroll left"
             disabled={!canScrollLeft}
@@ -88,10 +88,10 @@ export const ProductCarousel = ({ title, subtitle, products, viewAllLink }) => {
           </Button>
 
           {/* Right Navigation Button */}
-          <Button 
-            variant="outline" 
-            size="icon" 
-            className="absolute -right-2 md:-right-4 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-background/95 backdrop-blur-sm shadow-md border border-border opacity-0 group-hover/carousel:opacity-100 transition-all duration-200 hidden md:flex disabled:opacity-40 disabled:cursor-not-allowed" 
+          <Button
+            variant="outline"
+            size="icon"
+            className={`absolute right-1 md:right-2 lg:-right-4 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-background/95 backdrop-blur-sm shadow-md border border-border opacity-0 group-hover/carousel:opacity-100 transition-all duration-200 ${canScrollRight ? 'hidden md:flex' : 'hidden'}`}
             onClick={() => scroll('right')}
             aria-label="Scroll right"
             disabled={!canScrollRight}

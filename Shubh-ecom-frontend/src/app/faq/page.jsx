@@ -244,16 +244,8 @@ const FaqPage = () => {
                         <p className="text-slate-500">Can't find the answer you're looking for? Please contact our friendly team.</p>
                     </div>
 
-                    <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-                        <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100 text-center hover:border-blue-200 hover:shadow-lg transition-all group">
-                            <div className="w-12 h-12 mx-auto rounded-full bg-white shadow-sm flex items-center justify-center text-blue-600 mb-4 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                                <MessageCircle className="w-5 h-5" />
-                            </div>
-                            <h3 className="font-bold text-slate-900 mb-1">Live Chat</h3>
-                            <p className="text-sm text-slate-500 mb-4">Chat with our support team</p>
-                            <Button variant="outline" className="w-full rounded-full group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600">Start Chat</Button>
-                        </div>
-
+                    <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                      
                         <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100 text-center hover:border-blue-200 hover:shadow-lg transition-all group">
                             <div className="w-12 h-12 mx-auto rounded-full bg-white shadow-sm flex items-center justify-center text-blue-600 mb-4 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                                 <Mail className="w-5 h-5" />
