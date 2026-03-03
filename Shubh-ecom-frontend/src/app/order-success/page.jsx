@@ -9,8 +9,12 @@ import Link from 'next/link';
 import APP_CONFIG from '@/config/app.config';
 import { useAuth } from '@/context/AuthContext';
 import { confirmPayment } from '@/services/paymentService';
+import { useSiteConfig } from '@/hooks/useSiteConfig';
 
 export default function ThankYouPage() {
+  const { contact } = useSiteConfig();
+  const supportEmail = contact?.email || APP_CONFIG.site.contact.email;
+  const supportPhone = contact?.phone || APP_CONFIG.site.contact.phone;
   const { accessToken } = useAuth();
   const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [orderData] = useState(() => {
@@ -172,12 +176,12 @@ export default function ThankYouPage() {
               <div className="mt-6 text-sm text-muted-foreground text-center bg-zinc-50 p-4 rounded-lg border border-zinc-100">
                 <p>
                   Need help with your order? Contact our support team at{' '}
-                  <a href={`mailto:${APP_CONFIG.site.contact.email}`} className="text-primary hover:underline font-medium">
-                    {APP_CONFIG.site.contact.email}
+                  <a href={`mailto:${supportEmail}`} className="text-primary hover:underline font-medium">
+                    {supportEmail}
                   </a>{' '}
                   or call{' '}
-                  <a href={`tel:${APP_CONFIG.site.contact.phone.replace(/\D/g, '')}`} className="text-primary hover:underline font-medium">
-                    {APP_CONFIG.site.contact.phone}
+                  <a href={`tel:${String(supportPhone).replace(/\D/g, '')}`} className="text-primary hover:underline font-medium">
+                    {supportPhone}
                   </a>.
                 </p>
                 <p className="mt-1 text-xs opacity-75">

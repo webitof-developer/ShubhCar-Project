@@ -12,8 +12,6 @@ const inventoryService = require('../inventory/inventory.service');
 const orderVersionRepo = require('./orderVersion.repo');
 const orderEventRepo = require('./orderEvent.repo');
 const orderJobs = require('../../jobs/order.jobs');
-const taxService = require('../../services/tax.service');
-const shippingService = require('../../services/shipping.service');
 const shipmentRepo = require('../shipments/shipment.repo');
 const invoiceService = require('../invoice/invoice.service');
 const invoiceRepo = require('../invoice/invoice.repo');
@@ -1449,8 +1447,7 @@ class OrderService {
       let taxAmount = 0;
       let taxBreakdown: TaxBreakdown = { cgst: 0, sgst: 0, igst: 0 };
       const orderItems: MutableOrderItem[] = [];
-      const shippingItems: ShippingItem[] = [];
-      const taxMetaByItem = new Map();
+      const calcItems: CheckoutCalcItem[] = [];
 
       for (const item of payload.items || []) {
         const product = await productRepo.findById(item.productId, session);
@@ -1510,15 +1507,14 @@ class OrderService {
           hsnCode: product.hsnCode || null,
         });
 
-        taxMetaByItem.set(String(product._id), {
+        calcItems.push({
+          productId: product._id,
+          quantity: item.quantity,
+          price: unitPrice,
+          hsnCode: product.hsnCode || null,
           taxSlabs: product.taxSlabs || [],
           taxRate: product.taxRate,
           taxClassKey: product.taxClassKey,
-          hsnCode: product.hsnCode,
-        });
-
-        shippingItems.push({
-          quantity: item.quantity,
           weight: product.weight || 0,
           length: product.length || 0,
           width: product.width || 0,
@@ -1567,106 +1563,34 @@ class OrderService {
         );
         totalDiscount = couponPayload.discount + safeManualDiscount;
       }
-      const discountRatio = subtotal > 0 ? totalDiscount / subtotal : 0;
       const taxOverrideRate =
         payload.taxPercent != null ? Number(payload.taxPercent) / 100 : null;
-
-      const rawTotals: number[] = [];
-      const rawCgst: number[] = [];
-      const rawSgst: number[] = [];
-      const rawIgst: number[] = [];
-
-      for (const item of orderItems) {
-        const lineSubtotal = item.price * item.quantity;
-        const lineDiscount = Math.round(lineSubtotal * discountRatio);
-        const taxableBase = Math.max(0, lineSubtotal - lineDiscount);
-        const taxMeta = taxMetaByItem.get(String(item.productId)) || {};
-        const tax = await taxService.calculateGST({
-          amount: taxableBase,
-          // @ts-ignore
-          destinationState: shippingAddress.state,
-          // @ts-ignore
-          destinationCity: shippingAddress.city,
-          // @ts-ignore
-          destinationPostalCode: shippingAddress.postalCode,
-          // @ts-ignore
-          destinationCountry: shippingAddress.country,
-          hsnCode: taxMeta.hsnCode || item.hsnCode,
-          productTaxSlabs: taxMeta.taxSlabs,
-          taxRate: taxOverrideRate != null ? taxOverrideRate : taxMeta.taxRate,
-          taxClassKey: taxMeta.taxClassKey,
-          round: false,
-        });
-
-        item.discount = lineDiscount;
-        item.taxableAmount = taxableBase;
-        item.taxPercent = tax.ratePercent;
-        item.taxMode = tax.mode;
-
-        rawTotals.push(tax.total || 0);
-        rawCgst.push(tax.components?.cgst || 0);
-        rawSgst.push(tax.components?.sgst || 0);
-        rawIgst.push(tax.components?.igst || 0);
-      }
-
-      const totalRawTax = rawTotals.reduce((sum, val) => sum + val, 0);
-      taxAmount = roundCurrency(totalRawTax);
-
-      const totalRawCgst = rawCgst.reduce((sum, val) => sum + val, 0);
-      const totalRawSgst = rawSgst.reduce((sum, val) => sum + val, 0);
-      const totalRawIgst = rawIgst.reduce((sum, val) => sum + val, 0);
-
-      if (totalRawIgst > 0) {
-        taxBreakdown = { cgst: 0, sgst: 0, igst: taxAmount };
-      } else {
-        const cgstRounded = roundCurrency(totalRawCgst);
-        let sgstRounded = roundCurrency(totalRawSgst);
-        const diff = roundCurrency(taxAmount - (cgstRounded + sgstRounded));
-        sgstRounded = roundCurrency(sgstRounded + diff);
-        taxBreakdown = { cgst: cgstRounded, sgst: sgstRounded, igst: 0 };
-      }
-
-      allocateRoundedComponent(
-        orderItems,
-        taxBreakdown.cgst,
-        rawCgst,
-        'cgstComponent',
-      );
-      allocateRoundedComponent(
-        orderItems,
-        taxBreakdown.sgst,
-        rawSgst,
-        'sgstComponent',
-      );
-      allocateRoundedComponent(
-        orderItems,
-        taxBreakdown.igst,
-        rawIgst,
-        'igstComponent',
-      );
-
-      orderItems.forEach((item) => {
-        const cgst = Number(item.cgstComponent || 0);
-        const sgst = Number(item.sgstComponent || 0);
-        const igst = Number(item.igstComponent || 0);
-        item.taxComponents = { cgst, sgst, igst };
-        item.taxAmount = roundCurrency(cgst + sgst + igst);
-        item.total = roundCurrency(item.taxableAmount + item.taxAmount);
-        delete item.cgstComponent;
-        delete item.sgstComponent;
-        delete item.igstComponent;
+      const totals = await checkoutTotals.calculateTotals({
+        items: calcItems,
+        shippingAddress,
+        paymentMethod: payload.paymentMethod,
+        userId: user._id,
+        discountAmountOverride: totalDiscount,
+        taxPercentOverride: taxOverrideRate,
+        shippingFeeOverride:
+          payload.shippingFee != null ? Number(payload.shippingFee) : null,
       });
 
-      const shippingFee =
-        payload.shippingFee != null
-          ? Number(payload.shippingFee)
-          : await shippingService.calculate({
-            subtotal: subtotal - totalDiscount,
-            items: shippingItems,
-            address: shippingAddress,
-            paymentMethod: payload.paymentMethod,
-          });
-      const grandTotal = subtotal - totalDiscount + taxAmount + shippingFee;
+      totals.items.forEach((calc, idx) => {
+        orderItems[idx].discount = calc.discount;
+        orderItems[idx].taxableAmount = calc.taxableAmount;
+        orderItems[idx].taxPercent = calc.taxPercent;
+        orderItems[idx].taxMode = calc.taxMode;
+        orderItems[idx].taxComponents = calc.taxComponents;
+        orderItems[idx].taxAmount = calc.taxAmount;
+        orderItems[idx].total = calc.total;
+      });
+
+      subtotal = totals.subtotal;
+      taxAmount = totals.taxAmount || 0;
+      taxBreakdown = totals.taxBreakdown || { cgst: 0, sgst: 0, igst: 0 };
+      const shippingFee = totals.shippingFee || 0;
+      const grandTotal = totals.grandTotal || 0;
       const totalAfterDiscount = roundCurrency(grandTotal);
       const commissionPercent = salesmanCommissionPercent;
       const commissionAmount = salesmanCommissionPercent > 0

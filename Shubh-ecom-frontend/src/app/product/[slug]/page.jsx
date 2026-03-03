@@ -37,7 +37,7 @@ const ProductDetail = () => {
   const router = useRouter();
   const { addToCart, cart } = useCart();
   const { user } = useAuth();
-  const { tax: siteTax } = useSiteConfig();
+  const { tax: siteTax, productUnits } = useSiteConfig();
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -110,6 +110,8 @@ const ProductDetail = () => {
   }
 
   // Construct Specs Table Data
+  const weightUnit = productUnits?.weight || 'kg';
+  const dimensionsUnit = productUnits?.dimensions || 'cm';
   const specs = product ? [
     { label: 'Category', value: product.category?.name },
     { label: 'Sub Category', value: product.subCategory?.name },
@@ -126,10 +128,10 @@ const ProductDetail = () => {
       : [
         { label: 'Manufacturer Brand', value: product.manufacturerBrand },
       ]),
-    { label: 'Weight (kg)', value: product.weight },
-    { label: 'Width', value: product.width ? `${product.width} cm` : null },
-    { label: 'Length', value: product.length ? `${product.length} cm` : null },
-    { label: 'Height', value: product.height ? `${product.height} cm` : null },
+    { label: `Weight (${weightUnit})`, value: product.weight },
+    { label: 'Width', value: product.width ? `${product.width} ${dimensionsUnit}` : null },
+    { label: 'Length', value: product.length ? `${product.length} ${dimensionsUnit}` : null },
+    { label: 'Height', value: product.height ? `${product.height} ${dimensionsUnit}` : null },
   ].filter(s => s.value) : [];
 
   // Merge dynamic attributes
@@ -158,7 +160,7 @@ const ProductDetail = () => {
   // Tax display configuration
   const tax = siteTax || {};
   const displayShop = tax.displayShop || 'including';
-  const taxLabel = getTaxSuffix(displayShop);
+  const taxLabel = getTaxSuffix(displayShop, tax);
   const taxHelpText = getTaxHelpText(displayShop);
 
   const handleAddToCart = async () => {

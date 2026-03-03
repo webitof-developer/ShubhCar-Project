@@ -6,7 +6,7 @@ import { Check, X, Tag, Ticket, Copy, Info, Truck, Shield, Package, Loader2 } fr
 import QuotationButton from '@/components/cart/QuotationButton';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { formatPrice } from '@/services/pricingService';
-import { formatTaxBreakdown, getTaxSuffix } from '@/services/taxDisplayService';
+import { formatTaxBreakdown } from '@/services/taxDisplayService';
 
 export const CartSummary = ({
   items,
@@ -14,6 +14,7 @@ export const CartSummary = ({
   user,
   cartTaxLabel,
   showIncludingTax,
+  showTaxTotals = true,
   summarySubtotal,
   summaryDiscount,
   summaryTax,
@@ -35,6 +36,8 @@ export const CartSummary = ({
   couponLoading = false,
   summaryLoading = false,
   couponFxState = null,
+  couponEnabled = true,
+  shippingHandlingDays = '3-5 business days',
 }) => {
   const couponFxText =
     couponFxState === 'applied'
@@ -60,7 +63,11 @@ export const CartSummary = ({
             {summary?.couponCode ? 'Coupon Applied' : 'Have a Coupon?'}
           </label>
 
-          {summary?.couponCode ? (
+          {!couponEnabled ? (
+            <div className="text-xs text-muted-foreground bg-secondary/40 border border-border rounded-lg px-3 py-2">
+              Coupons are disabled right now.
+            </div>
+          ) : summary?.couponCode ? (
             // Applied coupon state
             <div className="space-y-2">
               <div className={`flex items-center justify-between p-2 bg-green-50 border border-green-400 rounded-lg transition-all ${couponLoading ? 'animate-pulse' : ''}`}>
@@ -350,7 +357,7 @@ export const CartSummary = ({
               <span className="font-medium text-success">-{formatPrice(summaryDiscount)}</span>
             </div>
           )}
-          {showIncludingTax ? (
+          {showTaxTotals && (showIncludingTax ? (
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground flex items-center gap-1">
                 Tax
@@ -392,7 +399,7 @@ export const CartSummary = ({
                 {formatPrice(summaryTax)}
               </span>
             </div>
-          )}
+          ))}
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Shipping</span>
             <span className="font-medium text-foreground">
@@ -430,7 +437,7 @@ export const CartSummary = ({
         <div className="grid grid-cols-2 gap-3 pt-2">
           <div className="flex items-center gap-2 text-xs text-muted-foreground"><Truck className="w-4 h-4 text-primary shrink-0" /><span>Free Delivery</span></div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground"><Shield className="w-4 h-4 text-primary shrink-0" /><span>Secure Payment</span></div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground col-span-2"><Package className="w-4 h-4 text-primary shrink-0" /><span>Delivery in 3-5 business days</span></div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground col-span-2"><Package className="w-4 h-4 text-primary shrink-0" /><span>Delivery in {shippingHandlingDays}</span></div>
         </div>
       </div>
     </div>

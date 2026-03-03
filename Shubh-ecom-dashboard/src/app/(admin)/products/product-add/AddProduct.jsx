@@ -12,9 +12,17 @@ import productService from '@/services/productService'
 import VehicleCompatibilitySection from './VehicleCompatibilitySection'
 import { reviewAPI } from '@/helpers/reviewApi'
 import { API_BASE_URL, API_ORIGIN } from '@/helpers/apiBase'
+import { settingsAPI } from '@/helpers/settingsApi'
 import MediaPickerModal from '@/components/media/MediaPickerModal'
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 const MAX_IMAGE_COUNT = 5
+const toLocalDatetimeInput = (value) => {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
 
 const extractItems = (payload, aliases = []) => {
   if (Array.isArray(payload)) return payload
@@ -91,6 +99,9 @@ const AddProduct = () => {
       mrp: '',
       salePrice: ''
     },
+    isFlashDeal: false,
+    flashDealStartAt: '',
+    flashDealEndAt: '',
     status: 'active'
   })
 
@@ -107,6 +118,7 @@ const AddProduct = () => {
   const [compatibilityVehicleIds, setCompatibilityVehicleIds] = useState([])
   const [vehicleBrands, setVehicleBrands] = useState([])
   const [loadingVehicleBrands, setLoadingVehicleBrands] = useState(false)
+  const [unitSettings, setUnitSettings] = useState({ weight: 'kg', dimensions: 'cm' })
   const [productReviews, setProductReviews] = useState([])
   const [reviewsLoading, setReviewsLoading] = useState(false)
   const [reviewsError, setReviewsError] = useState(null)
@@ -134,6 +146,23 @@ const AddProduct = () => {
     const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim()
     return fullName || user.email || 'Anonymous'
   }
+
+  useEffect(() => {
+    const fetchUnitSettings = async () => {
+      if (!session?.accessToken) return
+      try {
+        const response = await settingsAPI.list(undefined, session.accessToken)
+        const data = response?.data || response || {}
+        setUnitSettings({
+          weight: data.product_weight_unit || 'kg',
+          dimensions: data.product_dimensions_unit || 'cm',
+        })
+      } catch (err) {
+        logger.error('Failed to fetch product unit settings', err)
+      }
+    }
+    fetchUnitSettings()
+  }, [session])
 
   useEffect(() => {
     if (isEditMode && productId && session?.accessToken) {
@@ -209,6 +238,9 @@ const AddProduct = () => {
           mrp: product.wholesalePrice?.mrp || '',
           salePrice: product.wholesalePrice?.salePrice || ''
         },
+        isFlashDeal: !!product.isFlashDeal,
+        flashDealStartAt: toLocalDatetimeInput(product.flashDealStartAt),
+        flashDealEndAt: toLocalDatetimeInput(product.flashDealEndAt),
         status: product.status || 'active'
       })
 
@@ -306,6 +338,9 @@ const AddProduct = () => {
           mrp: product.wholesalePrice?.mrp || '',
           salePrice: product.wholesalePrice?.salePrice || ''
         },
+        isFlashDeal: !!product.isFlashDeal,
+        flashDealStartAt: toLocalDatetimeInput(product.flashDealStartAt),
+        flashDealEndAt: toLocalDatetimeInput(product.flashDealEndAt),
         status: product.status || 'active'
       })
       setCategorySnapshot({
@@ -632,6 +667,23 @@ const AddProduct = () => {
       return
     }
 
+    if (formData.isFlashDeal) {
+      if (!formData.flashDealStartAt || !formData.flashDealEndAt) {
+        setError('Flash deal start and end date are required')
+        return
+      }
+      const start = new Date(formData.flashDealStartAt)
+      const end = new Date(formData.flashDealEndAt)
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+        setError('Invalid flash deal date range')
+        return
+      }
+      if (start >= end) {
+        setError('Flash deal start must be before end date')
+        return
+      }
+    }
+
     const token = session?.accessToken
     if (!token) {
       setError(isEditMode ? 'You must be logged in to update products' : 'You must be logged in to create products')
@@ -684,6 +736,9 @@ const AddProduct = () => {
         taxClassKey: formData.taxClassKey || undefined,
         taxRate: parseNumber(formData.taxRate),
         hlaapNo: formData.productType === 'AFTERMARKET' ? formData.hlaapNo : undefined,
+        isFlashDeal: !!formData.isFlashDeal,
+        flashDealStartAt: formData.isFlashDeal && formData.flashDealStartAt ? new Date(formData.flashDealStartAt).toISOString() : null,
+        flashDealEndAt: formData.isFlashDeal && formData.flashDealEndAt ? new Date(formData.flashDealEndAt).toISOString() : null,
         status: formData.status
       }
 
@@ -799,6 +854,9 @@ const AddProduct = () => {
           minWholesaleQty: '',
           retailPrice: { mrp: '', salePrice: '' },
           wholesalePrice: { mrp: '', salePrice: '' },
+          isFlashDeal: false,
+          flashDealStartAt: '',
+          flashDealEndAt: '',
           status: 'active'
         })
         setSelectedCategory('')
@@ -1182,7 +1240,7 @@ const AddProduct = () => {
                     />
                   </Col>
                   <Col lg={3} md={6}>
-                    <label className="form-label">Weight (kg)</label>
+                    <label className="form-label">Weight ({unitSettings.weight})</label>
                     <input
                       type="number"
                       name="weight"
@@ -1195,7 +1253,7 @@ const AddProduct = () => {
                     />
                   </Col>
                   <Col lg={3} md={6}>
-                    <label className="form-label">Length</label>
+                    <label className="form-label">Length ({unitSettings.dimensions})</label>
                     <input
                       type="number"
                       name="length"
@@ -1208,7 +1266,7 @@ const AddProduct = () => {
                     />
                   </Col>
                   <Col lg={3} md={6}>
-                    <label className="form-label">Width</label>
+                    <label className="form-label">Width ({unitSettings.dimensions})</label>
                     <input
                       type="number"
                       name="width"
@@ -1221,7 +1279,7 @@ const AddProduct = () => {
                     />
                   </Col>
                   <Col lg={3} md={6}>
-                    <label className="form-label">Height</label>
+                    <label className="form-label">Height ({unitSettings.dimensions})</label>
                     <input
                       type="number"
                       name="height"
@@ -1310,6 +1368,44 @@ const AddProduct = () => {
                       onChange={handleInputChange}
                       step="0.01"
                       min="0"
+                    />
+                  </Col>
+
+                  <Col lg={3} md={6} className="d-flex align-items-end">
+                    <div className="form-check mb-2">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        id="isFlashDeal"
+                        name="isFlashDeal"
+                        checked={!!formData.isFlashDeal}
+                        onChange={handleInputChange}
+                      />
+                      <label className="form-check-label" htmlFor="isFlashDeal">
+                        Enable Flash Deal
+                      </label>
+                    </div>
+                  </Col>
+                  <Col lg={3} md={6}>
+                    <label className="form-label">Flash Deal Start</label>
+                    <input
+                      type="datetime-local"
+                      name="flashDealStartAt"
+                      className="form-control product-field"
+                      value={formData.flashDealStartAt}
+                      onChange={handleInputChange}
+                      disabled={!formData.isFlashDeal}
+                    />
+                  </Col>
+                  <Col lg={3} md={6}>
+                    <label className="form-label">Flash Deal End</label>
+                    <input
+                      type="datetime-local"
+                      name="flashDealEndAt"
+                      className="form-control product-field"
+                      value={formData.flashDealEndAt}
+                      onChange={handleInputChange}
+                      disabled={!formData.isFlashDeal}
                     />
                   </Col>
 

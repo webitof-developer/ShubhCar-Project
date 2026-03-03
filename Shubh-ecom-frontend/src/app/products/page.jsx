@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { getProducts } from '@/services/productService';
 import { ChevronRight } from 'lucide-react';
 import { ProductCard } from '@/components/product/ProductCard';
+import { FlashDealCountdown } from '@/components/deals/FlashDealCountdown';
+import { getFlashDealNowFromSettings, getFlashDealRangeFromSettings, getPublicSettings } from '@/services/settingsService';
 
 export const revalidate = 60;
 
@@ -19,7 +21,19 @@ const ProductsList = async ({ searchParams }) => {
     const isFeatured = searchParams?.isFeatured;
     const isBestSeller = searchParams?.isBestSeller;
 
-    const products = await getProducts({ page, limit, manufacturerBrand, search, sort, productType, isOnSale, isFeatured, isBestSeller });
+    const [products, settings] = await Promise.all([
+        getProducts({ page, limit, manufacturerBrand, search, sort, productType, isOnSale, isFeatured, isBestSeller }),
+        getPublicSettings(),
+    ]);
+    const flashDealNow = getFlashDealNowFromSettings(settings);
+    const flashDealRange = getFlashDealRangeFromSettings(settings);
+    const productDealEnd = products
+        .map((product) => product?.flashDealEndAt)
+        .map((value) => new Date(value))
+        .filter((date) => !Number.isNaN(date.getTime()))
+        .sort((a, b) => a.getTime() - b.getTime())[0]
+        ?.toISOString() || null;
+    const dealEndsAt = flashDealRange.end || productDealEnd;
     const queryParams = new URLSearchParams();
     if (manufacturerBrand) queryParams.set('manufacturerBrand', manufacturerBrand);
     if (search) queryParams.set('search', search);
@@ -36,6 +50,16 @@ const ProductsList = async ({ searchParams }) => {
 
     return (
         <>
+            {isOnSale === 'true' && (
+                <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+                    <p className="text-sm font-medium text-red-700">Flash deals are live now.</p>
+                    <FlashDealCountdown
+                        dealEndsAt={dealEndsAt}
+                        referenceNow={flashDealNow}
+                        className="font-mono text-sm font-bold text-red-700"
+                    />
+                </div>
+            )}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
                 {products.map((p, index) => (
                     <ProductCard key={p._id || p.id || index} product={p} />

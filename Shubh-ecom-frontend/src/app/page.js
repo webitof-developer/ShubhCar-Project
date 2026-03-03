@@ -9,6 +9,7 @@ import { BrandsStrip } from '@/components/home/BrandsStrip';
 import { getProducts } from '@/services/productService';
 import { getRootCategories } from '@/services/categoryService';
 import { getManufacturerBrands } from '@/services/brandService';
+import { getFlashDealNowFromSettings, getFlashDealRangeFromSettings, getPublicSettings } from '@/services/settingsService';
 
 export const revalidate = 60;
 
@@ -73,14 +74,16 @@ const HomeContent = async () => {
     bestSellersRes,
     dealsRes,
     categoriesRes,
-    brandsRes
+    brandsRes,
+    settingsRes,
   ] = await Promise.allSettled([
     getProducts({ page: 1, limit: 8, isFeatured: true }),
     getProducts({ page: 1, limit: 8, sort: 'newest' }),
     getProducts({ page: 1, limit: 8, isBestSeller: true }),
     getProducts({ page: 1, limit: 4, isOnSale: true }),
     getRootCategories(),
-    getManufacturerBrands()
+    getManufacturerBrands(),
+    getPublicSettings(),
   ]);
 
   // Extract data with fallback to empty arrays
@@ -88,6 +91,16 @@ const HomeContent = async () => {
   const newArrivals = newArrivalsRes.status === 'fulfilled' ? (newArrivalsRes.value || []) : [];
   const bestSellers = bestSellersRes.status === 'fulfilled' ? (bestSellersRes.value || []) : [];
   const dealProducts = dealsRes.status === 'fulfilled' ? (dealsRes.value || []) : [];
+  const settings = settingsRes.status === 'fulfilled' ? (settingsRes.value || {}) : {};
+  const flashDealNow = getFlashDealNowFromSettings(settings);
+  const flashDealRange = getFlashDealRangeFromSettings(settings);
+  const productDealEnd = dealProducts
+    .map((product) => product?.flashDealEndAt)
+    .map((value) => new Date(value))
+    .filter((date) => !Number.isNaN(date.getTime()))
+    .sort((a, b) => a.getTime() - b.getTime())[0]
+    ?.toISOString() || null;
+  const dealEndsAt = flashDealRange.end || productDealEnd;
 
   const rootCategories = categoriesRes.status === 'fulfilled' ? (categoriesRes.value || []) : [];
 
@@ -116,7 +129,7 @@ const HomeContent = async () => {
         viewAllLink="/products?isFeatured=true"
       />
 
-      <DealsSection products={dealProducts} />
+      <DealsSection products={dealProducts} dealEndsAt={dealEndsAt} referenceNow={flashDealNow} />
 
       <ProductCarousel
         title="New Arrivals"

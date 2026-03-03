@@ -48,6 +48,11 @@ const buildSettingsPayload = async () => {
     'shipping_enabled',
     'shipping_free_threshold',
     'shipping_flat_rate',
+    'shipping_handling_days',
+    'coupon_enabled',
+    'coupon_sequential',
+    'product_weight_unit',
+    'product_dimensions_unit',
   ]);
 
   return {
@@ -61,6 +66,11 @@ const buildSettingsPayload = async () => {
     shippingEnabled: map.shipping_enabled ?? true,
     shippingFreeThreshold: map.shipping_free_threshold ?? null,
     shippingFlatRate: map.shipping_flat_rate ?? null,
+    shippingHandlingDays: map.shipping_handling_days || '3-5 business days',
+    couponEnabled: map.coupon_enabled ?? true,
+    couponSequential: map.coupon_sequential ?? false,
+    productWeightUnit: map.product_weight_unit || 'kg',
+    productDimensionsUnit: map.product_dimensions_unit || 'cm',
   };
 };
 
@@ -88,6 +98,9 @@ const calculateTotals = async ({
   paymentMethod,
   couponCode,
   userId,
+  discountAmountOverride = null,
+  taxPercentOverride = null,
+  shippingFeeOverride = null,
 } = {}) => {
   const settings = await buildSettingsPayload();
 
@@ -98,17 +111,42 @@ const calculateTotals = async ({
 
   let discount = 0;
   let coupon = { couponId: null, couponCode: null };
-  if (couponCode) {
+  const hasDiscountOverride =
+    discountAmountOverride !== null && discountAmountOverride !== undefined;
+  const manualDiscount = hasDiscountOverride
+    ? Math.max(0, Number(discountAmountOverride) || 0)
+    : 0;
+  let couponDiscount = 0;
+
+  if (couponCode && settings.couponEnabled !== false) {
+    const couponBase =
+      hasDiscountOverride && settings.couponSequential
+        ? Math.max(0, subtotal - manualDiscount)
+        : subtotal;
     const preview = await couponService.preview({
       userId,
       code: couponCode,
-      orderSubtotal: subtotal,
+      orderSubtotal: couponBase,
     });
-    discount = preview.discountAmount || 0;
+    couponDiscount = preview.discountAmount || 0;
     coupon = { couponId: preview.couponId, couponCode: preview.code };
   }
+  if (hasDiscountOverride) {
+    discount = settings.couponSequential ? manualDiscount + couponDiscount : manualDiscount;
+  } else {
+    discount = couponDiscount;
+  }
+  discount = roundCurrency(Math.min(subtotal, discount));
 
   const discountRatio = subtotal > 0 ? discount / subtotal : 0;
+  const normalizedTaxOverride =
+    taxPercentOverride !== null && taxPercentOverride !== undefined
+      ? (() => {
+          const numeric = Number(taxPercentOverride);
+          if (!Number.isFinite(numeric) || numeric < 0) return null;
+          return numeric > 1 ? numeric / 100 : numeric;
+        })()
+      : null;
 
   const rawTotals = [];
   const rawCgst = [];
@@ -138,7 +176,7 @@ const calculateTotals = async ({
         destinationCountry: shippingAddress?.country,
         hsnCode: item.hsnCode,
         productTaxSlabs: item.taxSlabs,
-        taxRate: item.taxRate,
+        taxRate: normalizedTaxOverride != null ? normalizedTaxOverride : item.taxRate,
         taxClassKey: item.taxClassKey,
         round: false,
       });
@@ -229,14 +267,17 @@ const calculateTotals = async ({
     ? items.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0), 0)
     : 0;
 
-  const shippingFee = settings.shippingEnabled
-    ? await shippingService.calculate({
-      subtotal: shippingSubtotal,
-      items: shippingItems,
-      address: shippingAddress || {},
-      paymentMethod,
-    })
-    : 0;
+  const shippingFee =
+    shippingFeeOverride !== null && shippingFeeOverride !== undefined
+      ? Number(shippingFeeOverride) || 0
+      : settings.shippingEnabled
+      ? await shippingService.calculate({
+          subtotal: shippingSubtotal,
+          items: shippingItems,
+          address: shippingAddress || {},
+          paymentMethod,
+        })
+      : 0;
 
   // When "Display prices including tax" is selected:
   //   grandTotal = subtotal (product price, tax already inside) - discount + shipping

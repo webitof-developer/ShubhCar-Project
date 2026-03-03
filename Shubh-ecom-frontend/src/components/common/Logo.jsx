@@ -71,27 +71,26 @@ export const Logo = ({ size = 'md', className = '', variant = 'dark' }) => {
   // 3. Image failed to load
   const useTextLogo = !logoPath || imageError;
 
-  // if (useTextLogo) {
-  //   return (
-  //     <div className={`${sizeClass} bg-primary rounded-lg flex items-center justify-center shadow-sm ${className}`}>
-  //       <span className="text-primary-foreground font-bold leading-none">
-  //         {initials}
-  //       </span>
-  //     </div>
-  //   );
-  // }
+  if (useTextLogo) {
+    return (
+      <div className={`${sizeClass} bg-primary rounded-lg flex items-center justify-center shadow-sm ${className}`}>
+        <span className="text-primary-foreground font-bold leading-none">
+          {initials}
+        </span>
+      </div>
+    );
+  }
 
-  // // Only try to load image if logoPath is valid
-  // if (loading && !logoPath) {
-  //   return (
-  //     <div className={`${sizeClass} bg-primary rounded-lg flex items-center justify-center shadow-sm ${className}`} />
-  //   );
-  // }
+  if (loading && !logoPath) {
+    return (
+      <div className={`${sizeClass} bg-primary rounded-lg flex items-center justify-center shadow-sm ${className}`} />
+    );
+  }
 
   return (
     <div className={`${sizeClass} relative overflow-hidden  ${className}`}>
       <Image
-        src={'/logo.png'}
+        src={logoPath}
         alt={`${siteName || 'Site'} logo`}
         fill
         className="object-contain"

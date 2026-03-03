@@ -39,6 +39,21 @@ const SORT_MAP = {
 const resolveSort = (sort) =>
   sort ? (SORT_MAP[sort] ?? undefined) : undefined;
 
+const parseDateSafe = (value) => {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const isDemoFlashDealActive = (product) => {
+  if (!product?.isFlashDeal) return false;
+  const now = new Date();
+  const start = parseDateSafe(product.flashDealStartAt);
+  const end = parseDateSafe(product.flashDealEndAt);
+  if (!start || !end) return false;
+  return start <= now && now <= end;
+};
+
 
 const normalizeProduct = (product) => {
   if (!product) return product;
@@ -120,10 +135,11 @@ export const getProducts = async ({
 
     if (onSale) {
       filtered = filtered.filter(
-        (p) =>
+        (p) => isDemoFlashDealActive(p) || (
           p.retailPrice?.salePrice &&
           p.retailPrice?.mrp &&
-          p.retailPrice.salePrice < p.retailPrice.mrp,
+          p.retailPrice.salePrice < p.retailPrice.mrp
+        ),
       );
     }
 

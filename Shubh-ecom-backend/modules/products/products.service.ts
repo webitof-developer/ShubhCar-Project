@@ -12,6 +12,7 @@ const ROLES = require('../../constants/roles');
 const Category = require('../../models/Category.model');
 const Brand = require('../../models/Brand.model');
 const Product = require('../../models/Product.model');
+const Setting = require('../../models/Setting.model');
 const logger = require('../../config/logger');
 const { getStorageSettings } = require('../../utils/storageSettings');
 const s3 = require('../../utils/s3');
@@ -21,6 +22,9 @@ const { generateProductCode } = require('../../utils/numbering');
 const { escapeRegex } = require('../../utils/escapeRegex');
 
 const PRODUCT_CODE_REGEX = /^PRO-\d{6}$/;
+const FLASH_DEAL_TODAY_SETTING_KEY = 'flash_deal_today';
+const FLASH_DEAL_SWEEP_INTERVAL_MS = 60 * 1000;
+let lastFlashDealSweepAtMs = 0;
 
 type MutableProductDoc = {
   _id?: string;
@@ -48,6 +52,7 @@ type ProductListQuery = {
   productType?: string;
   minPrice?: number | string;
   maxPrice?: number | string;
+  isOnSale?: boolean | string;
   sort?: string;
 };
 
@@ -55,7 +60,24 @@ type ProductAdminListQuery = ProductListQuery & {
   status?: string;
   stockStatus?: string;
   isFeatured?: boolean | string;
+  isFlashDeal?: boolean | string;
+  flashDeal?: string;
   summary?: string | boolean;
+};
+
+const toValidDateOrNull = (value) => {
+  if (value === undefined || value === null || value === '') return null;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date;
+};
+
+const resolveFlashDealActive = (product, now: Date) => {
+  if (!product || !product.isFlashDeal) return false;
+  const start = toValidDateOrNull(product.flashDealStartAt);
+  const end = toValidDateOrNull(product.flashDealEndAt);
+  if (!start || !end) return false;
+  return start <= now && now <= end;
 };
 
 const normalizeProductFields = (product) => {
@@ -150,10 +172,126 @@ const ensureProductTypeFields = ({ productType, vehicleBrand, oemNumber, oesNumb
 };
 
 class ProductService {
+  async expireEndedFlashDeals(now: Date) {
+    const nowMs = now.getTime();
+    if (nowMs - lastFlashDealSweepAtMs < FLASH_DEAL_SWEEP_INTERVAL_MS) return;
+    lastFlashDealSweepAtMs = nowMs;
+
+    const result = await Product.updateMany(
+      {
+        isFlashDeal: true,
+        flashDealEndAt: { $lt: now },
+      },
+      {
+        $set: {
+          isFlashDeal: false,
+          flashDealStartAt: null,
+          flashDealEndAt: null,
+        },
+      },
+    );
+
+    const modified = Number(result?.modifiedCount || 0);
+    if (modified > 0) {
+      await cache.invalidateLists();
+      await deletePatterns(['catalog:products:*']);
+    }
+  }
+
+  async resolveFlashDealNow() {
+    const override = await Setting.findOne({ key: FLASH_DEAL_TODAY_SETTING_KEY })
+      .select('value')
+      .lean();
+    const parsed = toValidDateOrNull(override?.value);
+    const now = parsed || new Date();
+    await this.expireEndedFlashDeals(now);
+    return now;
+  }
+
+  applyFlashDealWindow(product, now: Date) {
+    if (!product) return product;
+
+    const isFlashDealActive = resolveFlashDealActive(product, now);
+    const next = { ...product, isFlashDealActive };
+
+    const sanitizePrice = (price) => {
+      if (!price || typeof price !== 'object') return price;
+      if (isFlashDealActive) return price;
+      const { salePrice, ...rest } = price as Record<string, unknown>;
+      return rest;
+    };
+
+    next.retailPrice = sanitizePrice(next.retailPrice);
+    next.wholesalePrice = sanitizePrice(next.wholesalePrice);
+
+    return next;
+  }
+
+  applyFlashDealWindowList(products: MutableProductDoc[] = [], now: Date) {
+    return Array.isArray(products)
+      ? products.map((product) => this.applyFlashDealWindow(product, now))
+      : [];
+  }
+
+  buildFlashDealFields(
+    payload: Record<string, unknown> = {},
+    existing: Record<string, unknown> | null = null,
+  ) {
+    const hasFlag = Object.prototype.hasOwnProperty.call(payload, 'isFlashDeal');
+    const hasStart = Object.prototype.hasOwnProperty.call(payload, 'flashDealStartAt');
+    const hasEnd = Object.prototype.hasOwnProperty.call(payload, 'flashDealEndAt');
+
+    if (!hasFlag && !hasStart && !hasEnd) return {};
+
+    const nextIsFlashDeal = hasFlag
+      ? Boolean(payload.isFlashDeal)
+      : Boolean(existing?.isFlashDeal);
+
+    const startRaw = hasStart ? payload.flashDealStartAt : existing?.flashDealStartAt;
+    const endRaw = hasEnd ? payload.flashDealEndAt : existing?.flashDealEndAt;
+
+    const nextStart = toValidDateOrNull(startRaw);
+    const nextEnd = toValidDateOrNull(endRaw);
+
+    if (!nextIsFlashDeal) {
+      return {
+        isFlashDeal: false,
+        flashDealStartAt: null,
+        flashDealEndAt: null,
+      };
+    }
+
+    if (!nextStart || !nextEnd) {
+      error('Flash deal start and end date are required when flash deal is enabled', 400);
+    }
+
+    if (!nextStart || !nextEnd) {
+      return {
+        isFlashDeal: false,
+        flashDealStartAt: null,
+        flashDealEndAt: null,
+      };
+    }
+
+    if (nextStart >= nextEnd) {
+      error('Flash deal start date must be before end date', 400);
+    }
+
+    return {
+      isFlashDeal: true,
+      flashDealStartAt: nextStart,
+      flashDealEndAt: nextEnd,
+    };
+  }
+
   async getBySlug(slug, user) {
+    const referenceNow = await this.resolveFlashDealNow();
     const cacheKey = cache.key.bySlug({ slug, user });
     const cached = await cache.get(cacheKey);
-    if (cached) return this.applyPricing(cached, user);
+    if (cached) {
+      const withDeals = this.applyFlashDealWindow(cached, referenceNow);
+      return this.applyPricing(withDeals, user);
+    }
 
     const product = await repo.findBySlugActive(slug);
     if (!product) error('Product not found', 404);
@@ -165,19 +303,23 @@ class ProductService {
     const withAttrs = await this.attachAttributes(withImages[0]);
     const withBrand = await this.attachBrandDetails(withAttrs);
     const withCategories = await this.attachCategoryHierarchy(withBrand);
-    return this.applyPricing(withCategories, user);
+    const withDeals = this.applyFlashDealWindow(withCategories, referenceNow);
+    return this.applyPricing(withDeals, user);
   }
 
   async getByIdPublic(id, user) {
+    const referenceNow = await this.resolveFlashDealNow();
     const product = await repo.findByIdActive(id);
     if (!product) error('Product not found', 404);
     const enriched = await this.attachAggregateRatings(normalizeProductFields(product));
     const withImages = await this.attachImages([enriched]);
     const withBrand = await this.attachBrandDetails(withImages[0]);
-    return this.applyPricing(withBrand, user);
+    const withDeals = this.applyFlashDealWindow(withBrand, referenceNow);
+    return this.applyPricing(withDeals, user);
   }
 
   async listByCategory(categoryId, options, user) {
+    const referenceNow = await this.resolveFlashDealNow();
     const { page = 1, limit = 20, cursor, sort = 'created_desc', filters } =
       options;
 
@@ -191,38 +333,49 @@ class ProductService {
     });
 
     const cached = await cache.get(cacheKey);
-    if (cached) return this.applyPricingList(cached, user);
+    if (cached) {
+      const withDeals = this.applyFlashDealWindowList(cached, referenceNow);
+      return this.applyPricingList(withDeals, user);
+    }
 
     const data = await repo.listByCategory(categoryId, { limit, cursor });
     const enriched = await Promise.all(
       normalizeProductList(data).map((p) => this.attachAggregateRatings(p)),
     );
     const withImages = await this.attachImages(enriched);
-    await cache.setList(cacheKey, withImages);
+    const withDeals = this.applyFlashDealWindowList(withImages, referenceNow);
+    await cache.setList(cacheKey, withDeals);
 
-    return this.applyPricingList(withImages, user);
+    return this.applyPricingList(withDeals, user);
   }
 
   async listFeatured(options, user) {
+    const referenceNow = await this.resolveFlashDealNow();
     const { page = 1, limit = 20, cursor } = options;
 
     const cacheKey = cache.key.featured({ page, limit, cursor });
 
     const cached = await cache.get(cacheKey);
-    if (cached) return this.applyPricingList(cached, user);
+    if (cached) {
+      const withDeals = this.applyFlashDealWindowList(cached, referenceNow);
+      return this.applyPricingList(withDeals, user);
+    }
 
     const data = await repo.listFeatured({ limit, cursor });
     const enriched = await Promise.all(
       normalizeProductList(data).map((p) => this.attachAggregateRatings(p)),
     );
     const withImages = await this.attachImages(enriched);
-    await cache.setList(cacheKey, withImages);
+    const withDeals = this.applyFlashDealWindowList(withImages, referenceNow);
+    await cache.setList(cacheKey, withDeals);
 
-    return this.applyPricingList(withImages, user);
+    return this.applyPricingList(withDeals, user);
   }
 
   async listPublic(query: ProductListQuery = {}, user) {
-    const { page = 1, limit = 20, search, categoryId, manufacturerBrand, productType, minPrice, maxPrice, sort } = query;
+    const referenceNow = await this.resolveFlashDealNow();
+    const { page = 1, limit = 20, search, categoryId, manufacturerBrand, productType, minPrice, maxPrice, isOnSale, sort } = query;
+    const onSale = isOnSale === true || String(isOnSale).toLowerCase() === 'true';
     const { items, total, page: safePage, limit: safeLimit } = await repo.listPublic({
       page,
       limit,
@@ -232,14 +385,17 @@ class ProductService {
       productType,
       minPrice,
       maxPrice,
+      isOnSale: onSale,
+      referenceNow,
       sort,
     });
     const enriched = await Promise.all(
       normalizeProductList(items).map((p) => this.attachAggregateRatings(p)),
     );
     const withImages = await this.attachImages(enriched);
+    const withDeals = this.applyFlashDealWindowList(withImages, referenceNow);
     return {
-      items: this.applyPricingList(withImages, user),
+      items: this.applyPricingList(withDeals, user),
       total,
       page: safePage,
       limit: safeLimit,
@@ -299,6 +455,7 @@ class ProductService {
     if (exists) error('Slug already exists', 409);
 
     const { images = [], ...safePayload } = payload;
+    const flashDealFields = this.buildFlashDealFields(safePayload);
 
     if (productCode) {
       if (!productCodeRegex.test(productCode)) {
@@ -339,6 +496,7 @@ class ProductService {
 
     const product = await repo.create({
       ...safePayload,
+      ...flashDealFields,
       slug,
       status: safePayload.status && user.role === ROLES.ADMIN ? safePayload.status : 'draft',
       listingFeeStatus: 'waived',
@@ -380,6 +538,7 @@ class ProductService {
 
 
     const { primaryImageId, ...safePayload } = payload;
+    const flashDealFields = this.buildFlashDealFields(safePayload, product);
     [
       'shortDescription',
       'longDescription',
@@ -429,7 +588,10 @@ class ProductService {
       }
     }
 
-    const updated = await repo.updateById(productId, safePayload);
+    const updated = await repo.updateById(productId, {
+      ...safePayload,
+      ...flashDealFields,
+    });
 
     if (primaryImageId) {
       const img = await ProductImage.findById(primaryImageId).lean();
@@ -555,7 +717,8 @@ class ProductService {
   }
 
   async adminList(query: ProductAdminListQuery = {}) {
-    const { limit = 20, page = 1, status, categoryId, manufacturerBrand, productType, stockStatus, isFeatured, search } = query;
+    await this.resolveFlashDealNow();
+    const { limit = 20, page = 1, status, categoryId, manufacturerBrand, productType, stockStatus, isFeatured, isFlashDeal, flashDeal, search } = query;
     const searchValue = search || '';
 
     logger.info('admin_list_query_received', { query, status });
@@ -598,6 +761,16 @@ class ProductService {
     } else if (isFeatured !== undefined && isFeatured !== '') {
       filter.isFeatured = String(isFeatured).toLowerCase() === 'true';
     }
+    const flashDealFilter = String(flashDeal || '').trim().toLowerCase();
+    if (flashDealFilter === 'flash') {
+      filter.isFlashDeal = true;
+    } else if (flashDealFilter === 'none') {
+      filter.isFlashDeal = false;
+    } else if (typeof isFlashDeal === 'boolean') {
+      filter.isFlashDeal = isFlashDeal;
+    } else if (isFlashDeal !== undefined && isFlashDeal !== '') {
+      filter.isFlashDeal = String(isFlashDeal).toLowerCase() === 'true';
+    }
     if (searchValue) {
       const safeSearch = escapeRegex(searchValue);
       filter.$or = [
@@ -628,6 +801,9 @@ class ProductService {
         'vehicleBrand',
         'manufacturerBrand',
         'isFeatured',
+        'isFlashDeal',
+        'flashDealStartAt',
+        'flashDealEndAt',
         'status',
         'createdAt',
         'isDeleted',
@@ -984,6 +1160,7 @@ class ProductService {
   }
 
   async getAlternatives(productId) {
+    const referenceNow = await this.resolveFlashDealNow();
     const Product = require('../../models/Product.model');
     const currentProduct = await repo.findById(productId);
 
@@ -1018,14 +1195,16 @@ class ProductService {
       this.attachImages(oem),
       this.attachImages(aftermarket)
     ]);
+    const oemWithDeals = this.applyFlashDealWindowList(oemWithImages, referenceNow);
+    const aftermarketWithDeals = this.applyFlashDealWindowList(aftermarketWithImages, referenceNow);
 
     // Apply pricing? (Should include wholesale logic if needed, but this is public data usually)
     // We'll leave pricing raw here, controller can apply context if needed, but simplified is better.
     // Actually, let's apply standard pricing structure.
 
     return {
-      oem: oemWithImages,
-      aftermarket: aftermarketWithImages
+      oem: oemWithDeals,
+      aftermarket: aftermarketWithDeals
     };
   }
 
@@ -1081,6 +1260,9 @@ class ProductService {
       returnPolicy: sourceProduct.returnPolicy,
       status: 'draft', // Set to draft as requested
       isFeatured: false,
+      isFlashDeal: false,
+      flashDealStartAt: null,
+      flashDealEndAt: null,
       isDeleted: false,
       listingFeeStatus: 'waived'
     };

@@ -17,6 +17,8 @@ export interface ProductsParams {
 export interface ProductsQuery {
   format?: QueryScalar;
   limit?: QueryScalar;
+  isOnSale?: QueryScalar;
+  isFlashDeal?: QueryScalar;
   [key: string]: QueryScalar | unknown;
 }
 
@@ -112,6 +114,9 @@ export interface ProductRecord {
   dimensions?: ProductDimensions;
   taxSlabId?: string;
   isFeatured: boolean;
+  isFlashDeal?: boolean;
+  flashDealStartAt?: Date | null;
+  flashDealEndAt?: Date | null;
   ratingAvg: number;
   ratingCount: number;
   isDeleted: boolean;
@@ -135,6 +140,9 @@ export interface UpdateProductInput {
   name?: string;
   status?: ProductStatus;
   isFeatured?: boolean;
+  isFlashDeal?: boolean;
+  flashDealStartAt?: string | Date | null;
+  flashDealEndAt?: string | Date | null;
   retailPrice?: PriceSchema;
   wholesalePrice?: PriceSchema;
   description?: string;

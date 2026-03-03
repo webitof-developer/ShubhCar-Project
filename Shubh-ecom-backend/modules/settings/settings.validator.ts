@@ -11,7 +11,7 @@ const updateSettingsSchema = Joi.object()
   .pattern(
     /^[a-zA-Z0-9_]+$/,
     Joi.alternatives().try(
-      Joi.string(),
+      Joi.string().allow(''),
       Joi.number(),
       Joi.boolean(),
       Joi.object(),

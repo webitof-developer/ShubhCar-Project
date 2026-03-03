@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import { currency } from '@/context/constants'
 import productService from '@/services/productService'
+import { settingsAPI } from '@/helpers/settingsApi'
 import { brandsAPI } from '@/helpers/brandsApi'
 import { API_BASE_URL, API_ORIGIN } from '@/helpers/apiBase'
 import Link from 'next/link'
@@ -18,9 +19,77 @@ import {
   CardTitle,
   Spinner,
   Badge,
-  Placeholder
+  Placeholder,
+  Modal
 } from 'react-bootstrap'
 import DeleteConfirmModal from '@/components/shared/DeleteConfirmModal'
+
+const toLocalDatetimeInput = (value) => {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+const formatDisplayDateTime = (value) => {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value)
+  return date.toLocaleString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  })
+}
+
+const toFiniteNumberOrNull = (value) => {
+  if (value === undefined || value === null || value === '') return null
+  const num = Number(value)
+  return Number.isFinite(num) ? num : null
+}
+
+const resolveDefaultFlashDealRangeInputs = (settings = {}) => {
+  const maxDaysRaw = settings.flash_deal_max_days ?? settings.flash_deal_range_end
+  const maxDaysNum = toFiniteNumberOrNull(maxDaysRaw)
+  const maxDays = Math.max(1, Math.trunc(maxDaysNum ?? 2))
+
+  const start = new Date()
+  const end = new Date()
+  end.setDate(end.getDate() + maxDays)
+
+  return {
+    maxDays,
+    start: toLocalDatetimeInput(start),
+    end: toLocalDatetimeInput(end)
+  }
+}
+
+const resolveDefaultFlashDealRangeDates = (settings = {}) => {
+  const maxDaysRaw = settings.flash_deal_max_days ?? settings.flash_deal_range_end
+  const maxDaysNum = toFiniteNumberOrNull(maxDaysRaw)
+  const maxDays = Math.max(1, Math.trunc(maxDaysNum ?? 2))
+
+  const start = new Date()
+  const end = new Date(start.getTime())
+  end.setDate(end.getDate() + maxDays)
+
+  return { start, end }
+}
+
+const extractSettingsMap = (payload) => {
+  if (!payload || typeof payload !== 'object') return {}
+  if (payload.data && typeof payload.data === 'object') {
+    if (payload.data.data && typeof payload.data.data === 'object') {
+      return payload.data.data
+    }
+    return payload.data
+  }
+  return payload
+}
 
 
 const ProductCard = ({ product, onDelete, onToggleFeatured, isSelected, onSelect, onDeleteClick, onTrashClick, onDuplicate }) => {
@@ -274,6 +343,24 @@ const ProductCard = ({ product, onDelete, onToggleFeatured, isSelected, onSelect
         </button>
       </td>
 
+      {/* Flash Deal */}
+      <td className="text-center">
+        {product.isFlashDeal ? (
+          <div className="d-flex flex-column align-items-center">
+            <Badge bg="danger-subtle" text="danger" className="mb-1">
+              Active
+            </Badge>
+            {product.flashDealEndAt && (
+              <small className="text-muted">
+                till {new Date(product.flashDealEndAt).toLocaleDateString()}
+              </small>
+            )}
+          </div>
+        ) : (
+          <Badge bg="secondary-subtle" text="secondary">No</Badge>
+        )}
+      </td>
+
       {/* Date Published */}
       <td>
         <div className="d-flex flex-column">
@@ -408,7 +495,8 @@ const ProductList = () => {
     manufacturerBrand: '',
     productType: '',
     stockStatus: '',
-    isFeatured: ''
+    isFeatured: '',
+    flashDeal: 'all'
   })
   
   // Modal states
@@ -416,9 +504,17 @@ const ProductList = () => {
   const [showTrashModal, setShowTrashModal] = useState(false)
   const [showEmptyTrashModal, setShowEmptyTrashModal] = useState(false)
   const [showBulkModal, setShowBulkModal] = useState(false)
+  const [showFlashDealModal, setShowFlashDealModal] = useState(false)
   const [productToDelete, setProductToDelete] = useState(null)
   const [productToTrash, setProductToTrash] = useState(null)
   const [bulkAction, setBulkAction] = useState(null)
+  const [flashDealMode, setFlashDealMode] = useState('default')
+  const [defaultFlashDealMaxDays, setDefaultFlashDealMaxDays] = useState(2)
+  const [defaultFlashDealStartAt, setDefaultFlashDealStartAt] = useState('')
+  const [defaultFlashDealEndAt, setDefaultFlashDealEndAt] = useState('')
+  const [flashDealStartAt, setFlashDealStartAt] = useState('')
+  const [flashDealEndAt, setFlashDealEndAt] = useState('')
+  const [flashDealError, setFlashDealError] = useState('')
   const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
@@ -500,7 +596,8 @@ const ProductList = () => {
         manufacturerBrand: filters.manufacturerBrand || undefined,
         productType: filters.productType || undefined,
         stockStatus: filters.stockStatus || undefined,
-        isFeatured: filters.isFeatured || undefined
+        isFeatured: filters.isFeatured || undefined,
+        flashDeal: filters.flashDeal || undefined
       }, token)
 
       // access the data payload from the API response
@@ -551,6 +648,8 @@ const ProductList = () => {
       <td><Placeholder xs={4} /></td>
       <td><Placeholder xs={6} /></td>
       <td><Placeholder xs={3} /></td>
+      <td><Placeholder xs={6} /></td>
+      <td><Placeholder xs={4} /></td>
       </tr>
     ))
 
@@ -718,8 +817,107 @@ const ProductList = () => {
       toast.error('Please select at least one product')
       return
     }
+    if (action === 'flashDeal') {
+      openFlashDealModal()
+      return
+    }
     setBulkAction(action)
     setShowBulkModal(true)
+  }
+
+  const openFlashDealModal = async () => {
+    const token = session?.accessToken
+    if (!token) return toast.error('Unauthorized')
+
+    const fallback = resolveDefaultFlashDealRangeInputs({})
+    setDefaultFlashDealMaxDays(fallback.maxDays)
+    setDefaultFlashDealStartAt(fallback.start)
+    setDefaultFlashDealEndAt(fallback.end)
+    setFlashDealStartAt(fallback.start)
+    setFlashDealEndAt(fallback.end)
+    setFlashDealMode('default')
+    setFlashDealError('')
+    setShowFlashDealModal(true)
+
+    try {
+      const response = await settingsAPI.list(undefined, token)
+      const data = extractSettingsMap(response)
+      const { start, end } = resolveDefaultFlashDealRangeInputs(data)
+      const { maxDays } = resolveDefaultFlashDealRangeInputs(data)
+      setDefaultFlashDealMaxDays(maxDays)
+      setDefaultFlashDealStartAt(start)
+      setDefaultFlashDealEndAt(end)
+      setFlashDealStartAt(start)
+      setFlashDealEndAt(end)
+    } catch (err) {
+      // Keep fallback range when settings request fails.
+      logger.error('Failed to load flash deal settings', err)
+    }
+  }
+
+  const confirmBulkFlashDeal = async () => {
+    const token = session?.accessToken
+    if (!token) return toast.error('Unauthorized')
+
+    try {
+      setDeleting(true)
+      setFlashDealError('')
+
+      let startDate
+      let endDate
+
+      if (flashDealMode === 'default') {
+        // Always recompute from today's datetime + max days at submit time.
+        const response = await settingsAPI.list(undefined, token)
+        const data = extractSettingsMap(response)
+        const range = resolveDefaultFlashDealRangeDates(data)
+        startDate = range.start
+        endDate = range.end
+      } else {
+        if (!flashDealStartAt || !flashDealEndAt) {
+          setFlashDealError('Start and end date are required.')
+          return
+        }
+        startDate = new Date(flashDealStartAt)
+        endDate = new Date(flashDealEndAt)
+      }
+
+      if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+        setFlashDealError('Invalid flash deal date range.')
+        return
+      }
+      if (startDate >= endDate) {
+        setFlashDealError('Start date must be before end date.')
+        return
+      }
+
+      const payload = {
+        isFlashDeal: true,
+        flashDealStartAt: startDate.toISOString(),
+        flashDealEndAt: endDate.toISOString()
+      }
+
+      const results = await Promise.allSettled(
+        selectedIds.map((id) => productService.updateProduct(id, payload, token))
+      )
+      const successCount = results.filter((r) => r.status === 'fulfilled').length
+      const failedCount = results.length - successCount
+
+      if (successCount > 0) {
+        toast.success(`Flash deal updated for ${successCount} product(s)`)
+      }
+      if (failedCount > 0) {
+        toast.error(`Failed to update ${failedCount} product(s)`)
+      }
+
+      setSelectedIds([])
+      setShowFlashDealModal(false)
+      fetchProducts()
+    } catch (err) {
+      toast.error(err.message || 'Bulk flash deal update failed')
+    } finally {
+      setDeleting(false)
+    }
   }
 
   const handleDuplicateAsAftermarket = async (productId) => {
@@ -743,6 +941,9 @@ const ProductList = () => {
 
   const isAllSelected = products.length > 0 && selectedIds.length === products.length
   const isSomeSelected = selectedIds.length > 0 && selectedIds.length < products.length
+  const computedDefaultRange = resolveDefaultFlashDealRangeInputs({ flash_deal_max_days: defaultFlashDealMaxDays })
+  const displayDefaultStartAt = defaultFlashDealStartAt || computedDefaultRange.start
+  const displayDefaultEndAt = defaultFlashDealEndAt || computedDefaultRange.end
 
   return (
     <Card>
@@ -844,7 +1045,18 @@ const ProductList = () => {
               <option value="delete">Move to Trash</option>
               <option value="published">Publish</option>
               <option value="draft">Move to Draft</option>
+              <option value="flashDeal">Mark as Flash Deal</option>
             </select>
+          </div>
+          <div className="col-lg-2 col-md-4 col-sm-6">
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-danger w-100"
+              onClick={() => handleBulkAction('flashDeal')}
+              disabled={!selectedIds.length}
+            >
+              Flash Deal ({selectedIds.length})
+            </button>
           </div>
           <div className="col-lg-2 col-md-4 col-sm-6">
             <select
@@ -918,6 +1130,20 @@ const ProductList = () => {
               <option value="false">Not Featured</option>
             </select>
           </div>
+          <div className="col-lg-2 col-md-4 col-sm-6">
+            <select
+              className="form-select form-select-sm"
+              value={filters.flashDeal}
+              onChange={(e) => {
+                setFilters(prev => ({ ...prev, flashDeal: e.target.value }))
+                setCurrentPage(1)
+              }}
+            >
+              <option value="all">All Flash Deal</option>
+              <option value="flash">Flash Deals</option>
+              <option value="none">No Flash Deal</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -950,6 +1176,7 @@ const ProductList = () => {
                 <th>Category</th>
                 <th>Identifier</th>
                 <th className="text-center">Featured</th>
+                <th className="text-center">Flash Deal</th>
                 <th>Date Published</th>
                 <th>Action</th>
               </tr>
@@ -959,7 +1186,7 @@ const ProductList = () => {
                 renderRowSkeletons()
               ) : products.length === 0 ? (
                 <tr>
-                  <td colSpan="12" className="text-center py-5">
+                  <td colSpan="13" className="text-center py-5">
                     <IconifyIcon icon="solar:box-broken" className="fs-48 text-muted mb-3" />
                     <p className="text-muted mb-0">No products found</p>
                     <Link href="/products/product-add" className="btn btn-primary btn-sm mt-3">
@@ -1119,6 +1346,107 @@ const ProductList = () => {
         title={bulkAction === 'delete' ? 'Move to Trash' : bulkAction === 'published' ? 'Publish Products' : 'Move to Draft'}
         message={`Are you sure you want to ${bulkAction === 'delete' ? 'move to trash' : bulkAction} ${selectedIds.length} product(s)?`}
       />
+
+      <Modal show={showFlashDealModal} onHide={() => setShowFlashDealModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Mark As Flash Deal</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p className="mb-3 text-muted">
+            Apply flash deal to {selectedIds.length} selected product(s).
+          </p>
+
+          <div className="form-check mb-2">
+            <input
+              className="form-check-input"
+              type="radio"
+              name="flashDealMode"
+              id="flashDealModeDefault"
+              checked={flashDealMode === 'default'}
+              onChange={() => {
+                setFlashDealMode('default')
+                setFlashDealError('')
+              }}
+            />
+            <label className="form-check-label" htmlFor="flashDealModeDefault">
+              Use default range from Settings
+            </label>
+          </div>
+
+          {flashDealMode === 'default' && (
+            <div className="border rounded p-2 mb-3 bg-light-subtle">
+              <div className="small">
+                <strong>Start:</strong> {formatDisplayDateTime(displayDefaultStartAt)}
+              </div>
+              <div className="small">
+                <strong>End:</strong> {formatDisplayDateTime(displayDefaultEndAt)}
+              </div>
+            </div>
+          )}
+
+          <div className="form-check mb-3">
+            <input
+              className="form-check-input"
+              type="radio"
+              name="flashDealMode"
+              id="flashDealModeCustom"
+              checked={flashDealMode === 'custom'}
+              onChange={() => {
+                setFlashDealMode('custom')
+                setFlashDealError('')
+              }}
+            />
+            <label className="form-check-label" htmlFor="flashDealModeCustom">
+              Use custom range
+            </label>
+          </div>
+
+          <div className="row g-2">
+            <div className="col-12 col-md-6">
+              <label className="form-label">Start Date & Time</label>
+              <input
+                type="datetime-local"
+                className="form-control"
+                value={flashDealStartAt}
+                onChange={(e) => setFlashDealStartAt(e.target.value)}
+                disabled={flashDealMode !== 'custom'}
+              />
+            </div>
+            <div className="col-12 col-md-6">
+              <label className="form-label">End Date & Time</label>
+              <input
+                type="datetime-local"
+                className="form-control"
+                value={flashDealEndAt}
+                onChange={(e) => setFlashDealEndAt(e.target.value)}
+                disabled={flashDealMode !== 'custom'}
+              />
+            </div>
+          </div>
+
+          {flashDealError && (
+            <div className="text-danger small mt-2">{flashDealError}</div>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <button
+            type="button"
+            className="btn btn-light"
+            onClick={() => setShowFlashDealModal(false)}
+            disabled={deleting}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={confirmBulkFlashDeal}
+            disabled={deleting}
+          >
+            {deleting ? 'Applying...' : 'Apply Flash Deal'}
+          </button>
+        </Modal.Footer>
+      </Modal>
     </Card>
   )
 }

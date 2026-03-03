@@ -12,7 +12,9 @@
     "backfill:product-delete-status": "node scripts/backfill_product_status_before_delete.js",
     "dev": "ts-node-dev --respawn --transpile-only server.ts",
     "dev:ts": "ts-node-dev --respawn --transpile-only server.ts",
-    "seed:client": "node scripts/seed-client-data.js"
+    "seed:client": "node scripts/seed-client-data.js",
+    "vehicles:transform:xlsx": "node scripts/transform-merged-vehicles-xlsx.js",
+    "vehicles:import:xlsx": "node scripts/import-vehicles-from-mapped-xlsx.js"
   },
   "author": "webitof",
   "license": "ISC",

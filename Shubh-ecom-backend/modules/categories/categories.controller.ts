@@ -76,3 +76,13 @@ exports.getHierarchy = asyncHandler(async (_req: CategoriesRequest, res: Respons
   return success(res, data);
 });
 
+exports.uploadImage = asyncHandler(async (req: CategoriesRequest, res: Response) => {
+  const data = await service.uploadCategoryImage(req.file, req.user);
+  audit.log({
+    actor: { id: req.user?.id, role: req.user?.role || 'unknown' },
+    action: 'category_image_upload',
+    target: { id: req.params.id || undefined },
+  });
+  return success(res, data, 'Category image uploaded', 201);
+});
+

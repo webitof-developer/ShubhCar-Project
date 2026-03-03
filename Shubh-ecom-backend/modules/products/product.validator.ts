@@ -75,6 +75,9 @@ exports.createProductSchema = Joi.object({
   images: Joi.array().items(imageSchema).max(10).default([]),
   status: Joi.string().valid('draft', 'active', 'inactive', 'blocked').optional(),
   isFeatured: Joi.boolean().optional(),
+  isFlashDeal: Joi.boolean().optional(),
+  flashDealStartAt: Joi.date().iso().allow(null).optional(),
+  flashDealEndAt: Joi.date().iso().allow(null).optional(),
   listingFeeStatus: Joi.string().valid('pending', 'paid', 'waived').optional(),
   hlaapNo: Joi.string().allow('', null).optional(),
 
@@ -123,6 +126,9 @@ exports.updateProductSchema = Joi.object({
   shippingClass: Joi.string().allow('', null),
 
   isFeatured: Joi.boolean(),
+  isFlashDeal: Joi.boolean(),
+  flashDealStartAt: Joi.date().iso().allow(null),
+  flashDealEndAt: Joi.date().iso().allow(null),
   status: Joi.string().valid('draft', 'active', 'inactive', 'blocked'),
   listingFeeStatus: Joi.string().valid('pending', 'paid', 'waived'),
   hlaapNo: Joi.string().allow('', null).optional(),
@@ -150,6 +156,7 @@ exports.listPublicQuerySchema = Joi.object({
   productType: Joi.string().trim().optional(),
   minPrice: Joi.number().min(0).optional(),
   maxPrice: Joi.number().min(0).optional(),
+  isOnSale: Joi.boolean().optional(),
   sort: Joi.string()
     .valid('created_desc', 'created_asc', 'price_asc', 'price_desc')
     .default('created_desc'),
@@ -165,6 +172,8 @@ exports.adminListQuerySchema = Joi.object({
   productType: Joi.string().trim().optional(),
   stockStatus: Joi.string().valid('instock', 'outstock').optional(),
   isFeatured: Joi.boolean().optional(),
+  isFlashDeal: Joi.boolean().optional(),
+  flashDeal: Joi.string().valid('all', 'flash', 'none').optional(),
   search: searchQuerySchema.optional(),
   summary: Joi.boolean().optional(),
 });

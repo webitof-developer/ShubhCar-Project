@@ -71,13 +71,6 @@ class SettingsService {
         const settings = await this._listBounded(filter);
         const result: Record<string, unknown> = {};
 
-        // Group by 'group' or return flat if filtered? 
-        // Let's return a flat map { "store_name": "My Store", ... } 
-        // or grouped { general: { ... }, store: { ... } }
-
-        // Common pattern: Return array or key-value map.
-        // For frontend use, a map is often easier: settings.store_name
-
         settings.forEach(s => {
             if (isSalesman && !salesmanAllowedKeys.has(s.key)) {
                 return;
@@ -90,15 +83,43 @@ class SettingsService {
 
     /**
      * Bulk update settings
-     * data: { "store_name": "New Name", "tax_enabled": true }
+     * data: { "shipping_enabled": true, "tax_enabled": true }
      */
     async updateBulk(data: Record<string, unknown>) {
         const existing = await Setting.find({ key: { $in: Object.keys(data) } }).lean();
         const existingMap = new Map(existing.map((s) => [s.key, s.group]));
+        const allowedGroups = new Set([
+            'general',
+            'store',
+            'payment',
+            'email',
+            'tax',
+            'shipping',
+            'social',
+            'seo',
+            'orders',
+            'invoice',
+            'storage',
+            'products',
+            'vehicles',
+            'categories',
+            'subcategories',
+        ]);
         const publicKeys = new Set([
+            'site_title',
+            'site_description',
+            'contact_email',
+            'contact_phone',
+            'seo_title',
+            'seo_description',
+            'seo_keywords',
             'site_logo_dark',
             'site_logo_light',
             'site_favicon',
+            'coupon_enabled',
+            'product_weight_unit',
+            'product_dimensions_unit',
+            'shipping_handling_days',
             'tax_price_display_shop',
             'tax_price_display_cart',
             'tax_price_display_suffix',
@@ -120,8 +141,34 @@ class SettingsService {
             'invoice_company_website',
             'invoice_logo_url',
             'invoice_template_image_url',
+            'flash_deal_today',
+            'flash_deal_range_start',
+            'flash_deal_range_end',
+            'flash_deal_max_days',
         ]);
         const groupMap: Record<string, string> = {
+            site_title: 'general',
+            site_description: 'general',
+            contact_email: 'general',
+            contact_phone: 'general',
+            seo_title: 'seo',
+            seo_description: 'seo',
+            seo_keywords: 'seo',
+            store_name: 'store',
+            store_owner: 'store',
+            store_phone: 'store',
+            store_email: 'store',
+            store_address: 'store',
+            store_zip: 'store',
+            store_city: 'store',
+            store_country: 'store',
+            billing_name: 'store',
+            billing_phone: 'store',
+            billing_address: 'store',
+            billing_city: 'store',
+            billing_state: 'store',
+            billing_zip: 'store',
+            billing_country: 'store',
             site_logo_dark: 'store',
             site_logo_light: 'store',
             'site_favicon': 'store',
@@ -140,6 +187,10 @@ class SettingsService {
             shipping_free_threshold: 'shipping',
             shipping_flat_rate: 'shipping',
             shipping_handling_days: 'shipping',
+            coupon_enabled: 'orders',
+            coupon_sequential: 'orders',
+            product_weight_unit: 'products',
+            product_dimensions_unit: 'products',
             order_number_prefix: 'orders',
             order_number_digits: 'orders',
             order_number_start: 'orders',
@@ -174,10 +225,20 @@ class SettingsService {
             payment_razorpay_enabled: 'payment',
             razorpay_key_id: 'payment',
             razorpay_key_secret: 'payment',
+            flash_deal_today: 'products',
+            flash_deal_range_start: 'products',
+            flash_deal_range_end: 'products',
+            flash_deal_max_days: 'products',
         };
 
         const operations = Object.keys(data).map(key => {
-            const group = existingMap.get(key) || groupMap[key] || 'general';
+            const existingGroup = existingMap.get(key);
+            const safeExistingGroup =
+                typeof existingGroup === 'string' ? existingGroup : '';
+            const group =
+                (safeExistingGroup && allowedGroups.has(safeExistingGroup) ? safeExistingGroup : null) ||
+                groupMap[key] ||
+                'general';
             return {
                 updateOne: {
                     filter: { key },

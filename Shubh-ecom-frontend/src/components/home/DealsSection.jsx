@@ -1,10 +1,11 @@
 //src/components/home/DealsSection.jsx
 import Link from 'next/link';
-import { Clock, Flame } from 'lucide-react';
+import { Clock3, Flame } from 'lucide-react';
 import { ProductCard } from '@/components/product/ProductCard';
+import { FlashDealCountdown } from '@/components/deals/FlashDealCountdown';
 
 
-export const DealsSection = ({ products }) => {
+export const DealsSection = ({ products, dealEndsAt, referenceNow }) => {
   if (!products || products.length === 0) return null;
 
   return (
@@ -24,13 +25,6 @@ export const DealsSection = ({ products }) => {
                 <h2 className="text-2xl md:text-3xl font-bold">Flash Deals</h2>
                 <span className="bg-red-500 text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded-full tracking-wider animate-bounce">Live</span>
               </div>
-              <div className="flex items-center gap-2 text-slate-400 text-sm">
-                <Clock className="w-4 h-4" />
-                <span>Ending in:</span>
-                <span className="font-mono text-white font-bold bg-slate-800 px-2 py-0.5 rounded">12</span>:
-                <span className="font-mono text-white font-bold bg-slate-800 px-2 py-0.5 rounded">45</span>:
-                <span className="font-mono text-white font-bold bg-slate-800 px-2 py-0.5 rounded">30</span>
-              </div>
             </div>
           </div>
 
@@ -42,7 +36,15 @@ export const DealsSection = ({ products }) => {
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-6">
           {products.slice(0, 4).map((p, index) => (
-            <div key={p._id || p.id || index} className="transform hover:-translate-y-1 transition-transform duration-300">
+            <div key={p._id || p.id || index} className="relative transform hover:-translate-y-1 transition-transform duration-300">
+              <div className="absolute right-2 top-2 z-20 inline-flex items-center gap-1 rounded-md bg-slate-900/85 px-2 py-1 text-[10px] font-semibold text-white shadow-sm backdrop-blur-sm">
+                <Clock3 className="h-3 w-3" />
+                <FlashDealCountdown
+                  dealEndsAt={p?.flashDealEndAt || dealEndsAt}
+                  referenceNow={referenceNow}
+                  className="font-mono"
+                />
+              </div>
               <ProductCard
                 key={p._id}
                 product={p}

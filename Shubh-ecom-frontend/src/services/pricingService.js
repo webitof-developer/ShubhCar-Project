@@ -48,41 +48,55 @@ export const getDisplayPrice = (product, user = null) => {
     return 0;
   };
 
+  const useSalePrice = (product) => {
+    if (!product) return false;
+    if (!product.isFlashDeal) return false;
+    return product.isFlashDealActive !== false;
+  };
+
   const getRetailPrice = (product) => {
+    const canUseSale = useSalePrice(product);
     if (typeof product.retailPrice === 'number') return product.retailPrice;
-    if (product.retailPrice?.salePrice != null) return product.retailPrice.salePrice;
+    if (canUseSale && product.retailPrice?.salePrice != null) return product.retailPrice.salePrice;
     if (product.retailPrice?.mrp != null) return product.retailPrice.mrp;
     if (product.price) return getPriceAmount(product.price);
     return 0;
   };
 
   const getWholesalePrice = (product) => {
+    const canUseSale = useSalePrice(product);
     if (typeof product.wholesalePrice === 'number') return product.wholesalePrice;
-    if (product.wholesalePrice?.salePrice != null) return product.wholesalePrice.salePrice;
+    if (canUseSale && product.wholesalePrice?.salePrice != null) return product.wholesalePrice.salePrice;
     if (product.wholesalePrice?.mrp != null) return product.wholesalePrice.mrp;
     return null;
   };
 
   const retailPrice = getRetailPrice(product);
   const wholesalePrice = getWholesalePrice(product);
+  const retailMrp = Number(product?.retailPrice?.mrp || retailPrice || 0);
+  const wholesaleMrp = Number(product?.wholesalePrice?.mrp || wholesalePrice || 0);
 
   // Wholesale users see wholesale price if available
   if (canViewWholesalePrices(user) && wholesalePrice) {
-    const savings = Math.round(((retailPrice - wholesalePrice) / retailPrice) * 100);
+    const savings = retailPrice > 0
+      ? Math.round(((retailPrice - wholesalePrice) / retailPrice) * 100)
+      : 0;
+    const originalPrice = wholesaleMrp > wholesalePrice ? wholesaleMrp : (retailPrice > wholesalePrice ? retailPrice : null);
     return {
       price: wholesalePrice,
       type: 'wholesale',
       savingsPercent: savings > 0 ? savings : null,
-      originalPrice: retailPrice
+      originalPrice
     };
   }
 
   // Retail users or products without wholesale price
+  const retailOriginalPrice = retailMrp > retailPrice ? retailMrp : null;
   return {
     price: retailPrice,
     type: 'retail',
     savingsPercent: null,
-    originalPrice: null
+    originalPrice: retailOriginalPrice
   };
 };
 

@@ -20,6 +20,7 @@ import { CartItem } from '@/components/cart/CartItem';
 import { CartSummary } from '@/components/cart/CartSummary';
 import { EmptyCartState } from '@/components/cart/EmptyCartState';
 import { CartSuggestionsSidebar } from '@/components/cart/CartSuggestionsSidebar';
+import { useSiteConfig } from '@/hooks/useSiteConfig';
 
 const toId = (value) => {
   if (value === null || value === undefined) return '';
@@ -104,6 +105,7 @@ const Cart = () => {
   const [copiedCoupon, setCopiedCoupon] = useState(null);
   /* ... */
   const { items, removeFromCart, updateQuantity, addToCart, cartSource, loading, initializationLoading, subtotal: contextSubtotal } = useCart();
+  const { tax: siteTax, couponEnabled, shippingHandlingDays } = useSiteConfig();
   const [suggestedProducts, setSuggestedProducts] = useState([]);
   const { user, isAuthenticated, accessToken } = useAuth();
   const [summary, setSummary] = useState(null);
@@ -188,6 +190,10 @@ const Cart = () => {
   }, [fetchSummary]);
 
   useEffect(() => {
+    if (!couponEnabled) {
+      setAvailableCoupons([]);
+      return;
+    }
     const loadCoupons = async () => {
       try {
         setCouponsLoading(true);
@@ -209,8 +215,9 @@ const Cart = () => {
   const summaryTax = summary?.taxAmount ?? 0;
   const summaryTotal = summary?.grandTotal ?? contextSubtotal;
   const cartTaxDisplay = summary?.settings?.taxPriceDisplayCart || summary?.settings?.taxPriceDisplayShop || 'excluding';
-  const cartTaxLabel = getTaxSuffix(cartTaxDisplay);
+  const cartTaxLabel = getTaxSuffix(cartTaxDisplay, siteTax, summary?.settings);
   const showIncludingTax = cartTaxDisplay === 'including';
+  const showTaxTotals = summary?.settings?.taxDisplayTotals !== false;
   // grandTotal from backend is now correct for both modes
   // (including: subtotal + shipping, excluding: taxableAmount + tax + shipping)
 
@@ -221,6 +228,10 @@ const Cart = () => {
 
   /* ... handlers ... */
   const handleApplyCoupon = async () => {
+    if (!couponEnabled) {
+      toast.error('Coupons are currently disabled');
+      return;
+    }
     const code = couponCode.trim().toUpperCase();
 
     if (!code) {
@@ -266,6 +277,11 @@ const Cart = () => {
   };
 
   const handleApplyCouponFromDialog = async (coupon) => {
+    if (!couponEnabled) {
+      toast.error('Coupons are currently disabled');
+      setCouponDialogOpen(false);
+      return;
+    }
     if (!isAuthenticated || !accessToken || cartSource !== 'backend') {
       toast.error('Please login to apply coupons');
       setCouponDialogOpen(false);
@@ -497,12 +513,12 @@ const Cart = () => {
           </div>
 
           <div className="lg:col-span-1">
-            <CartSummary items={items} summary={summary} user={user} cartTaxLabel={cartTaxLabel} showIncludingTax={showIncludingTax} summarySubtotal={summarySubtotal} summaryDiscount={summaryDiscount} summaryTax={summaryTax} summaryTotal={summaryTotal} couponCode={couponCode} setCouponCode={setCouponCode} handleApplyCoupon={handleApplyCoupon} handleRemoveCoupon={handleRemoveCoupon} couponDialogOpen={couponDialogOpen} setCouponDialogOpen={setCouponDialogOpen} availableCoupons={availableCoupons} couponsLoading={couponsLoading} handleApplyCouponFromDialog={handleApplyCouponFromDialog} handleCopyCouponCode={handleCopyCouponCode} copiedCoupon={copiedCoupon} formatCouponValue={formatCouponValue} onProceedToCheckout={handleProceedToCheckout} proceedLoading={creatingCheckoutDraft} couponLoading={couponLoading} summaryLoading={summaryLoading} couponFxState={couponFxState} />
+            <CartSummary items={items} summary={summary} user={user} cartTaxLabel={cartTaxLabel} showIncludingTax={showIncludingTax} showTaxTotals={showTaxTotals} summarySubtotal={summarySubtotal} summaryDiscount={summaryDiscount} summaryTax={summaryTax} summaryTotal={summaryTotal} couponCode={couponCode} setCouponCode={setCouponCode} handleApplyCoupon={handleApplyCoupon} handleRemoveCoupon={handleRemoveCoupon} couponDialogOpen={couponDialogOpen} setCouponDialogOpen={setCouponDialogOpen} availableCoupons={availableCoupons} couponsLoading={couponsLoading} handleApplyCouponFromDialog={handleApplyCouponFromDialog} handleCopyCouponCode={handleCopyCouponCode} copiedCoupon={copiedCoupon} formatCouponValue={formatCouponValue} onProceedToCheckout={handleProceedToCheckout} proceedLoading={creatingCheckoutDraft} couponLoading={couponLoading} summaryLoading={summaryLoading} couponFxState={couponFxState} couponEnabled={couponEnabled} shippingHandlingDays={shippingHandlingDays || summary?.settings?.shippingHandlingDays} />
           </div>
         </div>
 
         <div className="mt-10 md:mt-14">
-          <div className="rounded-2xl border border-border/60 bg-gradient-to-b from-secondary/35 to-background p-4 md:p-6">
+          <div className="rounded-2xl border border-border/60 bg-linear-to-b from-secondary/35 to-background p-4 md:p-6">
             <div className="flex items-start md:items-center justify-between gap-3 mb-6">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-primary" />

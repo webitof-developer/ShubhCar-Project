@@ -90,7 +90,6 @@ const InvoiceSettings = () => {
     return { valid: true, message: '' }
   }
 
-  // Copy store address details to invoice settings
   const copyFromStoreSettings = async () => {
     if (!session?.accessToken) {
       toast.error('Authentication required')
@@ -102,16 +101,13 @@ const InvoiceSettings = () => {
       const response = await settingsAPI.list(undefined, session.accessToken)
       const data = response.data || response
 
-      // Check if any store data exists
       const hasStoreData = data.store_name || data.store_address || data.store_city || data.store_email || data.store_phone
 
       if (!hasStoreData) {
         toast.warning('No store address found. Please fill in Ecommerce Settings first.')
-        setCopying(false)
         return
       }
 
-      // Map store fields to invoice fields, preserving existing values when store data is empty
       const updates = {}
       if (data.store_name) updates.invoice_company_name = data.store_name
       if (data.store_address) updates.invoice_company_address_line1 = data.store_address
@@ -123,12 +119,11 @@ const InvoiceSettings = () => {
 
       if (Object.keys(updates).length === 0) {
         toast.info('No complete store information available to copy')
-        setCopying(false)
         return
       }
 
-      setFormData(prev => ({ ...prev, ...updates }))
-      toast.success(`Copied ${Object.keys(updates).length} fields from store address. Please review and add GSTIN.`)
+      setFormData((prev) => ({ ...prev, ...updates }))
+      toast.success(`Copied ${Object.keys(updates).length} fields from store address.`)
     } catch (error) {
       logger.error('Copy failed:', error)
       toast.error('Failed to copy store details. Please try again.')
@@ -136,7 +131,6 @@ const InvoiceSettings = () => {
       setCopying(false)
     }
   }
-
 
   const handleSave = async (overrides = {}, skipValidation = false) => {
     if (!session?.accessToken) return
@@ -360,7 +354,7 @@ const InvoiceSettings = () => {
                             </>
                           )}
                         </Button>
-                        <small className="text-muted ms-2">Quickly fill fields from your Ecommerce Settings</small>
+                        <small className="text-muted ms-2">Quickly fill fields from Ecommerce Settings</small>
                       </div>
                     </div>
                   </div>

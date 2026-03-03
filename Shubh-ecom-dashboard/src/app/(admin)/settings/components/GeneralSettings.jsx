@@ -7,6 +7,20 @@ import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import { Card, CardBody, CardHeader, CardTitle, Col, Row, Spinner, Button } from 'react-bootstrap'
 import { toast } from 'react-toastify'
 
+const toMaxDaysInput = (value) => {
+  if (!value) return ''
+  const numeric = Number(value)
+  if (Number.isFinite(numeric)) return String(Math.trunc(numeric))
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  date.setHours(0, 0, 0, 0)
+  const diffDays = Math.round((date.getTime() - today.getTime()) / (24 * 60 * 60 * 1000))
+  return String(Math.max(1, diffDays))
+}
+
 const GeneralSettings = () => {
   const { data: session } = useSession()
   const [loading, setLoading] = useState(true)
@@ -17,7 +31,8 @@ const GeneralSettings = () => {
     contact_phone: '',
     seo_title: '',
     seo_description: '',
-    seo_keywords: ''
+    seo_keywords: '',
+    flash_deal_max_days: '2',
   })
 
   useEffect(() => {
@@ -29,7 +44,7 @@ const GeneralSettings = () => {
       try {
         const response = await settingsAPI.list(undefined, session.accessToken)
         const data = response.data || response
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
           site_title: data.site_title || '',
           site_description: data.site_description || '',
@@ -37,10 +52,11 @@ const GeneralSettings = () => {
           contact_phone: data.contact_phone || '',
           seo_title: data.seo_title || '',
           seo_description: data.seo_description || '',
-          seo_keywords: data.seo_keywords || ''
+          seo_keywords: data.seo_keywords || '',
+          flash_deal_max_days: toMaxDaysInput(data.flash_deal_max_days ?? data.flash_deal_range_end) || '2',
         }))
       } catch (error) {
-        logger.error("Failed to fetch settings", error)
+        logger.error('Failed to fetch settings', error)
       } finally {
         setLoading(false)
       }
@@ -50,17 +66,34 @@ const GeneralSettings = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+    setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
   const handleSave = async () => {
     if (!session?.accessToken) return
+
+    const maxDays = Number(formData.flash_deal_max_days)
+    if (!Number.isInteger(maxDays)) {
+      toast.error('Flash deal max days must be a whole number')
+      return
+    }
+    if (maxDays < 1) {
+      toast.error('Flash deal max days cannot be less than 1')
+      return
+    }
+
     try {
-      await settingsAPI.update(formData, session.accessToken)
-      toast.success("Settings saved successfully!")
+      const payload = {
+        ...formData,
+        flash_deal_max_days: maxDays,
+        flash_deal_range_start: null,
+        flash_deal_range_end: null,
+      }
+      await settingsAPI.update(payload, session.accessToken)
+      toast.success('Settings saved successfully!')
     } catch (error) {
       logger.error(error)
-      toast.error("Failed to save settings")
+      toast.error('Failed to save settings')
     }
   }
 
@@ -81,9 +114,7 @@ const GeneralSettings = () => {
             <Row>
               <Col lg={6}>
                 <div className="mb-3">
-                  <label htmlFor="site_title" className="form-label">
-                    Site Title
-                  </label>
+                  <label htmlFor="site_title" className="form-label">Site Title</label>
                   <input
                     type="text"
                     id="site_title"
@@ -97,9 +128,7 @@ const GeneralSettings = () => {
               </Col>
               <Col lg={6}>
                 <div className="mb-3">
-                  <label htmlFor="contact_email" className="form-label">
-                    Contact Email
-                  </label>
+                  <label htmlFor="contact_email" className="form-label">Contact Email</label>
                   <input
                     type="email"
                     id="contact_email"
@@ -113,9 +142,7 @@ const GeneralSettings = () => {
               </Col>
               <Col lg={6}>
                 <div className="mb-3">
-                  <label htmlFor="contact_phone" className="form-label">
-                    Contact Phone
-                  </label>
+                  <label htmlFor="contact_phone" className="form-label">Contact Phone</label>
                   <input
                     type="text"
                     id="contact_phone"
@@ -129,9 +156,7 @@ const GeneralSettings = () => {
               </Col>
               <Col lg={12}>
                 <div>
-                  <label htmlFor="site_description" className="form-label">
-                    Site Description
-                  </label>
+                  <label htmlFor="site_description" className="form-label">Site Description</label>
                   <textarea
                     className="form-control bg-light-subtle"
                     id="site_description"
@@ -143,14 +168,10 @@ const GeneralSettings = () => {
                   />
                 </div>
               </Col>
-              <Col lg={12}>
-                <hr className="my-3" />
-              </Col>
+              <Col lg={12}><hr className="my-3" /></Col>
               <Col lg={6}>
                 <div className="mb-3">
-                  <label htmlFor="seo_title" className="form-label">
-                    SEO Title
-                  </label>
+                  <label htmlFor="seo_title" className="form-label">SEO Title</label>
                   <input
                     type="text"
                     id="seo_title"
@@ -164,9 +185,7 @@ const GeneralSettings = () => {
               </Col>
               <Col lg={6}>
                 <div className="mb-3">
-                  <label htmlFor="seo_keywords" className="form-label">
-                    SEO Keywords
-                  </label>
+                  <label htmlFor="seo_keywords" className="form-label">SEO Keywords</label>
                   <input
                     type="text"
                     id="seo_keywords"
@@ -180,9 +199,7 @@ const GeneralSettings = () => {
               </Col>
               <Col lg={12}>
                 <div>
-                  <label htmlFor="seo_description" className="form-label">
-                    SEO Description
-                  </label>
+                  <label htmlFor="seo_description" className="form-label">SEO Description</label>
                   <textarea
                     className="form-control bg-light-subtle"
                     id="seo_description"
@@ -194,6 +211,28 @@ const GeneralSettings = () => {
                   />
                 </div>
               </Col>
+              <Col lg={12}><hr className="my-3" /></Col>
+              <Col lg={6}>
+                <div className="mb-3">
+                  <label htmlFor="flash_deal_max_days" className="form-label">Flash Deal Max Days</label>
+                  <input
+                    type="number"
+                    id="flash_deal_max_days"
+                    name="flash_deal_max_days"
+                    className="form-control"
+                    min="1"
+                    step="1"
+                    value={formData.flash_deal_max_days}
+                    onChange={handleChange}
+                    placeholder="2"
+                  />
+                </div>
+              </Col>
+              <Col lg={6}>
+                <div className="mb-3 d-flex align-items-end h-100">
+                  <small className="text-muted">Default flash deal will run from now until max days. Minimum is 1 day.</small>
+                </div>
+              </Col>
             </Row>
           </CardBody>
         </Card>
@@ -201,4 +240,5 @@ const GeneralSettings = () => {
     </Row>
   )
 }
+
 export default GeneralSettings

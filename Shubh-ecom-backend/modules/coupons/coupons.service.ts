@@ -1,5 +1,6 @@
 const couponRepo = require('./coupon.repo');
 const couponUsageRepo = require('./couponUsage.repo');
+const Setting = require('../../models/Setting.model');
 const { error } = require('../../utils/apiResponse');
 const { getOffsetPagination, buildPaginationMeta } = require('../../utils/pagination');
 
@@ -10,7 +11,18 @@ type CouponListQuery = {
 };
 
 class CouponsService {
+  async isCouponFeatureEnabled() {
+    const row = await Setting.findOne({ key: 'coupon_enabled' }).lean();
+    if (!row) return true;
+    const value = row.value;
+    if (value === false || value === 'false' || value === 0 || value === '0') return false;
+    return true;
+  }
+
   async preview({ userId, code, orderSubtotal, session }) {
+    const couponsEnabled = await this.isCouponFeatureEnabled();
+    if (!couponsEnabled) error('Coupons are disabled by admin', 400);
+
     const upper = code.toUpperCase();
     const now = new Date();
 
@@ -99,6 +111,15 @@ class CouponsService {
   }
 
   async listPublic(query: CouponListQuery = {}) {
+    const couponsEnabled = await this.isCouponFeatureEnabled();
+    if (!couponsEnabled) {
+      return {
+        coupons: [],
+        data: [],
+        pagination: buildPaginationMeta({ ...getOffsetPagination(query), total: 0 }),
+      };
+    }
+
     const { page, limit } = query;
     const pagination = getOffsetPagination({ page, limit });
     const now = new Date();

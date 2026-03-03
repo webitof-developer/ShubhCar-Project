@@ -5,7 +5,12 @@ const base = {
   slug: Joi.string().trim().lowercase().regex(/^[a-z0-9-]+$/),
   parentId: Joi.string().allow(null, ''),
   iconUrl: Joi.string().uri().allow(null, ''),
-  imageUrl: Joi.string().uri().allow(null, ''),
+  imageUrl: Joi.alternatives()
+    .try(
+      Joi.string().uri(),
+      Joi.string().pattern(/^\/uploads\/[a-zA-Z0-9/_\-.]+$/),
+    )
+    .allow(null, ''),
   description: Joi.string().max(500).allow(null, ''),
   isActive: Joi.boolean(),
 };

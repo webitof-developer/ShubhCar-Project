@@ -39,7 +39,10 @@ const swaggerDefinition = {
         properties: {
           accessToken: { type: 'string' },
           refreshToken: { type: 'string' },
-          expiresIn: { type: 'integer', description: 'Access token expiry in seconds' },
+          expiresIn: {
+            type: 'integer',
+            description: 'Access token expiry in seconds',
+          },
         },
       },
       ProductSummary: {
@@ -201,7 +204,11 @@ const swaggerDefinition = {
           trackingNumber: { type: 'string' },
           trackingUrl: { type: 'string', format: 'uri', nullable: true },
           shippedAt: { type: 'string', format: 'date-time', nullable: true },
-          estimatedDeliveryDate: { type: 'string', format: 'date', nullable: true },
+          estimatedDeliveryDate: {
+            type: 'string',
+            format: 'date',
+            nullable: true,
+          },
           deliveredAt: { type: 'string', format: 'date-time', nullable: true },
         },
       },
@@ -226,7 +233,7 @@ const swaggerDefinition = {
             items: {
               type: 'object',
               properties: {
-                orderItemId: { type: 'string' }, 
+                orderItemId: { type: 'string' },
                 quantity: { type: 'integer' },
                 reason: { type: 'string' },
               },
@@ -307,7 +314,9 @@ const swaggerDefinition = {
 
 const options = {
   definition: swaggerDefinition,
-  apis: [path.join(__dirname, '../modules/**/*.routes.js')],
+  apis: [
+    path.resolve(__dirname, '../modules/**/*.routes.ts').replace(/\\/g, '/'),
+  ],
 };
 
 const swaggerSpec = swaggerJSDoc(options);

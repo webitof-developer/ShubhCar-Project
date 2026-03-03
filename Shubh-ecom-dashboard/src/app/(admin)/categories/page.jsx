@@ -24,6 +24,49 @@ import FormErrorModal from '@/components/forms/FormErrorModal'
 import DeleteConfirmModal from '@/components/shared/DeleteConfirmModal'
 import DataTable from '@/components/shared/DataTable'
 import StatusToggle from '@/components/shared/StatusToggle'
+import MediaPickerModal from '@/components/media/MediaPickerModal'
+
+const MAX_CATEGORY_IMAGE_BYTES = 2 * 1024 * 1024
+const CATEGORY_ICON_SIZE_PX = 256
+const ALLOWED_CATEGORY_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+const API_ORIGIN = API_BASE_URL.replace(/\/api\/v1$/, '')
+
+const getImageDimensions = (file) =>
+  new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file)
+    const image = new window.Image()
+    image.onload = () => {
+      resolve({ width: image.naturalWidth, height: image.naturalHeight })
+      URL.revokeObjectURL(url)
+    }
+    image.onerror = () => {
+      reject(new Error('Unable to read image dimensions'))
+      URL.revokeObjectURL(url)
+    }
+    image.src = url
+  })
+
+const getRemoteImageDimensions = (url) =>
+  new Promise((resolve, reject) => {
+    if (!url) {
+      reject(new Error('Invalid image URL'))
+      return
+    }
+
+    const image = new window.Image()
+    image.onload = () => {
+      resolve({ width: image.naturalWidth, height: image.naturalHeight })
+    }
+    image.onerror = () => {
+      reject(new Error('Unable to read selected media dimensions'))
+    }
+    image.src = url
+  })
+
+const resolveImageUrl = (url) => {
+  if (!url) return ''
+  return url.startsWith('http') ? url : `${API_ORIGIN}${url}`
+}
 
 
 const flattenCategories = (nodes = []) => {
@@ -60,6 +103,7 @@ const CategoriesPage = () => {
     parentId: '',
     name: '',
     slug: '',
+    imageUrl: '',
     isActive: true,
   })
   const [submitting, setSubmitting] = useState(false)
@@ -71,6 +115,9 @@ const CategoriesPage = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [categoryToDelete, setCategoryToDelete] = useState(null)
   const [formDataSnapshot, setFormDataSnapshot] = useState(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const [showMediaPicker, setShowMediaPicker] = useState(false)
+  const [modalError, setModalError] = useState(null)
 
   const fetchCategories = async () => {
     if (status !== 'authenticated') return
@@ -114,10 +161,11 @@ const CategoriesPage = () => {
   const handleOpenModal = () => {
     setEditMode(false)
     setEditingId(null)
-    setFormData({ parentId: '', name: '', slug: '', isActive: true })
+    setFormData({ parentId: '', name: '', slug: '', imageUrl: '', isActive: true })
     setShowModal(true)
     setSuccessMessage(null)
     setError(null)
+    setModalError(null)
     setValidationErrors({})
     setTouchedFields({})
   }
@@ -129,6 +177,7 @@ const CategoriesPage = () => {
       parentId: cat.parentId || '',
       name: cat.name || '',
       slug: cat.slug || '',
+      imageUrl: cat.imageUrl || '',
       isActive: !!cat.isActive,
     }
     setFormData(snap)
@@ -136,6 +185,7 @@ const CategoriesPage = () => {
     setShowModal(true)
     setSuccessMessage(null)
     setError(null)
+    setModalError(null)
   }
 
   const handleCloseModal = () => {
@@ -143,6 +193,7 @@ const CategoriesPage = () => {
     setEditMode(false)
     setEditingId(null)
     setFormDataSnapshot(null)
+    setModalError(null)
   }
 
   const handleSubmit = async (e) => {
@@ -173,6 +224,7 @@ const CategoriesPage = () => {
         formData.name === formDataSnapshot.name &&
         formData.slug === formDataSnapshot.slug &&
         formData.parentId === formDataSnapshot.parentId &&
+        formData.imageUrl === formDataSnapshot.imageUrl &&
         formData.isActive === formDataSnapshot.isActive
       if (unchanged) {
         handleCloseModal()
@@ -186,6 +238,7 @@ const CategoriesPage = () => {
         name: formData.name,
         slug: formData.slug,
         parentId: formData.parentId || null,
+        imageUrl: formData.imageUrl || null,
         isActive: formData.isActive,
       }
 
@@ -216,6 +269,97 @@ const CategoriesPage = () => {
       setError(err.message)
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handleCategoryImageSelection = async (event) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+
+    try {
+      setError(null)
+      setModalError(null)
+
+      if (!ALLOWED_CATEGORY_IMAGE_TYPES.includes(file.type)) {
+        throw new Error('Only JPG, PNG, and WEBP images are allowed')
+      }
+
+      if (file.size > MAX_CATEGORY_IMAGE_BYTES) {
+        throw new Error('Image size must be 2MB or smaller')
+      }
+
+      const { width, height } = await getImageDimensions(file)
+      if (width !== CATEGORY_ICON_SIZE_PX || height !== CATEGORY_ICON_SIZE_PX) {
+        throw new Error(`Image must be exactly ${CATEGORY_ICON_SIZE_PX}x${CATEGORY_ICON_SIZE_PX}px`)
+      }
+
+      const token = session?.accessToken
+      if (!token) throw new Error('Authentication required')
+
+      setUploadingImage(true)
+      const form = new FormData()
+      form.append('image', file)
+
+      const response = await fetch(`${API_BASE_URL}/categories/admin/upload-image`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: form,
+      })
+
+      const body = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(body.message || 'Image upload failed')
+      }
+
+      const imageUrl = body?.data?.imageUrl
+      if (!imageUrl) {
+        throw new Error('Invalid upload response')
+      }
+
+      setFormData((prev) => ({ ...prev, imageUrl }))
+      setSuccessMessage('Category image uploaded')
+    } catch (err) {
+      logger.error(err)
+      setModalError(err.message)
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
+  const handleMediaSelect = async (items = []) => {
+    const selected = Array.isArray(items) ? items[0] : null
+    if (!selected) return
+
+    try {
+      setError(null)
+      setModalError(null)
+
+      if (!ALLOWED_CATEGORY_IMAGE_TYPES.includes(selected.mimeType)) {
+        throw new Error('Only JPG, JPEG, PNG, and WEBP media can be used as category icon')
+      }
+
+      let width = Number(selected.width)
+      let height = Number(selected.height)
+
+      if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+        const url = resolveImageUrl(selected.url)
+        const remoteDimensions = await getRemoteImageDimensions(url)
+        width = remoteDimensions.width
+        height = remoteDimensions.height
+      }
+
+      if (width !== CATEGORY_ICON_SIZE_PX || height !== CATEGORY_ICON_SIZE_PX) {
+        throw new Error(`Selected media must be exactly ${CATEGORY_ICON_SIZE_PX}x${CATEGORY_ICON_SIZE_PX}px`)
+      }
+
+      setFormData((prev) => ({ ...prev, imageUrl: selected.url }))
+      setSuccessMessage('Category image selected from media library')
+    } catch (err) {
+      logger.error(err)
+      setModalError(err.message)
     }
   }
 
@@ -340,6 +484,17 @@ const CategoriesPage = () => {
               <DataTable
                 columns={[
                   { key: 'checkbox', label: '', width: 20, render: () => <Form.Check /> },
+                  { key: 'image', label: 'Image', render: (cat) => (
+                    cat.imageUrl ? (
+                      <img
+                        src={resolveImageUrl(cat.imageUrl)}
+                        alt={cat.name}
+                        style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <span className="text-muted small">No image</span>
+                    )
+                  ) },
                   { key: 'name', label: 'Name', render: (cat) => <span className="fw-medium">{cat.name}</span> },
                   { key: 'slug', label: 'Slug', render: (cat) => <code>{cat.slug}</code> },
                   { key: 'parent', label: 'Parent', render: (cat) => cat.parentName || 'Root' },
@@ -395,6 +550,11 @@ const CategoriesPage = () => {
         </Modal.Header>
         <Form onSubmit={handleSubmit}>
           <Modal.Body>
+            {modalError && (
+              <Alert variant="danger" dismissible onClose={() => setModalError(null)}>
+                {modalError}
+              </Alert>
+            )}
             <Form.Group className="mb-3">
               <Form.Label>Parent</Form.Label>
               <Form.Select
@@ -407,7 +567,7 @@ const CategoriesPage = () => {
                   </option>
                 ))}
               </Form.Select>
-              <Form.Text className="text-muted">
+              <Form.Text className="text-muted" style={{ fontSize: '0.75rem' }}>
                 Leave empty to create a root category. Selecting a parent will create a subcategory.
               </Form.Text>
             </Form.Group>
@@ -455,9 +615,55 @@ const CategoriesPage = () => {
                   {validationErrors.slug}
                 </Form.Control.Feedback>
               )}
-              <Form.Text className="text-muted">
+              <Form.Text className="text-muted" style={{ fontSize: '0.75rem' }}>
                 Only lowercase letters, numbers, and hyphens allowed
               </Form.Text>
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>Category Image</Form.Label>
+              <div className="d-flex align-items-center gap-3 flex-wrap">
+                <label className="btn btn-outline-primary btn-sm mb-0">
+                  {uploadingImage ? 'Uploading...' : 'Upload Image'}
+                  <input
+                    type="file"
+                    hidden
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleCategoryImageSelection}
+                    disabled={uploadingImage}
+                  />
+                </label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline-primary"
+                  onClick={() => setShowMediaPicker(true)}
+                >
+                  Choose from Media
+                </Button>
+                {formData.imageUrl && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline-danger"
+                    onClick={() => setFormData((prev) => ({ ...prev, imageUrl: '' }))}
+                  >
+                    Remove
+                  </Button>
+                )}
+              </div>
+              <Form.Text className="text-muted d-block" style={{ fontSize: '0.75rem' }}>
+                Use JPG/JPEG/PNG/WEBP only, exactly {CATEGORY_ICON_SIZE_PX}x{CATEGORY_ICON_SIZE_PX}px, max 2MB.
+              </Form.Text>
+              {formData.imageUrl && (
+                <div className="mt-2">
+                  <img
+                    src={resolveImageUrl(formData.imageUrl)}
+                    alt="Category preview"
+                    style={{ width: 72, height: 72, borderRadius: 10, objectFit: 'cover' }}
+                  />
+                </div>
+              )}
             </Form.Group>
 
             <Form.Group className="mb-2">
@@ -495,6 +701,14 @@ const CategoriesPage = () => {
         itemType="category"
         itemName={categoryToDelete?.name}
         deleting={deletingId === categoryToDelete?._id}
+      />
+
+      <MediaPickerModal
+        open={showMediaPicker}
+        onClose={() => setShowMediaPicker(false)}
+        multiple={false}
+        title="Select Category Icon"
+        onSelect={handleMediaSelect}
       />
     </>
   )

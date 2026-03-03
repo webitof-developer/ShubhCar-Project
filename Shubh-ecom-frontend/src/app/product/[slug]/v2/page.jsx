@@ -36,6 +36,7 @@ import { ProductReviewsSectionV2 } from '@/components/product/ProductReviewsSect
 import { ProductDetailTabs } from '@/components/product/ProductDetailTabs';
 import { useProductReviews } from '@/hooks/useProductReviews';
 import { SafeImage } from '@/components/common/SafeImage';
+import { useSiteConfig } from '@/hooks/useSiteConfig';
 
 /* â”€â”€ Trust Badges â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const TRUST_BADGES = [
@@ -49,6 +50,7 @@ const ProductDetailV2 = () => {
   const router = useRouter();
   const { addToCart, cart } = useCart();
   const { user } = useAuth();
+  const { productUnits } = useSiteConfig();
 
   const [product, setProduct]         = useState(null);
   const [loading, setLoading]         = useState(true);
@@ -144,6 +146,8 @@ const ProductDetailV2 = () => {
   const discountPct = mrp > unitPrice ? Math.round(((mrp - unitPrice) / mrp) * 100) : 0;
   const isOem      = isOemProduct(product.productType);
 
+  const weightUnit = productUnits?.weight || 'kg';
+  const dimensionsUnit = productUnits?.dimensions || 'cm';
   const specs = [
     { label: 'Category',    value: product.category?.name },
     { label: 'Sub Category', value: product.subCategory?.name },
@@ -158,10 +162,10 @@ const ProductDetailV2 = () => {
         },
       ]
       : [{ label: 'Manufacturer', value: product.manufacturerBrand }]),
-    { label: 'Weight',  value: product.weight ? `${product.weight} kg` : null },
-    { label: 'Width',   value: product.width  ? `${product.width} cm`  : null },
-    { label: 'Length',  value: product.length ? `${product.length} cm` : null },
-    { label: 'Height',  value: product.height ? `${product.height} cm` : null },
+    { label: 'Weight',  value: product.weight ? `${product.weight} ${weightUnit}` : null },
+    { label: 'Width',   value: product.width  ? `${product.width} ${dimensionsUnit}`  : null },
+    { label: 'Length',  value: product.length ? `${product.length} ${dimensionsUnit}` : null },
+    { label: 'Height',  value: product.height ? `${product.height} ${dimensionsUnit}` : null },
     ...(product.attributes || []).map(a => ({ label: a.name, value: a.value })),
   ].filter(s => s.value);
 

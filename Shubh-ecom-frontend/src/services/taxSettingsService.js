@@ -71,6 +71,11 @@ function normalizeTaxSettings(backendSettings) {
     displayShop: backendSettings.tax_price_display_shop || 'including',
     displayCart: backendSettings.tax_price_display_cart || 'including',
     pricesIncludeTax: backendSettings.prices_include_tax === true || backendSettings.prices_include_tax === 'true',
+    taxDisplayTotals:
+      backendSettings.tax_display_totals === undefined
+        ? true
+        : backendSettings.tax_display_totals === true || backendSettings.tax_display_totals === 'true',
+    customSuffix: backendSettings.tax_price_display_suffix || '',
   };
 
   // Map backend display mode to frontend suffix
@@ -93,6 +98,7 @@ function normalizeTaxSettings(backendSettings) {
     showBreakdown: staticConfig.showBreakdown !== false,
     hideZeroComponents: staticConfig.hideZeroComponents !== false,
     taxRowLabel: staticConfig.taxRowLabel || 'Tax',
+    customSuffix: normalized.customSuffix || staticConfig.customSuffix || '',
   };
 
   // Help text from static config
@@ -116,6 +122,8 @@ function getFallbackSettings() {
     displayShop: staticTax.displayShop || 'including',
     displayCart: staticTax.displayCart || 'including',
     pricesIncludeTax: staticTax.pricesIncludeTax !== false,
+    taxDisplayTotals: staticTax.taxDisplayTotals !== false,
+    customSuffix: staticTax.customSuffix || '',
     display: staticTax.display || {
       suffixes: {
         including: 'incl. taxes',
@@ -131,6 +139,7 @@ function getFallbackSettings() {
       showBreakdown: true,
       hideZeroComponents: true,
       taxRowLabel: 'Tax',
+      customSuffix: staticTax.customSuffix || '',
     },
     help: staticTax.help || {
       including: 'Price includes all applicable taxes',

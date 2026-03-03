@@ -2,6 +2,31 @@
 
 ## Recent Updates
 
+### Fix: Swagger /docs Showing No APIs (2026-03-02)
+
+**Status**: ✅ Fixed
+
+**Problem**: `GET /docs` loaded the Swagger UI but showed zero API endpoints.
+
+**Root Cause**: `docs/swagger.js` line 310 had the `apis` glob pointing to:
+
+```
+modules/**/*.routes.js
+```
+
+But all route files were converted to TypeScript (`.routes.ts`) during the JS→TS migration. swagger-jsdoc found no files to scan, resulting in an empty spec.
+
+**Fix**:
+
+- `docs/swagger.js` — changed glob to `modules/**/*.routes.ts`
+- The `**` glob already covers the nested `vehicle-management/routes/` subdirectory
+
+**Files Modified**:
+
+- `docs/swagger.js` — `apis` pattern (1 line)
+
+---
+
 ### Security Audit — Pre-Production Hardening (2026-02-27)
 
 **Status**: ✅ Audit Complete — All critical backend issues were pre-fixed

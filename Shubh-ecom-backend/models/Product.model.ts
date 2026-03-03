@@ -139,6 +139,21 @@ const productSchema = new mongoose.Schema(
       default: false,
       index: true,
     },
+    isFlashDeal: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    flashDealStartAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
+    flashDealEndAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
 
     /* =====================
        REVIEWS & RATINGS
@@ -190,6 +205,7 @@ productSchema.pre('save', async function () {
 productSchema.index({ categoryId: 1, status: 1 });
 
 productSchema.index({ isFeatured: 1, status: 1 });
+productSchema.index({ isFlashDeal: 1, flashDealStartAt: 1, flashDealEndAt: 1, status: 1 });
 productSchema.index({ status: 1, createdAt: -1 });
 productSchema.index({ ratingAvg: -1, ratingCount: -1 });
 productSchema.index({ status: 1, stockQty: 1 });

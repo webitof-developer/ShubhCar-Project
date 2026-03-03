@@ -9,6 +9,10 @@ const {
   createCategorySchema,
   updateCategorySchema,
 } = require('./categories.validator');
+const {
+  uploadCategoryImage,
+  validateUploadedCategoryImage,
+} = require('../../middlewares/categoryImageUpload.middleware');
 
 const router = express.Router();
 
@@ -40,6 +44,15 @@ router.post(
   auth([ROLES.ADMIN]),
   validate(createCategorySchema),
   controller.create,
+);
+
+router.post(
+  '/admin/upload-image',
+  adminLimiter,
+  auth([ROLES.ADMIN]),
+  uploadCategoryImage.single('image'),
+  validateUploadedCategoryImage,
+  controller.uploadImage,
 );
 
 /**

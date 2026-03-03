@@ -21,7 +21,11 @@ import { formatPrice } from './pricingService';
  * @param {Object} runtimeConfig - Optional runtime tax config from useSiteConfig
  * @returns {string} - e.g., "incl. taxes" or "+ applicable taxes"
  */
-export function getTaxSuffix(displayMode = 'including', runtimeConfig = null) {
+export function getTaxSuffix(displayMode = 'including', runtimeConfig = null, backendSettings = null) {
+  const settingsSuffix = backendSettings?.taxPriceDisplaySuffix || backendSettings?.tax_price_display_suffix || '';
+  if (settingsSuffix) return settingsSuffix;
+  const customSuffix = runtimeConfig?.display?.customSuffix || '';
+  if (customSuffix) return customSuffix;
   const config = runtimeConfig?.display?.suffixes || APP_CONFIG.site?.tax?.display?.suffixes || {};
   return displayMode === 'including' 
     ? (config.including || 'incl. taxes')
@@ -83,6 +87,7 @@ export function getTaxLabel(runtimeConfig = null) {
  * @returns {boolean}
  */
 export function shouldShowTaxBreakdown(runtimeConfig = null) {
+  if (runtimeConfig?.taxDisplayTotals === false) return false;
   const config = runtimeConfig?.display || APP_CONFIG.site?.tax?.display || {};
   return config.showBreakdown !== false;
 }

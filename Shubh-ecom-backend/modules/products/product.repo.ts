@@ -12,6 +12,9 @@ type ProductFilter = Record<string, unknown> & {
   $or?: unknown[];
   $and?: unknown[];
   isFeatured?: boolean;
+  isFlashDeal?: boolean;
+  flashDealStartAt?: { $lte: Date };
+  flashDealEndAt?: { $gte: Date };
 };
 
 type UpdateOptions = Record<string, unknown>;
@@ -59,6 +62,8 @@ class ProductRepository {
     productType,
     minPrice,
     maxPrice,
+    isOnSale,
+    referenceNow,
     sort = 'created_desc',
   }) {
     const filter: ProductFilter = { status: 'active' };
@@ -102,6 +107,13 @@ class ProductRepository {
           },
         ],
       });
+    }
+
+    if (isOnSale) {
+      const now = referenceNow instanceof Date ? referenceNow : new Date();
+      filter.isFlashDeal = true;
+      filter.flashDealStartAt = { $lte: now };
+      filter.flashDealEndAt = { $gte: now };
     }
 
     const sortMap: Record<string, Record<string, 1 | -1>> = {

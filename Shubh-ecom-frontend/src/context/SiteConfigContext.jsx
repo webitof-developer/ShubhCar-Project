@@ -47,6 +47,11 @@ export const SiteConfigProvider = ({ children }) => {
     const staticConfig = useMemo(() => ({
         // Site Identity
         siteName: APP_CONFIG.site.name,
+        siteTitle: APP_CONFIG.site.name,
+        siteDescription: APP_CONFIG.site.tagline,
+        seoTitle: APP_CONFIG.site.name,
+        seoDescription: APP_CONFIG.site.tagline,
+        seoKeywords: '',
         domain: APP_CONFIG.site.domain,
 
         // Branding
@@ -66,6 +71,13 @@ export const SiteConfigProvider = ({ children }) => {
 
         // Tax Configuration (static fallback)
         tax: APP_CONFIG.site?.tax || {},
+        couponEnabled: true,
+        couponSequential: false,
+        shippingHandlingDays: '3-5 business days',
+        productUnits: {
+            weight: 'kg',
+            dimensions: 'cm',
+        },
 
         // Feature Flags
         features: APP_CONFIG.features,
@@ -99,13 +111,34 @@ export const SiteConfigProvider = ({ children }) => {
                     logoDark: data.site_logo_dark ? resolveMediaUrl(data.site_logo_dark) : prev.logoDark,
                     logoLight: data.site_logo_light ? resolveMediaUrl(data.site_logo_light) : prev.logoLight,
                     favicon: data.site_favicon ? resolveMediaUrl(data.site_favicon) : prev.favicon,
-                    siteName: data.siteName || prev.siteName,
+                    siteName: data.site_title || prev.siteName,
+                    siteTitle: data.site_title || prev.siteTitle,
+                    siteDescription: data.site_description || prev.siteDescription,
+                    seoTitle: data.seo_title || prev.seoTitle,
+                    seoDescription: data.seo_description || prev.seoDescription,
+                    seoKeywords: data.seo_keywords || prev.seoKeywords,
+                    contact: {
+                        ...prev.contact,
+                        email: data.contact_email || prev.contact?.email,
+                        phone: data.contact_phone || prev.contact?.phone,
+                    },
+                    couponEnabled: data.coupon_enabled !== undefined
+                        ? (data.coupon_enabled === true || data.coupon_enabled === 'true' || data.coupon_enabled === 1 || data.coupon_enabled === '1')
+                        : prev.couponEnabled,
+                    couponSequential: data.coupon_sequential !== undefined
+                        ? (data.coupon_sequential === true || data.coupon_sequential === 'true' || data.coupon_sequential === 1 || data.coupon_sequential === '1')
+                        : prev.couponSequential,
+                    shippingHandlingDays: data.shipping_handling_days || prev.shippingHandlingDays,
+                    productUnits: {
+                        weight: data.product_weight_unit || prev.productUnits?.weight || 'kg',
+                        dimensions: data.product_dimensions_unit || prev.productUnits?.dimensions || 'cm',
+                    },
                     
                     // Tax Config (Critical)
                     tax: mergedTaxConfig,
 
                     // Recompute copyright with potentially new site name
-                    copyrightText: `(c) ${new Date().getFullYear()} ${data.siteName || prev.siteName}. All rights reserved. Made with love in India`,
+                    copyrightText: `(c) ${new Date().getFullYear()} ${data.site_title || prev.siteName}. All rights reserved. Made with love in India`,
                 }));
 
             } catch (error) {
@@ -118,6 +151,27 @@ export const SiteConfigProvider = ({ children }) => {
 
         fetchSettings();
     }, [staticConfig]);
+
+    useEffect(() => {
+        if (typeof document === 'undefined') return;
+        if (config?.siteTitle) {
+            document.title = config.siteTitle;
+        }
+
+        const ensureMeta = (name, content) => {
+            if (!content) return;
+            let tag = document.querySelector(`meta[name='${name}']`);
+            if (!tag) {
+                tag = document.createElement('meta');
+                tag.setAttribute('name', name);
+                document.head.appendChild(tag);
+            }
+            tag.setAttribute('content', content);
+        };
+
+        ensureMeta('description', config?.seoDescription || config?.siteDescription || '');
+        ensureMeta('keywords', config?.seoKeywords || '');
+    }, [config?.siteTitle, config?.siteDescription, config?.seoDescription, config?.seoKeywords]);
 
     const value = useMemo(() => ({ ...config, loading }), [config, loading]);
 

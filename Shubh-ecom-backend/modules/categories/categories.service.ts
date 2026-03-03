@@ -7,6 +7,11 @@ const sanitize = require('../../utils/sanitizeHtml');
 const cacheKeys = require('../../lib/cache/keys');
 const catKeys = cacheKeys.catalog.categories;
 const { generateCategoryCode, generateSubCategoryCode } = require('../../utils/numbering');
+const { getStorageSettings } = require('../../utils/storageSettings');
+const s3 = require('../../utils/s3');
+const fs = require('fs/promises');
+const Media = require('../../models/Media.model');
+const ROLES = require('../../constants/roles');
 
 const CATEGORY_CODE_REGEX = /^(CAT|CATS)-\d{6}$/;
 
@@ -215,6 +220,56 @@ class CategoryService {
     });
 
     return rootCategories;
+  }
+
+  async uploadCategoryImage(file, user) {
+    if (!user || user.role !== ROLES.ADMIN) error('Forbidden', 403);
+    if (!file) error('No image uploaded', 400);
+    if (!file.detectedMimeType) error('Invalid uploaded file type', 400);
+
+    const storage = await getStorageSettings();
+
+    if (storage.driver === 's3') {
+      const s3Config = storage.s3 || {};
+      if (!s3Config.region || !s3Config.bucket) {
+        error('S3 config missing', 400);
+      }
+
+      const key = s3.generateKey('categories', file.detectedMimeType);
+      await s3.uploadFile({
+        filePath: file.path,
+        key,
+        mimeType: file.detectedMimeType,
+        config: s3Config,
+      });
+      await fs.unlink(file.path).catch(() => null);
+
+      const imageUrl = s3.getPublicUrl(key, s3Config);
+      const media = await Media.create({
+        key,
+        bucket: s3Config.bucket,
+        url: imageUrl,
+        mimeType: file.detectedMimeType,
+        size: file.size || 0,
+        usedIn: ['category'],
+        createdBy: user._id,
+      });
+
+      return { imageUrl, media };
+    }
+
+    const imageUrl = `/uploads/categories/${file.filename}`;
+    const media = await Media.create({
+      key: `categories/${file.filename}`,
+      bucket: 'local',
+      url: imageUrl,
+      mimeType: file.detectedMimeType,
+      size: file.size || 0,
+      usedIn: ['category'],
+      createdBy: user._id,
+    });
+
+    return { imageUrl, media };
   }
   
   async _updateRootsCache(category) {

@@ -12,7 +12,11 @@ import { useSiteConfig } from '@/hooks/useSiteConfig';
 import { sanitizeIndianPhone, isValidIndianPhone } from '@/utils/phoneValidation';
 
 const ContactPage = () => {
-  const { siteName } = useSiteConfig();
+  const { siteName, contact } = useSiteConfig();
+  const supportPhone = contact?.phone || '+91 98765 43210';
+  const supportEmail = contact?.email || 'support@autospares.com';
+  const supportPhoneHref = `tel:${String(supportPhone).replace(/\D/g, '')}`;
+  const supportEmailHref = `mailto:${supportEmail}`;
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -64,9 +68,9 @@ const ContactPage = () => {
       icon: Phone,
       title: 'Phone Support',
       desc: 'Mon-Sat 9am to 6pm',
-      value: '+91 98765 43210',
+      value: supportPhone,
       action: 'Call Now',
-      href: 'tel:+919876543210',
+      href: supportPhoneHref,
       color: 'text-green-600',
       bg: 'bg-green-50',
     },
@@ -74,9 +78,9 @@ const ContactPage = () => {
       icon: Mail,
       title: 'Email Us',
       desc: 'We reply within 24hrs',
-      value: 'support@autospares.com',
+      value: supportEmail,
       action: 'Send Email',
-      href: 'mailto:support@autospares.com',
+      href: supportEmailHref,
       color: 'text-blue-600',
       bg: 'bg-blue-50',
     },
