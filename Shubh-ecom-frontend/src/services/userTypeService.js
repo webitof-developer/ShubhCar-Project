@@ -51,10 +51,10 @@ export const getMinimumOrderQuantity = (product, user) => {
   if (!product) return 1;
   
   if (isWholesaleUser(user)) {
-    return product.wholesaleMinQty || product.minOrderQty || 10;
+    return Number(product.minWholesaleQty || product.wholesaleMinQty || product.minOrderQty || 1) || 1;
   }
   
-  return 1; // Retail users can order single items
+  return Number(product.minOrderQty || 1) || 1;
 };
 
 /**

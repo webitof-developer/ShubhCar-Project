@@ -97,7 +97,16 @@ export function OrderPreview({
             </div>
             <div className='p-5 space-y-4 max-h-[400px] overflow-y-auto'>
               {cartItems.map((item) => {
-                const unitPrice = getDisplayPrice(item.product, user).price;
+                const fallbackUnitPrice = getDisplayPrice(item.product, user).price || 0;
+                const itemUnitPrice = Number(
+                  item?.unitPrice ??
+                    item?.price ??
+                    item?.productPrice ??
+                    0,
+                ) || 0;
+                const unitPrice = itemUnitPrice > 0 ? itemUnitPrice : fallbackUnitPrice;
+                const itemLineTotal = Number(item?.lineTotal ?? item?.total ?? item?.subtotal ?? 0) || 0;
+                const lineTotal = itemLineTotal > 0 ? itemLineTotal : (unitPrice * item.quantity);
                 return (
                   <div
                     key={item.id}
@@ -126,7 +135,7 @@ export function OrderPreview({
                           Qty: {item.quantity} x {formatPrice(unitPrice || 0)}
                         </span>
                         <span className='font-semibold text-primary'>
-                          {formatPrice((unitPrice || 0) * item.quantity)}
+                          {formatPrice(lineTotal)}
                         </span>
                       </div>
                     </div>

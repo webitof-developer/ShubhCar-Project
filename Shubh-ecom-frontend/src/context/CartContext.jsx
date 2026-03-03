@@ -28,6 +28,7 @@ import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/stora
 import * as cartService from '@/services/cartService';
 import { getProductById } from '@/services/productService';
 import { calculateCartTotal } from '@/services/pricingService';
+import { getMinimumOrderQuantity } from '@/services/userTypeService';
 import { toast } from 'sonner';
 
 const CartContext = createContext(undefined);
@@ -63,11 +64,7 @@ const normalizeStoredCart = (storedCart) => {
   return [];
 };
 const resolveMinQtyForUser = (product, user) => {
-  const isWholesaleUser = user?.customerType === 'wholesale';
-  if (isWholesaleUser) {
-    return Math.max(1, Number(product?.minWholesaleQty || product?.minOrderQty || 1) || 1);
-  }
-  return Math.max(1, Number(product?.minOrderQty || 1) || 1);
+  return Math.max(1, Number(getMinimumOrderQuantity(product, user) || 1));
 };
 const normalizeGuestEntry = (entry) => {
   if (!entry || typeof entry !== 'object') return null;
@@ -191,6 +188,8 @@ export const CartProvider = ({ children }) => {
             productId: fallbackProductId,
             product: product,
             quantity: item.quantity,
+            unitPrice: Number(item.unitPrice ?? item.price ?? item.productPrice ?? 0) || 0,
+            lineTotal: Number(item.lineTotal ?? item.total ?? item.subtotal ?? 0) || 0,
           };
         });
         return mappedBackendItems;

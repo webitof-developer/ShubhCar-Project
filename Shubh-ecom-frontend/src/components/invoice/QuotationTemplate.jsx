@@ -41,7 +41,7 @@ const QuotationTemplate = forwardRef(({ items = [], summary = {}, profile = {} }
   const showIncludingTax = taxDisplayMode === 'including';
 
   // Summary values from backend (same source as cart page)
-  const subtotal = summary?.subtotal || 0;                       // product price Ã— qty
+  const subtotal = summary?.subtotal || 0;                       // product price x qty
   const discount = summary?.discountAmount || 0;
   const taxAmount = summary?.taxAmount || 0;
   const shippingFee = summary?.shippingFee || 0;
@@ -181,7 +181,7 @@ const QuotationTemplate = forwardRef(({ items = [], summary = {}, profile = {} }
                 // Price shown as-is (it's the product's selling price, tax conceptually inside)
                 displayUnitPrice = unitPrice;
                 lineTotal = unitPrice * itemQty;
-                // Tax shown informational â€” back-calculate from inclusive price
+                // Tax shown informational - back-calculate from inclusive price
                 const netUnit = taxRate > 0 ? unitPrice / (1 + taxRate / 100) : unitPrice;
                 lineTax = (unitPrice - netUnit) * itemQty;
               } else {
@@ -229,7 +229,7 @@ const QuotationTemplate = forwardRef(({ items = [], summary = {}, profile = {} }
               </div>
             )}
             
-            {/* Tax â€” separate line when excluding, informational when including */}
+            {/* Tax - separate line when excluding, informational when including */}
             {showIncludingTax ? (
               <div className="flex justify-between text-gray-500">
                 <span>Tax (incl. in price)</span>

@@ -21,10 +21,19 @@ const ProductsList = async ({ searchParams }) => {
     const isFeatured = searchParams?.isFeatured;
     const isBestSeller = searchParams?.isBestSeller;
 
-    const [products, settings] = await Promise.all([
-        getProducts({ page, limit, manufacturerBrand, search, sort, productType, isOnSale, isFeatured, isBestSeller }),
-        getPublicSettings(),
-    ]);
+    let products = [];
+    let settings = null;
+    let loadFailed = false;
+    try {
+        [products, settings] = await Promise.all([
+            getProducts({ page, limit, manufacturerBrand, search, sort, productType, isOnSale, isFeatured, isBestSeller }),
+            getPublicSettings(),
+        ]);
+    } catch {
+        loadFailed = true;
+        products = [];
+        settings = null;
+    }
     const flashDealNow = getFlashDealNowFromSettings(settings);
     const flashDealRange = getFlashDealRangeFromSettings(settings);
     const productDealEnd = products
@@ -50,6 +59,11 @@ const ProductsList = async ({ searchParams }) => {
 
     return (
         <>
+            {loadFailed && (
+                <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                    Unable to load products right now. Please try again.
+                </div>
+            )}
             {isOnSale === 'true' && (
                 <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
                     <p className="text-sm font-medium text-red-700">Flash deals are live now.</p>

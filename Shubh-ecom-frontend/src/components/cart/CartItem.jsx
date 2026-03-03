@@ -40,7 +40,11 @@ export const CartItem = ({
   const canIncrease = stockQty > 0 ? item.quantity < stockQty : true;
 
   const pricing = getDisplayPrice(product, user);
-  const { price: unitPrice, originalPrice, savingsPercent, type } = pricing;
+  const { price: fallbackUnitPrice, originalPrice, savingsPercent, type } = pricing;
+  const backendUnitPrice = Number(item?.unitPrice ?? item?.price ?? item?.productPrice ?? 0) || 0;
+  const unitPrice = backendUnitPrice > 0 ? backendUnitPrice : fallbackUnitPrice;
+  const backendLineTotal = Number(item?.lineTotal ?? item?.total ?? item?.subtotal ?? 0) || 0;
+  const lineTotal = backendLineTotal > 0 ? backendLineTotal : ((unitPrice || 0) * item.quantity);
   const productLink = product.slug ? `/product/${product.slug}` : '/products';
 
   return (
@@ -163,7 +167,7 @@ export const CartItem = ({
             <div>
               <div className='flex items-baseline gap-2'>
                 <span className='text-base md:text-lg font-bold text-primary'>
-                  {formatPrice((unitPrice || 0) * item.quantity)}
+                  {formatPrice(lineTotal)}
                 </span>
                 {originalPrice && (
                   <span className='text-xs text-muted-foreground line-through decoration-slate-400/50'>

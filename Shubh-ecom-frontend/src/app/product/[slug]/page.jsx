@@ -31,6 +31,7 @@ import { ProductReviewsSection } from '@/components/product/ProductReviewsSectio
 import { ProductDetailTabs } from '@/components/product/ProductDetailTabs';
 import { useProductReviews } from '@/hooks/useProductReviews';
 import { SafeImage } from '@/components/common/SafeImage';
+import { canViewWholesalePrices, getMinimumOrderQuantity } from '@/services/userTypeService';
 
 const ProductDetail = () => {
   const { slug } = useParams();
@@ -57,8 +58,7 @@ const ProductDetail = () => {
 
       // Initialize quantity with MOQ if applicable
       if (productData) {
-        const isWholesaleUser = user?.customerType === 'wholesale';
-        const minQ = isWholesaleUser ? (productData.minWholesaleQty || productData.minOrderQty || 1) : (productData.minOrderQty || 1);
+        const minQ = getMinimumOrderQuantity(productData, user);
         setQuantity(minQ);
       }
 
@@ -149,8 +149,9 @@ const ProductDetail = () => {
   // Pricing & User Role Logic
   const priceData = getDisplayPrice(product, user);
   const unitPrice = priceData.price;
-  const isWholesale = user?.customerType === 'wholesale';
-  const minQty = isWholesale ? (product.minWholesaleQty || product.minOrderQty || 1) : (product.minOrderQty || 1);
+  const isWholesale = canViewWholesalePrices(user);
+  const minQty = getMinimumOrderQuantity(product, user);
+  const mrp = Number(priceData.originalPrice || product?.retailPrice?.mrp || product?.mrp || 0);
   const subtotal = (unitPrice || 0) * quantity;
 
   // Cart Logic
@@ -393,14 +394,14 @@ const ProductDetail = () => {
               <div className="bg-slate-50/50 border border-slate-100 rounded-xl p-6 mb-8">
                 <div className="flex items-end gap-3 mb-2">
                   <span className="text-3xl font-bold text-slate-900 tracking-tight">{formatPrice(unitPrice)}</span>
-                  {product.mrp && product.mrp > unitPrice && (
+                  {mrp > unitPrice && (
                     <div className="flex flex-col items-start gap-1 pb-1.5">
                       <div className="flex items-center gap-2">
                         <span className="text-lg text-slate-500 font-medium whitespace-nowrap">
-                          MRP: <span className="line-through">{formatPrice(product.mrp)}</span>
+                          MRP: <span className="line-through">{formatPrice(mrp)}</span>
                         </span>
                         <span className="bg-cyan-500 text-white text-xs font-bold px-1.5 py-0.5 rounded">
-                          -{Math.round(((product.mrp - unitPrice) / product.mrp) * 100)}%
+                          -{Math.round(((mrp - unitPrice) / mrp) * 100)}%
                         </span>
                       </div>
                       <span className="text-[10px] font-semibold text-white bg-slate-500 px-2 py-0.5 rounded">
@@ -409,7 +410,7 @@ const ProductDetail = () => {
                     </div>
                   )}
                 </div>
-                {!product.mrp && <p className="text-xs text-slate-500 mb-4">*Price includes all taxes</p>}
+                {!(mrp > unitPrice) && <p className="text-xs text-slate-500 mb-4">*Price includes all taxes</p>}
 
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="secondary" className={`border-none px-3 py-1.5 gap-1.5 ${inStock ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
@@ -513,10 +514,10 @@ const ProductDetail = () => {
               <div className="text-2xl font-bold text-slate-900 leading-none mb-1">
                 {formatPrice(unitPrice)}
               </div>
-              {product.mrp > unitPrice && (
+              {mrp > unitPrice && (
                 <div className="text-xs text-slate-500">
-                  <span className="line-through">{formatPrice(product.mrp)}</span>
-                  <span className="text-green-600 font-bold ml-1">{Math.round(((product.mrp - unitPrice) / product.mrp) * 100)}% off</span>
+                  <span className="line-through">{formatPrice(mrp)}</span>
+                  <span className="text-green-600 font-bold ml-1">{Math.round(((mrp - unitPrice) / mrp) * 100)}% off</span>
                 </div>
               )}
             </div>

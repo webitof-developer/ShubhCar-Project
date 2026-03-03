@@ -1,5 +1,5 @@
 ﻿// src/app/product/[slug]/v2/page.jsx
-// Product Detail V2 â€” Sticky right panel, Part# chip, low-stock urgency,
+// Product Detail V2 - Sticky right panel, Part# chip, low-stock urgency,
 // trust badges, rating breakdown bars, toast-based add-to-cart.
 // Route: /product/[slug]/v2
 
@@ -37,8 +37,9 @@ import { ProductDetailTabs } from '@/components/product/ProductDetailTabs';
 import { useProductReviews } from '@/hooks/useProductReviews';
 import { SafeImage } from '@/components/common/SafeImage';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
+import { canViewWholesalePrices, getMinimumOrderQuantity } from '@/services/userTypeService';
 
-/* â”€â”€ Trust Badges â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- Trust Badges ---------------------------------------------------------- */
 const TRUST_BADGES = [
   { icon: ShieldCheck, label: '100% Genuine' },
   { icon: RotateCcw,   label: 'Easy Returns' },
@@ -62,22 +63,21 @@ const ProductDetailV2 = () => {
   const scrollContainerRef            = useRef(null);
   const mainImageRef                  = useRef(null);
 
-  /* â”€â”€ Load product â”€â”€ */
+  /* -- Load product -- */
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       const data = await getProductBySlug(slug || '');
       setProduct(data);
       if (data) {
-        const isWs = user?.customerType === 'wholesale';
-        setQuantity(isWs ? (data.minWholesaleQty || data.minOrderQty || 1) : (data.minOrderQty || 1));
+        setQuantity(getMinimumOrderQuantity(data, user));
       }
       setLoading(false);
     };
     if (slug) load();
   }, [slug, user]);
 
-  /* â”€â”€ Load reviews â”€â”€ */
+  /* -- Load reviews -- */
   const {
     reviews,
     reviewStats,
@@ -90,7 +90,7 @@ const ProductDetailV2 = () => {
     fallbackCount: product?.ratingCount,
   });
 
-  /* â”€â”€ Image scroll helpers â”€â”€ */
+  /* -- Image scroll helpers -- */
   const scrollToImage = (idx) => {
     if (scrollContainerRef.current && images.length > 0) {
       const w = scrollContainerRef.current.scrollWidth / images.length;
@@ -105,7 +105,7 @@ const ProductDetailV2 = () => {
     if (idx !== activeImage) setActiveImage(idx);
   };
 
-  /* â”€â”€ Image zoom â”€â”€ */
+  /* -- Image zoom -- */
   const handleMouseMove = (e) => {
     const rect = mainImageRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -115,8 +115,18 @@ const ProductDetailV2 = () => {
     });
   };
 
-  /* â”€â”€ Guard states â”€â”€ */
-  if (loading || !product) return <ProductSkeleton />;
+  /* -- Guard states -- */
+  if (loading) return <ProductSkeleton />;
+  if (!product) {
+    return (
+      <Layout>
+        <div className="container py-24 text-center">
+          <h1 className="text-2xl font-bold">Product not found</h1>
+          <Link href="/products" className="text-primary mt-4 inline-block">Browse Catalog</Link>
+        </div>
+      </Layout>
+    );
+  }
 
   if (!isProductVisible(product, user)) return (
     <Layout>
@@ -131,7 +141,7 @@ const ProductDetailV2 = () => {
     </Layout>
   );
 
-  /* â”€â”€ Derived data â”€â”€ */
+  /* -- Derived data -- */
   const images     = resolveProductImages(product.images || []).length
     ? resolveProductImages(product.images || []) : ['/placeholder.jpg'];
   const stockQty   = product?.stockQty ?? 0;
@@ -139,10 +149,10 @@ const ProductDetailV2 = () => {
   const lowStock   = inStock && stockQty <= 10;
   const priceData  = getDisplayPrice(product, user);
   const unitPrice  = priceData.price;
-  const isWholesale = user?.customerType === 'wholesale';
-  const minQty     = isWholesale ? (product.minWholesaleQty || product.minOrderQty || 1) : (product.minOrderQty || 1);
+  const isWholesale = canViewWholesalePrices(user);
+  const minQty     = getMinimumOrderQuantity(product, user);
   const isInCart   = (cart?.items || []).some(i => i.product?._id === product._id || i.productId === product._id);
-  const mrp        = product.mrp || product.retailPrice?.mrp || 0;
+  const mrp        = Number(priceData.originalPrice || product?.retailPrice?.mrp || product?.mrp || 0);
   const discountPct = mrp > unitPrice ? Math.round(((mrp - unitPrice) / mrp) * 100) : 0;
   const isOem      = isOemProduct(product.productType);
 
@@ -169,7 +179,7 @@ const ProductDetailV2 = () => {
     ...(product.attributes || []).map(a => ({ label: a.name, value: a.value })),
   ].filter(s => s.value);
 
-  /* â”€â”€ Handlers â”€â”€ */
+  /* -- Handlers -- */
   const handleAddToCart = async () => {
     if (isInCart) { router.push('/cart'); return; }
     if (quantity > stockQty) { toast.error(`Only ${stockQty} units available.`); return; }
@@ -189,13 +199,13 @@ const ProductDetailV2 = () => {
     }
   };
 
-  /* â”€â”€ Render â”€â”€ */
+  /* -- Render -- */
   return (
     <Layout>
       <div className="bg-muted/20 min-h-screen">
         <div className="container mx-auto px-4 py-5 pb-28 md:pb-8">
 
-          {/* â”€â”€ Breadcrumb â”€â”€ */}
+          {/* -- Breadcrumb -- */}
           <nav className="flex items-center gap-1.5 text-sm text-muted-foreground mb-5 overflow-x-auto whitespace-nowrap no-scrollbar">
             <Link href="/" className="hover:text-primary transition-colors">Home</Link>
             {product.category && (
@@ -218,10 +228,10 @@ const ProductDetailV2 = () => {
             <span className="text-foreground font-medium truncate max-w-[200px]">{product.name}</span>
           </nav>
 
-          {/* â”€â”€ Main Grid â”€â”€ */}
+          {/* -- Main Grid -- */}
           <div className="grid lg:grid-cols-12 gap-6 lg:gap-8 mb-10">
 
-            {/* â”€â”€ LEFT: Image Gallery â”€â”€ */}
+            {/* -- LEFT: Image Gallery -- */}
             <div className="lg:col-span-6 flex flex-col-reverse md:flex-row gap-3">
               {/* Thumbnails */}
               {images.length > 1 && (
@@ -338,7 +348,7 @@ const ProductDetailV2 = () => {
               </div>
             </div>
 
-            {/* â”€â”€ RIGHT: Product Info (sticky) â”€â”€ */}
+            {/* -- RIGHT: Product Info (sticky) -- */}
             <div className="lg:col-span-6">
               <div className="lg:sticky lg:top-6 bg-card border border-border/50 rounded-2xl p-5 md:p-6 flex flex-col gap-4">
 
@@ -416,7 +426,7 @@ const ProductDetailV2 = () => {
                       </span>
                     ) : lowStock ? (
                       <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600">
-                        <AlertTriangle className="w-3.5 h-3.5" /> Only {stockQty} left â€” order soon!
+                        <AlertTriangle className="w-3.5 h-3.5" /> Only {stockQty} left - order soon!
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-600">
@@ -432,7 +442,7 @@ const ProductDetailV2 = () => {
                     <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                     <div>
                       <p className="text-sm font-semibold text-blue-800">Wholesale Pricing Active</p>
-                      <p className="text-xs text-blue-600">MOQ: {minQty} units Â· Bulk pricing enabled</p>
+                      <p className="text-xs text-blue-600">MOQ: {minQty} units - Bulk pricing enabled</p>
                     </div>
                   </div>
                 )}
@@ -474,7 +484,7 @@ const ProductDetailV2 = () => {
                         : 'bg-muted text-muted-foreground cursor-not-allowed'
                     }`}
                   >
-                    {isInCart ? 'Go to Cart' : !inStock ? 'Unavailable' : `Add to Cart Â· ${formatPrice(unitPrice * quantity)}`}
+                    {isInCart ? 'Go to Cart' : !inStock ? 'Unavailable' : `Add to Cart - ${formatPrice(unitPrice * quantity)}`}
                   </Button>
 
                   {/* Wishlist */}
@@ -502,7 +512,7 @@ const ProductDetailV2 = () => {
             </div>
           </div>
 
-          {/* â”€â”€ Tabs: Description Â· Specs Â· Reviews â”€â”€ */}
+          {/* -- Tabs: Description - Specs - Reviews -- */}
           <div className="mb-10 bg-card border border-border/50 rounded-2xl p-4 md:p-7">
                         <ProductDetailTabs
               variant="v2"
@@ -523,15 +533,15 @@ const ProductDetailV2 = () => {
             />
           </div>
 
-          {/* â”€â”€ Vehicle Compatibility â”€â”€ */}
+          {/* -- Vehicle Compatibility -- */}
           <div className="mb-10">
             <VehicleCompatibility productId={product._id} />
           </div>
 
-          {/* â”€â”€ Alternatives â”€â”€ */}
+          {/* -- Alternatives -- */}
           <AlternativesSection productId={product._id} />
 
-          {/* â”€â”€ Related Products â”€â”€ */}
+          {/* -- Related Products -- */}
           <div className="mb-10">
             <RelatedProducts currentProduct={product} limit={5} />
           </div>
@@ -539,7 +549,7 @@ const ProductDetailV2 = () => {
         </div>
       </div>
 
-      {/* â”€â”€ Image preview modal â”€â”€ */}
+      {/* -- Image preview modal -- */}
       <ImagePreviewModal
         images={images}
         initialIndex={activeImage}
@@ -547,7 +557,7 @@ const ProductDetailV2 = () => {
         onClose={() => setIsPreviewOpen(false)}
       />
 
-      {/* â”€â”€ Mobile sticky bar â”€â”€ */}
+      {/* -- Mobile sticky bar -- */}
       <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border p-3 pb-safe z-50 md:hidden shadow-[0_-4px_16px_rgba(0,0,0,0.08)]">
         <div className="flex items-center gap-3">
           <div className="flex-1 min-w-0">

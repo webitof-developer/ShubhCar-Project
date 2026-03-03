@@ -22,7 +22,7 @@ import { api } from '@/utils/apiClient';
 const baseUrl = APP_CONFIG.api.baseUrl;
 const isProd = process.env.NODE_ENV === 'production';
 
-// Map frontend-friendly sort aliases â†’ backend enum values
+// Map frontend-friendly sort aliases -> backend enum values
 // Backend accepts: created_desc | created_asc | price_asc | price_desc
 const SORT_MAP = {
   newest: 'created_desc',

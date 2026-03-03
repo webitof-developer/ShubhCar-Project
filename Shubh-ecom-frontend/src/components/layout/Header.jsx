@@ -42,7 +42,8 @@ const SearchResultsDropdown = ({ results, isLoading, isVisible, onClose, query, 
               const isOem = isOemProduct(product.productType);
 
               // Fallback for MRP/Original price logic
-              const showOriginalPrice = originalPrice || product.mrp || (product.retailPrice > price ? product.retailPrice : null);
+              const retailMrp = Number(product?.retailPrice?.mrp || product?.mrp || 0);
+              const showOriginalPrice = originalPrice || (retailMrp > price ? retailMrp : null);
 
               return (
                 <Link

@@ -14,6 +14,7 @@ import {
 import WishlistButton from '@/components/product/WishlistButton';
 import { Button } from '@/components/ui/button';
 import { SafeImage } from '@/components/common/SafeImage';
+import { getMinimumOrderQuantity } from '@/services/userTypeService';
 
 export const ProductListItem = ({ product }) => {
   const { user } = useAuth();
@@ -45,7 +46,7 @@ export const ProductListItem = ({ product }) => {
       toast.error('Out of stock');
       return;
     }
-    const added = await addToCart(product, product.minOrderQty || 1);
+    const added = await addToCart(product, getMinimumOrderQuantity(product, user));
     if (added) {
       toast.success('Added to cart!');
     }
