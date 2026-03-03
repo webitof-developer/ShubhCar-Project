@@ -45,6 +45,21 @@ const CHECKOUT_STEPS = [
   { id: 2, name: 'Preview', label: 'Review Order' },
   { id: 3, name: 'Payment', label: 'Payment' },
 ];
+const toPositiveNumber = (value) => {
+  const num = Number(value);
+  return Number.isFinite(num) && num > 0 ? num : 0;
+};
+
+const calculateItemsSubtotal = (items = []) => {
+  return items.reduce((sum, item) => {
+    const explicitLineTotal = toPositiveNumber(item?.lineTotal ?? item?.total ?? item?.subtotal);
+    if (explicitLineTotal > 0) return sum + explicitLineTotal;
+
+    const unitPrice = toPositiveNumber(item?.unitPrice ?? item?.price ?? item?.productPrice);
+    const quantity = Math.max(1, Number(item?.quantity || 1) || 1);
+    return sum + (unitPrice > 0 ? unitPrice * quantity : 0);
+  }, 0);
+};
 
 const CheckoutInner = () => {
   const router = useRouter();
@@ -118,7 +133,31 @@ const CheckoutInner = () => {
     setSummaryLoading(true);
     try {
       const data = await cartService.getCartSummary(accessToken, checkoutData.addressId);
-      setSummary(data);
+      const normalizedSummary = data && typeof data === 'object' ? { ...data } : data;
+
+      if (normalizedSummary) {
+        const uiItemsSubtotal = calculateItemsSubtotal(items);
+        const summarySubtotal = toPositiveNumber(normalizedSummary.subtotal);
+
+        if (uiItemsSubtotal > 0 && summarySubtotal > 0 && uiItemsSubtotal > summarySubtotal) {
+          normalizedSummary.subtotal = uiItemsSubtotal;
+
+          const discount = toPositiveNumber(normalizedSummary.discountAmount);
+          const taxAmount = toPositiveNumber(normalizedSummary.taxAmount);
+          const shippingFee = toPositiveNumber(normalizedSummary.shippingFee);
+          const taxDisplayMode =
+            normalizedSummary?.settings?.taxPriceDisplayCart ||
+            normalizedSummary?.settings?.taxPriceDisplayShop ||
+            'excluding';
+
+          normalizedSummary.grandTotal =
+            taxDisplayMode === 'including'
+              ? Math.max(0, uiItemsSubtotal - discount) + shippingFee
+              : Math.max(0, uiItemsSubtotal - discount) + taxAmount + shippingFee;
+        }
+      }
+
+      setSummary(normalizedSummary);
     } catch (error) {
       console.error('[CHECKOUT] Failed to fetch summary:', error);
       setSummary(null);

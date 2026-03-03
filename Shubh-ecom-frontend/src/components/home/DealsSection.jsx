@@ -37,18 +37,22 @@ export const DealsSection = ({ products, dealEndsAt, referenceNow }) => {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-6">
           {products.slice(0, 4).map((p, index) => (
             <div key={p._id || p.id || index} className="relative transform hover:-translate-y-1 transition-transform duration-300">
-              <div className="absolute right-2 top-2 z-20 inline-flex items-center gap-1 rounded-md bg-slate-900/85 px-2 py-1 text-[10px] font-semibold text-white shadow-sm backdrop-blur-sm">
-                <Clock3 className="h-3 w-3" />
-                <FlashDealCountdown
-                  dealEndsAt={p?.flashDealEndAt || dealEndsAt}
-                  referenceNow={referenceNow}
-                  className="font-mono"
-                />
-              </div>
               <ProductCard
                 key={p._id}
                 product={p}
                 className="h-full bg-white text-slate-900 border-border"
+                imageOverlay={(
+                  <div className="inline-flex max-w-[calc(100%-0.5rem)] items-center justify-center gap-1 rounded-full border border-red-200 bg-white/95 px-2.5 py-1 text-[9px] font-semibold text-slate-800 shadow-sm backdrop-blur-sm md:text-[10px]">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500 animate-pulse" />
+                    <Clock3 className="h-3 w-3 shrink-0 text-red-600" />
+                    <span className="text-slate-600">Ends in</span>
+                    <FlashDealCountdown
+                      dealEndsAt={p?.flashDealEndAt || dealEndsAt}
+                      referenceNow={referenceNow}
+                      className="font-mono text-slate-900"
+                    />
+                  </div>
+                )}
               />
             </div>
           ))}

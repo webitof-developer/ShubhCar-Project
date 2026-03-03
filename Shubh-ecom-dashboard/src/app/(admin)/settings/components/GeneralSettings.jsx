@@ -26,12 +26,6 @@ const GeneralSettings = () => {
   const [loading, setLoading] = useState(true)
   const [formData, setFormData] = useState({
     site_title: '',
-    site_description: '',
-    contact_email: '',
-    contact_phone: '',
-    seo_title: '',
-    seo_description: '',
-    seo_keywords: '',
     flash_deal_max_days: '2',
   })
 
@@ -47,12 +41,6 @@ const GeneralSettings = () => {
         setFormData((prev) => ({
           ...prev,
           site_title: data.site_title || '',
-          site_description: data.site_description || '',
-          contact_email: data.contact_email || '',
-          contact_phone: data.contact_phone || '',
-          seo_title: data.seo_title || '',
-          seo_description: data.seo_description || '',
-          seo_keywords: data.seo_keywords || '',
           flash_deal_max_days: toMaxDaysInput(data.flash_deal_max_days ?? data.flash_deal_range_end) || '2',
         }))
       } catch (error) {
@@ -128,87 +116,9 @@ const GeneralSettings = () => {
               </Col>
               <Col lg={6}>
                 <div className="mb-3">
-                  <label htmlFor="contact_email" className="form-label">Contact Email</label>
-                  <input
-                    type="email"
-                    id="contact_email"
-                    name="contact_email"
-                    className="form-control"
-                    placeholder="Email"
-                    value={formData.contact_email}
-                    onChange={handleChange}
-                  />
-                </div>
-              </Col>
-              <Col lg={6}>
-                <div className="mb-3">
-                  <label htmlFor="contact_phone" className="form-label">Contact Phone</label>
-                  <input
-                    type="text"
-                    id="contact_phone"
-                    name="contact_phone"
-                    className="form-control"
-                    placeholder="Phone"
-                    value={formData.contact_phone}
-                    onChange={handleChange}
-                  />
-                </div>
-              </Col>
-              <Col lg={12}>
-                <div>
-                  <label htmlFor="site_description" className="form-label">Site Description</label>
-                  <textarea
-                    className="form-control bg-light-subtle"
-                    id="site_description"
-                    name="site_description"
-                    rows={4}
-                    placeholder="Type description"
-                    value={formData.site_description}
-                    onChange={handleChange}
-                  />
-                </div>
-              </Col>
-              <Col lg={12}><hr className="my-3" /></Col>
-              <Col lg={6}>
-                <div className="mb-3">
-                  <label htmlFor="seo_title" className="form-label">SEO Title</label>
-                  <input
-                    type="text"
-                    id="seo_title"
-                    name="seo_title"
-                    className="form-control"
-                    placeholder="SEO Title"
-                    value={formData.seo_title}
-                    onChange={handleChange}
-                  />
-                </div>
-              </Col>
-              <Col lg={6}>
-                <div className="mb-3">
-                  <label htmlFor="seo_keywords" className="form-label">SEO Keywords</label>
-                  <input
-                    type="text"
-                    id="seo_keywords"
-                    name="seo_keywords"
-                    className="form-control"
-                    placeholder="comma, separated, keywords"
-                    value={formData.seo_keywords}
-                    onChange={handleChange}
-                  />
-                </div>
-              </Col>
-              <Col lg={12}>
-                <div>
-                  <label htmlFor="seo_description" className="form-label">SEO Description</label>
-                  <textarea
-                    className="form-control bg-light-subtle"
-                    id="seo_description"
-                    name="seo_description"
-                    rows={3}
-                    placeholder="Meta description"
-                    value={formData.seo_description}
-                    onChange={handleChange}
-                  />
+                  <small className="text-muted d-block mt-4">
+                    Contact email, phone, and location are managed from Ecommerce Settings - Store Address.
+                  </small>
                 </div>
               </Col>
               <Col lg={12}><hr className="my-3" /></Col>

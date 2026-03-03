@@ -13,9 +13,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, HelpCircle, Package, Truck, RefreshCw, UserCircle, CreditCard, MessageCircle, Mail, Phone, ChevronRight } from 'lucide-react';
+import { useSiteConfig } from '@/hooks/useSiteConfig';
 
 const FaqPage = () => {
     const [searchQuery, setSearchQuery] = useState("");
+    const { contact } = useSiteConfig();
+    const supportPhone = contact?.phone || '+91 98765 43210';
+    const supportEmail = contact?.email || 'support@autospares.com';
+    const supportPhoneHref = `tel:${String(supportPhone).replace(/\D/g, '')}`;
+    const supportEmailHref = `mailto:${supportEmail}`;
 
     const categories = [
         { id: 'orders', label: 'Orders & Payments', icon: Package },
@@ -204,7 +210,7 @@ const FaqPage = () => {
                                                 <p className="text-sm text-slate-500 mb-6">
                                                     Everything you need to know about {cat.label.toLowerCase()}.
                                                 </p>
-                                                <Link href="/contact" className="text-sm font-semibold text-blue-600 flex items-center hover:underline">
+                                                <Link href="/contact-us" className="text-sm font-semibold text-blue-600 flex items-center hover:underline">
                                                     Still need help? <ChevronRight className="w-4 h-4" />
                                                 </Link>
                                             </div>
@@ -252,9 +258,9 @@ const FaqPage = () => {
                             </div>
                             <h3 className="font-bold text-slate-900 mb-1">Email Us</h3>
                             <p className="text-sm text-slate-500 mb-4">We usually reply within 24hrs</p>
-                            <Link href="/contact">
+                            <a href={supportEmailHref}>
                                 <Button variant="outline" className="w-full rounded-full group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600">Send Email</Button>
-                            </Link>
+                            </a>
                         </div>
 
                         <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100 text-center hover:border-blue-200 hover:shadow-lg transition-all group">
@@ -263,7 +269,7 @@ const FaqPage = () => {
                             </div>
                             <h3 className="font-bold text-slate-900 mb-1">Call Us</h3>
                             <p className="text-sm text-slate-500 mb-4">Mon-Sat from 9am to 6pm</p>
-                            <a href="tel:+919876543210">
+                            <a href={supportPhoneHref}>
                                 <Button variant="outline" className="w-full rounded-full group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600">Call Now</Button>
                             </a>
                         </div>

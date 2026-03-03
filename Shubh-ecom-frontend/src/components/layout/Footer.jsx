@@ -7,10 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 const Footer = () => {
-  const { siteName, logoLight, contact, siteDescription } = useSiteConfig();
+  const { siteName, copyrightText, contact } = useSiteConfig();
   const supportPhone = contact?.phone || '+91 98765 43210';
   const supportEmail = contact?.email || 'support@autospares.com';
-  const supportPhoneHref = `tel:${String(supportPhone).replace(/\\D/g, '')}`;
+  const supportAddress = contact?.address || 'Raipur, Chhattisgarh, India';
+  const supportPhoneHref = `tel:${String(supportPhone).replace(/\D/g, '')}`;
 
   return (
     <footer className="bg-slate-950 text-slate-300 mt-auto border-t border-slate-800">
@@ -24,11 +25,11 @@ const Footer = () => {
           <div className="col-span-2 lg:col-span-4 space-y-6">
             <Link href="/" className="inline-block">
               <div className="h-16 w-56 relative md:h-20 md:w-80">
-                <Image src={logoLight || '/logo.png'} alt={siteName || 'Logo'} fill className="object-contain object-left" unoptimized onError={(e) => e.currentTarget.style.display = 'none'} />
+                <Image src="/logo.png" alt="ShubhCars" fill className="object-contain object-left" onError={(e) => e.currentTarget.style.display = 'none'} />
               </div>
             </Link>
             <p className="text-slate-400 leading-relaxed max-w-sm">
-              {siteDescription || "India's most trusted online marketplace for genuine OEM and high-quality aftermarket automobile spare parts. Verified sellers, pan-India delivery, and dedicated support."}
+              India&apos;s most trusted online marketplace for genuine OEM and high-quality aftermarket automobile spare parts. Verified sellers, pan-India delivery, and dedicated support.
             </p>
 
             <div className="flex gap-4 pt-2">
@@ -92,7 +93,7 @@ const Footer = () => {
                 </div>
                 <div>
                   <p className="text-white font-medium mb-1">Headquarters</p>
-                  <p className="text-slate-400 text-sm leading-relaxed">Raipur, Chhattisgarh, India</p>
+                  <p className="text-slate-400 text-sm leading-relaxed">{supportAddress}</p>
                 </div>
               </li>
               <li className="flex items-start gap-4">
@@ -125,7 +126,7 @@ const Footer = () => {
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-sm text-slate-500 text-center md:text-left">
-              (c) {new Date().getFullYear()} {siteName}. All rights reserved.
+              {copyrightText}
             </p>
 
             <div className="flex items-center gap-6">

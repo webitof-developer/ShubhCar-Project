@@ -9,12 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { XCircle, AlertTriangle, ArrowLeft, RefreshCcw, Phone, Mail } from 'lucide-react';
 import Link from 'next/link';
 import APP_CONFIG from '@/config/app.config';
-import { useSiteConfig } from '@/hooks/useSiteConfig';
 
 export default function PaymentFailedPage() {
-  const { contact } = useSiteConfig();
-  const supportEmail = contact?.email || APP_CONFIG.site.contact.email;
-  const supportPhone = contact?.phone || APP_CONFIG.site.contact.phone;
   const router = useRouter();
   const [paymentData] = useState(() => {
     if (typeof window === 'undefined') return null;
@@ -100,7 +96,7 @@ export default function PaymentFailedPage() {
                   </li>
                   <li className="flex items-start gap-2">
                     <Phone className="w-4 h-4 mt-0.5 flex-shrink-0 text-primary" />
-                    <span><strong>Contact Support:</strong> Call us at {supportPhone}</span>
+                    <span><strong>Contact Support:</strong> Call us at {APP_CONFIG.site.contact.phone}</span>
                   </li>
                 </ul>
               </div>
@@ -121,7 +117,7 @@ export default function PaymentFailedPage() {
                   Back to Cart
                 </Button>
               </Link>
-              <Link href={`mailto:${supportEmail}`} className="flex-1">
+              <Link href={`mailto:${APP_CONFIG.site.contact.email}`} className="flex-1">
                 <Button variant="outline" className="w-full">
                   <Mail className="w-4 h-4 mr-2" />
                   Contact Support

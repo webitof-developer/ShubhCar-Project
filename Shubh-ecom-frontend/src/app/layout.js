@@ -6,7 +6,6 @@ import { VehicleProvider } from '@/context/VehicleContext';
 import { Toaster } from '@/components/ui/sonner';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { GlobalLoader } from '@/components/layout/GlobalLoader';
-import { DynamicFavicon } from '@/components/layout/DynamicFavicon';
 import { SiteConfigProvider } from '@/context/SiteConfigContext';
 import { GlobalLoggerInit } from '@/components/layout/GlobalLoggerInit';
 
@@ -29,7 +28,6 @@ export default function RootLayout({ children }) {
               <VehicleProvider>
                 <CartProvider>
                   <WishlistProvider>
-                    <DynamicFavicon />
                     <GlobalLoader />
                     <GlobalLoggerInit />
                     {children}

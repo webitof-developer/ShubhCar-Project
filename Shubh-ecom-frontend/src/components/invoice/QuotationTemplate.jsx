@@ -6,7 +6,7 @@ import { formatPrice, getDisplayPrice } from '@/services/pricingService';
 import { formatTaxBreakdown } from '@/services/taxDisplayService';
 
 const QuotationTemplate = forwardRef(({ items = [], summary = {}, profile = {} }, ref) => {
-  const { siteName, logoDark, logoLight } = useSiteConfig();
+  const { siteName } = useSiteConfig();
 
   // Use settings or defaults
   const settings = summary?.settings || {};
@@ -56,7 +56,7 @@ const QuotationTemplate = forwardRef(({ items = [], summary = {}, profile = {} }
     : grandTotal;
 
   // Logo
-  const logo = settings.invoice_logo_url || logoDark || logoLight;
+  const logo = settings.invoice_logo_url || '/logo.png';
 
   return (
     <div ref={ref} className="bg-white text-sm leading-tight text-gray-900 p-8 print:p-8" id="quotation-template">
@@ -81,13 +81,7 @@ const QuotationTemplate = forwardRef(({ items = [], summary = {}, profile = {} }
       <div className="flex flex-row justify-between items-start mb-8 pb-6 border-b-2 border-gray-200">
         <div className="flex flex-col">
            <div className="mb-4">
-             {logo ? (
-              <Image src={logo} alt={companyName} width={0} height={0} sizes="100vw" className="h-14 w-auto object-contain" />
-            ) : (
-              <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">{companyName.substring(0, 2).toUpperCase()}</span>
-              </div>
-            )}
+             <Image src={logo} alt={companyName} width={0} height={0} sizes="100vw" className="h-14 w-auto object-contain" />
           </div>
           <div className="text-xs text-gray-600 leading-relaxed">
             <p className="font-bold text-gray-900 text-sm mb-1">{companyName}</p>

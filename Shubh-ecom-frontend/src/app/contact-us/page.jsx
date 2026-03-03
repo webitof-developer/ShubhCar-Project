@@ -15,8 +15,10 @@ const ContactPage = () => {
   const { siteName, contact } = useSiteConfig();
   const supportPhone = contact?.phone || '+91 98765 43210';
   const supportEmail = contact?.email || 'support@autospares.com';
+  const supportAddress = contact?.address || 'Raipur, Chhattisgarh, India';
   const supportPhoneHref = `tel:${String(supportPhone).replace(/\D/g, '')}`;
-  const supportEmailHref = `mailto:${supportEmail}`;
+  const mapQuery = encodeURIComponent(supportAddress);
+  const mapHref = `https://www.google.com/maps/search/?api=1&query=${mapQuery}`;
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -80,17 +82,17 @@ const ContactPage = () => {
       desc: 'We reply within 24hrs',
       value: supportEmail,
       action: 'Send Email',
-      href: supportEmailHref,
+      href: `mailto:${supportEmail}`,
       color: 'text-blue-600',
       bg: 'bg-blue-50',
     },
     {
       icon: MapPin,
       title: 'Visit HQ',
-      desc: 'Raipur, Chhattisgarh',
+      desc: supportAddress,
       value: 'View on Google Maps',
       action: 'Get Directions',
-      href: 'https://maps.google.com',
+      href: mapHref,
       color: 'text-purple-600',
       bg: 'bg-purple-50',
       target: '_blank',
@@ -107,7 +109,7 @@ const ContactPage = () => {
 
         <div className="container mx-auto px-4 relative z-10 text-center">
           <span className="inline-block px-4 py-1.5 bg-white/10 text-white border border-white/20 text-sm font-medium rounded-full mb-6 backdrop-blur-sm">
-            We'd love to hear from you
+            We&apos;d love to hear from you
           </span>
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 tracking-tight">
             Get in touch with our team
