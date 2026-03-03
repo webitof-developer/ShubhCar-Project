@@ -10,7 +10,7 @@ import { ChevronRight, Folder, Search, Home, LayoutGrid } from 'lucide-react';
 
 export const revalidate = 60;
 
-// â”€â”€ Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Sidebar
 const Sidebar = ({ categories }) => (
   <aside className="w-56 flex-shrink-0 hidden lg:block">
     <div className="bg-card rounded-xl border border-border/50 overflow-hidden sticky top-4">
@@ -41,7 +41,7 @@ const Sidebar = ({ categories }) => (
   </aside>
 );
 
-// â”€â”€ Main Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Main Content
 const CategoriesContent = async () => {
   let categories = [];
   try {

@@ -55,7 +55,6 @@ const extractOrdersArray = (payload) => {
  * @param {boolean} isDemo - Whether demo data is being used
  */
 const logDataSource = (method, isDemo) => {
-  console.log(`[ORDER_SERVICE] ${method} - USING ${isDemo ? 'DEMO' : 'REAL'} DATA`);
 };
 
 /**
@@ -69,8 +68,6 @@ const logDataSource = (method, isDemo) => {
  * @returns {Promise<object>} - Created order
  */
 export const placeOrder = async (accessToken, orderData) => {
-  console.log('[ORDER_SERVICE] Placing order - USING REAL BACKEND');
-  console.log('[ORDER_SERVICE] Access token:', accessToken ? `${accessToken.substring(0, 20)}...` : 'NULL/UNDEFINED');
   
   try {
     const normalizeGateway = (method, gateway) => {
@@ -117,7 +114,6 @@ export const placeOrder = async (accessToken, orderData) => {
     }
 
     const result = body || {};
-    console.log('[ORDER_SERVICE] Order placed successfully:', result.data?.orderNumber);
     
     return result.data || result;
   } catch (error) {
@@ -188,7 +184,6 @@ export const getMyOrders = async (accessToken, { includeItems } = {}) => {
       json?.data?.pagination?.total ??
       json?.pagination?.total ??
       orders.length;
-    console.log('[ORDER_SERVICE] Orders fetched -', orders.length, 'orders (total:', total, ')');
     return orders;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -262,8 +257,6 @@ export const getOrder = async (accessToken, orderId) => {
       
       return null;
     }
-
-    console.log('[ORDER_SERVICE] Order fetched successfully');
     
     return json?.data || json || null;
   } catch (error) {
@@ -289,7 +282,6 @@ export const getOrder = async (accessToken, orderId) => {
  * @returns {Promise<object|null>} - Updated order or null
  */
 export const cancelOrder = async (accessToken, orderId, reason) => {
-  console.log('[ORDER_SERVICE] Cancelling order:', orderId);
   
   try {
     const response = await fetch(`${API_BASE}/orders/${orderId}/cancel`, {
@@ -311,8 +303,6 @@ export const cancelOrder = async (accessToken, orderId, reason) => {
       });
       throw new Error(json?.message || text || 'Failed to cancel order');
     }
-
-    console.log('[ORDER_SERVICE] Order cancelled successfully');
     
     return json?.data || json || null;
   } catch (error) {
@@ -320,3 +310,4 @@ export const cancelOrder = async (accessToken, orderId, reason) => {
     throw error;
   }
 };
+

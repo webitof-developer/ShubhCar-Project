@@ -161,7 +161,7 @@ const ProductDetail = () => {
   const taxLabel = getTaxSuffix(displayShop);
   const taxHelpText = getTaxHelpText(displayShop);
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (isInCart) {
       router.push('/cart');
       return;
@@ -177,8 +177,10 @@ const ProductDetail = () => {
       return;
     }
 
-    addToCart(product, quantity);
-    setShowSuccessModal(true);
+    const added = await addToCart(product, quantity);
+    if (added) {
+      setShowSuccessModal(true);
+    }
   };
 
   const scrollToImage = (index) => {
@@ -541,7 +543,7 @@ const ProductDetail = () => {
       />
 
       <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
-        <DialogContent className="sm:max-w-md p-8 gap-6 shadow-xl border-slate-100 rounded-xl">
+        <DialogContent className="sm:max-w-md p-8 gap-6 shadow-xl border border-zinc-200 rounded-xl">
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2 mb-1">
               <div className="rounded-full bg-transparent border-2 border-green-500 p-0.5">

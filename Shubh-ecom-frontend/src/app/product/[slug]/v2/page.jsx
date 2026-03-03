@@ -1,5 +1,5 @@
-// src/app/product/[slug]/v2/page.jsx
-// Product Detail V2 — Sticky right panel, Part# chip, low-stock urgency,
+﻿// src/app/product/[slug]/v2/page.jsx
+// Product Detail V2 â€” Sticky right panel, Part# chip, low-stock urgency,
 // trust badges, rating breakdown bars, toast-based add-to-cart.
 // Route: /product/[slug]/v2
 
@@ -37,7 +37,7 @@ import { ProductDetailTabs } from '@/components/product/ProductDetailTabs';
 import { useProductReviews } from '@/hooks/useProductReviews';
 import { SafeImage } from '@/components/common/SafeImage';
 
-/* ── Trust Badges ────────────────────────────────────────────────────────── */
+/* â”€â”€ Trust Badges â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const TRUST_BADGES = [
   { icon: ShieldCheck, label: '100% Genuine' },
   { icon: RotateCcw,   label: 'Easy Returns' },
@@ -60,7 +60,7 @@ const ProductDetailV2 = () => {
   const scrollContainerRef            = useRef(null);
   const mainImageRef                  = useRef(null);
 
-  /* ── Load product ── */
+  /* â”€â”€ Load product â”€â”€ */
   useEffect(() => {
     const load = async () => {
       setLoading(true);
@@ -75,7 +75,7 @@ const ProductDetailV2 = () => {
     if (slug) load();
   }, [slug, user]);
 
-  /* ── Load reviews ── */
+  /* â”€â”€ Load reviews â”€â”€ */
   const {
     reviews,
     reviewStats,
@@ -88,7 +88,7 @@ const ProductDetailV2 = () => {
     fallbackCount: product?.ratingCount,
   });
 
-  /* ── Image scroll helpers ── */
+  /* â”€â”€ Image scroll helpers â”€â”€ */
   const scrollToImage = (idx) => {
     if (scrollContainerRef.current && images.length > 0) {
       const w = scrollContainerRef.current.scrollWidth / images.length;
@@ -103,7 +103,7 @@ const ProductDetailV2 = () => {
     if (idx !== activeImage) setActiveImage(idx);
   };
 
-  /* ── Image zoom ── */
+  /* â”€â”€ Image zoom â”€â”€ */
   const handleMouseMove = (e) => {
     const rect = mainImageRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -113,7 +113,7 @@ const ProductDetailV2 = () => {
     });
   };
 
-  /* ── Guard states ── */
+  /* â”€â”€ Guard states â”€â”€ */
   if (loading || !product) return <ProductSkeleton />;
 
   if (!isProductVisible(product, user)) return (
@@ -129,7 +129,7 @@ const ProductDetailV2 = () => {
     </Layout>
   );
 
-  /* ── Derived data ── */
+  /* â”€â”€ Derived data â”€â”€ */
   const images     = resolveProductImages(product.images || []).length
     ? resolveProductImages(product.images || []) : ['/placeholder.jpg'];
   const stockQty   = product?.stockQty ?? 0;
@@ -165,13 +165,15 @@ const ProductDetailV2 = () => {
     ...(product.attributes || []).map(a => ({ label: a.name, value: a.value })),
   ].filter(s => s.value);
 
-  /* ── Handlers ── */
-  const handleAddToCart = () => {
+  /* â”€â”€ Handlers â”€â”€ */
+  const handleAddToCart = async () => {
     if (isInCart) { router.push('/cart'); return; }
     if (quantity > stockQty) { toast.error(`Only ${stockQty} units available.`); return; }
     if (quantity < minQty)   { toast.error(`Minimum order quantity is ${minQty}.`); return; }
-    addToCart(product, quantity);
-    toast.success('Added to cart!', { description: `${product.name} × ${quantity}` });
+    const added = await addToCart(product, quantity);
+    if (added) {
+      toast.success('Added to cart!', { description: `${product.name} × ${quantity}` });
+    }
   };
 
   const handleShare = async () => {
@@ -183,13 +185,13 @@ const ProductDetailV2 = () => {
     }
   };
 
-  /* ── Render ── */
+  /* â”€â”€ Render â”€â”€ */
   return (
     <Layout>
       <div className="bg-muted/20 min-h-screen">
         <div className="container mx-auto px-4 py-5 pb-28 md:pb-8">
 
-          {/* ── Breadcrumb ── */}
+          {/* â”€â”€ Breadcrumb â”€â”€ */}
           <nav className="flex items-center gap-1.5 text-sm text-muted-foreground mb-5 overflow-x-auto whitespace-nowrap no-scrollbar">
             <Link href="/" className="hover:text-primary transition-colors">Home</Link>
             {product.category && (
@@ -212,10 +214,10 @@ const ProductDetailV2 = () => {
             <span className="text-foreground font-medium truncate max-w-[200px]">{product.name}</span>
           </nav>
 
-          {/* ── Main Grid ── */}
+          {/* â”€â”€ Main Grid â”€â”€ */}
           <div className="grid lg:grid-cols-12 gap-6 lg:gap-8 mb-10">
 
-            {/* ── LEFT: Image Gallery ── */}
+            {/* â”€â”€ LEFT: Image Gallery â”€â”€ */}
             <div className="lg:col-span-6 flex flex-col-reverse md:flex-row gap-3">
               {/* Thumbnails */}
               {images.length > 1 && (
@@ -332,7 +334,7 @@ const ProductDetailV2 = () => {
               </div>
             </div>
 
-            {/* ── RIGHT: Product Info (sticky) ── */}
+            {/* â”€â”€ RIGHT: Product Info (sticky) â”€â”€ */}
             <div className="lg:col-span-6">
               <div className="lg:sticky lg:top-6 bg-card border border-border/50 rounded-2xl p-5 md:p-6 flex flex-col gap-4">
 
@@ -410,7 +412,7 @@ const ProductDetailV2 = () => {
                       </span>
                     ) : lowStock ? (
                       <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600">
-                        <AlertTriangle className="w-3.5 h-3.5" /> Only {stockQty} left — order soon!
+                        <AlertTriangle className="w-3.5 h-3.5" /> Only {stockQty} left â€” order soon!
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-600">
@@ -426,7 +428,7 @@ const ProductDetailV2 = () => {
                     <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                     <div>
                       <p className="text-sm font-semibold text-blue-800">Wholesale Pricing Active</p>
-                      <p className="text-xs text-blue-600">MOQ: {minQty} units · Bulk pricing enabled</p>
+                      <p className="text-xs text-blue-600">MOQ: {minQty} units Â· Bulk pricing enabled</p>
                     </div>
                   </div>
                 )}
@@ -468,7 +470,7 @@ const ProductDetailV2 = () => {
                         : 'bg-muted text-muted-foreground cursor-not-allowed'
                     }`}
                   >
-                    {isInCart ? 'Go to Cart' : !inStock ? 'Unavailable' : `Add to Cart · ${formatPrice(unitPrice * quantity)}`}
+                    {isInCart ? 'Go to Cart' : !inStock ? 'Unavailable' : `Add to Cart Â· ${formatPrice(unitPrice * quantity)}`}
                   </Button>
 
                   {/* Wishlist */}
@@ -496,7 +498,7 @@ const ProductDetailV2 = () => {
             </div>
           </div>
 
-          {/* ── Tabs: Description · Specs · Reviews ── */}
+          {/* â”€â”€ Tabs: Description Â· Specs Â· Reviews â”€â”€ */}
           <div className="mb-10 bg-card border border-border/50 rounded-2xl p-4 md:p-7">
                         <ProductDetailTabs
               variant="v2"
@@ -517,15 +519,15 @@ const ProductDetailV2 = () => {
             />
           </div>
 
-          {/* ── Vehicle Compatibility ── */}
+          {/* â”€â”€ Vehicle Compatibility â”€â”€ */}
           <div className="mb-10">
             <VehicleCompatibility productId={product._id} />
           </div>
 
-          {/* ── Alternatives ── */}
+          {/* â”€â”€ Alternatives â”€â”€ */}
           <AlternativesSection productId={product._id} />
 
-          {/* ── Related Products ── */}
+          {/* â”€â”€ Related Products â”€â”€ */}
           <div className="mb-10">
             <RelatedProducts currentProduct={product} limit={5} />
           </div>
@@ -533,7 +535,7 @@ const ProductDetailV2 = () => {
         </div>
       </div>
 
-      {/* ── Image preview modal ── */}
+      {/* â”€â”€ Image preview modal â”€â”€ */}
       <ImagePreviewModal
         images={images}
         initialIndex={activeImage}
@@ -541,7 +543,7 @@ const ProductDetailV2 = () => {
         onClose={() => setIsPreviewOpen(false)}
       />
 
-      {/* ── Mobile sticky bar ── */}
+      {/* â”€â”€ Mobile sticky bar â”€â”€ */}
       <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border p-3 pb-safe z-50 md:hidden shadow-[0_-4px_16px_rgba(0,0,0,0.08)]">
         <div className="flex items-center gap-3">
           <div className="flex-1 min-w-0">
@@ -577,6 +579,8 @@ const ProductDetailV2 = () => {
 };
 
 export default ProductDetailV2;
+
+
 
 
 

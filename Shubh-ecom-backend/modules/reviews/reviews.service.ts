@@ -47,7 +47,25 @@ class ReviewsService {
     const existing = await repo.findByUserProduct(user.id, payload.productId);
     if (existing) error('You have already reviewed this product', 409);
 
-    // 2. VERIFIED PURCHASE CHECK (DOCX REQUIREMENT)
+    // 2. VERIFIED PURCHASE CHECK
+    // Business rule: user must have ordered this product successfully.
+    // Do not require delivery completion.
+    const allowedOrderStatuses = new Set([
+      ORDER_STATUS.PLACED,
+      ORDER_STATUS.CONFIRMED,
+      ORDER_STATUS.SHIPPED,
+      ORDER_STATUS.OUT_FOR_DELIVERY,
+      ORDER_STATUS.DELIVERED,
+      ORDER_STATUS.RETURNED,
+      ORDER_STATUS.REFUNDED,
+    ]);
+    const allowedItemStatuses = new Set([
+      'confirmed',
+      'shipped',
+      'delivered',
+      'returned',
+    ]);
+
     const purchasedItems = await OrderItem.find({
       productId: payload.productId,
     })
@@ -59,13 +77,16 @@ class ReviewsService {
       .select('status orderId')
       .lean();
 
-    const hasDeliveredPurchase = purchasedItems.some(
+    const hasEligiblePurchase = purchasedItems.some(
       (item) =>
         item.orderId &&
-        (item.status === 'delivered' || item.orderId.orderStatus === ORDER_STATUS.DELIVERED),
+        (
+          allowedItemStatuses.has(String(item.status || '').toLowerCase()) ||
+          allowedOrderStatuses.has(String(item.orderId.orderStatus || '').toLowerCase())
+        ),
     );
 
-    if (!hasDeliveredPurchase) {
+    if (!hasEligiblePurchase) {
       error('Only verified buyers can review this product', 403);
     }
     const created = await repo.create({

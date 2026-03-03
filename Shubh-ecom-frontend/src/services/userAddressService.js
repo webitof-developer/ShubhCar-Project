@@ -414,7 +414,6 @@ export const setDefaultAddress = async (id, accessToken = null) => {
     }
     
     // Step 3: Update target address with isDefaultShipping: true
-    console.log('[ADDRESS_SERVICE] Setting as default:', id);
     const updated = await updateRealAddress(accessToken, id, {
       ...targetAddress,
       isDefaultShipping: true,
@@ -426,8 +425,6 @@ export const setDefaultAddress = async (id, accessToken = null) => {
       const addrId = a._id || a.id;
       return addrId !== id && a.isDefaultShipping === true;
     });
-    
-    console.log('[ADDRESS_SERVICE] Unsetting default for', others.length, 'addresses');
     for (const addr of others) {
       const addrId = addr._id || addr.id;
       await updateRealAddress(accessToken, addrId, {
@@ -495,3 +492,4 @@ export const getAddresses = getUserAddresses;
  * Alias for addAddress - used by AddressStep component
  */
 export const createAddress = addAddress;
+

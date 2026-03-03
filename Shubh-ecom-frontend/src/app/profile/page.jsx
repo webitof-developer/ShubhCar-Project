@@ -253,7 +253,7 @@ const Profile = () => {
 
       {/* Delete Account Confirmation */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="border border-zinc-200">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Account?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -275,7 +275,7 @@ const Profile = () => {
 
       {/* Logout Confirmation Dialog */}
       <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="border border-zinc-200">
           <AlertDialogHeader>
             <AlertDialogTitle>Logout?</AlertDialogTitle>
             <AlertDialogDescription>

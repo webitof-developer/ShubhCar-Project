@@ -35,13 +35,11 @@ export function handleDataSourceFallback(domain, fallbackMode, demoData, error =
     case 'demo':
       // Fallback to demo data
       logDataSource(domain, 'DEMO', 'fallback from real');
-      console.log(`[FALLBACK] ${domain}: Using demo data as fallback`);
       return demoData;
     
     case 'empty':
       // Return empty state (null for single items, [] for collections)
       logDataSource(domain, 'EMPTY', error ? 'real failed' : 'real returned empty');
-      console.log(`[FALLBACK] ${domain}: Returning empty state`);
       return Array.isArray(demoData) ? [] : null;
     
     case 'error':
@@ -68,3 +66,4 @@ export function isDataEmpty(data) {
   if (typeof data === 'object' && Object.keys(data).length === 0) return true;
   return false;
 }
+

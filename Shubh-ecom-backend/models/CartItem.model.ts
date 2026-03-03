@@ -26,5 +26,23 @@ const cartItemSchema = new mongoose.Schema(
 
 cartItemSchema.index({ cartId: 1, productId: 1 }, { unique: true });
 
-module.exports = mongoose.model('CartItem', cartItemSchema);
+const CartItem = mongoose.model('CartItem', cartItemSchema);
+
+const syncCartItemIndexes = async () => {
+  try {
+    // Keeps only indexes declared in schema and drops legacy/misaligned ones.
+    await CartItem.syncIndexes();
+  } catch (error) {
+    // Non-fatal: app should continue even if index sync cannot run.
+    console.warn('[CART_ITEM_MODEL] Index sync skipped:', error?.message || error);
+  }
+};
+
+if (mongoose.connection.readyState === 1) {
+  syncCartItemIndexes();
+} else {
+  mongoose.connection.once('open', syncCartItemIndexes);
+}
+
+module.exports = CartItem;
 

@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { GoogleLogin } from '@react-oauth/google';
 import { RegisterLoadingCard } from '@/components/register/RegisterLoadingCard';
 import { RegisterForm } from '@/components/register/RegisterForm';
+import { sanitizeIndianPhone, isValidIndianPhone } from '@/utils/phoneValidation';
 
 const RegisterPage = () => {
   const { register, loginWithGoogle, isAuthenticated, loading: authLoading } = useAuth();
@@ -40,7 +41,7 @@ const RegisterPage = () => {
     const { id, value, type, checked } = e.target;
     const nextValue =
       id === 'phone'
-        ? String(value || '').replace(/\D/g, '').slice(0, 10)
+        ? sanitizeIndianPhone(value)
         : value;
     setFormData((prev) => ({
       ...prev,
@@ -74,10 +75,10 @@ const RegisterPage = () => {
     }
 
     // Phone validation (exactly 10 digits)
-    const cleanPhone = formData.phone.replace(/\D/g, '');
+    const cleanPhone = sanitizeIndianPhone(formData.phone);
     if (!formData.phone.trim()) {
       newErrors.phone = 'Phone number is required';
-    } else if (cleanPhone.length !== 10) {
+    } else if (!isValidIndianPhone(cleanPhone)) {
       newErrors.phone = 'Phone number must be exactly 10 digits';
     }
 
@@ -107,7 +108,7 @@ const RegisterPage = () => {
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
-        phone: formData.phone.replace(/\D/g, ''),
+        phone: sanitizeIndianPhone(formData.phone),
         password: formData.password,
         customerType: formData.customerType,
       });

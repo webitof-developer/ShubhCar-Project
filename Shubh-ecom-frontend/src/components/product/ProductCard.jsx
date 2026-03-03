@@ -30,11 +30,13 @@ export const ProductCard = ({ product, className = '', compact = false }) => {
   const pricing = getDisplayPrice(product, user);
   const { price, type, savingsPercent, originalPrice } = pricing;
 
-  const handleAddToCart = (e) => {
+  const handleAddToCart = async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    addToCart(product, 1);
-    toast.success('Added to cart', { description: `${productName}` });
+    const added = await addToCart(product, 1);
+    if (added) {
+      toast.success('Added to cart', { description: `${productName}` });
+    }
   };
 
   return (
@@ -73,34 +75,35 @@ export const ProductCard = ({ product, className = '', compact = false }) => {
           )}
         </div>
 
-        {/* Icon Buttons on Hover - Vertical Stack on Right */}
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
+        {/* Cart action pinned to top-right and responsive to card size */}
+        <div className="absolute top-2 right-2 md:top-3 md:right-3 z-20 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300">
           <Button
             onClick={handleAddToCart}
             size="icon"
             variant="ghost"
-            className="w-10 h-10 rounded-full shadow-lg border-0 bg-background/90 backdrop-blur-sm hover:bg-background text-foreground hover:text-primary"
+            className={`${compact ? 'w-8 h-8' : 'w-8 h-8 md:w-10 md:h-10'} rounded-full shadow-lg border-0 bg-background/90 backdrop-blur-sm hover:bg-background text-foreground hover:text-primary`}
           >
-            <ShoppingCart className="w-5 h-5 transition-all hover:fill-primary" strokeWidth={2} />
+            <ShoppingCart className={`${compact ? 'w-4 h-4' : 'w-4 h-4 md:w-5 md:h-5'} transition-all hover:fill-primary`} strokeWidth={2} />
           </Button>
-
-          <WishlistButton
-            product={product}
-            size="icon"
-            variant="ghost"
-            className="w-10 h-10 rounded-full shadow-lg border-0"
-          />
         </div>
       </div>
 
       {/* Product Info */}
-      <div className={compact ? 'p-2' : 'p-2.5 md:p-4'}>
-        <h3 className={`font-semibold line-clamp-2 mb-1 text-foreground group-hover:text-primary transition-colors ${compact ? 'text-xs' : 'text-sm md:text-base'}`}>
+      <div className={compact ? 'p-2' : 'p-2.5 md:p-2 ps-3'}  >
+        
+        <div className="flex items-center justify-between">
+        <h3 className={`font-semibold ps-1 line-clamp-2 mb-1 text-foreground group-hover:text-primary transition-colors ${compact ? 'text-xs' : 'text-sm md:text-base'}`}>
           {productName}
         </h3>
-
+        <WishlistButton
+            product={product}
+            size="icon"
+            variant="ghost"
+            className="w-10 h-10 rounded-full border-0"
+          />
+</div>
         {!compact && (
-          <p className="text-[10px] md:text-xs text-muted-foreground mb-1.5 line-clamp-1">
+          <p className="text-[10px] ps-1 md:text-xs text-muted-foreground mb-1.5 line-clamp-1">
             {isOemProduct(product.productType)
               ? (product.vehicleBrand || 'N/A')
               : (isVehicleBasedProduct(product.productType)
@@ -110,7 +113,7 @@ export const ProductCard = ({ product, className = '', compact = false }) => {
         )}
 
         {/* Price and Rating Row */}
-        <div className="flex flex-wrap items-baseline justify-between gap-y-1 mb-1.5">
+        <div className="flex flex-wrap items-baseline justify-between gap-y-1 mb-1.5 ps-1">
           <div className="flex items-baseline gap-1.5">
             <span className={`font-bold text-primary ${compact ? 'text-sm' : 'text-base md:text-lg'}`}>
               {formatPrice(price)}

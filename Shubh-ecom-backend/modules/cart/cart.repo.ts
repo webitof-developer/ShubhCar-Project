@@ -62,12 +62,38 @@ class CartRepository {
   }
 
   async addItem({ cartId, item }) {
-    const payload: CartItemPayload = { ...item, cartId };
-    return CartItem.findOneAndUpdate(
-      { cartId, productId: item.productId },
-      payload,
-      { upsert: true, new: true },
-    ).lean();
+    const { quantity, ...rest } = item;
+
+    const filter = { cartId, productId: item.productId };
+    const update = {
+      $set: { ...rest, cartId },
+      $inc: { quantity: quantity },
+    };
+
+    try {
+      return await CartItem.findOneAndUpdate(filter, update, {
+        upsert: true,
+        new: true,
+      }).lean();
+    } catch (err) {
+      // Recover from race/duplicate scenarios by retrying idempotent update once.
+      if (err?.code === 11000) {
+        const recovered = await CartItem.findOneAndUpdate(filter, update, {
+          upsert: false,
+          new: true,
+        }).lean();
+
+        if (recovered) return recovered;
+
+        const keyPattern = err?.keyPattern || null;
+        const keyValue = err?.keyValue || null;
+        const conflict = new Error('Cart index conflict detected. Please sync indexes and retry.');
+        conflict.code = 'CART_INDEX_CONFLICT';
+        conflict.details = { keyPattern, keyValue };
+        throw conflict;
+      }
+      throw err;
+    }
   }
 
   async updateQty({ cartId, itemId, quantity, priceAtTime }) {

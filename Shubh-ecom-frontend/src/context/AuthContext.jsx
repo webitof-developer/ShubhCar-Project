@@ -49,7 +49,6 @@ export function AuthProvider({ children }) {
       if (storedToken && storedUser) {
         // Check if token is expired
         if (isTokenExpired(storedToken)) {
-          console.log('[AUTH_CONTEXT] Stored token expired, attempting refresh...');
 
           if (storedRefreshToken && !isTokenExpired(storedRefreshToken)) {
             try {
@@ -64,8 +63,6 @@ export function AuthProvider({ children }) {
               setStorageItem('accessToken', newAccessToken);
               setStorageItem('refreshToken', newRefreshToken);
               if (newUser) setStorageItem('user', JSON.stringify(newUser));
-
-              console.log('[AUTH_CONTEXT] Session restored via token refresh');
             } catch (refreshError) {
               console.error('[AUTH_CONTEXT] Token refresh failed:', refreshError);
               // Clear expired session
@@ -74,7 +71,6 @@ export function AuthProvider({ children }) {
               removeStorageItem('user');
             }
           } else {
-            console.log('[AUTH_CONTEXT] Refresh token missing or expired. Clearing session.');
             removeStorageItem('accessToken');
             removeStorageItem('refreshToken');
             removeStorageItem('user');
@@ -85,7 +81,6 @@ export function AuthProvider({ children }) {
             setAccessToken(storedToken);
             setRefreshToken(storedRefreshToken);
             setUser(userData);
-            console.log('[AUTH_CONTEXT] Restored session for:', userData.email || userData.phone);
           } catch (error) {
             console.error('[AUTH_CONTEXT] Failed to parse stored user:', error);
             // Clear corrupted data
@@ -95,7 +90,6 @@ export function AuthProvider({ children }) {
           }
         }
       } else {
-        console.log('[AUTH_CONTEXT] No stored session found - BROWSING IN DEMO MODE');
       }
 
       setLoading(false);
@@ -121,9 +115,6 @@ export function AuthProvider({ children }) {
       setStorageItem('accessToken', accessToken);
       setStorageItem('refreshToken', refreshToken);
       setStorageItem('user', JSON.stringify(user));
-
-      console.log('[AUTH_CONTEXT] Login successful - USING REAL BACKEND');
-      console.log('[AUTH_CONTEXT] User:', user.email || user.phone);
 
       // Phase 7: Migrate guest cart to backend (REPLACE strategy)
       await migrateGuestCartToBackend(accessToken);
@@ -153,9 +144,6 @@ export function AuthProvider({ children }) {
       setStorageItem('refreshToken', refreshToken);
       setStorageItem('user', JSON.stringify(user));
 
-      console.log('[AUTH_CONTEXT] Registration successful - USING REAL BACKEND');
-      console.log('[AUTH_CONTEXT] User:', user.email || user.phone);
-
       // Phase 7: Migrate guest cart to backend (REPLACE strategy)
       await migrateGuestCartToBackend(accessToken);
 
@@ -173,29 +161,24 @@ export function AuthProvider({ children }) {
   const migrateGuestCartToBackend = async (token) => {
     try {
       // Read guest cart from localStorage
-      const guestCartStr = getStorageItem('cart_items');
+      const guestCartRaw = getStorageItem('cart_items');
       
-      if (!guestCartStr) {
-        console.log('[AUTH_CONTEXT] No guest cart to migrate');
+      if (!guestCartRaw) {
         return;
       }
 
-      const guestCart = JSON.parse(guestCartStr);
+      const guestCart = Array.isArray(guestCartRaw) ? guestCartRaw : [];
       
       if (!guestCart || guestCart.length === 0) {
-        console.log('[AUTH_CONTEXT] Guest cart is empty, skipping migration');
         removeStorageItem('cart_items');
         return;
       }
-
-      console.log('[AUTH_CONTEXT] Migrating', guestCart.length, 'items to backend cart');
 
       // Call cartService.replaceCart (REPLACE strategy)
       await cartService.replaceCart(token, guestCart);
 
       // Clear localStorage cart after successful migration
       removeStorageItem('cart_items');
-      console.log('[AUTH_CONTEXT] Cart migration complete - localStorage cleared');
 
       // Note: CartContext will auto-fetch backend cart via useEffect
     } catch (error) {
@@ -231,9 +214,6 @@ export function AuthProvider({ children }) {
       setStorageItem('refreshToken', newRefreshToken);
       setStorageItem('user', JSON.stringify(user));
 
-      console.log('[AUTH_CONTEXT] Google Login successful');
-      console.log('[AUTH_CONTEXT] User:', user.email);
-
       // Phase 7: Migrate guest cart to backend (REPLACE strategy)
       await migrateGuestCartToBackend(newAccessToken);
 
@@ -264,14 +244,11 @@ export function AuthProvider({ children }) {
     removeStorageItem('accessToken');
     removeStorageItem('refreshToken');
     removeStorageItem('user');
-
-    console.log('[AUTH_CONTEXT] Logged out - BROWSING IN DEMO MODE');
  try {
       // 2. Call backend logout (best effort) AFTER clearing local state
       if (tokenToRevoke && refreshToRevoke) {
         // Fix for 401: Don't call backend if token is already expired
         if (isTokenExpired(tokenToRevoke)) {
-          console.log('[AUTH_CONTEXT] Token expired, skipping backend logout (harmless)');
         } else {
           await authService.logout(tokenToRevoke, refreshToRevoke);
         }
@@ -320,3 +297,4 @@ export function useAuth() {
   }
   return context;
 }
+

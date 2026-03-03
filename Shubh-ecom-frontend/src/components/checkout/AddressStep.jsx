@@ -14,6 +14,7 @@ import { MapPin, Plus, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import * as addressService from '@/services/userAddressService';
 import { toast } from 'sonner';
+import { sanitizeIndianPhone, isValidIndianPhone } from '@/utils/phoneValidation';
 
 /**
  * AddressStep - Backend Integration
@@ -59,8 +60,6 @@ export function AddressStep({ onNext, initialAddressId }) {
         } else if (data.length === 1) {
           setSelectedAddressId(data[0]._id);
         }
-        
-        console.log('[ADDRESS_STEP] Loaded', data.length, 'addresses');
       } catch (error) {
         console.error('[ADDRESS_STEP] Failed to fetch addresses:', error);
         toast.error('Failed to load addresses');
@@ -74,7 +73,8 @@ export function AddressStep({ onNext, initialAddressId }) {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const nextValue = name === 'phone' ? sanitizeIndianPhone(value) : value;
+    setFormData(prev => ({ ...prev, [name]: nextValue }));
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
@@ -85,6 +85,7 @@ export function AddressStep({ onNext, initialAddressId }) {
     
     if (!formData.fullName.trim()) newErrors.fullName = 'Full name is required';
     if (!formData.phone.trim()) newErrors.phone = 'Phone is required';
+    else if (!isValidIndianPhone(formData.phone)) newErrors.phone = 'Phone number must be exactly 10 digits';
     if (!formData.line1.trim()) newErrors.line1 = 'Address line 1 is required';
     if (!formData.city.trim()) newErrors.city = 'City is required';
     if (!formData.state.trim()) newErrors.state = 'State is required';
@@ -102,7 +103,6 @@ export function AddressStep({ onNext, initialAddressId }) {
       const newAddress = await addressService.createAddress(formData, accessToken);
       
       toast.success('Address saved successfully');
-      console.log('[ADDRESS_STEP] Created new address:', newAddress._id);
       
       // Add to addresses list and select it
       setAddresses(prev => [...prev, newAddress]);
@@ -135,7 +135,6 @@ export function AddressStep({ onNext, initialAddressId }) {
     }
     
     // Pass addressId to parent (checkout page)
-    console.log('[ADDRESS_STEP] Proceeding with addressId:', selectedAddressId);
     onNext(selectedAddressId);
   };
 
@@ -222,9 +221,13 @@ export function AddressStep({ onNext, initialAddressId }) {
                 <Input
                   id="phone"
                   name="phone"
+                  type="tel"
                   value={formData.phone}
                   onChange={handleInputChange}
-                  placeholder="+91 98765 43210"
+                  placeholder="9876500000"
+                  inputMode="numeric"
+                  pattern="[0-9]{10}"
+                  maxLength={10}
                 />
                 {errors.phone && <p className="text-xs text-destructive mt-1">{errors.phone}</p>}
               </div>
@@ -342,3 +345,4 @@ export function AddressStep({ onNext, initialAddressId }) {
     </div>
   );
 }
+

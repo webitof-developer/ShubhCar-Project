@@ -16,12 +16,14 @@ export const WishlistSection = () => {
   const { user } = useAuth();
   const displayItems = items.slice(0, 3);
 
-  const handleAddToCart = (product, e) => {
+  const handleAddToCart = async (product, e) => {
     e.preventDefault();
     e.stopPropagation();
-    addToCart(product, 1);
-    removeFromWishlist(product._id || product.id);
-    toast.success('Moved to cart!');
+    const added = await addToCart(product, 1);
+    if (added) {
+      removeFromWishlist(product._id || product.id);
+      toast.success('Moved to cart!');
+    }
   };
 
   return (

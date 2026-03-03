@@ -36,9 +36,11 @@ const Wishlist = () => {
     return getProductIdentifier(product);
   };
 
-  const handleAddToCart = (product) => {
-    addToCart(product, 1);
-    toast.success(`${product.name} added to cart`);
+  const handleAddToCart = async (product) => {
+    const added = await addToCart(product, 1);
+    if (added) {
+      toast.success(`${product.name} added to cart`);
+    }
   };
 
   const handleRemove = (productId) => {
@@ -46,12 +48,13 @@ const Wishlist = () => {
     toast.success('Removed from wishlist');
   };
 
-  const handleMoveAllToCart = () => {
-    items.forEach(product => {
-      addToCart(product, 1);
-    });
-    clearWishlist();
-    toast.success('All items moved to cart!');
+  const handleMoveAllToCart = async () => {
+    const results = await Promise.all(items.map((product) => addToCart(product, 1)));
+    const movedCount = results.filter(Boolean).length;
+    if (movedCount > 0) {
+      clearWishlist();
+      toast.success(`${movedCount} item${movedCount > 1 ? 's' : ''} moved to cart!`);
+    }
   };
 
   const totalPages = Math.ceil(items.length / itemsPerPage);

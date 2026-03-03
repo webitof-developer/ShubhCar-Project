@@ -88,7 +88,7 @@ class CartService {
     });
     if (!priceAtTime) error('Product pricing unavailable', 400);
 
-    const cart = await cartRepo.getOrCreateCart({ userId: user.id, sessionId });
+    const cart = await cartRepo.getOrCreateCart({ userId: user.id || user._id, sessionId });
     const sku =
       product.sku ||
       product.productId ||
@@ -105,7 +105,7 @@ class CartService {
       },
     });
 
-    await cartCache.clear({ userId: user.id, sessionId });
+    await cartCache.clear({ userId: user.id || user._id, sessionId });
     return this.getCart({ user, sessionId });
   }
 
@@ -113,7 +113,7 @@ class CartService {
     const { error: err } = updateQtySchema.validate({ quantity });
     if (err) error(err.details[0].message);
 
-    const cart = await cartRepo.getOrCreateCart({ userId: user.id, sessionId });
+    const cart = await cartRepo.getOrCreateCart({ userId: user.id || user._id, sessionId });
     const existing = await cartRepo.getItemById({ cartId: cart._id, itemId });
     if (!existing) error('Cart item not found', 404);
 
@@ -130,22 +130,22 @@ class CartService {
 
     await cartRepo.updateQty({ cartId: cart._id, itemId, quantity, priceAtTime });
 
-    await cartCache.clear({ userId: user.id, sessionId });
+    await cartCache.clear({ userId: user.id || user._id, sessionId });
     return this.getCart({ user, sessionId });
   }
 
   async removeItem({ user, sessionId, itemId }) {
-    const cart = await cartRepo.getOrCreateCart({ userId: user.id, sessionId });
+    const cart = await cartRepo.getOrCreateCart({ userId: user.id || user._id, sessionId });
     await cartRepo.removeItem({ cartId: cart._id, itemId });
-    await cartCache.clear({ userId: user.id, sessionId });
+    await cartCache.clear({ userId: user.id || user._id, sessionId });
     return this.getCart({ user, sessionId });
   }
 
   async getCart({ user, sessionId }) {
-    const cached = await cartCache.get({ userId: user.id, sessionId });
+    const cached = await cartCache.get({ userId: user.id || user._id, sessionId });
     if (cached) return cached;
 
-    const cart = await cartRepo.getOrCreateCart({ userId: user.id, sessionId });
+    const cart = await cartRepo.getOrCreateCart({ userId: user.id || user._id, sessionId });
     const items = await cartRepo.getCartWithItems(cart._id);
     const enrichedItems = await this.enrichItems(items);
     const payload = {
@@ -156,7 +156,7 @@ class CartService {
       discountAmount: cart.discountAmount || 0,
       updatedAt: cart.updatedAt,
     };
-    await cartCache.set({ userId: user.id, sessionId }, payload);
+    await cartCache.set({ userId: user.id || user._id, sessionId }, payload);
     return payload;
   }
 
@@ -165,7 +165,7 @@ class CartService {
     sessionId,
     shippingAddressId,
   }: CartSummaryInput = { user: {} }) {
-    const cart = await cartRepo.getOrCreateCart({ userId: user.id, sessionId });
+    const cart = await cartRepo.getOrCreateCart({ userId: user.id || user._id, sessionId });
     const items = await cartRepo.getCartWithItems(cart._id);
     if (!items.length) error('Cart is empty', 400);
 
@@ -174,7 +174,7 @@ class CartService {
     let shippingAddress = null;
     if (shippingAddressId) {
       const address = await addressRepo.findById(shippingAddressId);
-      if (!address || String(address.userId) !== String(user.id)) {
+      if (!address || String(address.userId) !== String(user.id || user._id)) {
         error('Invalid shipping address', 400);
       }
       shippingAddress = address;
@@ -212,7 +212,7 @@ class CartService {
       shippingAddress,
       paymentMethod: null,
       couponCode: cart.couponCode || null,
-      userId: user.id,
+      userId: user.id || user._id,
     });
 
     return {
@@ -343,38 +343,46 @@ class CartService {
   }
 
   async clearCart({ user, sessionId }) {
-    await cartCache.clear({ userId: user.id, sessionId });
+    await cartCache.clear({ userId: user.id || user._id, sessionId });
   }
 
   async applyCoupon({ user, sessionId, code }) {
     const cart = await cartRepo.getOrCreateCart({
-      userId: user.id,
+      userId: user.id || user._id,
       sessionId,
     });
 
     const items = await cartRepo.getCartWithItems(cart._id);
     if (!items.length) error('Cart is empty', 400);
 
-    const subtotal = items.reduce(
-      (sum, i) => sum + i.priceAtTime * i.quantity,
-      0,
-    );
+    const customerType = await this.resolveCustomerType(user.id || user._id);
+    const enrichedItems = await this.enrichItems(items);
+    const subtotal = enrichedItems.reduce((sum, item) => {
+      const product = item.product || {};
+      const resolvedUnitPrice = pricingService.resolveUnitPrice({
+        product,
+        customerType,
+      });
+      const unitPrice = Number(resolvedUnitPrice || item.priceAtTime || 0);
+      const quantity = Number(item.quantity || 0);
+      return sum + unitPrice * quantity;
+    }, 0);
 
     const result = await couponService.validate({
       code,
-      userId: user.id,
+      userId: user.id || user._id,
       orderAmount: subtotal,
     });
 
     await Cart.findByIdAndUpdate(cart._id, result);
 
-    await cartCache.clear({ userId: user.id, sessionId });
+    await cartCache.clear({ userId: user.id || user._id, sessionId });
     return this.getCart({ user, sessionId });
   }
 
   async removeCoupon({ user, sessionId }) {
     const cart = await cartRepo.getOrCreateCart({
-      userId: user.id,
+      userId: user.id || user._id,
       sessionId,
     });
 
@@ -384,7 +392,7 @@ class CartService {
       discountAmount: 0,
     });
 
-    await cartCache.clear({ userId: user.id, sessionId });
+    await cartCache.clear({ userId: user.id || user._id, sessionId });
     return this.getCart({ user, sessionId });
   }
 }

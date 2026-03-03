@@ -72,6 +72,18 @@ export const createReview = async (accessToken, payload) => {
   return data || null
 }
 
+export const updateReview = async (accessToken, reviewId, payload) => {
+  if (!reviewId) throw new Error('Review id is required')
+  const data = await api.authPut(`${baseUrl}/reviews/${reviewId}`, payload, accessToken)
+  return data || null
+}
+
+export const deleteReview = async (accessToken, reviewId) => {
+  if (!reviewId) throw new Error('Review id is required')
+  const data = await api.authDelete(`${baseUrl}/reviews/${reviewId}`, accessToken)
+  return data || null
+}
+
 export const getReviewStats = (reviewList = []) => {
   if (!Array.isArray(reviewList) || reviewList.length === 0) {
     return { average: 0, total: 0, breakdown: {} }

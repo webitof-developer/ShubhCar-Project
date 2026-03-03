@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -42,7 +42,7 @@ const ProductHero = ({ product }) => {
     const cartItems = cart?.items || [];
     const isInCart = cartItems.some(item => (item.product?._id === product._id) || (item.productId === product._id));
 
-    const handleAddToCart = () => {
+    const handleAddToCart = async () => {
         if (isInCart) {
             router.push('/cart');
             return;
@@ -60,8 +60,10 @@ const ProductHero = ({ product }) => {
             return;
         }
 
-        addToCart(product, quantity);
-        setShowSuccessModal(true);
+        const added = await addToCart(product, quantity);
+        if (added) {
+            setShowSuccessModal(true);
+        }
     };
 
     const scrollToImage = (index) => {
@@ -86,7 +88,6 @@ const ProductHero = ({ product }) => {
             }
         }
     };
-    console.log(product);
     return (
         <div className="grid lg:grid-cols-12 gap-10 mb-12">
             {/* Image Gallery - Left Side (5 cols) */}
@@ -274,7 +275,7 @@ const ProductHero = ({ product }) => {
                         onClick={handleAddToCart}
                         disabled={!inStock}
                     >
-                        {isInCart ? 'GO TO CART' : `ADD TO CART â€¢ ${formatPrice(unitPrice * quantity)}`}
+                        {isInCart ? 'GO TO CART' : `ADD TO CART • ${formatPrice(unitPrice * quantity)}`}
                     </Button>
 
                     <div className="h-12 w-12 shrink-0">
@@ -291,7 +292,7 @@ const ProductHero = ({ product }) => {
             />
 
             <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
-                <DialogContent className="sm:max-w-md p-8 gap-6 shadow-xl border-slate-100 rounded-xl">
+                <DialogContent className="sm:max-w-md p-8 gap-6 shadow-xl border border-zinc-200 rounded-xl">
                     <div className="flex flex-col gap-2">
                         <div className="flex items-center gap-2 mb-1">
                             <div className="rounded-full bg-transparent border-2 border-green-500 p-0.5">
@@ -331,3 +332,4 @@ const ProductHero = ({ product }) => {
 };
 
 export default ProductHero;
+

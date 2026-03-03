@@ -364,10 +364,10 @@ const CategoryContent = () => {
 
                       {/* Sort */}
                       <Select value={sortBy} onValueChange={setSortBy}>
-                        <SelectTrigger className="w-[130px] sm:w-[150px] h-9 text-sm rounded-lg border-border/50 bg-background">
+                        <SelectTrigger className="w-[130px] sm:w-[150px] h-9 text-sm rounded-lg border-border/50 focus:outline-none bg-background ">
                           <SelectValue placeholder="Sort by" />
                         </SelectTrigger>
-                        <SelectContent className="rounded-lg">
+                        <SelectContent className="rounded-lg border border-zinc-200">
                           <SelectItem value="relevance">Relevance</SelectItem>
                           <SelectItem value="price-low">Price: Low → High</SelectItem>
                           <SelectItem value="price-high">Price: High → Low</SelectItem>

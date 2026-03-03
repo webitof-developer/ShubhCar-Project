@@ -25,6 +25,7 @@ export const CartSummary = ({
   couponDialogOpen,
   setCouponDialogOpen,
   availableCoupons,
+  couponsLoading = false,
   handleApplyCouponFromDialog,
   handleCopyCouponCode,
   copiedCoupon,
@@ -33,7 +34,15 @@ export const CartSummary = ({
   proceedLoading = false,
   couponLoading = false,
   summaryLoading = false,
+  couponFxState = null,
 }) => {
+  const couponFxText =
+    couponFxState === 'applied'
+      ? 'Coupon applied successfully'
+      : couponFxState === 'removed'
+        ? 'Coupon removed'
+        : null;
+
   return (
     <div className="bg-card rounded-xl border border-border/50 overflow-hidden sticky top-20">
       <div className="bg-secondary/30 px-5 py-4 border-b border-border/50">
@@ -41,6 +50,12 @@ export const CartSummary = ({
       </div>
       <div className="p-5 space-y-5">
         <div>
+          {couponFxText && (
+            <div className="mb-2 rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-medium text-primary animate-fade-in">
+              {couponFxText}
+            </div>
+          )}
+
           <label className="text-sm font-medium text-foreground mb-2 block">
             {summary?.couponCode ? 'Coupon Applied' : 'Have a Coupon?'}
           </label>
@@ -48,7 +63,7 @@ export const CartSummary = ({
           {summary?.couponCode ? (
             // Applied coupon state
             <div className="space-y-2">
-              <div className="flex items-center justify-between p-2 bg-green-50  border border-green-400 rounded-lg">
+              <div className={`flex items-center justify-between p-2 bg-green-50 border border-green-400 rounded-lg transition-all ${couponLoading ? 'animate-pulse' : ''}`}>
                 <div className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-green-400" />
                   <div>
@@ -80,7 +95,7 @@ export const CartSummary = ({
                     View other available coupons
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[500px] border-border">
+                <DialogContent className="sm:max-w-[500px] border border-zinc-200">
                   <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                       <Ticket className="w-5 h-5 text-primary" />
@@ -92,7 +107,20 @@ export const CartSummary = ({
                   </DialogHeader>
 
                   <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-                    {availableCoupons.map((coupon) => (
+                    {couponsLoading && (
+                      <div className="space-y-2 animate-pulse">
+                        <div className="h-16 rounded-lg bg-muted" />
+                        <div className="h-16 rounded-lg bg-muted" />
+                      </div>
+                    )}
+
+                    {!couponsLoading && availableCoupons.length === 0 && (
+                      <div className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground text-center">
+                        No coupons available right now.
+                      </div>
+                    )}
+
+                    {!couponsLoading && availableCoupons.map((coupon) => (
                       <div
                         key={coupon.code}
                         className={`p-4 rounded-lg border-2 transition-all ${summary?.couponCode === coupon.code
@@ -174,7 +202,7 @@ export const CartSummary = ({
           ) : (
             // Input state
             <div className="space-y-2">
-              <div className="flex gap-2">
+              <div className={`flex gap-2 transition-all ${couponLoading ? 'animate-pulse' : ''}`}>
                 <Input
                   placeholder="Enter coupon code"
                   value={couponCode}
@@ -208,7 +236,7 @@ export const CartSummary = ({
                     View available coupons
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[500px] border-border">
+                <DialogContent className="sm:max-w-[500px] border border-zinc-200">
                   <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                       <Ticket className="w-5 h-5 text-primary" />
@@ -220,7 +248,20 @@ export const CartSummary = ({
                   </DialogHeader>
 
                   <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-                    {availableCoupons.map((coupon) => (
+                    {couponsLoading && (
+                      <div className="space-y-2 animate-pulse">
+                        <div className="h-16 rounded-lg bg-muted" />
+                        <div className="h-16 rounded-lg bg-muted" />
+                      </div>
+                    )}
+
+                    {!couponsLoading && availableCoupons.length === 0 && (
+                      <div className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground text-center">
+                        No coupons available right now.
+                      </div>
+                    )}
+
+                    {!couponsLoading && availableCoupons.map((coupon) => (
                       <div
                         key={coupon.code}
                         className="p-4 rounded-lg border-2 border-border hover:border-primary/50 transition-all"

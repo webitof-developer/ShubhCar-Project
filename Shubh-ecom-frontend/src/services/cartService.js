@@ -25,6 +25,7 @@ import APP_CONFIG from '@/config/app.config';
  */
 
 const API_BASE = APP_CONFIG.api.baseUrl;
+const isValidObjectId = (value) => /^[a-fA-F0-9]{24}$/.test(String(value || ''));
 const readResponseBody = async (response) => {
   const text = await response.text();
   if (!text) return { text: '', json: null };
@@ -49,7 +50,6 @@ const readResponseBody = async (response) => {
  * @returns {Promise<Object|null>} - Cart object with items, or null on error
  */
 export const getCart = async (accessToken) => {
-  console.log('[CART_SERVICE] Fetching cart from backend (READ-ONLY)');
   
   try {
     const response = await fetch(`${API_BASE}/cart`, {
@@ -69,7 +69,6 @@ export const getCart = async (accessToken) => {
       return null;
     }
     const cart = json?.data || json || null;
-    console.log('[CART_SERVICE] Cart fetched -', cart?.items?.length || 0, 'items');
     
     return cart; // Returns { items: [...], subtotal, etc. }
   } catch (error) {
@@ -96,7 +95,6 @@ export const getCart = async (accessToken) => {
  * @returns {Promise<boolean>} - Success status
  */
 export const replaceCart = async (accessToken, guestItems) => {
-  console.log('[CART_SERVICE] REPLACE strategy - migrating', guestItems.length, 'guest items');
   
   try {
     // Step 1: Fetch current backend cart
@@ -104,30 +102,37 @@ export const replaceCart = async (accessToken, guestItems) => {
     
     // Step 2: Clear backend cart if it has items
     if (backendCart && backendCart.items && backendCart.items.length > 0) {
-      console.log('[CART_SERVICE] Clearing existing backend cart (REPLACE)');
       await _clearCartInternal(accessToken, backendCart.items);
     }
     
     // Step 3: Add all guest items to backend cart
     if (guestItems.length > 0) {
-      console.log('[CART_SERVICE] Adding guest items to backend cart');
       
       for (const item of guestItems) {
-        const productId =
+        const rawProductId =
           item.product?._id ||
           item.product?.id ||
           item.productId ||
           null;
 
-        if (productId) {
-          await _addToCartInternal(accessToken, { productId, quantity: item.quantity });
-        } else {
+        const productId = String(rawProductId || '').trim();
+        const quantity = Math.max(1, Number(item?.quantity || 1) || 1);
+
+        if (!productId || !isValidObjectId(productId)) {
           console.warn('[CART_SERVICE] Skipping item without productId:', item);
+          continue;
+        }
+
+        try {
+          await _addToCartInternal(accessToken, { productId, quantity });
+        } catch (error) {
+          console.warn('[CART_SERVICE] Skipping guest item during migration:', {
+            productId,
+            message: error?.message || 'Failed to add item',
+          });
         }
       }
     }
-    
-    console.log('[CART_SERVICE] Cart replacement complete');
     return true;
   } catch (error) {
     console.error('[CART_SERVICE] Replace cart error:', error);
@@ -144,7 +149,6 @@ export const replaceCart = async (accessToken, guestItems) => {
  * ONLY used by replaceCart() during login migration
  */
 async function _addToCartInternal(accessToken, { productId, quantity }) {
-  console.log('[CART_SERVICE] [INTERNAL] Adding item:', productId);
   
   const response = await fetch(`${API_BASE}/cart/items`, {
     method: 'POST',
@@ -164,8 +168,23 @@ async function _addToCartInternal(accessToken, { productId, quantity }) {
     if (response.status === 409 && payload.code === 'DUPLICATE_KEY') {
       const cart = await getCart(accessToken);
       if (cart) {
-        return cart;
+        const targetId = String(productId);
+        const containsTarget = Array.isArray(cart.items) && cart.items.some((item) => {
+          const existingId =
+            item?.product?._id ||
+            item?.product?.id ||
+            item?.productId?._id ||
+            item?.productId?.id ||
+            item?.productId ||
+            null;
+          return existingId ? String(existingId) === targetId : false;
+        });
+
+        if (containsTarget) {
+          return cart;
+        }
       }
+      throw new Error('Cart conflict: backend rejected this item. Please refresh and try again.');
     }
     throw new Error(payload.message || 'Failed to add item to cart');
   }
@@ -178,8 +197,8 @@ async function _addToCartInternal(accessToken, { productId, quantity }) {
  * ONLY used by _clearCartInternal() during login migration
  */
 async function _removeFromCartInternal(accessToken, itemId) {
-  if (!itemId || typeof itemId !== 'string') {
-    throw new Error('Invalid cart item id: missing or non-string');
+  if (!itemId || typeof itemId !== 'string' || !isValidObjectId(itemId)) {
+    throw new Error('Invalid cart item identifier');
   }
   const response = await fetch(`${API_BASE}/cart/items/${itemId}`, {
     method: 'DELETE',
@@ -209,11 +228,9 @@ async function _removeFromCartInternal(accessToken, itemId) {
  * ONLY used by replaceCart() during login migration
  */
 async function _clearCartInternal(accessToken, items) {
-  console.log('[CART_SERVICE] [INTERNAL] Clearing cart -', items.length, 'items');
   
   // Skip if no items or items don't have valid IDs
   if (!items || items.length === 0) {
-    console.log('[CART_SERVICE] [INTERNAL] No items to clear');
     return;
   }
   
@@ -224,7 +241,6 @@ async function _clearCartInternal(accessToken, items) {
   });
   
   if (validItems.length === 0) {
-    console.log('[CART_SERVICE] [INTERNAL] No valid items to clear from backend');
     return;
   }
   
@@ -233,7 +249,6 @@ async function _clearCartInternal(accessToken, items) {
   );
   
   await Promise.all(removePromises);
-  console.log('[CART_SERVICE] [INTERNAL] Cart cleared');
 }
 
 // ============================================================================
@@ -268,6 +283,20 @@ export const getCartSummary = async (accessToken, shippingAddressId = null) => {
 
   const { text, json } = await readResponseBody(response);
   if (!response.ok) {
+    const message = String(json?.message || text || '').toLowerCase();
+    const isEmptyCartResponse =
+      [400, 404, 422].includes(response.status) &&
+      (
+        message.includes('cart is empty') ||
+        message.includes('empty cart') ||
+        message.includes('no items in cart') ||
+        message.includes('cart not found')
+      );
+
+    if (isEmptyCartResponse) {
+      return null;
+    }
+
     throw new Error(json?.message || text || 'Failed to fetch cart summary');
   }
   return json?.data || json || null;
@@ -361,7 +390,6 @@ export const updateCartItem = async (accessToken, itemId, quantity) => {
  * @returns {Promise<Object>} - Result
  */
 export const removeFromCart = async (accessToken, itemId) => {
-  console.log('[CART_SERVICE] Removing item:', itemId);
   return await _removeFromCartInternal(accessToken, itemId);
 };
 
@@ -374,4 +402,5 @@ export const removeFromCart = async (accessToken, itemId) => {
 export const clearCart = async (accessToken, items) => {
   return await _clearCartInternal(accessToken, items);
 };
+
 

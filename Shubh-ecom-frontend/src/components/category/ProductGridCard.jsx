@@ -27,12 +27,14 @@ export const ProductGridCard = ({ product }) => {
   const discountPct = mrp > unitPrice ? Math.round(((mrp - unitPrice) / mrp) * 100) : 0;
   const isOem = isOemProduct(product.productType);
 
-  const handleCart = (e) => {
+  const handleCart = async (e) => {
     e.preventDefault();
     if (isInCart) { window.location.href = '/cart'; return; }
     if (!inStock) { toast.error('Out of stock'); return; }
-    addToCart(product, product.minOrderQty || 1);
-    toast.success('Added to cart!');
+    const added = await addToCart(product, product.minOrderQty || 1);
+    if (added) {
+      toast.success('Added to cart!');
+    }
   };
 
   return (

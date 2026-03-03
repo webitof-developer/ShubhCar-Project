@@ -188,10 +188,7 @@ export function OrderRow({ order, accessToken }) {
               )}
             </div>
 
-            {/* Compact timeline */}
-            <div className="mt-3">
-              <OrderTimeline status={displayOrder.orderStatus} />
-            </div>
+            
           </div>
 
           {/* Price + actions */}
@@ -275,6 +272,11 @@ export function OrderRow({ order, accessToken }) {
                     <span>Total</span><span>{formatPrice(displayOrder.grandTotal || 0)}</span>
                   </div>
                 </div>
+
+                 {/* Compact timeline */}
+            <div className="mt-5 p-2">
+              <OrderTimeline status={displayOrder.orderStatus} />
+            </div>
               </div>
 
               {/* Right sidebar: address + payment + tracking */}
@@ -418,7 +420,7 @@ export function OrderRow({ order, accessToken }) {
       )}
 
       <AlertDialog open={requestOpen} onOpenChange={setRequestOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="border border-zinc-200">
           <AlertDialogHeader>
             <AlertDialogTitle>Cancel Your Order</AlertDialogTitle>
             <AlertDialogDescription>

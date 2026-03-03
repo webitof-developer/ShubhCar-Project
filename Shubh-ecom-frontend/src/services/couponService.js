@@ -19,5 +19,10 @@ export const getPublicCoupons = async () => {
     throw new Error(json?.message || text || 'Failed to fetch coupons');
   }
 
-  return Array.isArray(json?.data) ? json.data : [];
+  const payload = json?.data ?? json ?? null;
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.coupons)) return payload.coupons;
+  if (Array.isArray(payload?.items)) return payload.items;
+  return [];
 };

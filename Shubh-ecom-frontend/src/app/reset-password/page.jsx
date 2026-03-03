@@ -18,7 +18,6 @@ const ResetPassword = () => {
     e.preventDefault();
     
     if (!email.trim()) {
-      console.log('Please enter your email address');
       return;
     }
 
@@ -29,7 +28,6 @@ const ResetPassword = () => {
     
     setIsLoading(false);
     setIsSubmitted(true);
-    console.log('Reset link sent (UI-only):', email);
   };
 
   return (
@@ -114,3 +112,4 @@ const ResetPassword = () => {
 };
 
 export default ResetPassword;
+

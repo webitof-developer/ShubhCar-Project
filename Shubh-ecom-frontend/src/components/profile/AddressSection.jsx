@@ -13,6 +13,7 @@ import { Plus, Pencil, Trash2, MapPin, Check, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { getUserAddresses, addAddress, updateAddress, deleteAddress, setDefaultAddress } from '@/services/userAddressService';
 import { toast } from 'sonner';
+import { sanitizeIndianPhone, isValidIndianPhone } from '@/utils/phoneValidation';
 
 export const AddressSection = ({ user }) => {
   const { accessToken } = useAuth(); // PHASE 12: Get auth token
@@ -83,7 +84,7 @@ export const AddressSection = ({ user }) => {
     setFormCity(address.city || '');
     setFormState(address.state || '');
     setFormPincode(address.postalCode || '');
-    setFormPhone(address.phone || '');
+    setFormPhone(sanitizeIndianPhone(address.phone || ''));
     setFormIsDefault(address.isDefaultShipping || false);
     setShowAddressModal(true);
   };
@@ -94,6 +95,10 @@ export const AddressSection = ({ user }) => {
     if (!formLabel.trim() || !formName.trim() || !formLine1.trim() || 
         !formCity.trim() || !formState.trim() || !formPincode.trim() || !formPhone.trim()) {
       toast.error('Please fill in all required fields');
+      return;
+    }
+    if (!isValidIndianPhone(formPhone)) {
+      toast.error('Phone number must be exactly 10 digits');
       return;
     }
 
@@ -107,7 +112,7 @@ export const AddressSection = ({ user }) => {
         city: formCity.trim(),
         state: formState.trim(),
         postalCode: formPincode.trim(),
-        phone: formPhone.trim(),
+        phone: sanitizeIndianPhone(formPhone),
         isDefaultShipping: formIsDefault,
         isDefaultBilling: formIsDefault,
       };
@@ -266,7 +271,7 @@ export const AddressSection = ({ user }) => {
 
       {/* Add/Edit Address Modal */}
       <Dialog open={showAddressModal} onOpenChange={setShowAddressModal}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg border border-zinc-200">
           <DialogHeader>
             <DialogTitle>
               {editingAddress ? 'Edit Address' : 'Add New Address'}
@@ -359,8 +364,11 @@ export const AddressSection = ({ user }) => {
                   id="phone"
                   type="tel"
                   value={formPhone}
-                  onChange={(e) => setFormPhone(e.target.value)}
-                  placeholder="+91 98765 43210"
+                  onChange={(e) => setFormPhone(sanitizeIndianPhone(e.target.value))}
+                  placeholder="9876500000"
+                  inputMode="numeric"
+                  pattern="[0-9]{10}"
+                  maxLength={10}
                 />
               </div>
             </div>
@@ -395,7 +403,7 @@ export const AddressSection = ({ user }) => {
 
       {/* Delete Confirmation */}
       <AlertDialog open={!!deleteAddressId} onOpenChange={() => setDeleteAddressId(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="border border-zinc-200">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Address?</AlertDialogTitle>
             <AlertDialogDescription>

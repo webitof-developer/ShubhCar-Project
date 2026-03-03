@@ -445,7 +445,7 @@ const Header = () => {
 
       {/* Logout Confirmation Dialog */}
       <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
-        <AlertDialogContent className="rounded-2xl border-border/50 shadow-2xl bg-background/95 backdrop-blur-md">
+        <AlertDialogContent className="rounded-2xl border border-zinc-200 shadow-2xl bg-background/95 backdrop-blur-md">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-xl">Logout?</AlertDialogTitle>
             <AlertDialogDescription className="text-muted-foreground">

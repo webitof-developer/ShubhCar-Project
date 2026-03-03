@@ -34,7 +34,7 @@ export function OrderTimeline({ status }) {
   const activeIdx = getTimelineStep(status);
 
   return (
-    <div className="flex items-center gap-0 overflow-x-auto hide-scrollbar mt-1">
+    <div className="flex items-center gap-0 overflow-x-auto hide-scrollbar mt-2 p-3 justify-between ">
       {TIMELINE_STEPS.map((step, idx) => {
         const done      = idx < activeIdx;
         const active    = idx === activeIdx;

@@ -57,6 +57,11 @@ const deserializeValue = (raw) => {
 export const getStorageItem = (key) => {
   try {
     if (isBrowser()) {
+      if (key === 'cart_items') {
+        const raw = window.localStorage.getItem(key);
+        if (raw !== null) return deserializeValue(raw);
+        return memoryStorage.get(key) ?? null;
+      }
       const raw = Cookies.get(key);
       if (raw !== undefined) return deserializeValue(raw);
     }
@@ -75,7 +80,11 @@ export const setStorageItem = (key, value) => {
   try {
     const serialized = serializeValue(value);
     if (isBrowser()) {
-      Cookies.set(key, serialized, COOKIE_OPTIONS);
+      if (key === 'cart_items') {
+        window.localStorage.setItem(key, serialized);
+      } else {
+        Cookies.set(key, serialized, COOKIE_OPTIONS);
+      }
     }
     // Always mirror to memory (instant reads without parse overhead)
     memoryStorage.set(key, value);
@@ -93,7 +102,11 @@ export const setStorageItem = (key, value) => {
 export const removeStorageItem = (key) => {
   try {
     if (isBrowser()) {
-      Cookies.remove(key);
+      if (key === 'cart_items') {
+        window.localStorage.removeItem(key);
+      } else {
+        Cookies.remove(key);
+      }
     }
     memoryStorage.delete(key);
     return true;
@@ -120,7 +133,13 @@ const MANAGED_KEYS = [
 export const clearStorage = () => {
   try {
     if (isBrowser()) {
-      MANAGED_KEYS.forEach((k) => Cookies.remove(k));
+      MANAGED_KEYS.forEach((k) => {
+        if (k === 'cart_items') {
+          window.localStorage.removeItem(k);
+        } else {
+          Cookies.remove(k);
+        }
+      });
     }
     memoryStorage.clear();
     return true;

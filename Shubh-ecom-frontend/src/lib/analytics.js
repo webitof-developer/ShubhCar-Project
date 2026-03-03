@@ -13,7 +13,6 @@ export function initGA() {
   if (typeof window === 'undefined') return
   
   // GA script will be added here
-  console.log('Google Analytics initialized (placeholder)')
 }
 
 /**
@@ -25,8 +24,6 @@ export function trackPageView(url) {
   // window.gtag('config', GA_MEASUREMENT_ID, {
   //   page_path: url,
   // })
-  
-  console.log('Page view tracked:', url)
 }
 
 /**
@@ -40,8 +37,6 @@ export function trackEvent({ action, category, label, value }) {
   //   event_label: label,
   //   value: value,
   // })
-  
-  console.log('Event tracked:', { action, category, label, value })
 }
 
 /**

@@ -77,7 +77,6 @@ const CheckoutInner = () => {
   // Auth check - redirect if not logged in
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      console.log('[CHECKOUT] User not authenticated, redirecting to login');
       const returnTo = draftId ? `/checkout?draftId=${draftId}` : '/checkout';
       router.push(`/login?returnTo=${encodeURIComponent(returnTo)}`);
     }
@@ -252,4 +251,5 @@ export default function CheckoutPage() {
     </Layout>
   );
 }
+
 

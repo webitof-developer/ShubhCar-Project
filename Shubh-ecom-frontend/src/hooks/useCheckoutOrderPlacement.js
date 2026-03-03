@@ -21,7 +21,6 @@ export const useCheckoutOrderPlacement = ({
 
   const handlePaymentConfirm = useCallback(async (paymentMethod) => {
     if (placingOrder) {
-      console.log('[CHECKOUT] Order already in progress, ignoring duplicate click');
       return;
     }
 
@@ -126,15 +125,12 @@ export const useCheckoutOrderPlacement = ({
       const isOnlinePayment = paymentMethod !== 'cod';
 
       if (isOnlinePayment) {
-        console.log('[CHECKOUT] Creating order for online payment:', paymentMethod);
 
         toast.loading('Creating your order...', {
           description: 'Please wait',
         });
 
         const order = await orderService.placeOrder(accessToken, orderPayload);
-
-        console.log('[CHECKOUT] Order created with pending payment:', order.orderNumber);
 
         sessionStorage.setItem(
           'pendingOrder',
@@ -149,17 +145,12 @@ export const useCheckoutOrderPlacement = ({
         );
 
         toast.dismiss();
-
-        console.log('[CHECKOUT] Redirecting to payment processing...');
         setRedirectingAfterOrder(true);
         const draftQuery = checkoutDraftId ? `&draftId=${encodeURIComponent(checkoutDraftId)}` : '';
         router.push(`/payment/process?orderId=${order._id}&method=${paymentMethod}${draftQuery}`);
       } else {
-        console.log('[CHECKOUT] Placing COD order...');
 
         const order = await orderService.placeOrder(accessToken, orderPayload);
-
-        console.log('[CHECKOUT] Order placed successfully:', order.orderNumber);
 
         sessionStorage.setItem(
           'lastOrder',
@@ -206,3 +197,4 @@ export const useCheckoutOrderPlacement = ({
 };
 
 export default useCheckoutOrderPlacement;
+

@@ -7,7 +7,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import InvoiceTemplate from '@/components/invoice/InvoiceTemplate';
 import { InvoiceShell } from '@/components/invoice/InvoiceShell';
-import { Download, ArrowLeft, Printer } from 'lucide-react';
+import { Download, ArrowLeft, Printer, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { getOrder } from '@/services/orderService';
 import { getAddressById } from '@/services/userAddressService';
@@ -17,39 +17,51 @@ import './print.css';
 const InvoicePage = () => {
   const { orderId } = useParams();
   const router = useRouter();
-  const { accessToken, isAuthenticated } = useAuth();
+  const { accessToken, isAuthenticated, loading: authLoading } = useAuth();
   const [orderDetail, setOrderDetail] = useState(null);
   const [address, setAddress] = useState(null);
   const [settings, setSettings] = useState({});
+  const [invoiceLoading, setInvoiceLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
-      if (!isAuthenticated || !accessToken || !orderId) return;
-      
-      // Fetch order data
-      const data = await getOrder(accessToken, orderId);
-      setOrderDetail(data || null);
-      
-      // Fetch shipping address
-      if (data?.order?.shippingAddressId) {
-        const addr = await getAddressById(data.order.shippingAddressId, accessToken);
-        setAddress(addr || null);
+      if (authLoading) return;
+      if (!isAuthenticated || !accessToken || !orderId) {
+        setInvoiceLoading(false);
+        return;
       }
       
-      // Fetch public invoice settings
       try {
-        const response = await fetch(`${API_BASE_URL}/settings/public`);
-        if (response.ok) {
-          const settingsData = await response.json();
-          setSettings(settingsData.data || settingsData || {});
+        // Fetch order data
+        const data = await getOrder(accessToken, orderId);
+        setOrderDetail(data || null);
+
+        // Fetch shipping address
+        if (data?.order?.shippingAddressId) {
+          const addr = await getAddressById(data.order.shippingAddressId, accessToken);
+          setAddress(addr || null);
         }
-      } catch (err) {
-        console.error('Failed to fetch invoice settings:', err);
-        // Continue with empty settings (template has defaults)
+
+        // Fetch public invoice settings
+        try {
+          const response = await fetch(`${API_BASE_URL}/settings/public`);
+          if (response.ok) {
+            const settingsData = await response.json();
+            setSettings(settingsData.data || settingsData || {});
+          }
+        } catch (err) {
+          console.error('Failed to fetch invoice settings:', err);
+          // Continue with empty settings (template has defaults)
+        }
+      } catch (error) {
+        console.error('Failed to load invoice:', error);
+        setOrderDetail(null);
+      } finally {
+        setInvoiceLoading(false);
       }
     };
     load();
-  }, [orderId, accessToken, isAuthenticated]);
+  }, [orderId, accessToken, isAuthenticated, authLoading]);
 
   const handleDownloadPDF = () => {
     window.print();
@@ -58,6 +70,17 @@ const InvoicePage = () => {
   const handlePrint = () => {
     window.print();
   };
+
+  if (authLoading || invoiceLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="flex items-center gap-3 text-muted-foreground">
+          <Loader2 className="w-5 h-5 animate-spin" />
+          <span className="text-sm font-medium">Loading invoice...</span>
+        </div>
+      </div>
+    );
+  }
 
   if (!orderDetail?.order) {
     return (

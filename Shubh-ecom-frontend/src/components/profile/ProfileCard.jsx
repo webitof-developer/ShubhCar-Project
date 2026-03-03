@@ -14,6 +14,7 @@ import { Pencil, User, Mail, Phone, Building2, ShieldCheck, Clock, XCircle } fro
 import { updateUserProfile } from '@/services/userService';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
+import { sanitizeIndianPhone, isValidIndianPhone } from '@/utils/phoneValidation';
 
 export const ProfileCard = ({ user, onProfileUpdate }) => {
   const router = useRouter();
@@ -34,40 +35,33 @@ export const ProfileCard = ({ user, onProfileUpdate }) => {
 
   // PHASE 11: Profile edit handler with backend integration
   const handleSaveProfile = async () => {
-    console.log('[PROFILE_CARD] Save button clicked');
-    console.log('[PROFILE_CARD] Form values:', { editFirstName, editLastName, editPhone });
-    console.log('[PROFILE_CARD] Access token present:', !!accessToken);
 
     // Validation
     if (!editFirstName.trim() || !editLastName.trim()) {
-      console.log('[PROFILE_CARD] Validation failed: First/Last name empty');
       toast.error('Please fill in all required fields');
       return;
     }
 
     if (!editPhone.trim()) {
-      console.log('[PROFILE_CARD] Validation failed: Phone empty');
       toast.error('Phone number is required');
       return;
     }
-
-    console.log('[PROFILE_CARD] Validation passed, saving...');
+    if (!isValidIndianPhone(editPhone)) {
+      toast.error('Phone number must be exactly 10 digits');
+      return;
+    }
     setSaving(true);
     try {
       const profileData = {
         firstName: editFirstName.trim(),
         lastName: editLastName.trim(),
-        phone: editPhone.trim(),
+        phone: sanitizeIndianPhone(editPhone),
       };
-
-      console.log('[PROFILE_CARD] Calling updateUserProfile with:', profileData);
       const updatedProfile = await updateUserProfile(accessToken, profileData);
-      console.log('[PROFILE_CARD] Update response:', updatedProfile);
 
       if (updatedProfile) {
         toast.success('Profile updated successfully');
         setShowEditDialog(false);
-        console.log('[PROFILE_CARD] Triggering parent refetch');
         // Trigger parent refetch
         if (onProfileUpdate) {
           onProfileUpdate();
@@ -83,7 +77,6 @@ export const ProfileCard = ({ user, onProfileUpdate }) => {
       toast.error('An error occurred while saving your profile');
     } finally {
       setSaving(false);
-      console.log('[PROFILE_CARD] Save complete');
     }
   };
 
@@ -92,7 +85,7 @@ export const ProfileCard = ({ user, onProfileUpdate }) => {
   const openEditDialog = () => {
     setEditFirstName(user.firstName);
     setEditLastName(user.lastName);
-    setEditPhone(user.phone || '');
+    setEditPhone(sanitizeIndianPhone(user.phone || ''));
     setShowEditDialog(true);
   };
 
@@ -190,7 +183,7 @@ export const ProfileCard = ({ user, onProfileUpdate }) => {
 
       {/* Edit Profile Dialog */}
       < Dialog open={showEditDialog} onOpenChange={setShowEditDialog} >
-        <DialogContent>
+        <DialogContent className="border border-zinc-200">
           <DialogHeader>
             <DialogTitle>Edit Profile</DialogTitle>
           </DialogHeader>
@@ -225,7 +218,10 @@ export const ProfileCard = ({ user, onProfileUpdate }) => {
                 id="editPhone"
                 type="tel"
                 value={editPhone}
-                onChange={(e) => setEditPhone(e.target.value)}
+                onChange={(e) => setEditPhone(sanitizeIndianPhone(e.target.value))}
+                inputMode="numeric"
+                pattern="[0-9]{10}"
+                maxLength={10}
               />
             </div>
             <div className="space-y-2">
@@ -261,3 +257,4 @@ export const ProfileCard = ({ user, onProfileUpdate }) => {
     </>
   );
 };
+

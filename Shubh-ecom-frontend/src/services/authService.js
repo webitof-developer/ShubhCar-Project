@@ -29,7 +29,6 @@ const readResponseBody = async (response) => {
  * @returns {Promise<{accessToken: string, refreshToken: string, user: object}>}
  */
 export const login = async (email, password) => {
-  console.log('[AUTH_SERVICE] Login attempt for:', email);
   
   try {
     const response = await fetch(`${API_BASE}/auth/login`, {
@@ -48,7 +47,6 @@ export const login = async (email, password) => {
       });
       throw new Error(json?.message || text || 'Login failed');
     }
-    console.log('[AUTH_SERVICE] Login successful - USING REAL BACKEND');
     
     // Backend returns { success, data: { accessToken, refreshToken, user }, message }
     return json?.data || json;
@@ -64,7 +62,6 @@ export const login = async (email, password) => {
  * @returns {Promise<{accessToken: string, refreshToken: string, user: object}>}
  */
 export const register = async (userData) => {
-  console.log('[AUTH_SERVICE] Register attempt for:', userData.email);
   
   try {
     const response = await fetch(`${API_BASE}/auth/register`, {
@@ -83,7 +80,6 @@ export const register = async (userData) => {
       });
       throw new Error(json?.message || text || 'Registration failed');
     }
-    console.log('[AUTH_SERVICE] Registration successful - USING REAL BACKEND');
     
     return json?.data || json;
   } catch (error) {
@@ -98,7 +94,6 @@ export const register = async (userData) => {
  * @param {string} refreshToken - Refresh token
  */
 export const logout = async (accessToken, refreshToken) => {
-  console.log('[AUTH_SERVICE] Logout attempt');
   
   try {
     const response = await fetch(`${API_BASE}/auth/logout`, {
@@ -113,7 +108,6 @@ export const logout = async (accessToken, refreshToken) => {
     if (!response.ok) {
       console.warn('[AUTH_SERVICE] Logout failed (continuing anyway)');
     } else {
-      console.log('[AUTH_SERVICE] Logout successful');
     }
   } catch (error) {
     console.warn('[AUTH_SERVICE] Logout error (continuing anyway):', error);
@@ -126,7 +120,6 @@ export const logout = async (accessToken, refreshToken) => {
  * @returns {Promise<object|null>} User object or null
  */
 export const getCurrentUser = async (accessToken) => {
-  console.log('[AUTH_SERVICE] Fetching current user');
   
   try {
     const response = await fetch(`${API_BASE}/users/me`, {
@@ -140,7 +133,6 @@ export const getCurrentUser = async (accessToken) => {
       console.error('[AUTH_SERVICE] Failed to fetch user');
       return null;
     }
-    console.log('[AUTH_SERVICE] User fetched successfully');
     
     return json?.data || json || null;
   } catch (error) {
@@ -155,7 +147,6 @@ export const getCurrentUser = async (accessToken) => {
  * @returns {Promise<{accessToken: string, refreshToken: string}>}
  */
 export const refreshAccessToken = async (refreshToken) => {
-  console.log('[AUTH_SERVICE] Refreshing access token');
   
   try {
     const response = await fetch(`${API_BASE}/auth/refresh`, {
@@ -171,7 +162,6 @@ export const refreshAccessToken = async (refreshToken) => {
       console.error('[AUTH_SERVICE] Token refresh failed');
       throw new Error(json?.message || text || 'Token refresh failed');
     }
-    console.log('[AUTH_SERVICE] Token refreshed successfully');
     
     return json?.data || json;
   } catch (error) {
@@ -185,7 +175,6 @@ export const refreshAccessToken = async (refreshToken) => {
  * @returns {Promise<{accessToken: string, refreshToken: string, user: object}>}
  */
 export const googleLogin = async (idToken) => {
-  console.log('[AUTH_SERVICE] Google login attempt');
   
   try {
     const response = await fetch(`${API_BASE}/auth/google`, {
@@ -204,7 +193,6 @@ export const googleLogin = async (idToken) => {
       });
       throw new Error(json?.message || text || 'Google login failed');
     }
-    console.log('[AUTH_SERVICE] Google login successful - USING REAL BACKEND');
     
     // Backend returns { success, data: { accessToken, refreshToken, user }, message }
     return json?.data || json;
@@ -213,3 +201,4 @@ export const googleLogin = async (idToken) => {
     throw error;
   }
 };
+

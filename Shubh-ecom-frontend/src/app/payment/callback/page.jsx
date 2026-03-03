@@ -45,9 +45,6 @@ const PaymentCallbackContent = () => {
       return;
     }
 
-    console.log('[PAYMENT_CALLBACK] Processing callback for order:', orderId);
-    console.log('[PAYMENT_CALLBACK] Payment status:', status);
-
     const handleCallback = async () => {
       try {
         setProcessing(true);
@@ -91,7 +88,6 @@ const PaymentCallbackContent = () => {
 
         if (resolvedStatus === 'success') {
           // Payment successful
-          console.log('[PAYMENT_CALLBACK] Payment successful');
 
           // TODO: Call backend to update order.paymentStatus to 'paid'
           // await fetch(`/api/orders/${orderId}/confirm-payment`, { method: 'POST' });
@@ -120,7 +116,6 @@ const PaymentCallbackContent = () => {
 
         } else {
           // Payment failed
-          console.log('[PAYMENT_CALLBACK] Payment failed');
 
           // TODO: Call backend to update order.paymentStatus to 'failed'
           // await fetch(`/api/orders/${orderId}/fail-payment`, { method: 'POST' });
@@ -229,3 +224,4 @@ const PaymentCallbackPage = () => {
 };
 
 export default PaymentCallbackPage;
+

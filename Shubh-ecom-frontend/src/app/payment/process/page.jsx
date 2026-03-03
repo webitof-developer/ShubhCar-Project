@@ -105,8 +105,6 @@ function PaymentProcessInner() {
     setStatus('success');
     toast.success('Payment Successful!');
 
-    console.log('[PAYMENT_PROCESS] Success details:', details);
-
     if (details?.internalPaymentId && accessToken) {
       try {
         sessionStorage.setItem('lastPayment', JSON.stringify({
@@ -118,7 +116,6 @@ function PaymentProcessInner() {
         }));
         // Extract Razorpay payment ID and send it to backend
         const razorpayPaymentId = details.razorpay_payment_id;
-        console.log('[PAYMENT_PROCESS] Confirming payment:', details.internalPaymentId, 'with transactionId:', razorpayPaymentId);
         await confirmPayment(accessToken, details.internalPaymentId, razorpayPaymentId);
       } catch (confirmError) {
         console.error('[PAYMENT] Confirm failed:', confirmError);
@@ -287,3 +284,4 @@ export default function PaymentProcessPage() {
     </Layout>
   );
 }
+

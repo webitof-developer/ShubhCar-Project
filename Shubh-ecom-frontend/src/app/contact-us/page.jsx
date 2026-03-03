@@ -9,6 +9,7 @@ import { Mail, Phone, MapPin, Clock, Send, MessageSquare, ArrowRight, User, Help
 import { toast } from 'sonner';
 import { submitContactForm } from '@/services/contactService';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
+import { sanitizeIndianPhone, isValidIndianPhone } from '@/utils/phoneValidation';
 
 const ContactPage = () => {
   const { siteName } = useSiteConfig();
@@ -25,15 +26,15 @@ const ContactPage = () => {
     const { id, value } = e.target;
     const nextValue =
       id === 'phone'
-        ? String(value || '').replace(/\D/g, '').slice(0, 10)
+        ? sanitizeIndianPhone(value)
         : value;
     setFormData(prev => ({ ...prev, [id]: nextValue }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const cleanPhone = formData.phone.replace(/\D/g, '');
-    if (cleanPhone && cleanPhone.length !== 10) {
+    const cleanPhone = sanitizeIndianPhone(formData.phone);
+    if (cleanPhone && !isValidIndianPhone(cleanPhone)) {
       toast.error('Phone number must be exactly 10 digits');
       return;
     }

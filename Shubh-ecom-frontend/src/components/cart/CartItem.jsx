@@ -9,6 +9,13 @@ import { resolveProductImages } from '@/utils/media';
 export const CartItem = ({ item, index, user, removeFromCart, updateQuantity, summary, cartTaxLabel }) => {
   const product = item?.product;
   if (!product) return null;
+  const itemKey =
+    item?.backendItemId ||
+    item?._id ||
+    item?.id ||
+    item?.product?._id ||
+    item?.product?.id ||
+    `cart-item-${index}`;
   const isWholesaleUser = user?.customerType === 'wholesale';
   const minQty = isWholesaleUser
     ? Math.max(1, Number(product.minWholesaleQty || product.minOrderQty || 1) || 1)
@@ -21,7 +28,7 @@ export const CartItem = ({ item, index, user, removeFromCart, updateQuantity, su
   const productLink = product.slug ? `/product/${product.slug}` : '/products';
 
   return (
-    <div className="bg-card rounded-xl border border-border/50 p-3 md:p-4 animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
+    <div className="bg-card rounded-xl border border-border/50 p-3 md:p-4 animate-fade-in">
       <div className="flex gap-4">
         {/* Image Container with Badges */}
         <Link href={productLink} className="w-24 h-24 md:w-32 md:h-32 bg-secondary rounded-lg overflow-hidden shrink-0 group relative block">
@@ -106,7 +113,11 @@ export const CartItem = ({ item, index, user, removeFromCart, updateQuantity, su
                 </div>
               </div>
               <button 
-                onClick={() => removeFromCart(item.id)} 
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  removeFromCart(itemKey);
+                }} 
                 className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors shrink-0" 
                 aria-label="Remove item"
               >
@@ -139,7 +150,7 @@ export const CartItem = ({ item, index, user, removeFromCart, updateQuantity, su
 
             <div className="flex items-center bg-secondary/50 rounded-lg border border-border/50">
               <button
-                onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                onClick={() => updateQuantity(itemKey, item.quantity - 1)}
                 className="p-2.5 hover:bg-secondary rounded-l-lg transition-colors disabled:opacity-50"
                 disabled={item.quantity <= minQty}
               >
@@ -147,7 +158,7 @@ export const CartItem = ({ item, index, user, removeFromCart, updateQuantity, su
               </button>
               <span className="w-10 text-center text-sm font-medium">{item.quantity}</span>
               <button
-                onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                onClick={() => updateQuantity(itemKey, item.quantity + 1)}
                 className="p-2.5 hover:bg-secondary rounded-r-lg transition-colors disabled:opacity-50"
                 disabled={!canIncrease}
               >
