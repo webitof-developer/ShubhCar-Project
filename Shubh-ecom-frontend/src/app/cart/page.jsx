@@ -105,7 +105,7 @@ const Cart = () => {
   const [copiedCoupon, setCopiedCoupon] = useState(null);
   /* ... */
   const { items, removeFromCart, updateQuantity, addToCart, cartSource, loading, initializationLoading, subtotal: contextSubtotal } = useCart();
-  const { tax: siteTax, couponEnabled, shippingHandlingDays } = useSiteConfig();
+  const { tax: siteTax } = useSiteConfig();
   const [suggestedProducts, setSuggestedProducts] = useState([]);
   const { user, isAuthenticated, accessToken } = useAuth();
   const [summary, setSummary] = useState(null);
@@ -190,10 +190,6 @@ const Cart = () => {
   }, [fetchSummary]);
 
   useEffect(() => {
-    if (!couponEnabled) {
-      setAvailableCoupons([]);
-      return;
-    }
     const loadCoupons = async () => {
       try {
         setCouponsLoading(true);
@@ -228,10 +224,6 @@ const Cart = () => {
 
   /* ... handlers ... */
   const handleApplyCoupon = async () => {
-    if (!couponEnabled) {
-      toast.error('Coupons are currently disabled');
-      return;
-    }
     const code = couponCode.trim().toUpperCase();
 
     if (!code) {
@@ -277,11 +269,6 @@ const Cart = () => {
   };
 
   const handleApplyCouponFromDialog = async (coupon) => {
-    if (!couponEnabled) {
-      toast.error('Coupons are currently disabled');
-      setCouponDialogOpen(false);
-      return;
-    }
     if (!isAuthenticated || !accessToken || cartSource !== 'backend') {
       toast.error('Please login to apply coupons');
       setCouponDialogOpen(false);
@@ -513,7 +500,7 @@ const Cart = () => {
           </div>
 
           <div className="lg:col-span-1">
-            <CartSummary items={items} summary={summary} user={user} cartTaxLabel={cartTaxLabel} showIncludingTax={showIncludingTax} showTaxTotals={showTaxTotals} summarySubtotal={summarySubtotal} summaryDiscount={summaryDiscount} summaryTax={summaryTax} summaryTotal={summaryTotal} couponCode={couponCode} setCouponCode={setCouponCode} handleApplyCoupon={handleApplyCoupon} handleRemoveCoupon={handleRemoveCoupon} couponDialogOpen={couponDialogOpen} setCouponDialogOpen={setCouponDialogOpen} availableCoupons={availableCoupons} couponsLoading={couponsLoading} handleApplyCouponFromDialog={handleApplyCouponFromDialog} handleCopyCouponCode={handleCopyCouponCode} copiedCoupon={copiedCoupon} formatCouponValue={formatCouponValue} onProceedToCheckout={handleProceedToCheckout} proceedLoading={creatingCheckoutDraft} couponLoading={couponLoading} summaryLoading={summaryLoading} couponFxState={couponFxState} couponEnabled={couponEnabled} shippingHandlingDays={shippingHandlingDays || summary?.settings?.shippingHandlingDays} />
+            <CartSummary items={items} summary={summary} user={user} cartTaxLabel={cartTaxLabel} showIncludingTax={showIncludingTax} showTaxTotals={showTaxTotals} summarySubtotal={summarySubtotal} summaryDiscount={summaryDiscount} summaryTax={summaryTax} summaryTotal={summaryTotal} couponCode={couponCode} setCouponCode={setCouponCode} handleApplyCoupon={handleApplyCoupon} handleRemoveCoupon={handleRemoveCoupon} couponDialogOpen={couponDialogOpen} setCouponDialogOpen={setCouponDialogOpen} availableCoupons={availableCoupons} couponsLoading={couponsLoading} handleApplyCouponFromDialog={handleApplyCouponFromDialog} handleCopyCouponCode={handleCopyCouponCode} copiedCoupon={copiedCoupon} formatCouponValue={formatCouponValue} onProceedToCheckout={handleProceedToCheckout} proceedLoading={creatingCheckoutDraft} couponLoading={couponLoading} summaryLoading={summaryLoading} couponFxState={couponFxState} />
           </div>
         </div>
 

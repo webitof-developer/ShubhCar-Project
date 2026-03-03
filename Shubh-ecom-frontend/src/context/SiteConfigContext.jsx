@@ -15,51 +15,11 @@ export const useSiteConfigContext = () => {
 };
 
 export const SiteConfigProvider = ({ children }) => {
-    const resolveMediaUrl = (url) => {
-        if (!url) return url;
-        if (url.startsWith('/api/proxy/')) return url;
-        const apiOrigin = (APP_CONFIG.api.baseUrl || '').replace(/\/api\/v1\/?$/, '');
-        const toRawProxy = (path) => `/api/proxy/__raw__${path.startsWith('/') ? '' : '/'}${path}`;
-
-        if (url.startsWith('http://') || url.startsWith('https://')) {
-            try {
-                const parsed = new URL(url);
-                if (apiOrigin && parsed.origin === apiOrigin) {
-                    return toRawProxy(`${parsed.pathname}${parsed.search}`);
-                }
-            } catch {
-                // keep original url below
-            }
-            return url;
-        }
-
-        // Keep frontend static favicon local to avoid CSP cross-origin issues.
-        if (url.startsWith('/favicon')) return '/favicon.ico';
-
-        // Backend media paths are served through same-origin proxy.
-        if (url.startsWith('/uploads/')) return toRawProxy(url);
-
-        if (!apiOrigin) return url;
-        return `${apiOrigin}${url.startsWith('/') ? '' : '/'}${url}`;
-    };
-
     // Build static config object (Initial state)
     const staticConfig = useMemo(() => ({
         // Site Identity
         siteName: APP_CONFIG.site.name,
-        siteTitle: APP_CONFIG.site.name,
-        siteDescription: APP_CONFIG.site.tagline,
-        seoTitle: APP_CONFIG.site.name,
-        seoDescription: APP_CONFIG.site.tagline,
-        seoKeywords: '',
         domain: APP_CONFIG.site.domain,
-
-        // Branding
-        logoDark: resolveMediaUrl(APP_CONFIG.site.logoDark || APP_CONFIG.site.logo || null),
-        logoLight: resolveMediaUrl(APP_CONFIG.site.logoLight || APP_CONFIG.site.logo || null),
-        favicon: resolveMediaUrl(APP_CONFIG.site.favicon || APP_CONFIG.theme?.favicon || '/favicon.ico'),
-        tagline: APP_CONFIG.site.tagline,
-        primaryColor: APP_CONFIG.theme?.primaryColor,
 
         // Contact Information
         contact: APP_CONFIG.site.contact,
@@ -71,13 +31,6 @@ export const SiteConfigProvider = ({ children }) => {
 
         // Tax Configuration (static fallback)
         tax: APP_CONFIG.site?.tax || {},
-        couponEnabled: true,
-        couponSequential: false,
-        shippingHandlingDays: '3-5 business days',
-        productUnits: {
-            weight: 'kg',
-            dimensions: 'cm',
-        },
 
         // Feature Flags
         features: APP_CONFIG.features,
@@ -108,37 +61,24 @@ export const SiteConfigProvider = ({ children }) => {
                 setConfig(prev => ({
                     ...prev,
                     // Merge dynamic settings if available
-                    logoDark: data.site_logo_dark ? resolveMediaUrl(data.site_logo_dark) : prev.logoDark,
-                    logoLight: data.site_logo_light ? resolveMediaUrl(data.site_logo_light) : prev.logoLight,
-                    favicon: data.site_favicon ? resolveMediaUrl(data.site_favicon) : prev.favicon,
-                    siteName: data.site_title || prev.siteName,
-                    siteTitle: data.site_title || prev.siteTitle,
-                    siteDescription: data.site_description || prev.siteDescription,
-                    seoTitle: data.seo_title || prev.seoTitle,
-                    seoDescription: data.seo_description || prev.seoDescription,
-                    seoKeywords: data.seo_keywords || prev.seoKeywords,
+                    siteName: data.site_title || data.siteName || prev.siteName,
                     contact: {
                         ...prev.contact,
                         email: data.contact_email || prev.contact?.email,
                         phone: data.contact_phone || prev.contact?.phone,
-                    },
-                    couponEnabled: data.coupon_enabled !== undefined
-                        ? (data.coupon_enabled === true || data.coupon_enabled === 'true' || data.coupon_enabled === 1 || data.coupon_enabled === '1')
-                        : prev.couponEnabled,
-                    couponSequential: data.coupon_sequential !== undefined
-                        ? (data.coupon_sequential === true || data.coupon_sequential === 'true' || data.coupon_sequential === 1 || data.coupon_sequential === '1')
-                        : prev.couponSequential,
-                    shippingHandlingDays: data.shipping_handling_days || prev.shippingHandlingDays,
-                    productUnits: {
-                        weight: data.product_weight_unit || prev.productUnits?.weight || 'kg',
-                        dimensions: data.product_dimensions_unit || prev.productUnits?.dimensions || 'cm',
+                        address: [
+                            data.store_address,
+                            data.store_city,
+                            data.store_zip,
+                            data.store_country,
+                        ].filter(Boolean).join(', ') || prev.contact?.address,
                     },
                     
                     // Tax Config (Critical)
                     tax: mergedTaxConfig,
 
                     // Recompute copyright with potentially new site name
-                    copyrightText: `(c) ${new Date().getFullYear()} ${data.site_title || prev.siteName}. All rights reserved. Made with love in India`,
+                    copyrightText: `(c) ${new Date().getFullYear()} ${data.site_title || data.siteName || prev.siteName}. All rights reserved. Made with love in India`,
                 }));
 
             } catch (error) {
@@ -151,27 +91,6 @@ export const SiteConfigProvider = ({ children }) => {
 
         fetchSettings();
     }, [staticConfig]);
-
-    useEffect(() => {
-        if (typeof document === 'undefined') return;
-        if (config?.siteTitle) {
-            document.title = config.siteTitle;
-        }
-
-        const ensureMeta = (name, content) => {
-            if (!content) return;
-            let tag = document.querySelector(`meta[name='${name}']`);
-            if (!tag) {
-                tag = document.createElement('meta');
-                tag.setAttribute('name', name);
-                document.head.appendChild(tag);
-            }
-            tag.setAttribute('content', content);
-        };
-
-        ensureMeta('description', config?.seoDescription || config?.siteDescription || '');
-        ensureMeta('keywords', config?.seoKeywords || '');
-    }, [config?.siteTitle, config?.siteDescription, config?.seoDescription, config?.seoKeywords]);
 
     const value = useMemo(() => ({ ...config, loading }), [config, loading]);
 

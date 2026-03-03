@@ -182,7 +182,7 @@ const Header = () => {
   const { itemCount } = useCart();
   const { itemCount: wishlistCount } = useWishlist();
   const { user, isAuthenticated, logout } = useAuth();
-  const { siteName, logoDark } = useSiteConfig();
+  const { siteName } = useSiteConfig();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -277,11 +277,10 @@ const Header = () => {
             <Link href="/" className="flex items-center gap-2 shrink-0 transition-opacity hover:opacity-90">
               <div className="relative h-10 w-32 md:h-12 md:w-40">
                 <Image
-                  src={logoDark || '/logodark.png'}
+                  src="/logodark.png"
                   alt={`${siteName || 'Site'} Logo`}
                   fill
                   className="object-contain"
-                  unoptimized
                   priority
                 />
               </div>

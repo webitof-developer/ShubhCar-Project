@@ -16,7 +16,7 @@ import { getProductTypeLabel, isOemProduct, isVehicleBasedProduct } from '@/util
 import { toast } from 'sonner';
 
 
-export const ProductCard = ({ product, className = '', compact = false }) => {
+export const ProductCard = ({ product, className = '', compact = false, imageOverlay = null }) => {
   const { addToCart } = useCart();
   const { user } = useAuth();
 
@@ -86,6 +86,12 @@ export const ProductCard = ({ product, className = '', compact = false }) => {
             <ShoppingCart className={`${compact ? 'w-4 h-4' : 'w-4 h-4 md:w-5 md:h-5'} transition-all hover:fill-primary`} strokeWidth={2} />
           </Button>
         </div>
+
+        {imageOverlay && (
+          <div className="pointer-events-none absolute inset-x-2 bottom-2 z-20 flex justify-center">
+            {imageOverlay}
+          </div>
+        )}
       </div>
 
       {/* Product Info */}
