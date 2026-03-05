@@ -8,7 +8,7 @@ const { performance } = require('perf_hooks');
 async function test() {
   try {
     await mongoose.connect(process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/ecom');
-    console.log('Connected to DB');
+    console.error('Connected to DB');
 
     // 1. Clean verify state
     const testSlug = 'test-category-automation';
@@ -18,43 +18,43 @@ async function test() {
     // await deleteByPattern('catalog:categories:*');
 
     // 2. Fetch roots (should be cached as empty or partial list)
-    console.log('Fetching roots (1st time)...');
+    console.error('Fetching roots (1st time)...');
     let roots = await categoryService.getRootCategories();
-    console.log(`Roots count: ${roots.length}`);
+    console.error(`Roots count: ${roots.length}`);
     
     // 3. Create new category
-    console.log('Creating new root category...');
+    console.error('Creating new root category...');
     const created = await categoryService.createCategory({
       name: 'Test Category Automation',
       slug: testSlug,
       isActive: true
     });
-    console.log('Created:', created._id);
+    console.error('Created:', created._id);
 
     // 4. Fetch roots again - SHOULD contain new one
-    console.log('Fetching roots (2nd time)...');
+    console.error('Fetching roots (2nd time)...');
     roots = await categoryService.getRootCategories();
     const found = roots.find(r => r.slug === testSlug);
     if (found) {
-        console.log('PASS: New category found in roots.');
+        console.error('PASS: New category found in roots.');
     } else {
-        console.log('FAIL: New category NOT found in roots.');
-        console.log('Roots slugs:', roots.map(r => r.slug));
+        console.error('FAIL: New category NOT found in roots.');
+        console.error('Roots slugs:', roots.map(r => r.slug));
     }
 
     // 5. Update category
-    console.log('Updating category name...');
+    console.error('Updating category name...');
     await categoryService.updateCategory(created._id, { name: 'Test Cat Updated' });
 
     // 6. Fetch roots again
-    console.log('Fetching roots (3rd time)...');
+    console.error('Fetching roots (3rd time)...');
     roots = await categoryService.getRootCategories();
     const updated = roots.find(r => r.slug === testSlug);
     if (updated && updated.name === 'Test Cat Updated') {
-        console.log('PASS: Update reflected in roots.');
+        console.error('PASS: Update reflected in roots.');
     } else {
-        console.log('FAIL: Update NOT reflected.');
-        if(updated) console.log('Current name:', updated.name);
+        console.error('FAIL: Update NOT reflected.');
+        if(updated) console.error('Current name:', updated.name);
     }
 
     // Clean up

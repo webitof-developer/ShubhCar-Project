@@ -186,14 +186,14 @@ const response = await request(app)
   .send(data)
   .expect(200);
 
-console.log('Response:', JSON.stringify(response.body, null, 2));
+console.error('Response:', JSON.stringify(response.body, null, 2));
 ```
 
 To inspect database state:
 
 ```javascript
 const dbOrder = await Order.findById(orderId).lean();
-console.log('DB Order:', dbOrder);
+console.error('DB Order:', dbOrder);
 ```
 
 ## Common Issues

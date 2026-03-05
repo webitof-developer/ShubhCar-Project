@@ -219,10 +219,10 @@ GOOGLE_CLIENT_ID=xxxxx.apps.googleusercontent.com
 
 ```bash
 # Test environment
-node -e "require('dotenv').config(); console.log('Config loaded:', !!process.env.MONGO_URI)"
+node -e "require('dotenv').config(); console.error('Config loaded:', !!process.env.MONGO_URI)"
 
 # Test database connection
-node -e "const mongoose = require('mongoose'); require('dotenv').config(); mongoose.connect(process.env.MONGO_URI).then(() => console.log('DB OK')).catch(console.error)"
+node -e "const mongoose = require('mongoose'); require('dotenv').config(); mongoose.connect(process.env.MONGO_URI).then(() => console.error('DB OK')).catch(console.error)"
 ```
 
 ---

@@ -10,6 +10,13 @@ type QuantityUpdate = {
   priceAtTime?: number;
 };
 
+type CartRepoError = Error & {
+  code?: number | string;
+  details?: Record<string, unknown> | null;
+  keyPattern?: Record<string, unknown> | null;
+  keyValue?: Record<string, unknown> | null;
+};
+
 class CartRepository {
   async getByUserId(userId) {
     if (!userId) return null;
@@ -50,12 +57,13 @@ class CartRepository {
         sessionId: userId ? undefined : sessionId
       });
     } catch (error) {
+      const repoError = error as CartRepoError;
       // Handle duplicate key error (race condition)
-      if (error.code === 11000) {
+      if (repoError.code === 11000) {
         cart = await Cart.findOne(query).lean();
         if (cart) return cart;
       }
-      throw error;
+      throw repoError;
     }
 
     return cart.toObject ? cart.toObject() : cart;
@@ -76,8 +84,9 @@ class CartRepository {
         new: true,
       }).lean();
     } catch (err) {
+      const repoError = err as CartRepoError;
       // Recover from race/duplicate scenarios by retrying idempotent update once.
-      if (err?.code === 11000) {
+      if (repoError?.code === 11000) {
         const recovered = await CartItem.findOneAndUpdate(filter, update, {
           upsert: false,
           new: true,
@@ -85,14 +94,14 @@ class CartRepository {
 
         if (recovered) return recovered;
 
-        const keyPattern = err?.keyPattern || null;
-        const keyValue = err?.keyValue || null;
-        const conflict = new Error('Cart index conflict detected. Please sync indexes and retry.');
+        const keyPattern = repoError?.keyPattern || null;
+        const keyValue = repoError?.keyValue || null;
+        const conflict = new Error('Cart index conflict detected. Please sync indexes and retry.') as CartRepoError;
         conflict.code = 'CART_INDEX_CONFLICT';
         conflict.details = { keyPattern, keyValue };
         throw conflict;
       }
-      throw err;
+      throw repoError;
     }
   }
 

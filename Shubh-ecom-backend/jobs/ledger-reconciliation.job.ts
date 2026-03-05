@@ -32,7 +32,7 @@ module.exports = async function reconcilePayments() {
         orderId: order._id,
       });
 
-      await orderService.confirmOrder(order._id);
+      await orderService.markPaid(order._id);
       await invoiceService.generateFromOrder(order);
       continue;
     }

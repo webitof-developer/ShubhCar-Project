@@ -88,7 +88,7 @@ function PaymentProcessInner() {
         const result = await processRazorpayPayment(accessToken, orderData, userDetails);
 
         if (result.success) {
-          handleSuccess(result.details, orderData);
+          await handleSuccess(result.details, orderData);
         }
       } catch (err) {
         console.error('[PAYMENT] Failed:', err);
@@ -102,25 +102,47 @@ function PaymentProcessInner() {
   }, [orderId, paymentMethod, accessToken, user]); // Run once on mount (guarded by ref)
 
   const handleSuccess = async (details, orderData) => {
-    setStatus('success');
-    toast.success('Payment Successful!');
+    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
     if (details?.internalPaymentId && accessToken) {
-      try {
-        sessionStorage.setItem('lastPayment', JSON.stringify({
-          paymentId: details.internalPaymentId,
-          orderId: orderData?.orderId,
-          gateway: 'razorpay',
-          transactionId: details.razorpay_payment_id || null,
-          createdAt: new Date().toISOString(),
-        }));
-        // Extract Razorpay payment ID and send it to backend
-        const razorpayPaymentId = details.razorpay_payment_id;
-        await confirmPayment(accessToken, details.internalPaymentId, razorpayPaymentId);
-      } catch (confirmError) {
-        console.error('[PAYMENT] Confirm failed:', confirmError);
+      sessionStorage.setItem('lastPayment', JSON.stringify({
+        paymentId: details.internalPaymentId,
+        orderId: orderData?.orderId,
+        gateway: 'razorpay',
+        transactionId: details.razorpay_payment_id || null,
+        createdAt: new Date().toISOString(),
+      }));
+
+      const razorpayPaymentId = details.razorpay_payment_id;
+      let verified = false;
+
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        try {
+          const verifyRes = await confirmPayment(
+            accessToken,
+            details.internalPaymentId,
+            razorpayPaymentId,
+          );
+          const normalizedStatus = String(verifyRes?.status || '').toLowerCase();
+          const orderPaymentStatus = String(verifyRes?.orderPaymentStatus || '').toLowerCase();
+          if (normalizedStatus === 'success' || orderPaymentStatus === 'paid') {
+            verified = true;
+            break;
+          }
+        } catch (confirmError) {
+          console.error('[PAYMENT] Confirm attempt failed:', confirmError);
+        }
+
+        await sleep(1200);
+      }
+
+      if (!verified) {
+        throw new Error('Payment verification is pending. Please retry once.');
       }
     }
+
+    setStatus('success');
+    toast.success('Payment Successful!');
 
     // Store order data for Thank You page (crucial for display)
     if (orderData) {
@@ -180,7 +202,7 @@ function PaymentProcessInner() {
       );
 
       if (result.success) {
-        handleSuccess(result.details, orderData);
+        await handleSuccess(result.details, orderData);
       }
     } catch (err) {
       console.error('[PAYMENT] Retry failed:', err);

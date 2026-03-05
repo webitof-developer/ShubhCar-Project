@@ -162,6 +162,27 @@ exports.listPublicQuerySchema = Joi.object({
     .default('created_desc'),
 });
 
+exports.searchCatalogQuerySchema = Joi.object({
+  ...paginationQuerySchema,
+  q: searchQuerySchema.optional(),
+  search: searchQuerySchema.optional(),
+  categoryId: Joi.string().trim().optional(),
+  manufacturerBrand: Joi.string().trim().optional(),
+  vehicleBrand: Joi.string().trim().optional(),
+  year: Joi.string().trim().optional(),
+  productType: Joi.string().trim().optional(),
+  vehicle_id: Joi.string().trim().optional(),
+  sort: Joi.string()
+    .valid(
+      'relevance',
+      'created_desc',
+      'created_asc',
+      'price_asc',
+      'price_desc',
+    )
+    .default('relevance'),
+});
+
 exports.adminListQuerySchema = Joi.object({
   ...paginationQuerySchema,
   status: Joi.string()

@@ -14,6 +14,7 @@ const {
   PAYMENT_RECORD_STATUS,
   PAYMENT_STATUS,
 } = require('../../constants/paymentStatus');
+const { ORDER_STATUS } = require('../../constants/orderStatus');
 
 const { paymentRetryQueue } = require('../../queues/paymentRetry.queue');
 
@@ -59,7 +60,13 @@ class PaymentsService {
         error('Access denied - order belongs to another user', 403);
       }
 
-      if (order.orderStatus !== 'created') {
+      const paymentEligibleStatuses = new Set([
+        ORDER_STATUS.CREATED,
+        ORDER_STATUS.PENDING_PAYMENT,
+        ORDER_STATUS.PLACED,
+      ]);
+
+      if (!paymentEligibleStatuses.has(order.orderStatus)) {
         error('Order not eligible for payment', 409);
       }
 
@@ -394,15 +401,15 @@ class PaymentsService {
       normalizedStatus: normalized,
     });
 
-    if (normalized === 'success') {
-      if (payment.status !== PAYMENT_RECORD_STATUS.SUCCESS) {
-        await paymentRepo.markSuccess(payment._id, {
-          transactionId: gatewayStatus.transactionId,
-        });
-      }
-      if (order.paymentStatus !== PAYMENT_STATUS.PAID) {
-        await orderService.confirmOrder(order._id);
-      }
+      if (normalized === 'success') {
+        if (payment.status !== PAYMENT_RECORD_STATUS.SUCCESS) {
+          await paymentRepo.markSuccess(payment._id, {
+            transactionId: gatewayStatus.transactionId,
+          });
+        }
+        if (order.paymentStatus !== PAYMENT_STATUS.PAID) {
+          await orderService.markPaid(order._id);
+        }
     } else if (normalized === 'failed') {
       if (payment.status !== PAYMENT_RECORD_STATUS.FAILED) {
         await paymentRepo.markFailed(payment._id, {

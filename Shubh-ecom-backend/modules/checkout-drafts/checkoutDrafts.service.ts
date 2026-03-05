@@ -226,7 +226,7 @@ class CheckoutDraftService {
           shippingFee: roundCurrency(shippingFee),
           grandTotal: roundCurrency(grandTotal),
           paymentStatus: PAYMENT_STATUS.PENDING,
-          orderStatus: ORDER_STATUS.CREATED,
+          orderStatus: ORDER_STATUS.PENDING_PAYMENT,
           paymentMethod: null,
           placedAt: new Date(),
         },
@@ -429,7 +429,11 @@ class CheckoutDraftService {
       error('Order is already paid', 409);
     }
 
-    if (order.orderStatus !== ORDER_STATUS.CREATED) {
+    if (
+      order.orderStatus !== ORDER_STATUS.CREATED &&
+      order.orderStatus !== ORDER_STATUS.PENDING_PAYMENT &&
+      order.orderStatus !== ORDER_STATUS.PLACED
+    ) {
       error('Order is no longer eligible for retry', 409);
     }
 

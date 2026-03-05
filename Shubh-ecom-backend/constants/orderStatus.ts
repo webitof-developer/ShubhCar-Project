@@ -29,7 +29,7 @@ module.exports = {
     'refunded',
   ],
   ADMIN_STATUS_UPDATES: [
-    'pending_payment',
+    'created',
     'placed',
     'confirmed',
     'shipped',

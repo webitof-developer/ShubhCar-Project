@@ -385,6 +385,123 @@ export const searchProducts = async (query, options = {}) => {
   }
 };
 
+export const searchCatalogProducts = async ({
+  query,
+  page = 1,
+  limit = 20,
+  categoryId,
+  productType,
+  manufacturerBrand,
+  vehicleBrand,
+  year,
+  vehicleIds,
+  sort = 'relevance',
+  fetchOptions,
+} = {}) => {
+  const q = String(query || '').trim();
+  if (!q) {
+    return {
+      items: [],
+      total: 0,
+      page: 1,
+      limit,
+      totalPages: 0,
+      facets: {
+        productTypes: [],
+        manufacturerBrands: [],
+        vehicleBrands: [],
+        categories: [],
+        years: [],
+      },
+    };
+  }
+
+  const config = getDataSourceConfig('products');
+  const hasVehicleFilter = Array.isArray(vehicleIds) && vehicleIds.length > 0;
+
+  if (config.source === 'demo') {
+    const items = await searchProducts(q, {
+      page,
+      limit,
+      productType,
+      vehicleIds,
+      fetchOptions,
+    });
+    return {
+      items,
+      total: items.length,
+      page,
+      limit,
+      totalPages: items.length ? 1 : 0,
+      facets: {
+        productTypes: [],
+        manufacturerBrands: [],
+        vehicleBrands: [],
+        categories: [],
+        years: [],
+      },
+    };
+  }
+
+  try {
+    const params = new URLSearchParams();
+    params.set('q', q);
+    params.set('page', String(page));
+    params.set('limit', String(limit));
+    params.set('sort', sort);
+    if (categoryId) params.set('categoryId', categoryId);
+    if (productType) params.set('productType', productType);
+    if (manufacturerBrand) params.set('manufacturerBrand', manufacturerBrand);
+    if (vehicleBrand) params.set('vehicleBrand', vehicleBrand);
+    if (year) params.set('year', year);
+    if (hasVehicleFilter) params.set('vehicle_id', vehicleIds.join(','));
+
+    const url = `${baseUrl}/products/search?${params.toString()}`;
+    const data = await api.get(url, fetchOptions);
+    const payload = unwrapPayload(data) || {};
+    return {
+      items: normalizeProductList(payload.items || []),
+      total: Number(payload.total || 0),
+      page: Number(payload.page || page),
+      limit: Number(payload.limit || limit),
+      totalPages: Number(payload.totalPages || 0),
+      facets: payload.facets || {
+        productTypes: [],
+        manufacturerBrands: [],
+        vehicleBrands: [],
+        categories: [],
+        years: [],
+      },
+    };
+  } catch (error) {
+    console.error('[PRODUCT_SERVICE] searchCatalogProducts failed:', {
+      message: error.message,
+      status: error.status,
+    });
+    const fallbackItems = await searchProducts(q, {
+      page,
+      limit,
+      productType,
+      vehicleIds,
+      fetchOptions,
+    });
+    return {
+      items: fallbackItems,
+      total: fallbackItems.length,
+      page,
+      limit,
+      totalPages: fallbackItems.length ? 1 : 0,
+      facets: {
+        productTypes: [],
+        manufacturerBrands: [],
+        vehicleBrands: [],
+        categories: [],
+        years: [],
+      },
+    };
+  }
+};
+
 export const getRelatedProducts = async (
   productId,
   limit = 4,

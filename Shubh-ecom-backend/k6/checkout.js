@@ -230,9 +230,9 @@ export default function (data) {
 }
 
 export function teardown(data) {
-  console.log('=== Checkout Load Test Complete ===');
-  console.log('Verify:');
-  console.log('1. missing_address_id == 0 (CRITICAL)');
-  console.log('2. p95 checkout_duration < 800ms');
-  console.log('3. error rate < 2%');
+  console.error('=== Checkout Load Test Complete ===');
+  console.error('Verify:');
+  console.error('1. missing_address_id == 0 (CRITICAL)');
+  console.error('2. p95 checkout_duration < 800ms');
+  console.error('3. error rate < 2%');
 }

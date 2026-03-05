@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "nodemon start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "check:no-console": "powershell -NoProfile -Command \"if (rg -n 'console\\.(log|debug|info)\\(' src) { exit 1 } else { exit 0 }\""
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -43,7 +44,6 @@
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.6.0",
-    "html2pdf.js": "^0.14.0",
     "input-otp": "^1.4.2",
     "js-cookie": "^3.0.5",
     "lucide-react": "^0.575.0",
@@ -54,6 +54,7 @@
     "react-day-picker": "^9.13.2",
     "react-dom": "^19.2.4",
     "react-hook-form": "^7.71.2",
+    "react-to-print": "^3.2.0",
     "react-resizable-panels": "^4.6.5",
     "recharts": "^2.15.4",
     "sonner": "^2.0.7",

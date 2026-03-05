@@ -3,7 +3,7 @@
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import { Card, CardBody, Col, Row, Spinner } from 'react-bootstrap'
 
-const CouponsBoxs = ({ coupons = [], loading = false }) => {
+const CouponsBoxes = ({ coupons = [], loading = false }) => {
   const safeCoupons = Array.isArray(coupons) ? coupons : []
   // Calculate stats from props
   const now = new Date()
@@ -71,4 +71,4 @@ const CouponsBoxs = ({ coupons = [], loading = false }) => {
   )
 }
 
-export default CouponsBoxs
+export default CouponsBoxes

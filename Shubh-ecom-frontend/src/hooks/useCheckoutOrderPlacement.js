@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import APP_CONFIG from '@/config/app.config';
 import * as orderService from '@/services/orderService';
 import * as cartService from '@/services/cartService';
+import * as checkoutDraftService from '@/services/checkoutDraftService';
 import { validateCart, handleError } from '@/utils/errorHandler';
 
 export const useCheckoutOrderPlacement = ({
@@ -125,11 +126,6 @@ export const useCheckoutOrderPlacement = ({
       const isOnlinePayment = paymentMethod !== 'cod';
 
       if (isOnlinePayment) {
-
-        toast.loading('Creating your order...', {
-          description: 'Please wait',
-        });
-
         const order = await orderService.placeOrder(accessToken, orderPayload);
 
         sessionStorage.setItem(
@@ -143,8 +139,6 @@ export const useCheckoutOrderPlacement = ({
             items: items.length,
           }),
         );
-
-        toast.dismiss();
         setRedirectingAfterOrder(true);
         const draftQuery = checkoutDraftId ? `&draftId=${encodeURIComponent(checkoutDraftId)}` : '';
         router.push(`/payment/process?orderId=${order._id}&method=${paymentMethod}${draftQuery}`);
@@ -173,6 +167,41 @@ export const useCheckoutOrderPlacement = ({
     } catch (error) {
       console.error('[CHECKOUT] Order placement failed:', error);
       setRedirectingAfterOrder(false);
+      const isDraftAlreadyProcessed =
+        Number(error?.status) === 409 &&
+        (String(error?.code || '').toUpperCase() === 'DRAFT_INVALID' ||
+          /checkout draft already processed/i.test(String(error?.message || '')));
+      const isOnlinePayment = paymentMethod !== 'cod';
+
+      if (isOnlinePayment && checkoutDraftId && accessToken && isDraftAlreadyProcessed) {
+        try {
+          const draft = await checkoutDraftService.getDraft(accessToken, checkoutDraftId);
+          const draftOrderId = draft?.orderId ? String(draft.orderId) : null;
+          const draftStatus = String(draft?.status || '').toLowerCase();
+
+          if (draftOrderId && (draftStatus === 'pending' || draftStatus === 'paid')) {
+            sessionStorage.setItem(
+              'pendingOrder',
+              JSON.stringify({
+                orderId: draftOrderId,
+                paymentMethod,
+                checkoutDraftId,
+                total: summary?.grandTotal || 0,
+                items: items.length,
+              }),
+            );
+
+            toast.info('Order already created. Continuing payment...');
+            setRedirectingAfterOrder(true);
+            router.push(
+              `/payment/process?orderId=${encodeURIComponent(draftOrderId)}&method=${paymentMethod}&draftId=${encodeURIComponent(checkoutDraftId)}`,
+            );
+            return;
+          }
+        } catch (draftLoadError) {
+          console.error('[CHECKOUT] Failed to recover processed draft flow:', draftLoadError);
+        }
+      }
 
       const normalizedError = handleError(error, {
         page: 'checkout',

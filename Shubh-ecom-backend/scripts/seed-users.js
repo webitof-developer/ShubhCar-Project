@@ -63,7 +63,7 @@ async function seed() {
       process.exit(1);
     }
 
-    console.log('🔌 Connecting to MongoDB...');
+    console.error('🔌 Connecting to MongoDB...');
     
     // Set strictQuery before connecting
     mongoose.set('strictQuery', true);
@@ -73,7 +73,7 @@ async function seed() {
       serverSelectionTimeoutMS: 10000,
     });
     
-    console.log('✅ Connected to MongoDB');
+    console.error('✅ Connected to MongoDB');
 
     let created = 0;
     let skipped = 0;
@@ -83,7 +83,7 @@ async function seed() {
       const existingUser = await User.findOne({ email: userData.email }).lean();
 
       if (existingUser) {
-        console.log(`⏭️  Skipped: ${userData.email} (already exists)`);
+        console.error(`⏭️  Skipped: ${userData.email} (already exists)`);
         skipped++;
         continue;
       }
@@ -98,19 +98,19 @@ async function seed() {
         passwordHash,
       });
 
-      console.log(`✅ Created: ${userData.email} (${userData.role})`);
+      console.error(`✅ Created: ${userData.email} (${userData.role})`);
       created++;
     }
 
-    console.log('\n📊 Seeding Summary:');
-    console.log(`   ✅ Created: ${created}`);
-    console.log(`   ⏭️  Skipped: ${skipped}`);
-    console.log(`   📝 Total: ${seedUsers.length}`);
+    console.error('\n📊 Seeding Summary:');
+    console.error(`   ✅ Created: ${created}`);
+    console.error(`   ⏭️  Skipped: ${skipped}`);
+    console.error(`   📝 Total: ${seedUsers.length}`);
 
     // Disconnect
     await mongoose.disconnect();
-    console.log('\n🔌 Disconnected from MongoDB');
-    console.log('✨ Seeding completed successfully!\n');
+    console.error('\n🔌 Disconnected from MongoDB');
+    console.error('✨ Seeding completed successfully!\n');
     
     process.exit(0);
   } catch (error) {

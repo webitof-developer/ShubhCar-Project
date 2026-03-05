@@ -1,6 +1,8 @@
 // src/utils/storage.js
 /**
- * Cookie-based storage wrapper (replaces localStorage).
+ * Storage wrapper:
+ * - Auth/session keys use localStorage (to avoid conflict with backend httpOnly cookies).
+ * - Other keys use js-cookie with in-memory fallback.
  *
  * Uses js-cookie as primary layer, with in-memory fallback for:
  *  - SSR (server side where `document` is unavailable)
@@ -9,7 +11,7 @@
  * Exported API is identical to the old localStorage wrapper so all
  * callers (AuthContext, CartContext, etc.) need zero changes.
  *
- * Cookie options:
+ * Cookie options (non-auth keys only):
  *  - expires : 7 days
  *  - sameSite: 'Lax'
  *  - secure  : true in production (HTTPS)
@@ -21,6 +23,12 @@ import Cookies from 'js-cookie';
 const memoryStorage = new Map();
 
 const isBrowser = () => typeof window !== 'undefined';
+const LOCAL_STORAGE_KEYS = new Set([
+  'accessToken',
+  'refreshToken',
+  'user',
+  'cart_items',
+]);
 
 const COOKIE_OPTIONS = {
   expires: 7,          // days
@@ -57,7 +65,7 @@ const deserializeValue = (raw) => {
 export const getStorageItem = (key) => {
   try {
     if (isBrowser()) {
-      if (key === 'cart_items') {
+      if (LOCAL_STORAGE_KEYS.has(key)) {
         const raw = window.localStorage.getItem(key);
         if (raw !== null) return deserializeValue(raw);
         return memoryStorage.get(key) ?? null;
@@ -80,7 +88,7 @@ export const setStorageItem = (key, value) => {
   try {
     const serialized = serializeValue(value);
     if (isBrowser()) {
-      if (key === 'cart_items') {
+      if (LOCAL_STORAGE_KEYS.has(key)) {
         window.localStorage.setItem(key, serialized);
       } else {
         Cookies.set(key, serialized, COOKIE_OPTIONS);
@@ -102,7 +110,7 @@ export const setStorageItem = (key, value) => {
 export const removeStorageItem = (key) => {
   try {
     if (isBrowser()) {
-      if (key === 'cart_items') {
+      if (LOCAL_STORAGE_KEYS.has(key)) {
         window.localStorage.removeItem(key);
       } else {
         Cookies.remove(key);
@@ -134,7 +142,7 @@ export const clearStorage = () => {
   try {
     if (isBrowser()) {
       MANAGED_KEYS.forEach((k) => {
-        if (k === 'cart_items') {
+        if (LOCAL_STORAGE_KEYS.has(k)) {
           window.localStorage.removeItem(k);
         } else {
           Cookies.remove(k);

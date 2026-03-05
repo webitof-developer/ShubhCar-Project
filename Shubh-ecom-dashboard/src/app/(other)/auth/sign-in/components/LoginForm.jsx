@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Button, FormCheck } from 'react-bootstrap'
 import useSignIn from './useSignIn'
 import PasswordFormInput from '@/components/form/PasswordFormInput'
-const LoginFrom = () => {
+const LoginForm = () => {
   const { loading, login, control } = useSignIn()
   return (
     <form className="authentication-form auth-modern__form" onSubmit={login}>
@@ -45,4 +45,4 @@ const LoginFrom = () => {
     </form>
   )
 }
-export default LoginFrom
+export default LoginForm

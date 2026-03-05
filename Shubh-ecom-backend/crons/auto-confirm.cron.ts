@@ -4,6 +4,7 @@ const { redis, redisEnabled } = require('../config/redis');
 const Order = require('../models/Order.model');
 const orderService = require('../modules/orders/orders.service');
 const { ORDER_STATUS } = require('../constants/orderStatus');
+const { PAYMENT_STATUS } = require('../constants/paymentStatus');
 
 const LOCK_KEY = 'auto_confirm:lock';
 
@@ -12,6 +13,7 @@ async function processAutoConfirmOrders() {
   
   const ordersToConfirm = await Order.find({
     orderStatus: ORDER_STATUS.PLACED,
+    paymentStatus: PAYMENT_STATUS.PAID,
     placedAt: { $lte: sixHoursAgo },
   });
 

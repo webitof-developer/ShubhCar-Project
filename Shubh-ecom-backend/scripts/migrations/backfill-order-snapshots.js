@@ -17,7 +17,7 @@ const Product = require('../../models/Product.model');
 const BATCH_SIZE = 100; // Process items in batches
 
 async function backfillOrderSnapshots() {
-  console.log('🔄 Starting OrderItem snapshot backfill migration...\n');
+  console.error('🔄 Starting OrderItem snapshot backfill migration...\n');
 
   try {
     // Connect to MongoDB (assuming DATABASE_URL env var)
@@ -26,7 +26,7 @@ async function backfillOrderSnapshots() {
     }
 
     await mongoose.connect(process.env.DATABASE_URL);
-    console.log('✅ Connected to MongoDB\n');
+    console.error('✅ Connected to MongoDB\n');
 
     // Find all OrderItems without productName (missing snapshots)
     const totalItems = await OrderItem.countDocuments({ 
@@ -34,13 +34,13 @@ async function backfillOrderSnapshots() {
     });
 
     if (totalItems === 0) {
-      console.log('✅ All OrderItems already have product snapshots. No migration needed!\n');
+      console.error('✅ All OrderItems already have product snapshots. No migration needed!\n');
       await mongoose.disconnect();
       return;
     }
 
-    console.log(`📊 Found ${totalItems} OrderItems needing snapshot data\n`);
-    console.log('Starting backfill process...\n');
+    console.error(`📊 Found ${totalItems} OrderItems needing snapshot data\n`);
+    console.error('Starting backfill process...\n');
 
     let processedCount = 0;
     let successCount = 0;
@@ -69,7 +69,7 @@ async function backfillOrderSnapshots() {
               productDescription: null,
             };
             deletedProductCount++;
-            console.log(`⚠️  Product not found for OrderItem ${item._id}, using fallback`);
+            console.error(`⚠️  Product not found for OrderItem ${item._id}, using fallback`);
           } else {
             // Product exists - snapshot its data
             let primaryImageUrl = null;
@@ -98,7 +98,7 @@ async function backfillOrderSnapshots() {
           processedCount++;
 
           if (processedCount % 50 === 0) {
-            console.log(`Progress: ${processedCount}/${totalItems} items processed`);
+            console.error(`Progress: ${processedCount}/${totalItems} items processed`);
           }
         } catch (error) {
           failedCount++;
@@ -108,19 +108,19 @@ async function backfillOrderSnapshots() {
       }
     }
 
-    console.log('\n' + '='.repeat(60));
-    console.log('📊 Migration Summary:');
-    console.log('='.repeat(60));
-    console.log(`Total items processed: ${processedCount}`);
-    console.log(`✅ Successfully updated: ${successCount}`);
-    console.log(`⚠️  Deleted products (fallback used): ${deletedProductCount}`);
-    console.log(`❌ Failed: ${failedCount}`);
-    console.log('='.repeat(60) + '\n');
+    console.error('\n' + '='.repeat(60));
+    console.error('📊 Migration Summary:');
+    console.error('='.repeat(60));
+    console.error(`Total items processed: ${processedCount}`);
+    console.error(`✅ Successfully updated: ${successCount}`);
+    console.error(`⚠️  Deleted products (fallback used): ${deletedProductCount}`);
+    console.error(`❌ Failed: ${failedCount}`);
+    console.error('='.repeat(60) + '\n');
 
     if (failedCount > 0) {
-      console.log('⚠️  Some items failed to migrate. Please review the errors above.');
+      console.error('⚠️  Some items failed to migrate. Please review the errors above.');
     } else {
-      console.log('🎉 Migration completed successfully!\n');
+      console.error('🎉 Migration completed successfully!\n');
     }
 
   } catch (error) {
@@ -128,21 +128,21 @@ async function backfillOrderSnapshots() {
     process.exit(1);
   } finally {
     await mongoose.disconnect();
-    console.log('✅ Disconnected from MongoDB');
+    console.error('✅ Disconnected from MongoDB');
   }
 }
 
 // Verify before running
-console.log('⚠️  WARNING: This migration will update OrderItem documents in the database.');
-console.log('Make sure you have:');
-console.log('  1. Deployed the updated OrderItem model with snapshot fields');
-console.log('  2. Backed up your database');
-console.log('  3. Tested on a staging environment\n');
+console.error('⚠️  WARNING: This migration will update OrderItem documents in the database.');
+console.error('Make sure you have:');
+console.error('  1. Deployed the updated OrderItem model with snapshot fields');
+console.error('  2. Backed up your database');
+console.error('  3. Tested on a staging environment\n');
 
 if (process.argv.includes('--confirm')) {
   backfillOrderSnapshots();
 } else {
-  console.log('❌ Migration not run. Add --confirm flag to proceed:');
-  console.log('   node scripts/migrations/backfill-order-snapshots.js --confirm\n');
+  console.error('❌ Migration not run. Add --confirm flag to proceed:');
+  console.error('   node scripts/migrations/backfill-order-snapshots.js --confirm\n');
   process.exit(0);
 }

@@ -209,7 +209,7 @@ export const CartProvider = ({ children }) => {
     }
 
     // Log sync for debugging
-    // console.log('[CART_CONTEXT] Synced with backend');
+    // console.error('[CART_CONTEXT] Synced with backend');
   }, []);
 
   /* ... useEffects ... */

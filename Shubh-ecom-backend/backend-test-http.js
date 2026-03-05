@@ -29,7 +29,7 @@ function request(options, data) {
 
 async function test() {
   try {
-    console.log('Logging in...');
+    console.error('Logging in...');
     const loginData = JSON.stringify({
       email: 'admin@spareparts.com',
       password: 'Admin@123',
@@ -50,11 +50,11 @@ async function test() {
     );
 
     const token = loginRes.data?.accessToken || loginRes.token;
-    console.log('Login successful. Token obtained.');
+    console.error('Login successful. Token obtained.');
 
     if (!token) throw new Error('No token found in login response');
 
-    console.log('Fetching salesmen...');
+    console.error('Fetching salesmen...');
     const salesmenRes = await request({
       hostname: 'localhost',
       port: 5000,
@@ -64,21 +64,21 @@ async function test() {
     });
 
     const salesmen = salesmenRes.data?.items || salesmenRes.data || [];
-    console.log(`Found ${salesmen.length} salesmen.`);
+    console.error(`Found ${salesmen.length} salesmen.`);
 
     // Find a salesman to test with, or just test dashboard stats without filter if none
     let salesmanId = null;
     if (salesmen.length > 0) {
       salesmanId = salesmen[0]._id || salesmen[0].id;
-      console.log(`Testing with Salesman ID: ${salesmanId}`);
+      console.error(`Testing with Salesman ID: ${salesmanId}`);
     } else {
-      console.log(
+      console.error(
         'No salesmen found. Testing admin dashboard stats without filter.',
       );
     }
 
     const statsPath = `/api/v1/analytics/dashboard${salesmanId ? `?salesmanId=${salesmanId}` : ''}`;
-    console.log(`Fetching stats from ${statsPath}...`);
+    console.error(`Fetching stats from ${statsPath}...`);
 
     const statsRes = await request({
       hostname: 'localhost',
@@ -88,7 +88,7 @@ async function test() {
       headers: { Authorization: `Bearer ${token}` },
     });
 
-    console.log('Dashboard Stats:', JSON.stringify(statsRes.data, null, 2));
+    console.error('Dashboard Stats:', JSON.stringify(statsRes.data, null, 2));
   } catch (error) {
     console.error('Test failed:', error.message);
   }

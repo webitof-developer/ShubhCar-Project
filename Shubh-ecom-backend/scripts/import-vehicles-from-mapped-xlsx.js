@@ -277,8 +277,8 @@ async function run(inputPath) {
 
   await mongoose.disconnect();
 
-  console.log('Import completed');
-  console.log(JSON.stringify(stats, null, 2));
+  console.error('Import completed');
+  console.error(JSON.stringify(stats, null, 2));
 }
 
 const inputArg = process.argv[2] ? path.resolve(process.argv[2]) : DEFAULT_INPUT;

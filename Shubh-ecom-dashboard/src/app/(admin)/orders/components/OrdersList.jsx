@@ -566,6 +566,8 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
     country: INDIA_COUNTRY.code,
   })
 
+  const isValidManualOrderPhone = (value) => /^\d{10}$/.test(String(value || '').trim())
+
   const requiredLabel = (text) => (
     <span>
       {text} <span className="text-danger">*</span>
@@ -605,6 +607,41 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
     }
   }
 
+  const getManualOrderErrorMessage = (err) => {
+    const status = Number(err?.status || err?.data?.statusCode || 0)
+    const backendMessage = String(
+      err?.data?.message || err?.message || '',
+    ).trim()
+
+    if (status === 400) {
+      return backendMessage || 'Validation failed. Please verify customer, items, quantities, and addresses.'
+    }
+    if (status === 401) {
+      return 'Your session has expired. Please sign in again and retry.'
+    }
+    if (status === 403) {
+      return backendMessage || 'You are not allowed to create this manual order.'
+    }
+    if (status === 404) {
+      return backendMessage || 'Some selected data was not found. Refresh and try again.'
+    }
+    if (status === 409) {
+      return backendMessage || 'Order could not be created due to a conflict (stock, coupon, or order state).'
+    }
+    if (status >= 500) {
+      return 'Server error while creating manual order. Please retry in a moment.'
+    }
+
+    if (
+      err?.name === 'TypeError' ||
+      /network|failed to fetch/i.test(backendMessage)
+    ) {
+      return 'Network error while creating manual order. Check connection and try again.'
+    }
+
+    return backendMessage || 'Unable to create manual order. Please review details and try again.'
+  }
+
   const handleCreateOrder = async (e) => {
     e.preventDefault()
     setCreateError('')
@@ -629,6 +666,17 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
       setCreateError('Item quantities must be at least 1')
       return
     }
+
+    if (!isValidManualOrderPhone(createForm.shippingAddress.phone)) {
+      setCreateError('Shipping phone must be exactly 10 digits (numbers only)')
+      return
+    }
+
+    if (!createForm.billingSameAsShipping && !isValidManualOrderPhone(createForm.billingAddress.phone)) {
+      setCreateError('Billing phone must be exactly 10 digits (numbers only)')
+      return
+    }
+
     if (createForm.paymentMethod === 'razorpay' && !createForm.paymentCompleted) {
       setCreateError('Razorpay order can only be created after payment is completed')
       return
@@ -675,7 +723,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
       setCouponState({ loading: false, error: '', discount: 0 })
       fetchOrders()
     } catch (error) {
-      setCreateError(error.message || 'Failed to create order')
+      setCreateError(getManualOrderErrorMessage(error))
     } finally {
       setCreateSaving(false)
     }
@@ -1001,7 +1049,8 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
     <>
       {createError && (
         <Alert variant="danger" className="py-2">
-          {createError}
+          <div className="fw-semibold">Manual order creation failed</div>
+          <div className="small mt-1">{createError}</div>
         </Alert>
       )}
 
@@ -1381,6 +1430,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                       <Form.Control
                         type="tel"
                         inputMode="numeric"
+                        minLength={10}
                         maxLength={10}
                         value={createForm.shippingAddress.phone}
                         onChange={(e) => {
@@ -1508,6 +1558,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                         <Form.Control
                           type="tel"
                           inputMode="numeric"
+                          minLength={10}
                           maxLength={10}
                           value={createForm.billingAddress.phone}
                           onChange={(e) => {

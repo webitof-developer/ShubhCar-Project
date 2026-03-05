@@ -113,7 +113,7 @@ const processRazorpayInline = async (payload, requestId) => {
 
   if (order) {
 // @ts-ignore
-    await orderService.confirmOrder(payment.orderId);
+    await orderService.markPaid(payment.orderId);
     await invoiceService.generateFromOrder(order);
   }
 };

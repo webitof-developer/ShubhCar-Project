@@ -4,7 +4,7 @@ import logger from '@/lib/logger'
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import PageTitle from '@/components/PageTitle'
-import CouponsBoxs from './components/CouponsBoxes'
+import CouponsBoxes from './components/CouponsBoxes'
 import CouponsDataList from './components/CouponsDataList'
 import couponService from '@/services/couponService'
 
@@ -43,7 +43,7 @@ const CouponsListPage = () => {
   return (
     <>
       <PageTitle title="COUPONS" />
-      <CouponsBoxs coupons={coupons} loading={loading} />
+      <CouponsBoxes coupons={coupons} loading={loading} />
       <CouponsDataList 
         coupons={coupons} 
         setCoupons={setCoupons}

@@ -99,6 +99,8 @@ export const placeOrder = async (accessToken, orderData) => {
     if (!response.ok || body?.success === false) {
       const err = new Error(errorMessage);
       err.status = response.status;
+      err.code = body?.code || null;
+      err.details = body?.details || null;
       err.statusText = response.statusText;
       err.url = response.url;
       err.responseBody = body;

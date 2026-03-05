@@ -53,6 +53,11 @@ const schema = Joi.object({
 
   METRICS_TOKEN: Joi.string().optional(),
 
+  ELASTICSEARCH_NODE: Joi.string().uri().optional(),
+  ELASTICSEARCH_USERNAME: Joi.string().optional(),
+  ELASTICSEARCH_PASSWORD: Joi.string().optional(),
+  ELASTICSEARCH_INDEX_PRODUCTS: Joi.string().optional(),
+
   LOG_LEVEL: Joi.string().default('info'),
 }).unknown();
 

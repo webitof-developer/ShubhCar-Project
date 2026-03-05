@@ -29,8 +29,13 @@ import IconifyIcon from '@/components/wrappers/IconifyIcon'
  *   accept: string,        // For file: accepted file types
  *   min: number,           // For number: min value
  *   max: number,           // For number: max value
+ *   minLength: number,     // For input: min length
+ *   maxLength: number,     // For input: max length
+ *   inputMode: string,     // For input: numeric/email/etc
+ *   pattern: string,       // For input: regex pattern hint
  *   disabled: boolean,     // Whether field is disabled
  *   helpText: string,      // Help text below field
+ *   normalize: function,   // Input normalize fn: (rawValue) => normalizedValue
  *   render: function,      // Custom render function (formData, setFormData) => ReactNode
  *   validate: function,    // Custom validation (value) => error message or null
  * }
@@ -148,6 +153,8 @@ const CRUDModal = ({
     onSubmit(formData)
   }
 
+  const dirty = isDirty()
+
   const renderField = (field) => {
     const value = formData[field.name] ?? ''
     const hasError = !!validationErrors[field.name]
@@ -231,12 +238,22 @@ const CRUDModal = ({
         <Form.Control
           type={field.type || 'text'}
           value={value}
-          onChange={(e) => handleChange(field.name, field.type === 'number' ? parseFloat(e.target.value) || '' : e.target.value)}
+          onChange={(e) => {
+            const rawValue = field.type === 'number' ? parseFloat(e.target.value) || '' : e.target.value
+            const normalizedValue = typeof field.normalize === 'function'
+              ? field.normalize(rawValue)
+              : rawValue
+            handleChange(field.name, normalizedValue)
+          }}
           placeholder={field.placeholder}
           disabled={field.disabled || submitting}
           isInvalid={hasError}
           min={field.min}
           max={field.max}
+          minLength={field.minLength}
+          maxLength={field.maxLength}
+          inputMode={field.inputMode}
+          pattern={field.pattern}
           accept={field.accept}
         />
         {hasError && <Form.Control.Feedback type="invalid">{validationErrors[field.name]}</Form.Control.Feedback>}
@@ -267,7 +284,7 @@ const CRUDModal = ({
           <Button variant="secondary" onClick={onHide} disabled={submitting}>
             Cancel
           </Button>
-          <Button variant="primary" type="submit" disabled={submitting}>
+          <Button variant="primary" type="submit" disabled={submitting || (editMode && !dirty)}>
             {submitting ? (
               <>
                 <Spinner animation="border" size="sm" className="me-2" />

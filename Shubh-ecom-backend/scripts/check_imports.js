@@ -119,7 +119,7 @@ function checkImports(filePath) {
   return errors;
 }
 
-console.log('Scanning for broken imports...');
+console.error('Scanning for broken imports...');
 const allFiles = getAllFiles(ROOT_DIR);
 let totalErrors = 0;
 const allErrors = [];
@@ -142,8 +142,8 @@ allFiles.forEach(file => {
 fs.writeFileSync(path.join(ROOT_DIR, 'import_errors.json'), JSON.stringify(allErrors, null, 2), 'utf8');
 
 if (totalErrors === 0) {
-  console.log('\n✅ No broken imports found!');
+  console.error('\n✅ No broken imports found!');
 } else {
-  console.log(`\nFound ${totalErrors} broken imports. See import_errors.json`);
+  console.error(`\nFound ${totalErrors} broken imports. See import_errors.json`);
   process.exit(1);
 }

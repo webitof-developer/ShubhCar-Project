@@ -47,11 +47,11 @@ const seed = async () => {
       throw new Error('MONGO_URI is not defined in .env');
     }
 
-    console.log('🔌 Connecting to MongoDB...');
+    console.error('🔌 Connecting to MongoDB...');
     await mongoose.connect(mongoUri);
-    console.log(`✅ Connected to DB: ${mongoose.connection.name}`);
-    console.log(`   Host: ${mongoose.connection.host}`);
-    console.log(`   Internal URI: ${mongoUri.substring(0, 20)}...`);
+    console.error(`✅ Connected to DB: ${mongoose.connection.name}`);
+    console.error(`   Host: ${mongoose.connection.host}`);
+    console.error(`   Internal URI: ${mongoUri.substring(0, 20)}...`);
 
     // Define simplified inline schema to bypass model middleware issues
     // Explicitly map to 'users' collection
@@ -80,26 +80,26 @@ const seed = async () => {
     // Prevent overwriting model if already exists (unlikely in script)
     const User = mongoose.models.User || mongoose.model('User', userSchema);
     
-    console.log('🧹 Clearing existing users...');
+    console.error('🧹 Clearing existing users...');
     await User.deleteMany({});
-    console.log('✅ Users collection cleared.');
+    console.error('✅ Users collection cleared.');
 
-    console.log('\n🌱 Starting seed...');
+    console.error('\n🌱 Starting seed...');
 
     for (const user of users) {
-      console.log(`Checking existing user: ${user.email}`);
+      console.error(`Checking existing user: ${user.email}`);
       // Check for existing user
       const existing = await User.findOne({ email: user.email });
       if (existing) {
-        console.log(`⏭️  Skipped: ${user.email} (already exists)`);
+        console.error(`⏭️  Skipped: ${user.email} (already exists)`);
         continue;
       }
 
-      console.log(`Hashing password for: ${user.email}`);
+      console.error(`Hashing password for: ${user.email}`);
       // Hash password
       const passwordHash = await hashPassword(user.password);
 
-      console.log(`Creating user in DB: ${user.email}`);
+      console.error(`Creating user in DB: ${user.email}`);
       // Create new user
       // Removed API restrictions/validation, just direct DB insert
       await User.create({
@@ -119,10 +119,10 @@ const seed = async () => {
         isDeleted: false // REQUIRED for backend model filter
       });
 
-      console.log(`✅ Created: ${user.email} (${user.role})`);
+      console.error(`✅ Created: ${user.email} (${user.role})`);
     }
 
-    console.log('\n✨ Seeding process completed.');
+    console.error('\n✨ Seeding process completed.');
     process.exit(0);
 
   } catch (error) {

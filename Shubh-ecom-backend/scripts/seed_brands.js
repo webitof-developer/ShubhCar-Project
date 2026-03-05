@@ -29,10 +29,10 @@ const brands = [
 
 const seedBrands = async () => {
     try {
-        console.log('Connecting to MongoDB...');
+        console.error('Connecting to MongoDB...');
         await mongoConfig.connectMongo(); // Fixed function name
 
-        console.log(`Seeding ${brands.length} manufacturer brands...`);
+        console.error(`Seeding ${brands.length} manufacturer brands...`);
 
         for (const brand of brands) {
             const slug = brand.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -49,10 +49,10 @@ const seedBrands = async () => {
                 },
                 { upsert: true, new: true }
             );
-            console.log(`Processed: ${brand.name}`);
+            console.error(`Processed: ${brand.name}`);
         }
 
-        console.log('Seeding complete!');
+        console.error('Seeding complete!');
         process.exit(0);
     } catch (error) {
         console.error('Seeding failed:', error);

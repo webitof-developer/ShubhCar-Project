@@ -3,9 +3,9 @@ const cache = require('../cache/category.cache');
 
 async function clear() {
   try {
-    console.log('Clearing categories:roots...');
+    console.error('Clearing categories:roots...');
     await cache.del('categories:roots');
-    console.log('Done.');
+    console.error('Done.');
   } catch (e) {
     console.error(e);
   }

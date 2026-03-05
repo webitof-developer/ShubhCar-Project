@@ -23,13 +23,13 @@ const noop = () => {};
 
 export const logger = {
   /** Verbose debug — dev only */
-  log: isDev ? (...args) => console.log(...args) : noop,
+  log: noop,
 
   /** Informational — dev only */
-  info: isDev ? (...args) => console.info(...args) : noop,
+  info: noop,
 
   /** Warnings — dev only */
-  warn: isDev ? (...args) => console.warn(...args) : noop,
+  warn: noop,
 
   /**
    * Errors — always shown.

@@ -196,8 +196,8 @@ export function teardown(data) {
   // - reservedQty <= stockQty
   // - availableQty = stockQty - reservedQty >= 0
   
-  console.log('=== Cart Concurrency Test Complete ===');
-  console.log('Check metrics to ensure:');
-  console.log('1. insufficient_stock_errors > 0 (system is protecting stock)');
-  console.log('2. oversell_detected == 0 (CRITICAL)');
+  console.error('=== Cart Concurrency Test Complete ===');
+  console.error('Check metrics to ensure:');
+  console.error('1. insufficient_stock_errors > 0 (system is protecting stock)');
+  console.error('2. oversell_detected == 0 (CRITICAL)');
 }

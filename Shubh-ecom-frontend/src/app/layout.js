@@ -8,19 +8,68 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import { GlobalLoader } from '@/components/layout/GlobalLoader';
 import { SiteConfigProvider } from '@/context/SiteConfigContext';
 import { GlobalLoggerInit } from '@/components/layout/GlobalLoggerInit';
+import {
+  SITE_NAME,
+  SITE_DESCRIPTION,
+  absoluteUrl,
+  getSiteUrl,
+} from '@/lib/seo';
 
-// export const metadata = {
-//   title: 'Shubh Car Spares',
-//   description: 'Your trusted source for automotive spare parts',
-// }
+export const metadata = {
+  metadataBase: new URL(getSiteUrl()),
+  title: {
+    default: SITE_NAME,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/favicon.ico',
+  },
+  alternates: {
+    canonical: absoluteUrl('/'),
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_IN',
+    url: absoluteUrl('/'),
+    siteName: SITE_NAME,
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    images: [
+      {
+        url: absoluteUrl('/logo.png'),
+        width: 1200,
+        height: 630,
+        alt: SITE_NAME,
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    images: [absoluteUrl('/logo.png')],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-snippet': -1,
+      'max-image-preview': 'large',
+      'max-video-preview': -1,
+    },
+  },
+};
 
 export default function RootLayout({ children }) {
   const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
   return (
     <html lang="en">
-      <head>
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-      </head>
       <body>
         <GoogleOAuthProvider clientId={googleClientId}>
           <SiteConfigProvider>

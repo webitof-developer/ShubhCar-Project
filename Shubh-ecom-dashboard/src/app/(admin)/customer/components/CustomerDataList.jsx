@@ -26,6 +26,7 @@ import {
 import FormErrorModal from '@/components/forms/FormErrorModal'
 import DataTable from '@/components/shared/DataTable'
 import StatusToggle from '@/components/shared/StatusToggle'
+import { sanitizeIndianMobileInput, validateEmail, validateIndianPhone, validatePersonName } from '@/helpers/validationHelpers'
 
 const extractItems = (payload) => {
   if (Array.isArray(payload)) return payload
@@ -325,15 +326,17 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
     
     if (!formData.firstName?.trim()) {
       errors.firstName = 'First Name is required'
+    } else if (!validatePersonName(formData.firstName)) {
+      errors.firstName = 'First name must be 2-50 letters only'
     }
     
     if (!formData.email?.trim()) {
       errors.email = 'Email is required'
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    } else if (!validateEmail(formData.email)) {
       errors.email = 'Please enter a valid email address'
     }
     
-    if (formData.phone && !/^[6-9]\d{9}$/.test(formData.phone.replace(/\D/g, ''))) {
+    if (formData.phone && !validateIndianPhone(formData.phone)) {
       errors.phone = 'Please enter a valid 10-digit phone number'
     }
     
@@ -378,16 +381,24 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
       setSubmitting(true)
       setModalError(null)
 
+      const normalizedForm = {
+        ...formData,
+        firstName: String(formData.firstName || '').trim(),
+        lastName: String(formData.lastName || '').trim(),
+        email: String(formData.email || '').trim(),
+        phone: sanitizeIndianMobileInput(formData.phone || ''),
+      }
+
       const payload = editMode ? {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        phone: formData.phone,
+        firstName: normalizedForm.firstName,
+        lastName: normalizedForm.lastName,
+        email: normalizedForm.email,
+        phone: normalizedForm.phone,
         customerType: formData.customerType,
         status: formData.status
       }
         : {
-          ...formData,
+          ...normalizedForm,
           role: 'customer'
         }
 
@@ -433,6 +444,12 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
       setSubmitting(false)
     }
   }
+
+  const isEditFormDirty = editMode && initialFormSnapshot
+    ? Object.keys(initialFormSnapshot).some(
+      (key) => String(formData[key] ?? '') !== String(initialFormSnapshot[key] ?? '')
+    )
+    : true
 
   const handleDeleteClick = (customer) => {
     setCustomerToDelete(customer)
@@ -998,7 +1015,7 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => {
-                  const value = e.target.value.replace(/\D/g, '').slice(0, 10)
+                  const value = sanitizeIndianMobileInput(e.target.value)
                   setFormData({ ...formData, phone: value })
                   setTouchedFields({ ...touchedFields, phone: true })
                 }}
@@ -1068,7 +1085,7 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
             <Button variant="secondary" onClick={handleCloseModal}>
               Cancel
             </Button>
-            <Button variant="primary" type="submit" disabled={submitting}>
+            <Button variant="primary" type="submit" disabled={submitting || (editMode && !isEditFormDirty)}>
               {submitting ? (editMode ? 'Updating...' : 'Creating...') : (editMode ? 'Update Customer' : 'Create Customer')}
             </Button>
           </Modal.Footer>

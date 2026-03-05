@@ -22,7 +22,7 @@ const users = [
 ];
 
 async function seedViaAPI() {
-  console.log('🌱 Seeding users via API...\n');
+  console.error('🌱 Seeding users via API...\n');
   
   let created = 0;
   let skipped = 0;
@@ -33,11 +33,11 @@ async function seedViaAPI() {
         headers: { 'Content-Type': 'application/json' },
       });
       
-      console.log(`✅ Created: ${user.email} (${user.role})`);
+      console.error(`✅ Created: ${user.email} (${user.role})`);
       created++;
     } catch (error) {
       if (error.response?.status === 409) {
-        console.log(`⏭️  Skipped: ${user.email} (already exists)`);
+        console.error(`⏭️  Skipped: ${user.email} (already exists)`);
         skipped++;
       } else {
         console.error(`❌ Failed: ${user.email}`, error.response?.data?.message || error.message);
@@ -45,11 +45,11 @@ async function seedViaAPI() {
     }
   }
 
-  console.log('\n📊 Seeding Summary:');
-  console.log(`   ✅ Created: ${created}`);
-  console.log(`   ⏭️  Skipped: ${skipped}`);
-  console.log(`   📝 Total: ${users.length}`);
-  console.log('\n✨ Seeding completed!\n');
+  console.error('\n📊 Seeding Summary:');
+  console.error(`   ✅ Created: ${created}`);
+  console.error(`   ⏭️  Skipped: ${skipped}`);
+  console.error(`   📝 Total: ${users.length}`);
+  console.error('\n✨ Seeding completed!\n');
 }
 
 seedViaAPI().catch(err => {

@@ -10,8 +10,23 @@ import { getProducts } from '@/services/productService';
 import { getRootCategories } from '@/services/categoryService';
 import { getManufacturerBrands } from '@/services/brandService';
 import { getFlashDealNowFromSettings, getFlashDealRangeFromSettings, getPublicSettings } from '@/services/settingsService';
+import { buildPageMetadata } from '@/lib/seo';
 
 export const revalidate = 60;
+
+export const metadata = buildPageMetadata({
+  title: 'Genuine Car Spare Parts Online',
+  description:
+    'Shop OEM, OES, and aftermarket car spare parts with fast delivery and trusted quality support.',
+  path: '/',
+  keywords: [
+    'car spare parts',
+    'auto parts online',
+    'OEM parts',
+    'aftermarket parts',
+    'ShubhCars',
+  ],
+});
 
 const HomeSkeleton = () => {
   return (

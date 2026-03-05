@@ -1,8 +1,3 @@
-const getStoredToken = () => {
-  if (typeof window === 'undefined') return ''
-  return localStorage.getItem('authToken') || ''
-}
-
 const safeJson = async (response) => {
   try {
     return await response.json()
@@ -11,8 +6,8 @@ const safeJson = async (response) => {
   }
 }
 
-const buildHeaders = ({ headers, token, useStoredToken, body, skipContentType }) => {
-  const resolvedToken = token || (useStoredToken ? getStoredToken() : '')
+const buildHeaders = ({ headers, token, body, skipContentType }) => {
+  const resolvedToken = token || ''
   const isFormData = typeof FormData !== 'undefined' && body instanceof FormData
   const contentTypeHeader =
     skipContentType || isFormData ? {} : { 'Content-Type': 'application/json' }
@@ -31,17 +26,17 @@ export const fetchWithAuth = async (url, options = {}) => {
     parse = 'json',
     extractData,
     returnNullOnError = false,
-    useStoredToken = false,
+    useStoredToken: _useStoredToken = false,
     skipContentType = false,
     ...fetchOptions
   } = options
 
   const response = await fetch(url, {
     ...fetchOptions,
+    credentials: fetchOptions.credentials || 'include',
     headers: buildHeaders({
       headers,
       token,
-      useStoredToken,
       body: fetchOptions.body,
       skipContentType,
     }),

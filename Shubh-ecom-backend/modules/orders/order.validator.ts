@@ -19,7 +19,9 @@ const placeOrderSchema = Joi.object({
 
 const addressSchema = Joi.object({
   fullName: Joi.string().required(),
-  phone: Joi.string().required(),
+  phone: Joi.string()
+    .pattern(/^\d{10}$/)
+    .required(),
   line1: Joi.string().required(),
   line2: Joi.string().allow('', null),
   city: Joi.string().required(),

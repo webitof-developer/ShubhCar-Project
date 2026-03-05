@@ -77,8 +77,8 @@ export default function () {
 }
 
 export function teardown(data) {
-  console.log('=== Rate Limit Test Complete ===');
-  console.log('Verify:');
-  console.log('1. rate_limit_hits > 0 (Protection active)');
-  console.log('2. server_errors == 0 (Resilience)');
+  console.error('=== Rate Limit Test Complete ===');
+  console.error('Verify:');
+  console.error('1. rate_limit_hits > 0 (Protection active)');
+  console.error('2. server_errors == 0 (Resilience)');
 }

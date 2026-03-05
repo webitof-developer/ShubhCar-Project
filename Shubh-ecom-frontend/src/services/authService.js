@@ -33,6 +33,7 @@ export const login = async (email, password) => {
   try {
     const response = await fetch(`${API_BASE}/auth/login`, {
       method: 'POST',
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
       },
@@ -66,6 +67,7 @@ export const register = async (userData) => {
   try {
     const response = await fetch(`${API_BASE}/auth/register`, {
       method: 'POST',
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
       },
@@ -98,11 +100,12 @@ export const logout = async (accessToken, refreshToken) => {
   try {
     const response = await fetch(`${API_BASE}/auth/logout`, {
       method: 'POST',
+      credentials: 'include',
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
+        ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
       },
-      body: JSON.stringify({ refreshToken }),
+      body: JSON.stringify(refreshToken ? { refreshToken } : {}),
     });
 
     if (!response.ok) {
@@ -123,8 +126,9 @@ export const getCurrentUser = async (accessToken) => {
   
   try {
     const response = await fetch(`${API_BASE}/users/me`, {
+      credentials: 'include',
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
+        ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
       },
     });
 
@@ -151,10 +155,11 @@ export const refreshAccessToken = async (refreshToken) => {
   try {
     const response = await fetch(`${API_BASE}/auth/refresh`, {
       method: 'POST',
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ refreshToken }),
+      body: JSON.stringify(refreshToken ? { refreshToken } : {}),
     });
 
     const { text, json } = await readResponseBody(response);
@@ -179,6 +184,7 @@ export const googleLogin = async (idToken) => {
   try {
     const response = await fetch(`${API_BASE}/auth/google`, {
       method: 'POST',
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
       },

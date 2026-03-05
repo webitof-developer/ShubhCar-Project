@@ -948,14 +948,19 @@ class AnalyticsService {
         $match: {
           ...(await this._roleScopedOrderMatch(user, {}, salesmanId)),
           createdAt: { $gte: startDate, $lte: endDate },
-          paymentStatus: 'paid',
           isDeleted: false,
         },
       },
       {
         $group: {
           _id: groupId,
-          revenue: { $sum: '$grandTotal' },
+          // Revenue should reflect successfully paid orders only.
+          revenue: {
+            $sum: {
+              $cond: [{ $eq: ['$paymentStatus', 'paid'] }, '$grandTotal', 0],
+            },
+          },
+          // Orders should reflect all orders in the selected range.
           orders: { $sum: 1 },
         },
       },

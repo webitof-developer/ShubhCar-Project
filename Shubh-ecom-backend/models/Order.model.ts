@@ -177,8 +177,15 @@ const guardImmutable = function (next) {
   check(update);
   ['$set', '$inc', '$unset'].forEach((op) => check(update[op]));
 
+  const done =
+    typeof next === 'function'
+      ? next
+      : (err) => {
+        if (err) throw err;
+      };
+
   if (touched.size) {
-    return next(
+    return done(
       new Error(
         `Immutable order financial fields cannot be modified: ${[
           ...touched,
@@ -186,7 +193,7 @@ const guardImmutable = function (next) {
       ),
     );
   }
-  return next();
+  return done();
 };
 
 orderSchema.pre('updateOne', guardImmutable);

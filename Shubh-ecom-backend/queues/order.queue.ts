@@ -87,13 +87,19 @@ const enqueueOrderStatusNotification = async (orderId, status) =>
  * Remove scheduled auto-cancel job once payment succeeds
  */
 const cancelAutoCancel = async (orderId) => {
-  const jobs = await orderQueue.getDelayed();
+  const jobs =
+    typeof orderQueue?.getJobs === 'function'
+      ? await orderQueue.getJobs(['delayed'])
+      : typeof orderQueue?.getDelayed === 'function'
+        ? await orderQueue.getDelayed()
+        : [];
+  const targetOrderId = String(orderId);
   await Promise.all(
     jobs
       .filter(
         (j) =>
           j.name === ORDER_JOBS.AUTO_CANCEL &&
-          j.data?.orderId === orderId,
+          String(j.data?.orderId) === targetOrderId,
       )
       .map((j) => j.remove()),
   );

@@ -12,6 +12,7 @@ import {
 export const ORDER_STATUS = {
   CREATED: 'created',
   PENDING_PAYMENT: 'pending_payment',
+  PLACED: 'placed',
   CONFIRMED: 'confirmed',
   SHIPPED: 'shipped',
   OUT_FOR_DELIVERY: 'out_for_delivery',
@@ -25,7 +26,7 @@ export const ORDER_STATUS = {
 
 export const ORDER_STATUS_LIST = [
   ORDER_STATUS.CREATED,
-  ORDER_STATUS.PENDING_PAYMENT,
+  ORDER_STATUS.PLACED,
   ORDER_STATUS.CONFIRMED,
   ORDER_STATUS.SHIPPED,
   ORDER_STATUS.OUT_FOR_DELIVERY,
@@ -39,17 +40,22 @@ export const ORDER_STATUS_LIST = [
 
 export const ORDER_STATUS_FILTERS = [
   ORDER_STATUS.CREATED,
+  ORDER_STATUS.PLACED,
   ORDER_STATUS.CONFIRMED,
   ORDER_STATUS.SHIPPED,
+  ORDER_STATUS.OUT_FOR_DELIVERY,
   ORDER_STATUS.DELIVERED,
+  ORDER_STATUS.ON_HOLD,
+  ORDER_STATUS.FAILED,
   ORDER_STATUS.CANCELLED,
   ORDER_STATUS.RETURNED,
   ORDER_STATUS.REFUNDED,
 ];
 
 export const ORDER_STATUS_LABELS = {
-  [ORDER_STATUS.CREATED]: 'Order placed',
-  [ORDER_STATUS.PENDING_PAYMENT]: 'Pending payment',
+  [ORDER_STATUS.CREATED]: 'Pending',
+  [ORDER_STATUS.PENDING_PAYMENT]: 'Pending',
+  [ORDER_STATUS.PLACED]: 'Order placed',
   [ORDER_STATUS.CONFIRMED]: 'Confirmed',
   [ORDER_STATUS.SHIPPED]: 'Shipped',
   [ORDER_STATUS.OUT_FOR_DELIVERY]: 'Out for delivery',
@@ -94,29 +100,31 @@ export const getPaymentStatusBadgeClass = (status) =>
 export const ORDER_STATUS_BADGE_CLASS = {
   [ORDER_STATUS.CREATED]: 'bg-warning/10 text-warning border-warning/30',
   [ORDER_STATUS.PENDING_PAYMENT]: 'bg-warning/10 text-warning border-warning/30',
+  [ORDER_STATUS.PLACED]: 'bg-warning/10 text-warning border-warning/30',
   [ORDER_STATUS.CONFIRMED]: 'bg-blue-500/10 text-blue-600 border-blue-500/30',
   [ORDER_STATUS.SHIPPED]: 'bg-purple-500/10 text-purple-600 border-purple-500/30',
   [ORDER_STATUS.OUT_FOR_DELIVERY]: 'bg-purple-500/10 text-purple-600 border-purple-500/30',
   [ORDER_STATUS.DELIVERED]: 'bg-success/10 text-success border-success/30',
+  [ORDER_STATUS.ON_HOLD]: 'bg-muted text-muted-foreground',
+  [ORDER_STATUS.FAILED]: 'bg-destructive/10 text-destructive border-destructive/30',
   [ORDER_STATUS.CANCELLED]: 'bg-destructive/10 text-destructive border-destructive/30',
   [ORDER_STATUS.RETURNED]: 'bg-destructive/10 text-destructive border-destructive/30',
   [ORDER_STATUS.REFUNDED]: 'bg-destructive/10 text-destructive border-destructive/30',
-  [ORDER_STATUS.FAILED]: 'bg-destructive/10 text-destructive border-destructive/30',
-  [ORDER_STATUS.ON_HOLD]: 'bg-muted text-muted-foreground',
 };
 
 const ORDER_STATUS_ICON = {
   [ORDER_STATUS.CREATED]: Clock,
   [ORDER_STATUS.PENDING_PAYMENT]: Clock,
+  [ORDER_STATUS.PLACED]: CheckCircle2,
   [ORDER_STATUS.CONFIRMED]: CheckCircle2,
   [ORDER_STATUS.SHIPPED]: Truck,
   [ORDER_STATUS.OUT_FOR_DELIVERY]: Truck,
   [ORDER_STATUS.DELIVERED]: PackageCheck,
+  [ORDER_STATUS.ON_HOLD]: Package,
+  [ORDER_STATUS.FAILED]: XCircle,
   [ORDER_STATUS.CANCELLED]: XCircle,
   [ORDER_STATUS.RETURNED]: XCircle,
   [ORDER_STATUS.REFUNDED]: XCircle,
-  [ORDER_STATUS.FAILED]: XCircle,
-  [ORDER_STATUS.ON_HOLD]: Package,
 };
 
 export const getOrderStatusLabel = (status) =>

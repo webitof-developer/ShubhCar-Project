@@ -13,6 +13,7 @@ import DataTable from '@/components/shared/DataTable'
 import CRUDModal from '@/components/shared/CRUDModal'
 import DeleteConfirmModal from '@/components/shared/DeleteConfirmModal'
 import useAPI from '@/hooks/useAPI'
+import { sanitizeIndianMobileInput, validateEmail, validateIndianPhone, validatePersonName } from '@/helpers/validationHelpers'
 
 const ADMIN_FULL_ACCESS_VALUE = '__admin_full_access__'
 
@@ -200,7 +201,14 @@ const UsersPage = () => {
   }
 
   const handleSubmit = async (formData) => {
-    await saveUser(formData, editingItem?._id)
+    const payload = {
+      ...formData,
+      firstName: String(formData.firstName || '').trim(),
+      lastName: String(formData.lastName || '').trim(),
+      email: String(formData.email || '').trim(),
+      phone: sanitizeIndianMobileInput(formData.phone || ''),
+    }
+    await saveUser(payload, editingItem?._id)
     setShowModal(false)
     fetchUsers(currentPage)
   }
@@ -220,15 +228,25 @@ const UsersPage = () => {
   // --- Configurations ---
 
   const formFields = [
-    { name: 'firstName', label: 'First Name', required: true },
-    { name: 'lastName', label: 'Last Name' },
+    {
+      name: 'firstName', label: 'First Name', required: true,
+      validate: (value) => !validatePersonName(value) ? 'First name must be 2-50 letters only' : null
+    },
+    {
+      name: 'lastName', label: 'Last Name',
+      validate: (value) => value && !validatePersonName(value) ? 'Last name must be 2-50 letters only' : null
+    },
     { 
         name: 'email', label: 'Email', type: 'email', required: true,
-        validate: (value) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? 'Invalid email format' : null
+        validate: (value) => !validateEmail(value) ? 'Invalid email format' : null
     },
     { 
         name: 'phone', label: 'Phone', type: 'tel', placeholder: '10-digit mobile number',
-        validate: (value) => value && !/^[6-9]\d{9}$/.test(value.replace(/\D/g, '')) ? 'Invalid 10-digit phone number' : null
+        normalize: (value) => sanitizeIndianMobileInput(value),
+        inputMode: 'numeric',
+        maxLength: 10,
+        pattern: '[6-9][0-9]{9}',
+        validate: (value) => value && !validateIndianPhone(value) ? 'Invalid 10-digit phone number' : null
     },
     { 
         name: 'password', 

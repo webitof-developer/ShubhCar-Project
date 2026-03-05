@@ -1,11 +1,13 @@
 'use client'
 import PageTitle from '@/components/PageTitle'
-import { currency } from '@/context/constants'
+import InvoiceTemplate from '@/components/invoice/InvoiceTemplate'
+import { InvoiceShell } from '@/components/invoice/InvoiceShell'
 import { invoiceAPI } from '@/helpers/invoiceApi'
+import { settingsAPI } from '@/helpers/settingsApi'
 import { useSession } from 'next-auth/react'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { Alert, Card, CardBody, Col, Row, Spinner } from 'react-bootstrap'
+import { Alert, Col, Row, Spinner } from 'react-bootstrap'
 
 const InvoiceDetails = () => {
   const { data: session } = useSession()
@@ -14,13 +16,19 @@ const InvoiceDetails = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [invoice, setInvoice] = useState(null)
+  const [settings, setSettings] = useState({})
 
   useEffect(() => {
     if (!invoiceId || !session?.accessToken) return
     const fetchInvoice = async () => {
       try {
-        const response = await invoiceAPI.get(invoiceId, session.accessToken)
-        setInvoice(response.data?.invoice || response.invoice || null)
+        const [invoiceResponse, settingsResponse] = await Promise.all([
+          invoiceAPI.get(invoiceId, session.accessToken),
+          settingsAPI.list(undefined, session.accessToken),
+        ])
+
+        setInvoice(invoiceResponse.data?.invoice || invoiceResponse.invoice || null)
+        setSettings(settingsResponse?.data || settingsResponse || {})
       } catch (err) {
         setError(err.message || 'Failed to load invoice')
       } finally {
@@ -92,104 +100,61 @@ const InvoiceDetails = () => {
     )
   }
 
+  const adaptedOrder = {
+    _id: invoice._id,
+    orderNumber: invoice.orderSnapshot?.orderNumber || invoice.invoiceNumber || invoice._id,
+    placedAt: invoice.orderSnapshot?.placedAt || invoice.issuedAt || invoice.createdAt,
+    createdAt: invoice.createdAt,
+    paymentMethod: invoice.orderSnapshot?.paymentMethod || '-',
+    paymentStatus: invoice.paymentStatus || '-',
+    taxableAmount: Number(invoice.totals?.subtotal || 0),
+    discountAmount: Number(invoice.totals?.discountTotal || 0),
+    taxAmount: Number(invoice.totals?.taxTotal || 0),
+    shippingFee: Number(invoice.totals?.shippingFee || 0),
+    grandTotal: Number(invoice.totals?.grandTotal || 0),
+    taxBreakdown: invoice.totals?.taxBreakdown || { cgst: 0, sgst: 0, igst: 0 },
+  }
+
+  const adaptedItems = (invoice.items || []).map((item, index) => ({
+    _id: `${item.sku || 'item'}-${index}`,
+    product: { name: item.name || 'Product' },
+    quantity: Number(item.quantity || 0),
+    price: Number(item.unitPrice || 0),
+    taxAmount: Number(item.taxAmount || 0),
+    taxPercent: Number(item.taxPercent || 0),
+    total: Number(item.lineTotal || 0),
+  }))
+
+  const customerAddress = invoice.customerSnapshot?.address || {}
+  const adaptedAddress = {
+    fullName: invoice.customerSnapshot?.name || '-',
+    line1: customerAddress.line1 || customerAddress.addressLine1 || '-',
+    line2: customerAddress.line2 || customerAddress.addressLine2 || '',
+    city: customerAddress.city || '-',
+    state: customerAddress.state || '-',
+    postalCode: customerAddress.postalCode || customerAddress.pincode || customerAddress.zip || '-',
+    phone: invoice.customerSnapshot?.phone || '-',
+  }
+
   return (
     <>
       <PageTitle title="INVOICE DETAILS" />
       <Row className="justify-content-center">
-        <Col lg={9}>
+        <Col lg={12}>
           {error && <Alert variant="danger">{error}</Alert>}
-          <Card>
-            <CardBody>
-              <div className="d-flex justify-content-between align-items-start flex-wrap gap-3">
-                <div>
-                  <h4 className="mb-1">Invoice {invoice.invoiceNumber || invoice._id}</h4>
-                  <div className="text-muted">
-                    Issued: {invoice.issuedAt ? new Date(invoice.issuedAt).toLocaleDateString('en-IN') : '-'}
-                  </div>
-                  <div className="text-muted">Order: {invoice.orderSnapshot?.orderNumber || '-'}</div>
-                </div>
-                <div className="d-flex gap-2">
-                  <button className="btn btn-outline-primary btn-sm" onClick={handleViewPdf}>View PDF</button>
-                  <button className="btn btn-outline-secondary btn-sm" onClick={handlePrintPdf}>Print</button>
-                  <button className="btn btn-primary btn-sm" onClick={handleDownloadPdf}>Download</button>
-                </div>
-              </div>
-
-              <Row className="mt-4">
-                <Col md={6}>
-                  <h6 className="text-uppercase text-muted fs-12">Bill To</h6>
-                  <div className="fw-semibold">{invoice.customerSnapshot?.name || '-'}</div>
-                  <div className="text-muted">{invoice.customerSnapshot?.email || '-'}</div>
-                  <div className="text-muted">{invoice.customerSnapshot?.phone || '-'}</div>
-                </Col>
-                <Col md={6}>
-                  <h6 className="text-uppercase text-muted fs-12">Address</h6>
-                  <div className="text-muted">
-                    {[
-                      invoice.customerSnapshot?.address?.line1,
-                      invoice.customerSnapshot?.address?.line2,
-                      invoice.customerSnapshot?.address?.city,
-                      invoice.customerSnapshot?.address?.state,
-                      invoice.customerSnapshot?.address?.postalCode,
-                      invoice.customerSnapshot?.address?.country,
-                    ]
-                      .filter(Boolean)
-                      .join(', ')}
-                  </div>
-                </Col>
-              </Row>
-
-              <div className="table-responsive mt-4">
-                <table className="table table-bordered align-middle">
-                  <thead className="bg-light-subtle">
-                    <tr>
-                      <th>Item</th>
-                      <th>Qty</th>
-                      <th>Unit</th>
-                      <th>Tax %</th>
-                      <th className="text-end">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(invoice.items || []).map((item, idx) => (
-                      <tr key={`${item.name}-${idx}`}>
-                        <td>{item.name || 'Item'}</td>
-                        <td>{item.quantity}</td>
-                        <td>{currency}{item.unitPrice}</td>
-                        <td>{item.taxPercent ?? 0}</td>
-                        <td className="text-end">{currency}{item.lineTotal ?? 0}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <Row className="justify-content-end">
-                <Col lg={4}>
-                  <table className="table table-borderless mb-0">
-                    <tbody>
-                      <tr>
-                        <td className="text-end">Subtotal</td>
-                        <td className="text-end">{currency}{invoice.totals?.subtotal ?? 0}</td>
-                      </tr>
-                      <tr>
-                        <td className="text-end">Tax</td>
-                        <td className="text-end">{currency}{invoice.totals?.taxTotal ?? 0}</td>
-                      </tr>
-                      <tr>
-                        <td className="text-end">Discount</td>
-                        <td className="text-end">{currency}{invoice.totals?.discountTotal ?? 0}</td>
-                      </tr>
-                      <tr className="border-top">
-                        <td className="text-end fw-semibold">Grand Total</td>
-                        <td className="text-end fw-semibold">{currency}{invoice.totals?.grandTotal ?? 0}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </Col>
-              </Row>
-            </CardBody>
-          </Card>
+          <div className="d-flex justify-content-end gap-2 mb-3">
+            <button className="btn btn-outline-primary btn-sm" onClick={handleViewPdf}>View PDF</button>
+            <button className="btn btn-outline-secondary btn-sm" onClick={handlePrintPdf}>Print</button>
+            <button className="btn btn-primary btn-sm" onClick={handleDownloadPdf}>Download</button>
+          </div>
+          <InvoiceShell>
+            <InvoiceTemplate
+              order={adaptedOrder}
+              items={adaptedItems}
+              address={adaptedAddress}
+              settings={settings}
+            />
+          </InvoiceShell>
         </Col>
       </Row>
     </>

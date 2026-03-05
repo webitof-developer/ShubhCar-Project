@@ -30,7 +30,7 @@ const DEMO_USER = {
   id: 'user-1',
   name: 'John Doe',
   email: 'john.doe@example.com',
-  phone: '+91 98765 43210'
+  phone: '9876543210'
 };
 
 // Demo addresses - REMOVED: No static data
@@ -453,6 +453,8 @@ export const validateAddress = (addressData) => {
 
   if (!addressData.phone || addressData.phone.trim() === '') {
     errors.phone = 'Phone number is required';
+  } else if (!/^[6-9]\d{9}$/.test(String(addressData.phone).replace(/\D/g, ''))) {
+    errors.phone = 'Phone number must be 10 digits and start with 6-9';
   }
 
   if (!addressData.address || addressData.address.trim() === '') {

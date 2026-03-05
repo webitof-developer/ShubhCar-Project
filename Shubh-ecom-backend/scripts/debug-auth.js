@@ -9,42 +9,42 @@ const EMAIL = 'admin@spareparts.com';
 
 const debug = async () => {
     try {
-        console.log('🔌 Connecting to DB...');
+        console.error('🔌 Connecting to DB...');
         const uri = process.env.MONGO_URI;
-        console.log(`🔌 URI: ${uri.substring(0, 25)}...${uri.substring(uri.length - 10)}`);
+        console.error(`🔌 URI: ${uri.substring(0, 25)}...${uri.substring(uri.length - 10)}`);
         
         await mongoose.connect(process.env.MONGO_URI);
-        console.log(`✅ Connected to DB: ${mongoose.connection.name}`);
+        console.error(`✅ Connected to DB: ${mongoose.connection.name}`);
 
         
-        console.log(`🔍 Finding user: ${EMAIL}`);
+        console.error(`🔍 Finding user: ${EMAIL}`);
         // Explicitly select passwordHash as per User.model definition
         const user = await User.findOne({ email: EMAIL }).select('+passwordHash');
         
         if (!user) {
             console.error('❌ Admin User not found!');
             
-            console.log('📋 Listing ALL users:');
+            console.error('📋 Listing ALL users:');
             const allUsers = await User.find({}).select('email role');
-            allUsers.forEach(u => console.log(`   - ${u.email} (${u.role})`));
+            allUsers.forEach(u => console.error(`   - ${u.email} (${u.role})`));
             
             process.exit(1);
         }
 
-        console.log('✅ User found.');
-        console.log('   ID:', user._id);
-        console.log('   Hash present?', !!user.passwordHash);
+        console.error('✅ User found.');
+        console.error('   ID:', user._id);
+        console.error('   Hash present?', !!user.passwordHash);
         
         if (user.passwordHash) {
-            console.log('   Hash length:', user.passwordHash.length);
-            console.log('   Hash start:', user.passwordHash.substring(0, 10));
+            console.error('   Hash length:', user.passwordHash.length);
+            console.error('   Hash start:', user.passwordHash.substring(0, 10));
         }
 
-        console.log(`🔐 Testing password: ${PASSWORD}`);
+        console.error(`🔐 Testing password: ${PASSWORD}`);
         const match = await bcrypt.compare(PASSWORD, user.passwordHash);
         
         if (match) {
-            console.log('✅ Password VALID locally.');
+            console.error('✅ Password VALID locally.');
         } else {
             console.error('❌ Password INVALID locally.');
         }

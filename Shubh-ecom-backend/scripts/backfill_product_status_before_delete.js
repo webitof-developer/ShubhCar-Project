@@ -5,7 +5,7 @@ const allowedStatuses = new Set(['draft', 'active', 'inactive', 'blocked']);
 
 const backfill = async () => {
   try {
-    console.log('Connecting to MongoDB...');
+    console.error('Connecting to MongoDB...');
     await mongoConfig.connectMongo();
 
     const filter = {
@@ -19,7 +19,7 @@ const backfill = async () => {
       .lean();
 
     if (!products.length) {
-      console.log('No trashed products need backfill.');
+      console.error('No trashed products need backfill.');
       process.exit(0);
     }
 
@@ -38,7 +38,7 @@ const backfill = async () => {
     });
 
     const result = await Product.bulkWrite(updates);
-    console.log(`Backfilled ${result.modifiedCount} products.`);
+    console.error(`Backfilled ${result.modifiedCount} products.`);
     process.exit(0);
   } catch (error) {
     console.error('Backfill failed:', error);

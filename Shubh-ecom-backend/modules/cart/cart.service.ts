@@ -85,6 +85,7 @@ class CartService {
     const priceAtTime = pricingService.resolveUnitPrice({
       product,
       customerType: priceType,
+      quantity,
     });
     if (!priceAtTime) error('Product pricing unavailable', 400);
 
@@ -126,6 +127,7 @@ class CartService {
     const priceAtTime = pricingService.resolveUnitPrice({
       product,
       customerType: priceType,
+      quantity,
     });
 
     await cartRepo.updateQty({ cartId: cart._id, itemId, quantity, priceAtTime });
@@ -188,7 +190,11 @@ class CartService {
     // Fall back to item.priceAtTime only if the product is missing (e.g., deleted product still in cart).
     const calcItems = enrichedItems.map((item) => {
       const product = (item.product || {}) as NonNullable<CartItemWithProductId['product']>;
-      const resolvedPrice = pricingService.resolveUnitPrice({ product, customerType });
+      const resolvedPrice = pricingService.resolveUnitPrice({
+        product,
+        customerType,
+        quantity: item.quantity,
+      });
       const unitPrice = resolvedPrice || item.priceAtTime || 0;
       return {
         productId: product._id || item.productId,
@@ -268,6 +274,7 @@ class CartService {
       const unitPrice = pricingService.resolveUnitPrice({
         product,
         customerType: 'retail',
+        quantity,
       });
 
       calcItems.push({
@@ -359,12 +366,13 @@ class CartService {
     const enrichedItems = await this.enrichItems(items);
     const subtotal = enrichedItems.reduce((sum, item) => {
       const product = item.product || {};
+      const quantity = Number(item.quantity || 0);
       const resolvedUnitPrice = pricingService.resolveUnitPrice({
         product,
         customerType,
+        quantity,
       });
       const unitPrice = Number(resolvedUnitPrice || item.priceAtTime || 0);
-      const quantity = Number(item.quantity || 0);
       return sum + unitPrice * quantity;
     }, 0);
 

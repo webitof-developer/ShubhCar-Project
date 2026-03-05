@@ -3,7 +3,7 @@
 import logoDark from '@/assets/images/logo-dark.png'
 import logoLight from '@/assets/images/logo-light.png'
 import Image from 'next/image'
-import LoginFrom from './LoginForm'
+import LoginForm from './LoginForm'
 import { Col, Row } from 'react-bootstrap'
 
 const SignIn = () => {
@@ -30,7 +30,7 @@ const SignIn = () => {
             <p className="auth-modern__subtitle">Access your dashboard with your credentials.</p>
 
             <div className="auth-modern__form-wrap">
-              <LoginFrom />
+              <LoginForm />
             </div>
           </div>
         </Col>

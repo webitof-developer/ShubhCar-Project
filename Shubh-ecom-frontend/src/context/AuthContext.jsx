@@ -39,6 +39,19 @@ export function AuthProvider({ children }) {
   const [refreshToken, setRefreshToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const normalizeStoredUser = (rawUser) => {
+    if (!rawUser) return null;
+    if (typeof rawUser === 'object') return rawUser;
+    if (typeof rawUser === 'string') {
+      try {
+        return JSON.parse(rawUser);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  };
+
   // Load auth state from localStorage on mount
   useEffect(() => {
     const loadAuthState = async () => {
@@ -46,7 +59,9 @@ export function AuthProvider({ children }) {
       const storedRefreshToken = getStorageItem('refreshToken');
       const storedUser = getStorageItem('user');
 
-      if (storedToken && storedUser) {
+      const normalizedStoredUser = normalizeStoredUser(storedUser);
+
+      if (storedToken && normalizedStoredUser) {
         // Check if token is expired
         if (isTokenExpired(storedToken)) {
 
@@ -57,12 +72,12 @@ export function AuthProvider({ children }) {
               // Update state with new tokens
               setAccessToken(newAccessToken);
               setRefreshToken(newRefreshToken);
-              setUser(newUser || JSON.parse(storedUser)); // Use new user or fallback to stored
+              setUser(newUser || normalizedStoredUser); // Use new user or fallback to stored
 
               // Persist new tokens
               setStorageItem('accessToken', newAccessToken);
               setStorageItem('refreshToken', newRefreshToken);
-              if (newUser) setStorageItem('user', JSON.stringify(newUser));
+              if (newUser) setStorageItem('user', newUser);
             } catch (refreshError) {
               console.error('[AUTH_CONTEXT] Token refresh failed:', refreshError);
               // Clear expired session
@@ -77,10 +92,9 @@ export function AuthProvider({ children }) {
           }
         } else {
           try {
-            const userData = JSON.parse(storedUser);
             setAccessToken(storedToken);
             setRefreshToken(storedRefreshToken);
-            setUser(userData);
+            setUser(normalizedStoredUser);
           } catch (error) {
             console.error('[AUTH_CONTEXT] Failed to parse stored user:', error);
             // Clear corrupted data
@@ -114,7 +128,7 @@ export function AuthProvider({ children }) {
       // Persist to localStorage
       setStorageItem('accessToken', accessToken);
       setStorageItem('refreshToken', refreshToken);
-      setStorageItem('user', JSON.stringify(user));
+      setStorageItem('user', user);
 
       // Phase 7: Migrate guest cart to backend (REPLACE strategy)
       await migrateGuestCartToBackend(accessToken);
@@ -142,7 +156,7 @@ export function AuthProvider({ children }) {
       // Persist to localStorage
       setStorageItem('accessToken', accessToken);
       setStorageItem('refreshToken', refreshToken);
-      setStorageItem('user', JSON.stringify(user));
+      setStorageItem('user', user);
 
       // Phase 7: Migrate guest cart to backend (REPLACE strategy)
       await migrateGuestCartToBackend(accessToken);
@@ -212,7 +226,7 @@ export function AuthProvider({ children }) {
       // Persist to localStorage
       setStorageItem('accessToken', newAccessToken);
       setStorageItem('refreshToken', newRefreshToken);
-      setStorageItem('user', JSON.stringify(user));
+      setStorageItem('user', user);
 
       // Phase 7: Migrate guest cart to backend (REPLACE strategy)
       await migrateGuestCartToBackend(newAccessToken);

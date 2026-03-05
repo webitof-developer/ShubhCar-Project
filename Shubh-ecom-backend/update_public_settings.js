@@ -6,7 +6,7 @@ const MONGO_URI = 'mongodb+srv://developerwebitof_db_user:OXk1jmw0bqkKb2AB@clust
 async function run() {
     try {
         await mongoose.connect(MONGO_URI);
-        console.log('Connected to DB');
+        console.error('Connected to DB');
 
         const publicKeys = [
             'tax_price_display_shop',
@@ -20,7 +20,7 @@ async function run() {
             { $set: { isPublic: true } }
         );
 
-        console.log('Updated settings:', result);
+        console.error('Updated settings:', result);
     } catch (err) {
         console.error(err);
     } finally {

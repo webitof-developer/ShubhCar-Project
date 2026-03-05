@@ -39,7 +39,7 @@ export const CartItem = ({
   const stockQty = Number(product.stockQty || 0);
   const canIncrease = stockQty > 0 ? item.quantity < stockQty : true;
 
-  const pricing = getDisplayPrice(product, user);
+  const pricing = getDisplayPrice(product, user, item.quantity);
   const { price: fallbackUnitPrice, originalPrice, savingsPercent, type } = pricing;
   const backendUnitPrice = Number(item?.unitPrice ?? item?.price ?? item?.productPrice ?? 0) || 0;
   const unitPrice = backendUnitPrice > 0 ? backendUnitPrice : fallbackUnitPrice;

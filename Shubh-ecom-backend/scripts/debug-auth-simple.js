@@ -48,7 +48,7 @@ const next = (err) => {
   if (err) {
     console.error('Error passed to next:', err);
   } else {
-    console.log('Next called successfully');
+    console.error('Next called successfully');
   }
 };
 
@@ -59,13 +59,13 @@ async function runTest() {
   try {
     const mongoUri = process.env.MONGO_URI || process.env.MONGO_REPLICA_URI;
     await mongoose.connect(mongoUri);
-    console.log('Connected to DB');
+    console.error('Connected to DB');
 
-    console.log('Running login controller...');
+    console.error('Running login controller...');
     await authController.login(req, res, next);
     
-    console.log('Response status:', res.statusCode);
-    console.log('Response data:', JSON.stringify(res.data, null, 2));
+    console.error('Response status:', res.statusCode);
+    console.error('Response data:', JSON.stringify(res.data, null, 2));
     
   } catch (err) {
     console.error('Caught error:', err);

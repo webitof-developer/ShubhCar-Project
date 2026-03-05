@@ -10,6 +10,7 @@ const {
   listFeaturedQuerySchema,
   listByCategoryQuerySchema,
   listPublicQuerySchema,
+  searchCatalogQuerySchema,
   adminListQuerySchema,
 } = require('./product.validator');
 const ROLES = require('../../constants/roles');
@@ -130,6 +131,40 @@ router.get(
  *       200: { description: Products }
  */
 router.get('/', validate(listPublicQuerySchema, 'query'), controller.listPublic);
+
+/**
+ * @openapi
+ * /api/v1/products/search:
+ *   get:
+ *     summary: Search products with pagination and filter facets
+ *     tags: [Catalog]
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         schema: { type: string }
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer }
+ *       - in: query
+ *         name: vehicle_id
+ *         schema: { type: string, description: Comma-separated vehicle ids }
+ *       - in: query
+ *         name: productType
+ *         schema: { type: string, description: Comma-separated values }
+ *       - in: query
+ *         name: manufacturerBrand
+ *         schema: { type: string, description: Comma-separated values }
+ *     responses:
+ *       200: { description: Search results with facets }
+ */
+router.get(
+  '/search',
+  validate(searchCatalogQuerySchema, 'query'),
+  controller.searchCatalog,
+);
 
 /**
  * @openapi

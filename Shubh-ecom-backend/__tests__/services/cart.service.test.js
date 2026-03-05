@@ -120,7 +120,7 @@ describe('CartService', () => {
           productId: '507f1f77bcf86cd799439011',
           quantity: 2,
           priceType: 'retail',
-          priceAtTime: 90,
+          priceAtTime: 100,
         }),
       }),
     );

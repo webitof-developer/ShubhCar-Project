@@ -3,6 +3,7 @@ import type { ProductsRequest } from './products.types';
 //products.controller.js  
 const asyncHandler = require('../../utils/asyncHandler');
 const productService = require('./products.service');
+const productSearchService = require('./product.search.service');
 const productBulkUpdateService = require('./productBulkUpdate.service');
 const productBulkCreateService = require('./productBulkCreate.service');
 const productBulkExportService = require('./productBulkExport.service');
@@ -61,6 +62,11 @@ exports.listFeatured = asyncHandler(async (req: ProductsRequest, res: Response) 
 
 exports.listPublic = asyncHandler(async (req: ProductsRequest, res: Response) => {
   const data = await productService.listPublic(req.query, req.user || null);
+  return success(res, data);
+});
+
+exports.searchCatalog = asyncHandler(async (req: ProductsRequest, res: Response) => {
+  const data = await productSearchService.searchCatalog(req.query, req.user || null);
   return success(res, data);
 });
 

@@ -55,7 +55,7 @@ const securityHeaders = [
       // Razorpay opens its own iframes for 3DS / OTP screens + blobs for PDFs
       `frame-src 'self' blob: data: https://checkout.razorpay.com https://api.razorpay.com`,
 
-      // Allow web workers to load from blob URLs (often used by html2canvas/pdf libraries)
+      // Allow web workers to load from blob URLs (some client-side utilities rely on this)
       `worker-src 'self' blob:`,
 
       // Prevent other sites from framing us

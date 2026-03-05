@@ -20,7 +20,7 @@ async function run() {
   );
 
   // eslint-disable-next-line no-console
-  console.info('Migration complete', {
+  console.error('Migration complete', {
     audienceUpdated: audienceResult.modifiedCount,
     readAtUpdated: readAtResult.modifiedCount,
   });

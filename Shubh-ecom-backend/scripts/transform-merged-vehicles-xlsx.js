@@ -181,9 +181,9 @@ async function transform(inputPath, outputPath) {
   }
 
   await outWb.xlsx.writeFile(outputPath);
-  console.log(`Input rows processed: ${total}`);
-  console.log(`Import-ready rows: ${ready}`);
-  console.log(`Output written: ${outputPath}`);
+  console.error(`Input rows processed: ${total}`);
+  console.error(`Import-ready rows: ${ready}`);
+  console.error(`Output written: ${outputPath}`);
 }
 
 const inputArg = process.argv[2] ? path.resolve(process.argv[2]) : DEFAULT_INPUT;

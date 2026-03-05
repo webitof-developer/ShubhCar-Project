@@ -180,10 +180,8 @@ class OrderRepository {
       const order = await orderQuery;
       if (!order) throw new Error('Order not found');
 
-      // HARD LOCK ENFORCEMENT
-      if (order.isLocked && reason === 'admin_update') {
-        throw new Error('Locked order cannot be modified');
-      }
+      // Allow admin lifecycle status updates even for locked orders.
+      // Financial/payment mutations stay protected by separate flows.
 
       const beforeStatus = order.orderStatus;
 

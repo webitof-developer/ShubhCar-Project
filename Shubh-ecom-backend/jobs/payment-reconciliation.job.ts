@@ -52,8 +52,8 @@ async function reconcilePayments() {
             transactionId: gateway.transactionId,
           });
 
-          // Confirm order
-          await orderService.confirmOrder(payment.orderId);
+          // Mark paid after successful reconciliation
+          await orderService.markPaid(payment.orderId);
 
           logger.info('Payment reconciled successfully', {
             paymentId: payment._id,

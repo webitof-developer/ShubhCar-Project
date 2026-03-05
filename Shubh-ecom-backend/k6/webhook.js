@@ -222,10 +222,10 @@ function sendDuplicateWebhook(orderId, secret) {
 }
 
 export function teardown(data) {
-  console.log('=== Webhook Flood Test Complete ===');
-  console.log('Verify:');
-  console.log('1. invalid_signatures_rejected > 0');
-  console.log('2. double_processing_detected == 0 (CRITICAL)');
-  console.log('3. Check DB: each order processed exactly once');
-  console.log('4. Check DB: inventory committed only once per order');
+  console.error('=== Webhook Flood Test Complete ===');
+  console.error('Verify:');
+  console.error('1. invalid_signatures_rejected > 0');
+  console.error('2. double_processing_detected == 0 (CRITICAL)');
+  console.error('3. Check DB: each order processed exactly once');
+  console.error('4. Check DB: inventory committed only once per order');
 }

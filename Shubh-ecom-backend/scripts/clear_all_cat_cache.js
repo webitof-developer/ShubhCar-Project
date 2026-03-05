@@ -3,10 +3,10 @@ const { deleteByPattern } = require('../cache/cacheUtils');
 
 async function clear() {
   try {
-    console.log('Clearing ALL category keys (old and new)...');
+    console.error('Clearing ALL category keys (old and new)...');
     await deleteByPattern('categories:*'); // Old style
     await deleteByPattern('catalog:categories:*'); // New style
-    console.log('Done.');
+    console.error('Done.');
   } catch (e) {
     console.error(e);
   }

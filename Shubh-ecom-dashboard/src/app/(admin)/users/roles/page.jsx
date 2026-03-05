@@ -69,6 +69,17 @@ const RolesPage = () => {
     return originalPermissions.filter((perm) => !known.has(perm))
   }, [originalPermissions, permissionKeys])
 
+  const isRoleDirty = useMemo(() => {
+    if (!editRoleId) return true
+    const nameSame = formData.name.trim() === originalName.trim()
+    const currentPerms = [...formData.permissions].sort()
+    const origPerms = [...originalPermissions].sort()
+    const permsSame =
+      currentPerms.length === origPerms.length &&
+      currentPerms.every((p, i) => p === origPerms[i])
+    return !(nameSame && permsSame)
+  }, [editRoleId, formData.name, formData.permissions, originalName, originalPermissions])
+
   const fetchRoles = async () => {
     if (status !== 'authenticated') return
     const token = session?.accessToken
@@ -294,7 +305,11 @@ const RolesPage = () => {
               size="sm"
               variant="primary"
               onClick={handleSave}
-              disabled={submitting || (!editRoleId && !canCreateRoles) || (editRoleId && !canUpdateRoles)}
+              disabled={
+                submitting ||
+                (!editRoleId && !canCreateRoles) ||
+                (editRoleId && (!canUpdateRoles || !isRoleDirty))
+              }
             >
               {submitting ? 'Saving...' : 'Save'}
             </Button>

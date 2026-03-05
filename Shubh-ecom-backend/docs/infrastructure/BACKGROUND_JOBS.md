@@ -206,7 +206,7 @@ const emailWorker = new Worker('email-queue', async (job) => {
 
 // Event listeners
 emailWorker.on('completed', (job) => {
-  console.log(`Job ${job.id} completed`);
+  console.error(`Job ${job.id} completed`);
 });
 
 emailWorker.on('failed', (job, err) => {
@@ -283,9 +283,9 @@ const counts = await emailQueue.getJobCounts();
 ```javascript
 const failed = await emailQueue.getFailed();
 failed.forEach(job => {
-  console.log(`Job ${job.id} failed:`, job.failedReason);
-  console.log('Data:', job.data);
-  console.log('Attempts:', job.attemptsMade);
+  console.error(`Job ${job.id} failed:`, job.failedReason);
+  console.error('Data:', job.data);
+  console.error('Attempts:', job.attemptsMade);
 });
 ```
 
@@ -299,7 +299,7 @@ worker.on('progress', async (job) => {
 
 // Check progress
 const job = await emailQueue.getJob(jobId);
-console.log(`Progress: ${job.progress}%`);
+console.error(`Progress: ${job.progress}%`);
 ```
 
 ---

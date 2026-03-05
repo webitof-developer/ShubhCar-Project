@@ -472,7 +472,7 @@ router.post(
  *     summary: Logout the current session
  *     tags: [Auth]
  *     security:
- *       - bearerAuth: [] as unknown[]
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Session revoked
@@ -497,7 +497,7 @@ router.post('/logout', auth(), controller.logout);
  *     summary: Logout from all active sessions
  *     tags: [Auth]
  *     security:
- *       - bearerAuth: [] as unknown[]
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: All sessions revoked

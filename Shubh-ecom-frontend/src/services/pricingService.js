@@ -27,7 +27,7 @@ const calculateSavings = (product) => {
  * @param {Object|null} user - User object from AuthContext
  * @returns {Object} - { price, type, savingsPercent, originalPrice }
  */
-export const getDisplayPrice = (product, user = null) => {
+export const getDisplayPrice = (product, user = null, quantity = 1, now = new Date()) => {
   if (!product) {
     return {
       price: 0,
@@ -37,66 +37,79 @@ export const getDisplayPrice = (product, user = null) => {
     };
   }
 
-  // Extract actual price values (handle both flat and nested structures)
-  const getPriceAmount = (price) => {
-    if (price == null) return 0;
-    if (typeof price === 'number') return price;
-    if (typeof price === 'string') return Number(price) || 0;
-    if (price.salePrice != null) return Number(price.salePrice) || 0;
-    if (price.mrp != null) return Number(price.mrp) || 0;
-    if (price.price != null) return Number(price.price) || 0;
-    return 0;
+  const toNumberPrice = (value) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
   };
 
-  const useSalePrice = (product) => {
-    if (!product) return false;
-    if (!product.isFlashDeal) return false;
-    return product.isFlashDealActive !== false;
-  };
-
-  const getRetailPrice = (product) => {
-    const canUseSale = useSalePrice(product);
-    if (typeof product.retailPrice === 'number') return product.retailPrice;
-    if (canUseSale && product.retailPrice?.salePrice != null) return product.retailPrice.salePrice;
-    if (product.retailPrice?.mrp != null) return product.retailPrice.mrp;
-    if (product.price) return getPriceAmount(product.price);
-    return 0;
-  };
-
-  const getWholesalePrice = (product) => {
-    const canUseSale = useSalePrice(product);
-    if (typeof product.wholesalePrice === 'number') return product.wholesalePrice;
-    if (canUseSale && product.wholesalePrice?.salePrice != null) return product.wholesalePrice.salePrice;
-    if (product.wholesalePrice?.mrp != null) return product.wholesalePrice.mrp;
-    return null;
-  };
-
-  const retailPrice = getRetailPrice(product);
-  const wholesalePrice = getWholesalePrice(product);
-  const retailMrp = Number(product?.retailPrice?.mrp || retailPrice || 0);
-  const wholesaleMrp = Number(product?.wholesalePrice?.mrp || wholesalePrice || 0);
-
-  // Wholesale users see wholesale price if available
-  if (canViewWholesalePrices(user) && wholesalePrice) {
-    const savings = retailPrice > 0
-      ? Math.round(((retailPrice - wholesalePrice) / retailPrice) * 100)
-      : 0;
-    const originalPrice = wholesaleMrp > wholesalePrice ? wholesaleMrp : (retailPrice > wholesalePrice ? retailPrice : null);
+  const normalizePriceField = (value) => {
+    if (value == null) return { mrp: 0, salePrice: null };
+    if (typeof value === 'number' || typeof value === 'string') {
+      return { mrp: toNumberPrice(value), salePrice: null };
+    }
     return {
-      price: wholesalePrice,
-      type: 'wholesale',
+      mrp: toNumberPrice(value?.mrp),
+      salePrice: value?.salePrice == null ? null : toNumberPrice(value?.salePrice),
+    };
+  };
+
+  const isFlashActive = (item, now = new Date()) => {
+    if (!item?.isFlashDeal) return false;
+    const start = item?.flashDealStartAt ? new Date(item.flashDealStartAt) : null;
+    const end = item?.flashDealEndAt ? new Date(item.flashDealEndAt) : null;
+    if (!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return false;
+    return start <= now && now <= end;
+  };
+
+  const resolveTierPrice = (priceField, flashActive) => {
+    const normalized = normalizePriceField(priceField);
+    if (flashActive && normalized.salePrice != null && normalized.salePrice > 0) {
+      return normalized.salePrice;
+    }
+    return normalized.mrp;
+  };
+
+  const safeQty = Math.max(1, Number(quantity || 1) || 1);
+  const referenceNow = now instanceof Date ? now : new Date();
+  const minWholesaleQty = Math.max(1, Number(product?.minWholesaleQty || 1) || 1);
+  const wholesaleApproved = canViewWholesalePrices(user);
+  const hasWholesalePrice = !!product?.wholesalePrice;
+  const useWholesaleTier = wholesaleApproved && hasWholesalePrice && safeQty >= minWholesaleQty;
+  const flashActive = isFlashActive(product, referenceNow);
+
+  const retailPrice = resolveTierPrice(product?.retailPrice, flashActive);
+  const wholesalePrice = resolveTierPrice(product?.wholesalePrice, flashActive);
+  const retailMrp = normalizePriceField(product?.retailPrice).mrp || retailPrice || 0;
+  const wholesaleMrp = normalizePriceField(product?.wholesalePrice).mrp || wholesalePrice || 0;
+  const forceRetailMrpForWholesaleMinQty = wholesaleApproved && safeQty < minWholesaleQty;
+  if (forceRetailMrpForWholesaleMinQty) {
+    return {
+      price: retailMrp,
+      type: 'retail',
+      savingsPercent: null,
+      originalPrice: null,
+    };
+  }
+  const finalPrice = useWholesaleTier && wholesalePrice > 0 ? wholesalePrice : retailPrice;
+  const type = useWholesaleTier && wholesalePrice > 0 ? 'wholesale' : 'retail';
+
+  if (type === 'wholesale') {
+    const savings = retailPrice > 0 ? Math.round(((retailPrice - finalPrice) / retailPrice) * 100) : 0;
+    const originalPrice = wholesaleMrp > finalPrice ? wholesaleMrp : (retailPrice > finalPrice ? retailPrice : null);
+    return {
+      price: finalPrice,
+      type,
       savingsPercent: savings > 0 ? savings : null,
-      originalPrice
+      originalPrice,
     };
   }
 
-  // Retail users or products without wholesale price
-  const retailOriginalPrice = retailMrp > retailPrice ? retailMrp : null;
+  const retailOriginalPrice = retailMrp > finalPrice ? retailMrp : null;
   return {
-    price: retailPrice,
+    price: finalPrice,
     type: 'retail',
     savingsPercent: null,
-    originalPrice: retailOriginalPrice
+    originalPrice: retailOriginalPrice,
   };
 };
 
@@ -144,7 +157,7 @@ export const getPriceRange = (product, user = null) => {
  */
 export const calculateCartTotal = (items, user = null) => {
   return items.reduce((total, item) => {
-    const { price } = getDisplayPrice(item.product, user);
+    const { price } = getDisplayPrice(item.product, user, item.quantity);
     return total + (price * item.quantity);
   }, 0);
 };

@@ -23,13 +23,32 @@ export const formatPhoneInput = (value) => {
 };
 
 /**
+ * Formats Indian mobile input to max 10 digits
+ * @param {string} value - Raw input value
+ * @returns {string} - Digits only, max 10 chars
+ */
+export const sanitizeIndianMobileInput = (value) => {
+  return formatPhoneInput(String(value || '')).slice(0, 10);
+};
+
+/**
  * Validates email format
  * @param {string} email - Email to validate
  * @returns {boolean} - True if valid
  */
 export const validateEmail = (email) => {
   if (!email) return true;
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim());
+};
+
+/**
+ * Validates person name (2-50 chars, letters/spaces/apostrophe/dot/hyphen)
+ * @param {string} name - Name to validate
+ * @returns {boolean}
+ */
+export const validatePersonName = (name) => {
+  if (!name) return false;
+  return /^[A-Za-z][A-Za-z\s'.-]{1,49}$/.test(String(name).trim());
 };
 
 /**

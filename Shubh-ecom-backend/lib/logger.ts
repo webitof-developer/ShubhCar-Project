@@ -36,9 +36,9 @@ function write(level, message, meta) {
     if (level === LEVELS.ERROR) {
       console.error(serialized);
     } else if (level === LEVELS.WARN) {
-      console.warn(serialized);
+      process.stderr.write(`${serialized}\n`);
     } else {
-      console.log(serialized);
+      process.stdout.write(`${serialized}\n`);
     }
   } catch (err) {
     // Never crash the app due to logging failures

@@ -72,12 +72,7 @@ const CustomerDetailContent = () => {
   // Initial Data Fetch
   useEffect(() => {
     const fetchData = async () => {
-      let token = session?.accessToken
-
-      // Fallback to localStorage
-      if (!token && typeof window !== 'undefined') {
-        token = localStorage.getItem('authToken')
-      }
+      const token = session?.accessToken
 
       if (!customerId) {
         setError('No customer ID provided')
@@ -128,7 +123,7 @@ const CustomerDetailContent = () => {
     let isActive = true
 
     const fetchOrderItems = async () => {
-      let token = session?.accessToken || (typeof window !== 'undefined' ? localStorage.getItem('authToken') : null)
+      const token = session?.accessToken
 
       if (!token || orders.length === 0) return
 
@@ -164,10 +159,7 @@ const CustomerDetailContent = () => {
   }, [orders, session])
 
   const handleApproveWholesale = async () => {
-    let token = session?.accessToken
-    if (!token && typeof window !== 'undefined') {
-      token = localStorage.getItem('authToken')
-    }
+    const token = session?.accessToken
     if (!token || !customer?._id) return
 
     const name = `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.email || 'this customer'

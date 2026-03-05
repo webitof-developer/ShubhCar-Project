@@ -70,10 +70,14 @@ export class ApiError extends Error {
 async function request(path, options = {}) {
   const url = path.startsWith('http') ? path : `${BASE_URL}${path}`;
   const requestUrl = resolveRequestUrl(url);
+  const requestOptions = {
+    credentials: options.credentials || 'include',
+    ...options,
+  };
 
   let response;
   try {
-    response = await fetch(requestUrl, options);
+    response = await fetch(requestUrl, requestOptions);
   } catch (networkError) {
     throw new ApiError('Network error: could not reach server', 0, { url: requestUrl, originalUrl: url });
   }
@@ -100,7 +104,7 @@ async function request(path, options = {}) {
 function authHeaders(token, extra = {}) {
   return {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...extra,
   };
 }

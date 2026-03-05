@@ -285,7 +285,11 @@ class OrderService {
           error('Access denied', 403, 'FORBIDDEN');
         }
         if (
-          (order.orderStatus !== ORDER_STATUS.CREATED && order.orderStatus !== ORDER_STATUS.PLACED) ||
+          (
+            order.orderStatus !== ORDER_STATUS.CREATED &&
+            order.orderStatus !== ORDER_STATUS.PENDING_PAYMENT &&
+            order.orderStatus !== ORDER_STATUS.PLACED
+          ) ||
           order.paymentStatus !== PAYMENT_STATUS.PENDING
         ) {
           error('Order is not eligible for checkout update', 409, 'ORDER_INVALID_STATE');
@@ -587,6 +591,75 @@ class OrderService {
     }
   }
 
+  async markPaid(orderId) {
+    const session = await createSafeSession();
+    if (!session._isStandalone) {
+      session.startTransaction({ readPreference: 'primary' });
+    }
+
+    try {
+      const order = await orderRepo.findById(orderId, session);
+      if (!order) error('Order not found', 404);
+
+      if (
+        order.paymentStatus === PAYMENT_STATUS.PAID &&
+        order.orderStatus === ORDER_STATUS.PLACED
+      ) {
+        if (!session._isStandalone && session.inTransaction()) {
+          await session.commitTransaction();
+        }
+        return order;
+      }
+
+      if (order.orderStatus !== ORDER_STATUS.PLACED) {
+        orderStateMachine.assertTransition(order.orderStatus, ORDER_STATUS.PLACED);
+      }
+
+      order.paymentStatus = PAYMENT_STATUS.PAID;
+      order.orderStatus = ORDER_STATUS.PLACED;
+      order.isLocked = true;
+      await order.save({ session });
+
+      await checkoutDraftService.markPaidByOrderId(order._id, session);
+      await invoiceService.generateFromOrder(order);
+
+      if (order.couponId) {
+        await couponRepo.recordUsage(
+          {
+            couponId: order.couponId,
+            userId: order.userId,
+            orderId: order._id,
+          },
+          session,
+        );
+      }
+
+      if (!session._isStandalone && session.inTransaction()) {
+        await session.commitTransaction();
+      }
+
+      await clearUserCartAfterOrderDone({ userId: String(order.userId) });
+      await orderJobs.cancelAutoCancel(order._id);
+      await orderJobs.enqueueStatusNotification(order._id, 'placed');
+
+      this.sendOrderConfirmationEmail(order).catch((err) => {
+        logger.error('Order confirmation email failed', {
+          orderId: order._id,
+          error: err.message,
+        });
+      });
+
+      return order;
+    } catch (e) {
+      if (!session._isStandalone && session.inTransaction()) {
+        await session.abortTransaction();
+      }
+      throw e;
+    } finally {
+      session.endSession();
+    }
+  }
+
   async confirmOrder(orderId) {
     const session = await createSafeSession();
     if (!session._isStandalone) {
@@ -680,7 +753,11 @@ class OrderService {
       );
 
       if (
-        order.orderStatus !== ORDER_STATUS.CREATED ||
+        (
+          order.orderStatus !== ORDER_STATUS.CREATED &&
+          order.orderStatus !== ORDER_STATUS.PENDING_PAYMENT &&
+          order.orderStatus !== ORDER_STATUS.PLACED
+        ) ||
         order.paymentStatus !== PAYMENT_STATUS.PENDING
       ) {
         if (!session._isStandalone && session.inTransaction()) {
@@ -1134,7 +1211,13 @@ class OrderService {
     const previousStatus = order.orderStatus;
     const previousPaymentStatus = order.paymentStatus;
 
-    const nextStatus = normalizeOrderStatus(payload.status);
+    const normalizedRequestedStatus = normalizeOrderStatus(payload.status);
+    const nextStatus =
+      normalizedRequestedStatus === 'pending' ||
+      normalizedRequestedStatus === 'draft' ||
+      normalizedRequestedStatus === 'pending_payment'
+        ? ORDER_STATUS.CREATED
+        : normalizedRequestedStatus;
     if (!ADMIN_STATUS_UPDATES.includes(nextStatus)) {
       error('Invalid status', 400, 'INVALID_STATUS');
     }
@@ -1145,11 +1228,6 @@ class OrderService {
       reason: 'admin_update',
       mutateFn: (o) => {
         o.orderStatus = nextStatus;
-
-        // Allow updating payment status for COD
-        if (payload.paymentStatus) {
-          o.paymentStatus = payload.paymentStatus;
-        }
       },
     });
 

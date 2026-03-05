@@ -90,7 +90,7 @@ const APP_CONFIG = {
     // CONTACT INFORMATION
     contact: {
       email: 'support@autospares.com',
-      phone: '+91 98765 43210',
+      phone: '9876543210',
       address: 'Plot No. 45, MIDC Industrial Area, Andheri East, Mumbai 400093, Maharashtra, India',
       coordinates: { lat: 19.1136, lng: 72.8697 }, // Mumbai
     },
@@ -380,9 +380,9 @@ export function logDataSource(domain, source, reason) {
   const message = `[DATA] ${safeDomain}: USING ${safeSource}`;
 
   // if (reason) {
-  //   console.log(`${message} - ${reason}`);
+  //   console.error(`${message} - ${reason}`);
   // } else {
-  //   console.log(message);
+  //   console.error(message);
   // }
 }
 

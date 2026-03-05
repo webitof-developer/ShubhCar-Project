@@ -8,12 +8,17 @@ const inventoryService = require('../modules/inventory/inventory.service');
 const couponRepo = require('../modules/coupons/coupon.repo');
 const paymentRepo = require('../modules/payments/payment.repo');
 
-const { orderQueue, enqueueAutoCancel } = require('../queues/order.queue');
+const {
+  orderQueue,
+  enqueueAutoCancel,
+  cancelAutoCancel: cancelAutoCancelJob,
+} = require('../queues/order.queue');
 const { payoutQueue } = require('../queues/payout.queue');
 const { enqueueEmail } = require('../queues/email.queue');
 const userRepo = require('../modules/users/user.repo'); // or wherever user lookup is
 const notificationsService = require('../modules/notifications/notifications.service');
 const checkoutDraftService = require('../modules/checkout-drafts/checkoutDrafts.service');
+const emailNotification = require('../services/emailNotification.service');
 
 const EmailDispatch = require('../models/EmailDispatch');
 
@@ -225,12 +230,7 @@ const sendOrderEmailOnce = async ({
    CANCEL AUTO-CANCEL JOB (SAFE)
 ============================================================ */
 const cancelAutoCancel = async (orderId) => {
-  const jobs = await orderQueue.getDelayed();
-  await Promise.all(
-    jobs
-      .filter((j) => j.name === 'auto-cancel' && j.data?.orderId === orderId)
-      .map((j) => j.remove()),
-  );
+  await cancelAutoCancelJob(orderId);
 };
 
 module.exports = {

@@ -12,6 +12,12 @@ if (!process.env.NEXTAUTH_SECRET) {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: '**' },
+      { protocol: 'http', hostname: '**' },
+    ],
+  },
   sassOptions: {
     quietDeps: true,
     silenceDeprecations: [

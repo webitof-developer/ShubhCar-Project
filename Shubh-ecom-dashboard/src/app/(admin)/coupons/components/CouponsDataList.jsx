@@ -91,7 +91,7 @@ const CouponsDataList = ({ coupons = [], setCoupons, loading = false }) => {
         session.accessToken
       )
       
-      // Update UI - this will also update the stats in CouponsBoxs
+      // Update UI - this will also update the stats in CouponsBoxes
       setCoupons(safeCoupons.map(c =>
         c._id === couponId ? { ...c, isActive: !currentStatus } : c
       ))

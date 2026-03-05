@@ -47,7 +47,7 @@ if (!queuesEnabled) {
       });
       const order = await orderRepo.findById(orderId);
       if (order) {
-        await orderService.confirmOrder(orderId);
+        await orderService.markPaid(orderId);
         await invoiceService.generateFromOrder(order);
       }
       return;
@@ -145,7 +145,7 @@ if (!queuesEnabled) {
       });
 
       if (order) {
-        await orderService.confirmOrder(payment.orderId);
+        await orderService.markPaid(payment.orderId);
         await invoiceService.generateFromOrder(order);
       }
       return;

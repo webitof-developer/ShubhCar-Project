@@ -4,5 +4,5 @@ export const sanitizeIndianPhone = (value) =>
     .slice(0, 10);
 
 export const isValidIndianPhone = (value) =>
-  sanitizeIndianPhone(value).length === 10;
+  /^[6-9]\d{9}$/.test(sanitizeIndianPhone(value));
 

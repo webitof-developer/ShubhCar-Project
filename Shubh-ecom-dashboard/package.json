@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --turbo",
     "build": "next build",
+    "check:no-console": "powershell -NoProfile -Command \"if (rg -n 'console\\.(log|debug|info)\\(' src) { exit 1 } else { exit 0 }\"",
     "start": "next start -H 0.0.0.0 -p ${PORT:-3000}",
     "lint": "next lint",
     "format": "prettier --write 'src/**/*.{ts,tsx,js,jsx}'",
@@ -42,7 +43,7 @@
     "react-input-mask": "^2.0.4",
     "react-select": "^5.10.2",
     "react-toastify": "^10.0.6",
-    "sass": "^1.77.8",
+    "sass": "^1.97.3",
     "simplebar-react": "^3.2.6",
     "sweetalert2": "^11.22.5",
     "sweetalert2-react-content": "^5.1.1",
@@ -71,5 +72,8 @@
     "jest-environment-jsdom": "^30.2.0",
     "prettier": "^3.3.3",
     "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "immutable": "^5.1.5"
   }
 }

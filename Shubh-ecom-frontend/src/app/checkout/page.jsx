@@ -264,7 +264,11 @@ const CheckoutInner = () => {
             )}
 
             {currentStep === 3 && (
-              <PaymentStep onBack={handlePaymentBack} onConfirm={handlePaymentConfirm} />
+              <PaymentStep
+                onBack={handlePaymentBack}
+                onConfirm={handlePaymentConfirm}
+                placingOrder={placingOrder}
+              />
             )}
           </div>
         </div>

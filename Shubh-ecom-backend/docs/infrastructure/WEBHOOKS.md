@@ -219,7 +219,7 @@ const paymentWebhookWorker = new Worker('payment-webhook-queue', async (job) => 
         break;
         
       default:
-        console.log(`Unhandled webhook type: ${type}`);
+        console.error(`Unhandled webhook type: ${type}`);
     }
     
     return { success: true, eventId };
@@ -521,7 +521,7 @@ metrics.histogram('webhook.processing.time', duration, {
 app.post('/webhook', express.raw({ type: 'application/json' }), handler);
 
 // Verify webhook secret matches
-console.log('Using secret:', process.env.STRIPE_WEBHOOK_SECRET);
+console.error('Using secret:', process.env.STRIPE_WEBHOOK_SECRET);
 ```
 
 ---

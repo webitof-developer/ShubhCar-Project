@@ -7,7 +7,7 @@ const cancelOrderSchema = Joi.object({
 
 const adminStatusUpdateSchema = Joi.object({
   status: Joi.string()
-    .valid(...ADMIN_STATUS_UPDATES)
+    .valid(...ADMIN_STATUS_UPDATES, 'pending', 'draft', 'pending_payment')
     .required(),
 });
 

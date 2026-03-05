@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { CreditCard, Wallet, AlertCircle, Smartphone } from 'lucide-react';
 import { getPaymentMethods } from '@/services/paymentService';
 
-export function PaymentStep({ onBack, onConfirm }) {
+export function PaymentStep({ onBack, onConfirm, placingOrder = false }) {
   const [paymentMethod, setPaymentMethod] = useState(null);
   const [methods, setMethods] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -146,10 +146,10 @@ export function PaymentStep({ onBack, onConfirm }) {
         </div>
 
         <div className="flex gap-3 mt-6">
-          <Button variant="outline" onClick={onBack} className="flex-1">
+          <Button variant="outline" onClick={onBack} className="flex-1" disabled={placingOrder}>
             Back to Review
           </Button>
-          <Button onClick={handleConfirm} className="flex-1" size="lg" disabled={!paymentMethod}>
+          <Button onClick={handleConfirm} className="flex-1" size="lg" disabled={!paymentMethod || placingOrder}>
             Place Order
           </Button>
         </div>
