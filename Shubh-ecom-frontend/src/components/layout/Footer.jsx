@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 
 const Footer = () => {
   const { siteName, copyrightText, contact } = useSiteConfig();
-  const supportPhone = contact?.phone || '+91 98765 43210';
+  const supportPhone = contact?.phone || '9876543210';
   const supportEmail = contact?.email || 'support@autospares.com';
   const supportAddress = contact?.address || 'Raipur, Chhattisgarh, India';
   const supportPhoneHref = `tel:${String(supportPhone).replace(/\D/g, '')}`;

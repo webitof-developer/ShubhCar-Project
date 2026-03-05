@@ -5,7 +5,7 @@ import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import { dashboardAPI } from '@/helpers/dashboardApi'
 import { currency } from '@/context/constants'
 import { useSession } from 'next-auth/react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Button, Card, CardBody, CardHeader, CardTitle, Col, Row, Table, Placeholder, Badge } from 'react-bootstrap'
 
@@ -18,11 +18,76 @@ const ReactApexChart = dynamic(() => import('react-apexcharts'), {
   ),
 })
 
-const SalespersonDashboard = ({ data, loading: reportLoading, salesmanId }) => {
+const parseLocalDateInput = (value) => {
+  if (!value) return null
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return null
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  const parsed = new Date(year, month - 1, day)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+const toStartOfDay = (date) => {
+  const d = new Date(date)
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+const toEndOfDay = (date) => {
+  const d = new Date(date)
+  d.setHours(23, 59, 59, 999)
+  return d
+}
+
+const SalespersonDashboard = ({ data, loading: reportLoading, salesmanId, filters }) => {
   const { data: session } = useSession()
   const [chartLoading, setChartLoading] = useState(false)
   const [chartData, setChartData] = useState({ labels: [], revenue: [], orders: [] })
   const [chartRange, setChartRange] = useState('month')
+  const chartRequestSeqRef = useRef(0)
+  const chartQueryParams = useMemo(() => {
+    const hasCustomRange = Boolean(filters?.from && filters?.to)
+    if (hasCustomRange) {
+      const fromDate = parseLocalDateInput(filters.from)
+      const toDate = parseLocalDateInput(filters.to)
+      if (fromDate && toDate) {
+        const safeFrom = fromDate <= toDate ? toStartOfDay(fromDate) : toStartOfDay(toDate)
+        const safeTo = fromDate <= toDate ? toEndOfDay(toDate) : toEndOfDay(fromDate)
+        return {
+          range: 'custom',
+          from: safeFrom.toISOString(),
+          to: safeTo.toISOString(),
+          salesmanId,
+        }
+      }
+      return {
+        range: 'custom',
+        from: filters.from,
+        to: filters.to,
+        salesmanId,
+      }
+    }
+
+    const now = new Date()
+    const from = new Date(now)
+    if (chartRange === 'today') {
+      from.setHours(0, 0, 0, 0)
+    } else if (chartRange === 'week') {
+      from.setDate(from.getDate() - 6)
+      from.setHours(0, 0, 0, 0)
+    } else {
+      from.setDate(from.getDate() - 29)
+      from.setHours(0, 0, 0, 0)
+    }
+    return {
+      range: 'custom',
+      from: from.toISOString(),
+      to: now.toISOString(),
+      salesmanId,
+    }
+  }, [chartRange, filters?.from, filters?.to, salesmanId])
 
   useEffect(() => {
     const token = session?.accessToken
@@ -32,19 +97,23 @@ const SalespersonDashboard = ({ data, loading: reportLoading, salesmanId }) => {
     }
 
     const fetchChart = async () => {
+      const requestSeq = ++chartRequestSeqRef.current
       setChartLoading(true)
       try {
-        const chartResponse = await dashboardAPI.getRevenueChart(token, { range: chartRange, salesmanId })
+        const chartResponse = await dashboardAPI.getRevenueChart(token, chartQueryParams)
+        if (requestSeq !== chartRequestSeqRef.current) return
         setChartData(chartResponse || { labels: [], revenue: [], orders: [] })
       } catch (error) {
+        if (requestSeq !== chartRequestSeqRef.current) return
         logger.error('Failed to load chart data', error)
       } finally {
+        if (requestSeq !== chartRequestSeqRef.current) return
         setChartLoading(false)
       }
     }
 
     fetchChart()
-  }, [session, salesmanId, chartRange])
+  }, [session?.accessToken, salesmanId, chartQueryParams])
 
   const salesChartOptions = useMemo(
     () => ({

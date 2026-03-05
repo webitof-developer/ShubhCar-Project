@@ -1,4 +1,4 @@
-﻿//src/components/invoice/InvoiceTemplate.jsx
+//src/components/invoice/InvoiceTemplate.jsx
 "use client";
 import { forwardRef } from 'react';
 import Image from 'next/image';
@@ -19,7 +19,7 @@ const InvoiceTemplate = forwardRef(({ order, items = [], address, settings = {} 
   const pincode = settings.invoice_company_pincode || '122001';
   const gstin = settings.invoice_company_gstin || 'GSTIN NOT CONFIGURED';
   const companyEmail = settings.invoice_company_email || 'support@example.com';
-  const companyPhone = settings.invoice_company_phone || '+91 1800-123-4567';
+  const companyPhone = settings.invoice_company_phone || '1800123456';
   const companyWebsite = settings.invoice_company_website || '';
 
   const invoiceNumber = `INV-${order.orderNumber || order._id}`;

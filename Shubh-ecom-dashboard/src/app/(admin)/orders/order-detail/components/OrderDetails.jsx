@@ -707,6 +707,7 @@ const OrderDetails = ({ order, shipments, items, notes, onStatusUpdate, updating
         </Card>
       )}
       {canManage && <OrderActions order={order} onStatusUpdate={onStatusUpdate} updatingStatus={updatingStatus} />}
+      <OrderTotals order={order} />
       {canManage && (
         <PaymentInformation
           order={order}
@@ -717,7 +718,6 @@ const OrderDetails = ({ order, shipments, items, notes, onStatusUpdate, updating
           canManage={canManage}
         />
       )}
-      <OrderTotals order={order} />
       <CustomerDetails user={order.userId} order={order} />
     </div>
   )

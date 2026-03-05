@@ -35,7 +35,7 @@ const Privacy = () => {
               </div>
               <div className="prose prose-slate max-w-none text-slate-600 text-base leading-relaxed">
                 <p>
-                  Welcome to <strong>{siteName}</strong> ("we," "our," or "us"). We are committed to protecting your privacy and ensuring your personal information is handled in a safe and responsible manner. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website <strong>autospares.com</strong> and use our services.
+                  Welcome to <strong>{siteName}</strong> (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;). We are committed to protecting your privacy and ensuring your personal information is handled in a safe and responsible manner. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website <strong>autospares.com</strong> and use our services.
                 </p>
                 <p>
                   By accessing or using our Service, you signify that you have read, understood, and agree to our collection, storage, use, and disclosure of your personal information as described in this Privacy Policy.

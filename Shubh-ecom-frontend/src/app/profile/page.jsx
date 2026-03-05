@@ -30,6 +30,7 @@ import { getMyOrders } from '@/services/orderService';
 import { getWishlist } from '@/services/wishlistService';
 import { getUserAddresses } from '@/services/userAddressService';
 import { toast } from 'sonner';
+import { logger } from '@/utils/logger';
 
 const Profile = () => {
   const { user: authUser, accessToken, isLoggedIn, logout } = useAuth();
@@ -55,7 +56,7 @@ const Profile = () => {
         const profile = await getCurrentUser(accessToken);
         setProfileData(profile);
       } catch (error) {
-        console.error('[PROFILE_PAGE] Failed to load profile:', error);
+        logger.error('[PROFILE_PAGE] Failed to load profile:', error);
         setProfileData(null);
       } finally {
         setLoading(false);
@@ -80,7 +81,7 @@ const Profile = () => {
           addresses: Array.isArray(addresses) ? addresses.length : 0,
         });
       } catch (error) {
-        console.error('[PROFILE_PAGE] Failed to load stats:', error);
+        logger.error('[PROFILE_PAGE] Failed to load stats:', error);
         setStats({ orders: 0, wishlist: 0, addresses: 0 });
       }
     };
@@ -94,7 +95,7 @@ const Profile = () => {
       const profile = await getCurrentUser(accessToken);
       setProfileData(profile);
     } catch (error) {
-      console.error('[PROFILE_PAGE] Refetch failed:', error);
+      logger.error('[PROFILE_PAGE] Refetch failed:', error);
     } finally {
       setLoading(false);
     }

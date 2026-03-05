@@ -23,6 +23,7 @@ import {
   Modal
 } from 'react-bootstrap'
 import DeleteConfirmModal from '@/components/shared/DeleteConfirmModal'
+import Image from 'next/image'
 
 const toLocalDatetimeInput = (value) => {
   if (!value) return ''
@@ -188,12 +189,13 @@ const ProductCard = ({ product, onDelete, onToggleFeatured, isSelected, onSelect
         <div className="d-flex align-items-start gap-2">
           <div className="rounded bg-secondary-subtle avatar-md d-flex align-items-center justify-content-center flex-shrink-0">
             {productImage ? (
-              <img
+              <Image
                 src={productImage.startsWith('http') ? productImage : `${API_ORIGIN}${productImage}`}
                 alt={product.name}
                 width={50}
                 height={50}
                 className="rounded"
+                unoptimized
                 style={{ objectFit: 'cover' }}
               />
             ) : (

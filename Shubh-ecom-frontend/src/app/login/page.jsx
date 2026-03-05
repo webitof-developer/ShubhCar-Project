@@ -12,6 +12,7 @@ import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
+import { logger } from '@/utils/logger';
 
 const LoginContent = () => {
   const router = useRouter();
@@ -40,7 +41,7 @@ const LoginContent = () => {
       const returnTo = searchParams?.get('returnTo') || '/';
       router.push(returnTo);
     } catch (error) {
-      console.error('Google Login Error:', error);
+      logger.error('Google Login Error:', error);
       toast.error(error.message || 'Google Login failed.');
     } finally {
       setLoading(false);
@@ -66,7 +67,7 @@ const LoginContent = () => {
       const returnTo = searchParams?.get('returnTo') || '/';
       router.push(returnTo);
     } catch (error) {
-      console.error('[LOGIN] Error:', error);
+      logger.error('[LOGIN] Error:', error);
       toast.error(error.message || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
@@ -221,7 +222,7 @@ const LoginContent = () => {
             <GoogleLogin
               onSuccess={handleGoogleLoginSuccess}
               onError={() => {
-                console.error('Google Login Failed');
+                logger.error('Google Login Failed');
                 toast.error('Google Login canceled or failed');
               }}
               useOneTap

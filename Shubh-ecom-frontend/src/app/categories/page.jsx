@@ -1,4 +1,4 @@
-﻿// src/app/categories/page.jsx
+// src/app/categories/page.jsx
 // Route: /categories
 
 import { Suspense } from 'react';
@@ -8,6 +8,7 @@ import { Layout } from '@/components/layout/Layout';
 import { getRootCategories } from '@/services/categoryService';
 import { resolveAssetUrl } from '@/utils/media';
 import { ChevronRight, Folder, Search, Home, LayoutGrid } from 'lucide-react';
+import { logger } from '@/utils/logger';
 
 export const revalidate = 60;
 
@@ -47,7 +48,7 @@ const CategoriesContent = async () => {
   try {
     categories = await getRootCategories();
   } catch (e) {
-    console.error('[Categories] fetch failed', e);
+    logger.error('[Categories] fetch failed', e);
   }
 
   return (

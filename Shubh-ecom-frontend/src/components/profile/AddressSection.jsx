@@ -14,6 +14,7 @@ import { useAuth } from '@/context/AuthContext';
 import { getUserAddresses, addAddress, updateAddress, deleteAddress, setDefaultAddress } from '@/services/userAddressService';
 import { toast } from 'sonner';
 import { sanitizeIndianPhone, isValidIndianPhone } from '@/utils/phoneValidation';
+import { logger } from '@/utils/logger';
 
 export const AddressSection = ({ user }) => {
   const { accessToken } = useAuth(); // PHASE 12: Get auth token
@@ -48,7 +49,7 @@ export const AddressSection = ({ user }) => {
       const data = await getUserAddresses(accessToken);
       setAddresses(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error('[ADDRESS_SECTION] Load failed:', error);
+      logger.error('[ADDRESS_SECTION] Load failed:', error);
       toast.error('Failed to load addresses');
       setAddresses([]);
     } finally {
@@ -132,7 +133,7 @@ export const AddressSection = ({ user }) => {
       resetForm();
       loadAddresses(); // Refetch
     } catch (error) {
-      console.error('[ADDRESS_SECTION] Save failed:', error);
+      logger.error('[ADDRESS_SECTION] Save failed:', error);
       toast.error('Failed to save address');
     } finally {
       setSaving(false);
@@ -149,7 +150,7 @@ export const AddressSection = ({ user }) => {
       setDeleteAddressId(null);
       loadAddresses(); // Refetch
     } catch (error) {
-      console.error('[ADDRESS_SECTION] Delete failed:', error);
+      logger.error('[ADDRESS_SECTION] Delete failed:', error);
       toast.error('Failed to delete address');
     }
   };
@@ -161,7 +162,7 @@ export const AddressSection = ({ user }) => {
       toast.success('Default address updated');
       loadAddresses(); // Refetch
     } catch (error) {
-      console.error('[ADDRESS_SECTION] Set default failed:', error);
+      logger.error('[ADDRESS_SECTION] Set default failed:', error);
       toast.error('Failed to set default address');
     }
   };

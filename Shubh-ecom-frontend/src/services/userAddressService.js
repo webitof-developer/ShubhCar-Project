@@ -15,15 +15,8 @@
 
 import APP_CONFIG, { getDataSourceConfig, logDataSource } from '@/config/app.config';
 import { handleDataSourceFallback } from '@/utils/dataSourceFallback';
-const readJsonSafe = async (response) => {
-  const text = await response.text();
-  if (!text) return null;
-  try {
-    return JSON.parse(text);
-  } catch {
-    return null;
-  }
-};
+import { logger } from '@/utils/logger';
+import { api } from '@/utils/apiClient';
 
 // Demo user data
 const DEMO_USER = {
@@ -81,28 +74,15 @@ const getDemoAddresses = () => {
  */
 const fetchRealAddresses = async (accessToken) => {
   if (!accessToken) {
-    console.warn('[ADDRESS_SERVICE] No access token for real fetch');
+    logger.warn('[ADDRESS_SERVICE] No access token for real fetch');
     return null;
   }
 
   try {
-    const response = await fetch(`${APP_CONFIG.api.baseUrl}/user-addresses`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      console.error('[ADDRESS_SERVICE] Address fetch failed:', response.status);
-      return null;
-    }
-
-    const json = await readJsonSafe(response);
-    return normalizeAddressList(json?.data ?? json);
+    const payload = await api.authGet('/user-addresses', accessToken);
+    return normalizeAddressList(payload);
   } catch (error) {
-    console.error('[ADDRESS_SERVICE] Address fetch error:', error);
+    logger.error('[ADDRESS_SERVICE] Address fetch error:', error);
     return null;
   }
 };
@@ -114,22 +94,10 @@ const addRealAddress = async (accessToken, addressData) => {
   if (!accessToken) return null;
 
   try {
-    const response = await fetch(`${APP_CONFIG.api.baseUrl}/user-addresses`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify(addressData),
-    });
-
-    if (!response.ok) return null;
-
-    const json = await readJsonSafe(response);
-    // Backend returns: {success: true, data: {...}}
-    return json?.data || json?.address || null;
+    const payload = await api.authPost('/user-addresses', addressData, accessToken);
+    return payload || null;
   } catch (error) {
-    console.error('[ADDRESS_SERVICE] Add address error:', error);
+    logger.error('[ADDRESS_SERVICE] Add address error:', error);
     return null;
   }
 };
@@ -141,22 +109,10 @@ const updateRealAddress = async (accessToken, id, addressData) => {
   if (!accessToken) return null;
 
   try {
-    const response = await fetch(`${APP_CONFIG.api.baseUrl}/user-addresses/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify(addressData),
-    });
-
-    if (!response.ok) return null;
-
-    const json = await readJsonSafe(response);
-    // Backend returns: {success: true, data: {...}}
-    return json?.data || json?.address || null;
+    const payload = await api.authPut(`/user-addresses/${id}`, addressData, accessToken);
+    return payload || null;
   } catch (error) {
-    console.error('[ADDRESS_SERVICE] Update address error:', error);
+    logger.error('[ADDRESS_SERVICE] Update address error:', error);
     return null;
   }
 };
@@ -168,16 +124,10 @@ const deleteRealAddress = async (accessToken, id) => {
   if (!accessToken) return false;
 
   try {
-    const response = await fetch(`${APP_CONFIG.api.baseUrl}/user-addresses/${id}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-      },
-    });
-
-    return response.ok;
+    await api.authDelete(`/user-addresses/${id}`, accessToken);
+    return true;
   } catch (error) {
-    console.error('[ADDRESS_SERVICE] Delete address error:', error);
+    logger.error('[ADDRESS_SERVICE] Delete address error:', error);
     return false;
   }
 };
@@ -402,14 +352,14 @@ export const setDefaultAddress = async (id, accessToken = null) => {
     const addresses = await fetchRealAddresses(accessToken);
     
     if (!addresses || addresses.length === 0) {
-      console.error('[ADDRESS_SERVICE] No addresses found');
+      logger.error('[ADDRESS_SERVICE] No addresses found');
       return null;
     }
     
     // Step 2: Find target address
     const targetAddress = addresses.find(a => (a._id || a.id) === id);
     if (!targetAddress) {
-      console.error('[ADDRESS_SERVICE] Address not found:', id);
+      logger.error('[ADDRESS_SERVICE] Address not found:', id);
       return null;
     }
     
@@ -436,7 +386,7 @@ export const setDefaultAddress = async (id, accessToken = null) => {
     
     return updated;
   } catch (error) {
-    console.error('[ADDRESS_SERVICE] Set default error:', error);
+    logger.error('[ADDRESS_SERVICE] Set default error:', error);
     return null;
   }
 };

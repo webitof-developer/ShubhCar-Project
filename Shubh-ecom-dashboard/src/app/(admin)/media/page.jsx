@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, Card, CardBody, Col, Form, Row, Spinner, Modal } from 'react-bootstrap'
 import styles from './media.module.scss'
 import DeleteConfirmModal from '@/components/shared/DeleteConfirmModal'
+import Image from 'next/image'
 
 
 const MEDIA_TYPES = [
@@ -136,9 +137,12 @@ const MediaPage = () => {
             {mediaItems.map((item) => (
               <div key={item._id} className={styles.mediaCard} onClick={() => setSelectedImage(item)}>
                 <div className={styles.imageContainer}>
-                  <img
+                  <Image
                     src={item.url?.startsWith('http') ? item.url : `${API_ORIGIN}${item.url}`}
                     alt={item.key}
+                    width={360}
+                    height={240}
+                    unoptimized
                   />
                 </div>
                 <button
@@ -177,10 +181,13 @@ const MediaPage = () => {
             <IconifyIcon icon="mdi:close" className="fs-5" />
           </button>
           {selectedImage && (
-            <img
+            <Image
               src={selectedImage.url?.startsWith('http') ? selectedImage.url : `${API_ORIGIN}${selectedImage.url}`}
               alt={selectedImage.key}
               className="img-fluid rounded shadow-lg"
+              width={1200}
+              height={900}
+              unoptimized
               style={{ maxHeight: '90vh', objectFit: 'contain', backgroundColor: '#fff' }}
             />
           )}

@@ -11,6 +11,7 @@ import { mediaAPI } from '@/helpers/mediaApi'
 import DropzoneFormInput from '@/components/form/DropzoneFormInput'
 import MediaPickerModal from '@/components/media/MediaPickerModal'
 import DataTable from '@/components/shared/DataTable'
+import Image from 'next/image'
 
 const ManufacturerBrandsPage = () => {
     const { data: session } = useSession()
@@ -196,7 +197,7 @@ const ManufacturerBrandsPage = () => {
                               columns={[
                                 { key: 'logo', label: 'Logo', render: (item) => (
                                   item.logo ? (
-                                    <img src={resolveMediaUrl(item.logo)} alt={item.name} className="rounded border" style={{ width: 40, height: 40, objectFit: 'cover' }} />
+                                    <Image src={resolveMediaUrl(item.logo)} alt={item.name} className="rounded border" width={40} height={40} unoptimized style={{ width: 40, height: 40, objectFit: 'cover' }} />
                                   ) : <span className="text-muted">-</span>
                                 )},
                                 { key: 'name', label: 'Name', render: (item) => item.name },
@@ -265,10 +266,13 @@ const ManufacturerBrandsPage = () => {
                             <Form.Label className="d-block">Brand Logo</Form.Label>
                             {newItem.logo ? (
                                 <div className="position-relative d-inline-block">
-                                    <img
+                                    <Image
                                         src={resolveMediaUrl(newItem.logo)}
                                         alt="Brand Logo"
                                         className="rounded border"
+                                        width={140}
+                                        height={140}
+                                        unoptimized
                                         style={{ width: 140, height: 140, objectFit: 'cover' }}
                                     />
                                     <Button

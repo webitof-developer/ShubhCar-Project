@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import * as wishlistService from '@/services/wishlistService';
 import { getProductById } from '@/services/productService';
 import { resolveProductImages } from '@/utils/media';
+import { logger } from '@/utils/logger';
 
 const WishlistContext = createContext(undefined);
 const normalizeWishlistEntries = (payload) => {
@@ -60,7 +61,7 @@ export const WishlistProvider = ({ children }) => {
       }
       setItems(normalized);
     } catch (error) {
-      console.error('[WISHLIST_CONTEXT] Failed to load wishlist:', error);
+      logger.error('[WISHLIST_CONTEXT] Failed to load wishlist:', error);
       setItems([]);
     } finally {
       setLoading(false);
@@ -96,7 +97,7 @@ export const WishlistProvider = ({ children }) => {
         await loadWishlist();
       }
     } catch (error) {
-      console.error('[WISHLIST_CONTEXT] Add failed:', error);
+      logger.error('[WISHLIST_CONTEXT] Add failed:', error);
     }
   }, [accessToken, isAuthenticated, loadWishlist, normalizeProduct]);
 
@@ -110,7 +111,7 @@ export const WishlistProvider = ({ children }) => {
       await wishlistService.removeFromWishlist(productId, accessToken);
       setItems(prev => prev.filter(item => (item._id || item.id) !== productId));
     } catch (error) {
-      console.error('[WISHLIST_CONTEXT] Remove failed:', error);
+      logger.error('[WISHLIST_CONTEXT] Remove failed:', error);
     }
   }, [accessToken, isAuthenticated]);
 
@@ -123,7 +124,7 @@ export const WishlistProvider = ({ children }) => {
       try {
         await wishlistService.clearWishlist(accessToken);
       } catch (error) {
-        console.error('[WISHLIST_CONTEXT] Clear failed:', error);
+        logger.error('[WISHLIST_CONTEXT] Clear failed:', error);
       }
     }
     setItems([]);

@@ -72,6 +72,9 @@ export const RegisterForm = ({
       </div>
 
       <div className="relative">
+        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground z-10">
+          +91
+        </span>
         <Input
           id="phone"
           type="tel"
@@ -81,15 +84,9 @@ export const RegisterForm = ({
           pattern="[0-9]{10}"
           maxLength={10}
           placeholder=" "
-          className={`${fieldClassName} pl-16 ${errors.phone ? 'border-destructive' : ''}`}
+          className={`${fieldClassName} pl-14 ${errors.phone ? 'border-destructive' : ''}`}
         />
-        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground select-none">
-          +91
-        </span>
-        <Label
-          htmlFor="phone"
-          className={fieldLabelClassName.replace('left-4', 'left-16')}
-        >
+        <Label htmlFor="phone" className={fieldLabelClassName}>
           Phone
         </Label>
         {errors.phone && <p className="text-xs text-destructive mt-1">{errors.phone}</p>}

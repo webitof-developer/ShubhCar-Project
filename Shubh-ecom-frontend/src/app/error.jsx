@@ -3,11 +3,11 @@
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertCircle } from 'lucide-react';
+import { logger } from '@/utils/logger';
 
 export default function Error({ error, reset }) {
   useEffect(() => {
-    // Log the error to an error reporting service
-    console.error('Frontend Error Boundary caught:', error);
+    logger.error('Frontend Error Boundary caught:', error);
   }, [error]);
 
   return (

@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import { mediaAPI } from '@/helpers/mediaApi'
 import { API_ORIGIN } from '@/helpers/apiBase'
+import Image from 'next/image'
 
 const resolveMediaUrl = (url) => {
   if (!url) return ''
@@ -151,12 +152,14 @@ const MediaPickerModal = ({
                       style={{ cursor: 'pointer', padding: 0, overflow: 'hidden' }}
                       onClick={() => toggleSelect(item)}
                     >
-                      <img
+                      <Image
                         src={resolveMediaUrl(item.url)}
                         alt={item.key || 'Media'}
                         className="img-fluid rounded"
+                        width={240}
+                        height={120}
+                        unoptimized
                         style={{ height: 120, width: '100%', objectFit: 'cover' }}
-                        loading="lazy"
                       />
                       {isSelected(item._id) && (
                         <span
@@ -181,10 +184,13 @@ const MediaPickerModal = ({
               <div className="border rounded p-3 h-100 overflow-auto" style={{ maxHeight: '70vh' }}>
                 <h6 className="mb-3">Preview</h6>
                 {previewItem ? (
-                  <img
+                  <Image
                     src={resolveMediaUrl(previewItem.url)}
                     alt={previewItem.key || 'Preview'}
                     className="img-fluid rounded"
+                    width={640}
+                    height={320}
+                    unoptimized
                     style={{ maxHeight: 320, width: '100%', objectFit: 'contain' }}
                   />
                 ) : (

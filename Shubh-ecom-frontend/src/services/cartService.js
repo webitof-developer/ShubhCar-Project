@@ -1,6 +1,7 @@
 // src/services/cartService.js
 
-import APP_CONFIG from '@/config/app.config';
+import { logger } from '@/utils/logger';
+import { api, ApiError } from '@/utils/apiClient';
 
 /**
  * Backend Cart Service - Phase 7 SCOPE
@@ -24,17 +25,7 @@ import APP_CONFIG from '@/config/app.config';
  * TODO: CART_CRUD - Enable per-item backend mutations in Phase 8+
  */
 
-const API_BASE = APP_CONFIG.api.baseUrl;
 const isValidObjectId = (value) => /^[a-fA-F0-9]{24}$/.test(String(value || ''));
-const readResponseBody = async (response) => {
-  const text = await response.text();
-  if (!text) return { text: '', json: null };
-  try {
-    return { text, json: JSON.parse(text) };
-  } catch {
-    return { text, json: null };
-  }
-};
 
 // ============================================================================
 // PHASE 7: ACTIVE METHODS (READ + REPLACE ONLY)
@@ -52,27 +43,9 @@ const readResponseBody = async (response) => {
 export const getCart = async (accessToken) => {
   
   try {
-    const response = await fetch(`${API_BASE}/cart`, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-      },
-    });
-
-    const { text, json } = await readResponseBody(response);
-
-    if (!response.ok) {
-      console.error('[CART_SERVICE] Failed to fetch cart', {
-        status: response.status,
-        statusText: response.statusText,
-        message: json?.message || text || null,
-      });
-      return null;
-    }
-    const cart = json?.data || json || null;
-    
-    return cart; // Returns { items: [...], subtotal, etc. }
+    return await api.authGet('/cart', accessToken);
   } catch (error) {
-    console.error('[CART_SERVICE] Fetch cart error:', error);
+    logger.error('[CART_SERVICE] Fetch cart error:', error);
     return null;
   }
 };
@@ -119,14 +92,14 @@ export const replaceCart = async (accessToken, guestItems) => {
         const quantity = Math.max(1, Number(item?.quantity || 1) || 1);
 
         if (!productId || !isValidObjectId(productId)) {
-          console.warn('[CART_SERVICE] Skipping item without productId:', item);
+          logger.warn('[CART_SERVICE] Skipping item without productId:', item);
           continue;
         }
 
         try {
           await _addToCartInternal(accessToken, { productId, quantity });
         } catch (error) {
-          console.warn('[CART_SERVICE] Skipping guest item during migration:', {
+          logger.warn('[CART_SERVICE] Skipping guest item during migration:', {
             productId,
             message: error?.message || 'Failed to add item',
           });
@@ -135,7 +108,7 @@ export const replaceCart = async (accessToken, guestItems) => {
     }
     return true;
   } catch (error) {
-    console.error('[CART_SERVICE] Replace cart error:', error);
+    logger.error('[CART_SERVICE] Replace cart error:', error);
     throw error;
   }
 };
@@ -150,22 +123,10 @@ export const replaceCart = async (accessToken, guestItems) => {
  */
 async function _addToCartInternal(accessToken, { productId, quantity }) {
   
-  const response = await fetch(`${API_BASE}/cart/items`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      productId,
-      quantity,
-    }),
-  });
-
-  const payload = await response.json().catch(() => ({}));
-
-  if (!response.ok) {
-    if (response.status === 409 && payload.code === 'DUPLICATE_KEY') {
+  try {
+    return await api.authPost('/cart/items', { productId, quantity }, accessToken);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 409 && error.data?.code === 'DUPLICATE_KEY') {
       const cart = await getCart(accessToken);
       if (cart) {
         const targetId = String(productId);
@@ -186,10 +147,8 @@ async function _addToCartInternal(accessToken, { productId, quantity }) {
       }
       throw new Error('Cart conflict: backend rejected this item. Please refresh and try again.');
     }
-    throw new Error(payload.message || 'Failed to add item to cart');
+    throw new Error(error?.message || 'Failed to add item to cart');
   }
-
-  return payload.data ?? payload;
 }
 
 /**
@@ -200,27 +159,7 @@ async function _removeFromCartInternal(accessToken, itemId) {
   if (!itemId || typeof itemId !== 'string' || !isValidObjectId(itemId)) {
     throw new Error('Invalid cart item identifier');
   }
-  const response = await fetch(`${API_BASE}/cart/items/${itemId}`, {
-    method: 'DELETE',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-    },
-  });
-
-  const payload = await response.json().catch(() => ({}));
-
-  if (!response.ok) {
-    const errorMessage =
-      payload &&
-      typeof payload === 'object' &&
-      typeof payload.message === 'string' &&
-      payload.message.trim()
-        ? payload.message
-        : 'Failed to remove item from cart';
-    throw new Error(errorMessage);
-  }
-
-  return payload.data ?? payload;
+  return await api.authDelete(`/cart/items/${itemId}`, accessToken);
 }
 
 /**
@@ -272,20 +211,13 @@ export const addToCart = async (accessToken, { productId, quantity }) => {
  * @param {string|null} shippingAddressId
  */
 export const getCartSummary = async (accessToken, shippingAddressId = null) => {
-  const response = await fetch(`${API_BASE}/cart/summary`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ shippingAddressId }),
-  });
-
-  const { text, json } = await readResponseBody(response);
-  if (!response.ok) {
-    const message = String(json?.message || text || '').toLowerCase();
+  try {
+    return await api.authPost('/cart/summary', { shippingAddressId }, accessToken);
+  } catch (error) {
+    const message = String(error?.message || '').toLowerCase();
+    const status = error instanceof ApiError ? error.status : 0;
     const isEmptyCartResponse =
-      [400, 404, 422].includes(response.status) &&
+      [400, 404, 422].includes(status) &&
       (
         message.includes('cart is empty') ||
         message.includes('empty cart') ||
@@ -297,66 +229,29 @@ export const getCartSummary = async (accessToken, shippingAddressId = null) => {
       return null;
     }
 
-    throw new Error(json?.message || text || 'Failed to fetch cart summary');
+    throw new Error(error?.message || 'Failed to fetch cart summary');
   }
-  return json?.data || json || null;
 };
 
 /**
  * Guest cart summary (no auth)
  */
 export const getGuestCartSummary = async ({ items = [], shippingAddress = null, couponCode = null } = {}) => {
-  const response = await fetch(`${API_BASE}/cart/summary/guest`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ items, shippingAddress, couponCode }),
-  });
-
-  const { text, json } = await readResponseBody(response);
-  if (!response.ok) {
-    throw new Error(json?.message || text || 'Failed to fetch cart summary');
-  }
-  return json?.data || json || null;
+  return await api.post('/cart/summary/guest', { items, shippingAddress, couponCode });
 };
 
 /**
  * Apply coupon code to backend cart
  */
 export const applyCoupon = async (accessToken, code) => {
-  const response = await fetch(`${API_BASE}/cart/coupon`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ code }),
-  });
-
-  const { text, json } = await readResponseBody(response);
-  if (!response.ok) {
-    throw new Error(json?.message || text || 'Failed to apply coupon');
-  }
-  return json?.data || json || null;
+  return await api.authPost('/cart/coupon', { code }, accessToken);
 };
 
 /**
  * Remove applied coupon from backend cart
  */
 export const removeCoupon = async (accessToken) => {
-  const response = await fetch(`${API_BASE}/cart/coupon`, {
-    method: 'DELETE',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-    },
-  });
-
-  const { text, json } = await readResponseBody(response);
-  if (!response.ok) {
-    throw new Error(json?.message || text || 'Failed to remove coupon');
-  }
-  return json?.data || json || null;
+  return await api.authDelete('/cart/coupon', accessToken);
 };
 
 /**
@@ -367,20 +262,7 @@ export const removeCoupon = async (accessToken) => {
  * @returns {Promise<Object>} - Updated cart item
  */
 export const updateCartItem = async (accessToken, itemId, quantity) => {
-  const response = await fetch(`${API_BASE}/cart/items/${itemId}`, {
-    method: 'PATCH',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ quantity }),
-  });
-
-  const { text, json } = await readResponseBody(response);
-  if (!response.ok) {
-    throw new Error(json?.message || text || 'Failed to update cart item');
-  }
-  return json?.data || json || null;
+  return await api.authPatch(`/cart/items/${itemId}`, { quantity }, accessToken);
 };
 
 /**

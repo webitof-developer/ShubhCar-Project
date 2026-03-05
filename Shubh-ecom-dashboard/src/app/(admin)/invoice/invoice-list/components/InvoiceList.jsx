@@ -37,46 +37,16 @@ const InvoiceList = () => {
     }
   }
 
-  const handleView = async (invoiceId) => {
-    if (!session?.accessToken) return
-    try {
-      const blob = await invoiceAPI.getPdf(invoiceId, session.accessToken, false)
-      const url = URL.createObjectURL(blob)
-      window.open(url, '_blank')
-    } catch (err) {
-      setError(err.message || 'Failed to view invoice')
-    }
+  const handleView = (invoiceId) => {
+    window.open(`/invoice/invoice-details?id=${invoiceId}`, '_blank')
   }
 
-  const handleDownload = async (invoiceId) => {
-    if (!session?.accessToken) return
-    try {
-      const blob = await invoiceAPI.getPdf(invoiceId, session.accessToken, true)
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `invoice-${invoiceId}.pdf`
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      URL.revokeObjectURL(url)
-    } catch (err) {
-      setError(err.message || 'Failed to download invoice')
-    }
+  const handleDownload = (invoiceId) => {
+    window.open(`/invoice/invoice-details?id=${invoiceId}&action=download`, '_blank')
   }
 
-  const handlePrint = async (invoiceId) => {
-    if (!session?.accessToken) return
-    try {
-      const blob = await invoiceAPI.getPdf(invoiceId, session.accessToken, false)
-      const url = URL.createObjectURL(blob)
-      const popup = window.open(url, '_blank')
-      if (!popup) return
-      popup.focus()
-      popup.print()
-    } catch (err) {
-      setError(err.message || 'Failed to print invoice')
-    }
+  const handlePrint = (invoiceId) => {
+    window.open(`/invoice/invoice-details?id=${invoiceId}&action=print`, '_blank')
   }
 
   return (

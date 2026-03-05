@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Mail, ArrowLeft, CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import APP_CONFIG from '@/config/app.config';
+import { logger } from '@/utils/logger';
 
 const VerifyEmailContent = () => {
   const router = useRouter();
@@ -98,7 +99,7 @@ const VerifyEmailContent = () => {
         router.push('/login');
       }, 2000);
     } catch (error) {
-      console.error('[VERIFY_EMAIL] Error:', error);
+      logger.error('[VERIFY_EMAIL] Error:', error);
       toast.error(error.message || 'Invalid OTP. Please try again.');
       setOtp(['', '', '', '', '', '']);
       inputRefs.current[0]?.focus();
@@ -128,7 +129,7 @@ const VerifyEmailContent = () => {
       setOtp(['', '', '', '', '', '']);
       inputRefs.current[0]?.focus();
     } catch (error) {
-      console.error('[RESEND_OTP] Error:', error);
+      logger.error('[RESEND_OTP] Error:', error);
       toast.error(error.message || 'Failed to resend OTP');
     } finally {
       setResending(false);

@@ -16,6 +16,14 @@ const extractItems = (payload) => {
   return []
 }
 
+const formatLocalDate = (date) => {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return ''
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 const SalespersonFilter = ({ filters, onChange, onReset }) => {
   const { data: session } = useSession()
   const [salesmen, setSalesmen] = useState([])
@@ -44,12 +52,8 @@ const SalespersonFilter = ({ filters, onChange, onReset }) => {
   }, [session])
 
   const handleDateChange = (dates, field) => {
-    if (dates && dates[0]) {
-      const dateStr = dates[0].toISOString().split('T')[0]
-      onChange({ ...filters, [field]: dateStr, page: 1 })
-    } else {
-      onChange({ ...filters, [field]: '', page: 1 })
-    }
+    const nextValue = dates && dates[0] ? formatLocalDate(dates[0]) : ''
+    onChange((prev) => ({ ...prev, [field]: nextValue, page: 1 }))
   }
 
   return (
@@ -72,7 +76,7 @@ const SalespersonFilter = ({ filters, onChange, onReset }) => {
               isLoading={loading}
               placeholder={loading ? 'Loading...' : 'Select Salesperson'}
               value={salesmen.find((s) => s.value === filters.salesmanId) || null}
-              onChange={(option) => onChange({ ...filters, salesmanId: option?.value || '', page: 1 })}
+              onChange={(option) => onChange((prev) => ({ ...prev, salesmanId: option?.value || '', page: 1 }))}
               isClearable
               styles={{
                 control: (base) => ({

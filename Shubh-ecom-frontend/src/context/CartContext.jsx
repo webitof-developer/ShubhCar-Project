@@ -30,6 +30,7 @@ import { getProductById } from '@/services/productService';
 import { calculateCartTotal } from '@/services/pricingService';
 import { getMinimumOrderQuantity } from '@/services/userTypeService';
 import { toast } from 'sonner';
+import { logger } from '@/utils/logger';
 
 const CartContext = createContext(undefined);
 
@@ -209,7 +210,7 @@ export const CartProvider = ({ children }) => {
     }
 
     // Log sync for debugging
-    // console.error('[CART_CONTEXT] Synced with backend');
+    // logger.error('[CART_CONTEXT] Synced with backend');
   }, []);
 
   /* ... useEffects ... */
@@ -252,7 +253,7 @@ export const CartProvider = ({ children }) => {
       // Keep storage normalized but never trimmed by temporary fetch failures.
       setStorageItem(CART_STORAGE_KEY, parsedCart);
     } catch (error) {
-      console.error('[CART_CONTEXT] Failed to load guest cart:', error);
+      logger.error('[CART_CONTEXT] Failed to load guest cart:', error);
       setItems([]);
     }
   }, []);
@@ -268,7 +269,7 @@ export const CartProvider = ({ children }) => {
       const payload = toGuestStorageItems(cartItems);
       setStorageItem(CART_STORAGE_KEY, payload);
     } catch (error) {
-      console.error('[CART_CONTEXT] Failed to persist guest cart:', error);
+      logger.error('[CART_CONTEXT] Failed to persist guest cart:', error);
     }
   }, [cartSource]);
 
@@ -283,7 +284,7 @@ export const CartProvider = ({ children }) => {
     // Safety timeout to prevent indefinite loading
     const safetyTimeout = setTimeout(() => {
       if (isMounted && initializationLoading) {
-        console.warn('[CART_CONTEXT] Initialization timed out - forcing loading completion');
+        logger.warn('[CART_CONTEXT] Initialization timed out - forcing loading completion');
         setInitializationLoading(false);
         setLoading(false);
       }
@@ -321,11 +322,11 @@ export const CartProvider = ({ children }) => {
                 setBackendDiscount(0);
               } else {
                 // Keep current in-memory cart on transient fetch failures.
-                console.warn('[CART_CONTEXT] Backend cart unavailable, preserving current cart state');
+                logger.warn('[CART_CONTEXT] Backend cart unavailable, preserving current cart state');
               }
             }
           } catch (error) {
-            console.error('[CART_CONTEXT] Failed to load backend cart:', error);
+            logger.error('[CART_CONTEXT] Failed to load backend cart:', error);
             // toast.error('Failed to load your cart. Please refresh the page.'); // Optional: Don't spam
 
             // Do not fallback to guest for authenticated users, otherwise
@@ -342,7 +343,7 @@ export const CartProvider = ({ children }) => {
           }
         }
       } catch (err) {
-        console.error('[CART_CONTEXT] Critical error in loadCart:', err);
+        logger.error('[CART_CONTEXT] Critical error in loadCart:', err);
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -374,7 +375,7 @@ export const CartProvider = ({ children }) => {
         syncWithBackend(backendCart);
       }
     } catch (error) {
-      console.error('[CART_CONTEXT] Failed to hydrate cart:', error);
+      logger.error('[CART_CONTEXT] Failed to hydrate cart:', error);
       toast.error('Failed to load your cart');
     } finally {
       setLoading(false);
@@ -393,7 +394,7 @@ export const CartProvider = ({ children }) => {
 
     const productId = product?._id || product?.id;
     if (!productId) {
-      console.error('[CART_CONTEXT] Missing product id');
+      logger.error('[CART_CONTEXT] Missing product id');
       return false;
     }
     const safeQuantity = Math.max(1, Number(quantity) || 1);
@@ -444,7 +445,7 @@ export const CartProvider = ({ children }) => {
         return false;
 
       } catch (error) {
-        console.error('[CART_CONTEXT] Failed to add to backend cart:', error);
+        logger.error('[CART_CONTEXT] Failed to add to backend cart:', error);
         toast.error(error?.message || 'Failed to add item to cart');
         return false;
       }
@@ -495,7 +496,7 @@ export const CartProvider = ({ children }) => {
    */
   const removeFromCart = useCallback(async (itemId) => {
     if (itemId === null || itemId === undefined || itemId === '') {
-      console.warn('[CART_CONTEXT] removeFromCart called without valid item id');
+      logger.warn('[CART_CONTEXT] removeFromCart called without valid item id');
       return;
     }
     const targetId = String(itemId);
@@ -520,7 +521,7 @@ export const CartProvider = ({ children }) => {
       }
 
       if (cartSource === 'backend' && accessToken && !backendItemId) {
-        console.warn('[CART_CONTEXT] Skip local remove in backend mode: missing backend item id');
+        logger.warn('[CART_CONTEXT] Skip local remove in backend mode: missing backend item id');
         return prev;
       }
 
@@ -545,12 +546,12 @@ export const CartProvider = ({ children }) => {
         }
 
       } catch (error) {
-        console.error('[CART_CONTEXT] Failed to remove from backend cart:', error);
+        logger.error('[CART_CONTEXT] Failed to remove from backend cart:', error);
         toast.error('Failed to sync cart. Changes saved locally.');
       }
     } else {
       if (cartSource === 'backend' && accessToken) {
-        console.warn('[CART_CONTEXT] Skipped backend remove: missing valid backend item id');
+        logger.warn('[CART_CONTEXT] Skipped backend remove: missing valid backend item id');
       } else {
       }
     }
@@ -585,7 +586,7 @@ export const CartProvider = ({ children }) => {
       }
 
       if (cartSource === 'backend' && accessToken && !backendItemId) {
-        console.warn('[CART_CONTEXT] Skip local quantity update in backend mode: missing backend item id');
+        logger.warn('[CART_CONTEXT] Skip local quantity update in backend mode: missing backend item id');
         return prev;
       }
 
@@ -609,12 +610,12 @@ export const CartProvider = ({ children }) => {
         }
 
       } catch (error) {
-        console.error('[CART_CONTEXT] Failed to update backend cart:', error);
+        logger.error('[CART_CONTEXT] Failed to update backend cart:', error);
         toast.error('Failed to sync cart. Changes saved locally.');
       }
     } else {
       if (cartSource === 'backend' && accessToken) {
-        console.warn('[CART_CONTEXT] Skipped backend quantity update: missing valid backend item id');
+        logger.warn('[CART_CONTEXT] Skipped backend quantity update: missing valid backend item id');
       } else {
       }
     }
@@ -642,13 +643,13 @@ export const CartProvider = ({ children }) => {
         if (hadCoupon) {
           promises.push(
             cartService.removeCoupon(accessToken)
-              .catch(err => console.warn('[CART_CONTEXT] Failed to clear backend coupon (non-critical):', err))
+              .catch(err => logger.warn('[CART_CONTEXT] Failed to clear backend coupon (non-critical):', err))
           );
         }
 
         await Promise.all(promises);
       } catch (error) {
-        console.error('[CART_CONTEXT] Failed to clear backend cart:', error);
+        logger.error('[CART_CONTEXT] Failed to clear backend cart:', error);
         toast.error('Failed to sync cart. Changes saved locally.');
       }
     }
@@ -680,7 +681,7 @@ export const CartProvider = ({ children }) => {
         syncWithBackend(updatedCart);
         toast.success(`Coupon ${coupon.code} applied!`);
       } catch (error) {
-        console.error('[CART_CONTEXT] Failed to apply coupon:', error);
+        logger.error('[CART_CONTEXT] Failed to apply coupon:', error);
         toast.error(error.message || 'Failed to apply coupon');
       }
     } else {
@@ -702,7 +703,7 @@ export const CartProvider = ({ children }) => {
         syncWithBackend(updatedCart);
         toast.success('Coupon removed');
       } catch (error) {
-        console.error('[CART_CONTEXT] Failed to remove coupon:', error);
+        logger.error('[CART_CONTEXT] Failed to remove coupon:', error);
         toast.error('Failed to remove coupon');
       }
     } else {

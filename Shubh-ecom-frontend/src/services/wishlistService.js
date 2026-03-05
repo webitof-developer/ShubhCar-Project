@@ -15,15 +15,8 @@
 
 import APP_CONFIG, { getDataSourceConfig, logDataSource } from '@/config/app.config';
 import { handleDataSourceFallback } from '@/utils/dataSourceFallback';
-const readJsonSafe = async (response) => {
-  const text = await response.text();
-  if (!text) return null;
-  try {
-    return JSON.parse(text);
-  } catch {
-    return null;
-  }
-};
+import { logger } from '@/utils/logger';
+import { api } from '@/utils/apiClient';
 
 const STORAGE_KEY = 'user_wishlist';
 
@@ -65,28 +58,15 @@ const saveDemoWishlist = (wishlist) => {
  */
 const fetchRealWishlist = async (accessToken) => {
   if (!accessToken) {
-    console.warn('[WISHLIST_SERVICE] No access token for real fetch');
+    logger.warn('[WISHLIST_SERVICE] No access token for real fetch');
     return null;
   }
 
   try {
-    const response = await fetch(`${APP_CONFIG.api.baseUrl}/wishlist`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      console.error('[WISHLIST_SERVICE] Wishlist fetch failed:', response.status);
-      return null;
-    }
-
-    const json = await readJsonSafe(response);
-    return normalizeWishlistArray(json?.data ?? json);
+    const payload = await api.authGet('/wishlist', accessToken);
+    return normalizeWishlistArray(payload);
   } catch (error) {
-    console.error('[WISHLIST_SERVICE] Wishlist fetch error:', error);
+    logger.error('[WISHLIST_SERVICE] Wishlist fetch error:', error);
     return null;
   }
 };
@@ -98,21 +78,9 @@ const addToRealWishlist = async (accessToken, productId) => {
   if (!accessToken) return null;
 
   try {
-    const response = await fetch(`${APP_CONFIG.api.baseUrl}/wishlist`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({ productId }),
-    });
-
-    if (!response.ok) return null;
-
-    const data = await readJsonSafe(response);
-    return data?.data || null;
+    return await api.authPost('/wishlist', { productId }, accessToken);
   } catch (error) {
-    console.error('[WISHLIST_SERVICE] Add to wishlist error:', error);
+    logger.error('[WISHLIST_SERVICE] Add to wishlist error:', error);
     return null;
   }
 };
@@ -124,19 +92,9 @@ const removeFromRealWishlist = async (accessToken, productId) => {
   if (!accessToken) return null;
 
   try {
-    const response = await fetch(`${APP_CONFIG.api.baseUrl}/wishlist/${productId}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-      },
-    });
-
-    if (!response.ok) return null;
-
-    const data = await readJsonSafe(response);
-    return data?.data || null;
+    return await api.authDelete(`/wishlist/${productId}`, accessToken);
   } catch (error) {
-    console.error('[WISHLIST_SERVICE] Remove from wishlist error:', error);
+    logger.error('[WISHLIST_SERVICE] Remove from wishlist error:', error);
     return null;
   }
 };
@@ -150,16 +108,10 @@ const clearRealWishlist = async (accessToken) => {
   // TODO: Backend may not have DELETE /wishlist (clear all) endpoint
   // Verify backend route exists before using this function
   try {
-    const response = await fetch(`${APP_CONFIG.api.baseUrl}/wishlist`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-      },
-    });
-
-    return response.ok;
+    await api.authDelete('/wishlist', accessToken);
+    return true;
   } catch (error) {
-    console.error('[WISHLIST_SERVICE] Clear wishlist error:', error);
+    logger.error('[WISHLIST_SERVICE] Clear wishlist error:', error);
     return false;
   }
 };

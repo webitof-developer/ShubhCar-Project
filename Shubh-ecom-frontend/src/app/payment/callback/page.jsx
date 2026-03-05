@@ -23,6 +23,7 @@ import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import APP_CONFIG from '@/config/app.config';
 import { confirmPayment, getPaymentStatus } from '@/services/paymentService';
+import { logger } from '@/utils/logger';
 
 const PaymentCallbackContent = () => {
   const router = useRouter();
@@ -40,7 +41,7 @@ const PaymentCallbackContent = () => {
   useEffect(() => {
     // Validate required parameters
     if (!orderId || !status) {
-      console.error('[PAYMENT_CALLBACK] Missing orderId or status');
+      logger.error('[PAYMENT_CALLBACK] Missing orderId or status');
       router.push('/checkout');
       return;
     }
@@ -65,7 +66,7 @@ const PaymentCallbackContent = () => {
               resolvedStatus = 'failed';
             }
           } catch (confirmError) {
-            console.error('[PAYMENT_CALLBACK] Confirm failed:', confirmError);
+            logger.error('[PAYMENT_CALLBACK] Confirm failed:', confirmError);
           }
         }
 
@@ -137,7 +138,7 @@ const PaymentCallbackContent = () => {
           }, 1500);
         }
       } catch (error) {
-        console.error('[PAYMENT_CALLBACK] Error processing callback:', error);
+        logger.error('[PAYMENT_CALLBACK] Error processing callback:', error);
         toast.error('Payment verification failed', {
           description: 'Please contact support if amount was deducted.',
         });

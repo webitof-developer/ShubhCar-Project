@@ -13,6 +13,7 @@ import {
 import { useRouter } from "next/navigation";
 import { getVehicleBrands, getModelsByBrand, getModelYears, getVehiclesByFilter } from "@/services/vehicleService"; // Restored getVehicleBrands
 import { useVehicleSelection } from "@/context/VehicleContext";
+import { logger } from '@/utils/logger';
 
 // ... (helper functions same)
 
@@ -58,7 +59,7 @@ export const VehicleFinder = () => {
         const data = await getVehicleBrands();
         setBrands(Array.isArray(data) ? data : []);
       } catch (error) {
-        console.error("Failed to fetch brands", error);
+        logger.error("Failed to fetch brands", error);
       }
     };
     fetchBrands();
@@ -78,7 +79,7 @@ export const VehicleFinder = () => {
         const data = await getModelsByBrand(val);
         setModels(Array.isArray(data) ? data : []);
       } catch (error) {
-        console.error("Failed to fetch models", error);
+        logger.error("Failed to fetch models", error);
       }
     }
   };
@@ -99,7 +100,7 @@ export const VehicleFinder = () => {
           : [];
         setYears(sorted);
       } catch (error) {
-        console.error("Failed to fetch years", error);
+        logger.error("Failed to fetch years", error);
       }
     }
   };
@@ -115,7 +116,7 @@ export const VehicleFinder = () => {
         const data = await getVehiclesByFilter({ brandId, modelId, yearId: val });
         setVariants(Array.isArray(data) ? data : []);
       } catch (error) {
-        console.error("Failed to fetch variants", error);
+        logger.error("Failed to fetch variants", error);
       }
     }
   };

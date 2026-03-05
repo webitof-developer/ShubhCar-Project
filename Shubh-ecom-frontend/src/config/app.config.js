@@ -1,5 +1,7 @@
 //src/config/app.config.js
 
+import { logger } from '@/utils/logger';
+
 /**
  * ============================================================================
  * CENTRAL APPLICATION CONFIGURATION
@@ -240,7 +242,7 @@ const APP_CONFIG = {
         if (isProd) {
           throw new Error('NEXT_PUBLIC_API_URL is required in production builds');
         }
-        console.warn('[CONFIG] NEXT_PUBLIC_API_URL missing, falling back to localhost for development');
+        logger.warn('[CONFIG] NEXT_PUBLIC_API_URL missing, falling back to localhost for development');
       }
       const base = raw || 'http://localhost:5000';
       const trimmed = base.replace(/\/$/, '');
@@ -257,7 +259,7 @@ const APP_CONFIG = {
         if (isProd) {
           throw new Error('NEXT_PUBLIC_API_URL is required in production builds');
         }
-        console.warn('[CONFIG] NEXT_PUBLIC_API_URL missing, falling back to localhost for development');
+        logger.warn('[CONFIG] NEXT_PUBLIC_API_URL missing, falling back to localhost for development');
       }
       const base = raw || 'http://localhost:5000';
       const trimmed = base.replace(/\/$/, '');
@@ -380,9 +382,9 @@ export function logDataSource(domain, source, reason) {
   const message = `[DATA] ${safeDomain}: USING ${safeSource}`;
 
   // if (reason) {
-  //   console.error(`${message} - ${reason}`);
+  //   logger.error(`${message} - ${reason}`);
   // } else {
-  //   console.error(message);
+  //   logger.error(message);
   // }
 }
 

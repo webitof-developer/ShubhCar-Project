@@ -25,6 +25,7 @@ import DeleteConfirmModal from '@/components/shared/DeleteConfirmModal'
 import DataTable from '@/components/shared/DataTable'
 import StatusToggle from '@/components/shared/StatusToggle'
 import MediaPickerModal from '@/components/media/MediaPickerModal'
+import Image from 'next/image'
 
 const MAX_CATEGORY_IMAGE_BYTES = 2 * 1024 * 1024
 const CATEGORY_ICON_SIZE_PX = 256
@@ -486,9 +487,12 @@ const CategoriesPage = () => {
                   { key: 'checkbox', label: '', width: 20, render: () => <Form.Check /> },
                   { key: 'image', label: 'Image', render: (cat) => (
                     cat.imageUrl ? (
-                      <img
+                      <Image
                         src={resolveImageUrl(cat.imageUrl)}
                         alt={cat.name}
+                        width={36}
+                        height={36}
+                        unoptimized
                         style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover' }}
                       />
                     ) : (
@@ -657,9 +661,12 @@ const CategoriesPage = () => {
               </Form.Text>
               {formData.imageUrl && (
                 <div className="mt-2">
-                  <img
+                  <Image
                     src={resolveImageUrl(formData.imageUrl)}
                     alt="Category preview"
+                    width={72}
+                    height={72}
+                    unoptimized
                     style={{ width: 72, height: 72, borderRadius: 10, objectFit: 'cover' }}
                   />
                 </div>

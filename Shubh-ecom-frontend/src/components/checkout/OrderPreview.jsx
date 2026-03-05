@@ -24,6 +24,7 @@ import { resolveProductImages } from '@/utils/media';
 import { getTaxSuffix } from '@/services/taxDisplayService';
 import { getProductIdentifier } from '@/utils/productType';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
+import { logger } from '@/utils/logger';
 
 /**
  * Purely Presentational Order Preview
@@ -71,7 +72,7 @@ export function OrderPreview({
         const data = await getAddressById(addressId, accessToken);
         setResolvedAddress(data || null);
       } catch (error) {
-        console.error('[ORDER_PREVIEW] Failed to load address:', error);
+        logger.error('[ORDER_PREVIEW] Failed to load address:', error);
         setResolvedAddress(null);
       }
     };

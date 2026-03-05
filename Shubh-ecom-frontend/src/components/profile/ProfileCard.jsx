@@ -15,6 +15,7 @@ import { updateUserProfile } from '@/services/userService';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { sanitizeIndianPhone, isValidIndianPhone } from '@/utils/phoneValidation';
+import { logger } from '@/utils/logger';
 
 export const ProfileCard = ({ user, onProfileUpdate }) => {
   const router = useRouter();
@@ -66,14 +67,14 @@ export const ProfileCard = ({ user, onProfileUpdate }) => {
         if (onProfileUpdate) {
           onProfileUpdate();
         } else {
-          console.warn('[PROFILE_CARD] onProfileUpdate callback not provided!');
+          logger.warn('[PROFILE_CARD] onProfileUpdate callback not provided!');
         }
       } else {
-        console.error('[PROFILE_CARD] Update returned null/false');
+        logger.error('[PROFILE_CARD] Update returned null/false');
         toast.error('Failed to update profile. Please try again.');
       }
     } catch (error) {
-      console.error('[PROFILE_CARD] Save error:', error);
+      logger.error('[PROFILE_CARD] Save error:', error);
       toast.error('An error occurred while saving your profile');
     } finally {
       setSaving(false);

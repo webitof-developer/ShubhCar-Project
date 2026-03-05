@@ -5,7 +5,6 @@ const asyncHandler = require('../../utils/asyncHandler');
 const authService = require('./auth.service');
 const { success } = require('../../utils/apiResponse');
 const {
-  setAccessTokenCookie,
   setAuthCookies,
   clearAuthCookies,
   getRefreshTokenFromRequest,
@@ -13,9 +12,10 @@ const {
 
 exports.register = asyncHandler(async (req: AuthRequest, res: Response) => {
   const result = await authService.register(req.body);
-  if (result?.token) {
-    setAccessTokenCookie(res, result.token);
-  }
+  setAuthCookies(res, {
+    accessToken: result?.accessToken,
+    refreshToken: result?.refreshToken,
+  });
   return success(res, result, 'Registration successful');
 });
 

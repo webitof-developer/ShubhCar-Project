@@ -14,6 +14,7 @@ import DataTable from '@/components/shared/DataTable'
 import CRUDModal from '@/components/shared/CRUDModal'
 import DeleteConfirmModal from '@/components/shared/DeleteConfirmModal'
 import useAPI from '@/hooks/useAPI'
+import Image from 'next/image'
 
 const ModelsPage = () => {
   const { data: session } = useSession()
@@ -183,7 +184,7 @@ const ModelsPage = () => {
                   { key: 'name', label: 'Model', render: (item) => item.name },
                   { key: 'image', label: 'Image', render: (item) => (
                     item.image ? (
-                      <img src={resolveMediaUrl(item.image)} alt={item.name} className="rounded border" style={{ width: 40, height: 40, objectFit: 'cover' }} />
+                      <Image src={resolveMediaUrl(item.image)} alt={item.name} className="rounded border" width={40} height={40} unoptimized style={{ width: 40, height: 40, objectFit: 'cover' }} />
                     ) : <span className="text-muted">No image</span>
                   )},
                   { key: 'status', label: 'Status', render: (item) => (
@@ -246,10 +247,13 @@ const ModelsPage = () => {
             render: () => (
               tempImageUrl ? (
                 <div className="position-relative d-inline-block">
-                  <img
+                  <Image
                     src={resolveMediaUrl(tempImageUrl)}
                     alt="Model"
                     className="rounded border"
+                    width={140}
+                    height={140}
+                    unoptimized
                     style={{ width: 140, height: 140, objectFit: 'cover' }}
                   />
                   <Button

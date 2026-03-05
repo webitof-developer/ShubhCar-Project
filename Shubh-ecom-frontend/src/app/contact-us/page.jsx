@@ -9,11 +9,17 @@ import { Mail, Phone, MapPin, Clock, Send, MessageSquare, ArrowRight, User, Help
 import { toast } from 'sonner';
 import { submitContactForm } from '@/services/contactService';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
-import { sanitizeIndianPhone, isValidIndianPhone } from '@/utils/phoneValidation';
+import { sanitizeIndianPhone } from '@/utils/phoneValidation';
+import { validateEmailField, validateNameField, validatePhoneField } from '@/utils/formValidation';
+
+const fieldClassName =
+  'peer h-12 rounded-[10px] border border-[#94a3b866] bg-white px-[0.95rem] pt-[0.95rem] text-foreground shadow-none transition-colors focus-visible:ring-0 focus-visible:ring-offset-0';
+const fieldLabelClassName =
+  'pointer-events-none absolute left-4 top-0 -translate-y-1/2 text-xs text-primary bg-white px-2 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-sm peer-placeholder-shown:text-muted-foreground peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-xs peer-focus:text-primary';
 
 const ContactPage = () => {
   const { siteName, contact } = useSiteConfig();
-  const supportPhone = contact?.phone || '+91 98765 43210';
+  const supportPhone = contact?.phone || '9876543210';
   const supportEmail = contact?.email || 'support@autospares.com';
   const supportAddress = contact?.address || 'Raipur, Chhattisgarh, India';
   const supportPhoneHref = `tel:${String(supportPhone).replace(/\D/g, '')}`;
@@ -26,6 +32,7 @@ const ContactPage = () => {
     subject: '',
     message: ''
   });
+  const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e) => {
@@ -35,13 +42,40 @@ const ContactPage = () => {
         ? sanitizeIndianPhone(value)
         : value;
     setFormData(prev => ({ ...prev, [id]: nextValue }));
+    if (errors[id]) {
+      setErrors((prev) => ({ ...prev, [id]: '' }));
+    }
+  };
+
+  const validateForm = () => {
+    const nextErrors = {};
+    const cleanPhone = sanitizeIndianPhone(formData.phone);
+
+    const nameError = validateNameField(formData.name, 'Name');
+    if (nameError) nextErrors.name = nameError;
+
+    const emailError = validateEmailField(formData.email, true);
+    if (emailError) nextErrors.email = emailError;
+
+    const phoneError = validatePhoneField(cleanPhone, false);
+    if (phoneError) nextErrors.phone = phoneError;
+
+    if (!formData.subject.trim()) nextErrors.subject = 'Subject is required';
+    if (!formData.message.trim()) {
+      nextErrors.message = 'Message is required';
+    } else if (formData.message.trim().length < 10) {
+      nextErrors.message = 'Message must be at least 10 characters';
+    }
+
+    setErrors(nextErrors);
+    return { valid: Object.keys(nextErrors).length === 0, cleanPhone };
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const cleanPhone = sanitizeIndianPhone(formData.phone);
-    if (cleanPhone && !isValidIndianPhone(cleanPhone)) {
-      toast.error('Phone number must be exactly 10 digits');
+    const { valid, cleanPhone } = validateForm();
+    if (!valid) {
+      toast.error('Please correct the highlighted fields.');
       return;
     }
 
@@ -55,6 +89,7 @@ const ContactPage = () => {
       toast.success('Message sent successfully!', {
         description: 'We will get back to you within 24 hours.'
       });
+      setErrors({});
       setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
     } catch (error) {
       toast.error('Failed to send message', {
@@ -166,85 +201,98 @@ const ContactPage = () => {
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="name" className="text-slate-700 font-medium">Full Name</Label>
                     <div className="relative">
-                      <User className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
                       <Input
                         id="name"
-                        placeholder="John Doe"
+                        placeholder=" "
                         value={formData.name}
                         onChange={handleChange}
                         required
-                        className="pl-10 h-12 bg-slate-50 border-slate-200 focus:bg-white transition-colors"
+                        className={`${fieldClassName} ${errors.name ? 'border-destructive' : ''}`}
                       />
+                      <Label htmlFor="name" className={fieldLabelClassName}>
+                        Full Name
+                      </Label>
                     </div>
+                    {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-slate-700 font-medium">Phone Number</Label>
                     <div className="relative">
-                      <Phone className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground z-10">
+                        +91
+                      </span>
                       <Input
                         id="phone"
                         type="tel"
-                        placeholder="9876500000"
+                        placeholder=" "
                         value={formData.phone}
                         onChange={handleChange}
                         inputMode="numeric"
                         pattern="[0-9]{10}"
                         maxLength={10}
-                        className="pl-16 h-12 bg-slate-50 border-slate-200 focus:bg-white transition-colors"
+                        className={`${fieldClassName} pl-14 ${errors.phone ? 'border-destructive' : ''}`}
                       />
-                      <span className="absolute left-10 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-500 select-none">
-                        +91
-                      </span>
+                      <Label htmlFor="phone" className={fieldLabelClassName}>
+                        Phone Number
+                      </Label>
                     </div>
+                    {errors.phone && <p className="text-xs text-destructive mt-1">{errors.phone}</p>}
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-slate-700 font-medium">Email Address</Label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
                     <Input
                       id="email"
                       type="email"
-                      placeholder="john@example.com"
+                      placeholder=" "
                       value={formData.email}
                       onChange={handleChange}
                       required
-                      className="pl-10 h-12 bg-slate-50 border-slate-200 focus:bg-white transition-colors"
+                      className={`${fieldClassName} ${errors.email ? 'border-destructive' : ''}`}
                     />
+                    <Label htmlFor="email" className={fieldLabelClassName}>
+                      Email Address
+                    </Label>
                   </div>
+                  {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="subject" className="text-slate-700 font-medium">Subject</Label>
                   <div className="relative">
-                    <HelpCircle className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
                     <Input
                       id="subject"
-                      placeholder="How can we help you?"
+                      placeholder=" "
                       value={formData.subject}
                       onChange={handleChange}
                       required
-                      className="pl-10 h-12 bg-slate-50 border-slate-200 focus:bg-white transition-colors"
+                      className={`${fieldClassName} ${errors.subject ? 'border-destructive' : ''}`}
                     />
+                    <Label htmlFor="subject" className={fieldLabelClassName}>
+                      Subject
+                    </Label>
                   </div>
+                  {errors.subject && <p className="text-xs text-destructive mt-1">{errors.subject}</p>}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="message" className="text-slate-700 font-medium">Message</Label>
-                  <Textarea
-                    id="message"
-                    placeholder="Tell us more about your query..."
-                    className="min-h-[150px] resize-none bg-slate-50 border-slate-200 focus:bg-white transition-colors p-4"
-                    value={formData.message}
-                    onChange={handleChange}
-                    required
-                  />
+                  <div className="relative">
+                    <Textarea
+                      id="message"
+                      placeholder=" "
+                      className={`${fieldClassName} min-h-[150px] resize-none p-4 ${errors.message ? 'border-destructive' : ''}`}
+                      value={formData.message}
+                      onChange={handleChange}
+                      required
+                    />
+                    <Label htmlFor="message" className={fieldLabelClassName}>
+                      Message
+                    </Label>
+                  </div>
+                  {errors.message && <p className="text-xs text-destructive mt-1">{errors.message}</p>}
                 </div>
 
-                <Button type="submit" className="w-full h-14 text-base font-bold bg-primary hover:bg-primary/90 shadow-xl shadow-primary/25 text-primary-foreground" disabled={isSubmitting}>
+                <Button type="submit" className="w-full h-11 rounded-full tracking-widest text-base" disabled={isSubmitting}>
                   {isSubmitting ? 'Sending Message...' : 'Send Message'}
                   {!isSubmitting && <Send className="ml-2 w-4 h-4" />}
                 </Button>

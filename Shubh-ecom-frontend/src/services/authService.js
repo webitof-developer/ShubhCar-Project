@@ -1,210 +1,61 @@
-//src/services/authService.js
-
-import APP_CONFIG from '@/config/app.config';
+import { api } from '@/utils/apiClient';
+import { logger } from '@/utils/logger';
 
 /**
  * Authentication Service
- * 
- * Handles all authentication operations with backend
- * - Login/Logout
- * - User profile fetch
- * - Token management (handled by AuthContext)
+ *
+ * Cookie-first auth flow with optional bearer fallback support.
  */
 
-const API_BASE = APP_CONFIG.api.baseUrl;
-const readResponseBody = async (response) => {
-  const text = await response.text();
-  if (!text) return { text: '', json: null };
-  try {
-    return { text, json: JSON.parse(text) };
-  } catch {
-    return { text, json: null };
-  }
-};
-
-/**
- * Login with email and password
- * @param {string} email - User email
- * @param {string} password - User password
- * @returns {Promise<{accessToken: string, refreshToken: string, user: object}>}
- */
 export const login = async (email, password) => {
-  
   try {
-    const response = await fetch(`${API_BASE}/auth/login`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ identifier: email, password }), // Backend expects "identifier" field
-    });
-
-    const { text, json } = await readResponseBody(response);
-    if (!response.ok) {
-      console.error('[AUTH_SERVICE] Login failed:', {
-        status: response.status,
-        message: json?.message || text || null,
-      });
-      throw new Error(json?.message || text || 'Login failed');
-    }
-    
-    // Backend returns { success, data: { accessToken, refreshToken, user }, message }
-    return json?.data || json;
+    return await api.post('/auth/login', { identifier: email, password });
   } catch (error) {
-    console.error('[AUTH_SERVICE] Login error:', error);
+    logger.error('[AUTH_SERVICE] Login error:', error);
     throw error;
   }
 };
 
-/**
- * Register new user
- * @param {object} userData - User registration data
- * @returns {Promise<{accessToken: string, refreshToken: string, user: object}>}
- */
 export const register = async (userData) => {
-  
   try {
-    const response = await fetch(`${API_BASE}/auth/register`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(userData),
-    });
-
-    const { text, json } = await readResponseBody(response);
-    if (!response.ok) {
-      console.error('[AUTH_SERVICE] Registration failed:', {
-        status: response.status,
-        message: json?.message || text || null,
-      });
-      throw new Error(json?.message || text || 'Registration failed');
-    }
-    
-    return json?.data || json;
+    return await api.post('/auth/register', userData);
   } catch (error) {
-    console.error('[AUTH_SERVICE] Registration error:', error);
+    logger.error('[AUTH_SERVICE] Registration error:', error);
     throw error;
   }
 };
 
-/**
- * Logout user (revoke session)
- * @param {string} accessToken - Access token
- * @param {string} refreshToken - Refresh token
- */
 export const logout = async (accessToken, refreshToken) => {
-  
   try {
-    const response = await fetch(`${API_BASE}/auth/logout`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
-      },
-      body: JSON.stringify(refreshToken ? { refreshToken } : {}),
-    });
-
-    if (!response.ok) {
-      console.warn('[AUTH_SERVICE] Logout failed (continuing anyway)');
-    } else {
-    }
+    await api.authPost('/auth/logout', refreshToken ? { refreshToken } : {}, accessToken || null);
   } catch (error) {
-    console.warn('[AUTH_SERVICE] Logout error (continuing anyway):', error);
+    logger.warn('[AUTH_SERVICE] Logout error (continuing anyway):', error);
   }
 };
 
-/**
- * Get current user profile
- * @param {string} accessToken - Access token
- * @returns {Promise<object|null>} User object or null
- */
 export const getCurrentUser = async (accessToken) => {
-  
   try {
-    const response = await fetch(`${API_BASE}/users/me`, {
-      credentials: 'include',
-      headers: {
-        ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
-      },
-    });
-
-    const { json } = await readResponseBody(response);
-    if (!response.ok) {
-      console.error('[AUTH_SERVICE] Failed to fetch user');
-      return null;
-    }
-    
-    return json?.data || json || null;
+    return await api.authGet('/users/me', accessToken || null);
   } catch (error) {
-    console.error('[AUTH_SERVICE] Get user error:', error);
+    logger.error('[AUTH_SERVICE] Get user error:', error);
     return null;
   }
 };
 
-/**
- * Refresh access token
- * @param {string} refreshToken - Refresh token
- * @returns {Promise<{accessToken: string, refreshToken: string}>}
- */
 export const refreshAccessToken = async (refreshToken) => {
-  
   try {
-    const response = await fetch(`${API_BASE}/auth/refresh`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(refreshToken ? { refreshToken } : {}),
-    });
-
-    const { text, json } = await readResponseBody(response);
-    if (!response.ok) {
-      console.error('[AUTH_SERVICE] Token refresh failed');
-      throw new Error(json?.message || text || 'Token refresh failed');
-    }
-    
-    return json?.data || json;
+    return await api.post('/auth/refresh', refreshToken ? { refreshToken } : {});
   } catch (error) {
-    console.error('[AUTH_SERVICE] Refresh token error:', error);
+    logger.error('[AUTH_SERVICE] Refresh token error:', error);
     throw error;
   }
 };
-/**
- * Login with Google
- * @param {string} idToken - Google ID Token
- * @returns {Promise<{accessToken: string, refreshToken: string, user: object}>}
- */
+
 export const googleLogin = async (idToken) => {
-  
   try {
-    const response = await fetch(`${API_BASE}/auth/google`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ idToken }),
-    });
-
-    const { text, json } = await readResponseBody(response);
-    if (!response.ok) {
-      console.error('[AUTH_SERVICE] Google login failed:', {
-        status: response.status,
-        message: json?.message || text || null,
-      });
-      throw new Error(json?.message || text || 'Google login failed');
-    }
-    
-    // Backend returns { success, data: { accessToken, refreshToken, user }, message }
-    return json?.data || json;
+    return await api.post('/auth/google', { idToken });
   } catch (error) {
-    console.error('[AUTH_SERVICE] Google login error:', error);
+    logger.error('[AUTH_SERVICE] Google login error:', error);
     throw error;
   }
 };
-

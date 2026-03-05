@@ -21,6 +21,7 @@ import {
   getOrderStatusLabel,
 } from '@/constants/orderStatus';
 import { OrdersFilterPanel } from '@/components/orders/OrdersFilterPanel';
+import { logger } from '@/utils/logger';
 
 const SORT_OPTIONS = [
   { value: 'date-desc', label: 'Newest First' },
@@ -47,7 +48,7 @@ const OrdersV2 = () => {
         const data = await getMyOrders(accessToken, { includeItems: true });
         setOrders(Array.isArray(data) ? data : []);
       } catch (e) {
-        console.error('[ORDERS V2] failed', e);
+        logger.error('[ORDERS V2] failed', e);
         setOrders([]);
       } finally {
         setLoadingOrders(false);

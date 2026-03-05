@@ -14,6 +14,7 @@ import { reviewAPI } from '@/helpers/reviewApi'
 import { API_BASE_URL, API_ORIGIN } from '@/helpers/apiBase'
 import { settingsAPI } from '@/helpers/settingsApi'
 import MediaPickerModal from '@/components/media/MediaPickerModal'
+import Image from 'next/image'
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 const MAX_IMAGE_COUNT = 5
 const toLocalDatetimeInput = (value) => {
@@ -1448,15 +1449,21 @@ const AddProduct = () => {
 
               <div className="product-image-drop mb-3">
                 {featuredExistingImage ? (
-                  <img
+                  <Image
                     src={getImageSrc(featuredExistingImage.url)}
                     alt="Featured"
+                    width={720}
+                    height={720}
+                    unoptimized
                     style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '14px' }}
                   />
                 ) : featuredNewImage ? (
-                  <img
+                  <Image
                     src={URL.createObjectURL(featuredNewImage)}
                     alt="Featured"
+                    width={720}
+                    height={720}
+                    unoptimized
                     style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '14px' }}
                   />
                 ) : (
@@ -1487,7 +1494,7 @@ const AddProduct = () => {
                       setFeaturedNewIndex(0)
                     }}
                   >
-                    <img src={getImageSrc(image.url)} alt={image.altText || 'Product'} />
+                    <Image src={getImageSrc(image.url)} alt={image.altText || 'Product'} width={140} height={140} unoptimized />
                     <button
                       type="button"
                       className="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 p-0"
@@ -1518,7 +1525,7 @@ const AddProduct = () => {
                       setFeaturedNewIndex(index)
                     }}
                   >
-                    <img src={URL.createObjectURL(file)} alt={file.name} />
+                    <Image src={URL.createObjectURL(file)} alt={file.name} width={140} height={140} unoptimized />
                     <button
                       type="button"
                       className="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 p-0"

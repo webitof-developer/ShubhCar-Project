@@ -31,6 +31,7 @@ import { resolveProductImages } from '@/utils/media';
 import { formatPrice } from '@/services/pricingService';
 import APP_CONFIG from '@/config/app.config';
 import { OrderTimeline } from './OrderTimeline';
+import { logger } from '@/utils/logger';
 import {
   getOrderStatusBadgeClass,
   getOrderStatusIcon,
@@ -112,7 +113,7 @@ export function OrderRow({ order, accessToken }) {
             setAddress(addr || null);
           }
         } catch (e) {
-          console.error('[OrderRow] load detail error', e);
+          logger.error('[OrderRow] load detail error', e);
           setDetail(order);
         } finally {
           setLoadingDetail(false);

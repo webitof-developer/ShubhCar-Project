@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { XCircle, AlertTriangle, ArrowLeft, RefreshCcw, Phone, Mail } from 'lucide-react';
 import Link from 'next/link';
 import APP_CONFIG from '@/config/app.config';
+import { logger } from '@/utils/logger';
 
 export default function PaymentFailedPage() {
   const router = useRouter();
@@ -19,7 +20,7 @@ export default function PaymentFailedPage() {
     try {
       return JSON.parse(storedPaymentData);
     } catch (error) {
-      console.error('[PAYMENT_FAILED] Failed to parse payment data:', error);
+      logger.error('[PAYMENT_FAILED] Failed to parse payment data:', error);
       return null;
     }
   });

@@ -21,6 +21,7 @@ import { CartSummary } from '@/components/cart/CartSummary';
 import { EmptyCartState } from '@/components/cart/EmptyCartState';
 import { CartSuggestionsSidebar } from '@/components/cart/CartSuggestionsSidebar';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
+import { logger } from '@/utils/logger';
 
 const toId = (value) => {
   if (value === null || value === undefined) return '';
@@ -178,7 +179,7 @@ const Cart = () => {
         setSummary(data);
       }
     } catch (error) {
-      console.error('[CART] Failed to fetch summary', error);
+      logger.error('[CART] Failed to fetch summary', error);
       setSummary(null);
     } finally {
       setSummaryLoading(false);
@@ -196,7 +197,7 @@ const Cart = () => {
         const list = await getPublicCoupons();
         setAvailableCoupons(Array.isArray(list) ? list : []);
       } catch (error) {
-        console.error('[CART] Failed to load coupons', error);
+        logger.error('[CART] Failed to load coupons', error);
         setAvailableCoupons([]);
       } finally {
         setCouponsLoading(false);
@@ -321,7 +322,7 @@ const Cart = () => {
         }
       }
     } catch (error) {
-      console.error('Failed to copy:', error);
+      logger.error('Failed to copy:', error);
       toast.error('Failed to copy coupon code', {
         description: 'Please try selecting and copying manually'
       });
@@ -353,7 +354,7 @@ const Cart = () => {
 
       router.push(`/checkout?draftId=${draftId}`);
     } catch (error) {
-      console.error('[CART] Failed to create checkout draft', error);
+      logger.error('[CART] Failed to create checkout draft', error);
       toast.error(error.message || 'Unable to start checkout right now');
     } finally {
       setCreatingCheckoutDraft(false);
@@ -440,7 +441,7 @@ const Cart = () => {
 
         setSuggestedProducts(scored.slice(0, 12));
       } catch (error) {
-        console.error('[CART] Failed to load related suggestions', error);
+        logger.error('[CART] Failed to load related suggestions', error);
         setSuggestedProducts([]);
       }
     };

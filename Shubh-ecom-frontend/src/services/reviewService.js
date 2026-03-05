@@ -1,5 +1,6 @@
 import APP_CONFIG, { getDataSourceConfig, logDataSource } from '@/config/app.config'
 import { api } from '@/utils/apiClient'
+import { logger } from '@/utils/logger';
 import {
   getProductReviews as getDemoProductReviews,
   getReviewStats as getDemoReviewStats,
@@ -7,7 +8,6 @@ import {
   getFilteredReviews as getDemoFilteredReviews,
 } from '@/data/reviews'
 
-const baseUrl = APP_CONFIG.api.baseUrl
 const normalizeList = (payload) => {
   if (Array.isArray(payload)) return payload
   if (payload && typeof payload === 'object') {
@@ -40,10 +40,10 @@ export const getProductReviews = async (productId) => {
   }
   try {
     logDataSource('REVIEWS', 'REAL')
-    const data = await api.get(`${baseUrl}/reviews/product/${productId}`)
+    const data = await api.get(`/reviews/product/${productId}`)
     return normalizeList(data)
   } catch (error) {
-    console.error('[REVIEW_SERVICE] getProductReviews failed:', error.message)
+    logger.error('[REVIEW_SERVICE] getProductReviews failed:', error.message)
     return applyFallback(config.fallback, getDemoProductReviews(productId), 'REVIEWS')
   }
 }
@@ -58,29 +58,29 @@ export const getProductReviewAggregate = async (productId) => {
   }
   try {
     logDataSource('REVIEWS', 'REAL')
-    const data = await api.get(`${baseUrl}/reviews/product/${productId}/aggregate`)
+    const data = await api.get(`/reviews/product/${productId}/aggregate`)
     return normalizeObject(data) || { averageRating: 0, reviewCount: 0 }
   } catch (error) {
-    console.error('[REVIEW_SERVICE] getProductReviewAggregate failed:', error.message)
+    logger.error('[REVIEW_SERVICE] getProductReviewAggregate failed:', error.message)
     const stats = getDemoReviewStats(getDemoProductReviews(productId))
     return applyFallback(config.fallback, { averageRating: stats.average || 0, reviewCount: stats.total || 0 }, 'REVIEWS')
   }
 }
 
 export const createReview = async (accessToken, payload) => {
-  const data = await api.authPost(`${baseUrl}/reviews`, payload, accessToken)
+  const data = await api.authPost('/reviews', payload, accessToken)
   return data || null
 }
 
 export const updateReview = async (accessToken, reviewId, payload) => {
   if (!reviewId) throw new Error('Review id is required')
-  const data = await api.authPut(`${baseUrl}/reviews/${reviewId}`, payload, accessToken)
+  const data = await api.authPut(`/reviews/${reviewId}`, payload, accessToken)
   return data || null
 }
 
 export const deleteReview = async (accessToken, reviewId) => {
   if (!reviewId) throw new Error('Review id is required')
-  const data = await api.authDelete(`${baseUrl}/reviews/${reviewId}`, accessToken)
+  const data = await api.authDelete(`/reviews/${reviewId}`, accessToken)
   return data || null
 }
 

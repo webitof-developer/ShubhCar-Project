@@ -15,6 +15,7 @@ import { useAuth } from '@/context/AuthContext';
 import * as addressService from '@/services/userAddressService';
 import { toast } from 'sonner';
 import { sanitizeIndianPhone, isValidIndianPhone } from '@/utils/phoneValidation';
+import { logger } from '@/utils/logger';
 
 /**
  * AddressStep - Backend Integration
@@ -61,7 +62,7 @@ export function AddressStep({ onNext, initialAddressId }) {
           setSelectedAddressId(data[0]._id);
         }
       } catch (error) {
-        console.error('[ADDRESS_STEP] Failed to fetch addresses:', error);
+        logger.error('[ADDRESS_STEP] Failed to fetch addresses:', error);
         toast.error('Failed to load addresses');
       } finally {
         setLoadingAddresses(false);
@@ -121,7 +122,7 @@ export function AddressStep({ onNext, initialAddressId }) {
         country: 'IN',
       });
     } catch (error) {
-      console.error('[ADDRESS_STEP] Failed to create address:', error);
+      logger.error('[ADDRESS_STEP] Failed to create address:', error);
       toast.error(error.message || 'Failed to save address');
     } finally {
       setSavingAddress(false);

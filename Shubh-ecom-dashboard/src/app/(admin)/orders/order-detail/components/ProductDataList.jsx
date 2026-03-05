@@ -5,6 +5,7 @@ import { Card, CardBody, CardHeader, CardTitle, Dropdown, DropdownItem, Dropdown
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import { getStatusBadge } from '@/helpers/orderApi'
 import { API_BASE_URL, API_ORIGIN } from '@/helpers/apiBase'
+import Image from 'next/image'
 
 const ProductDataList = ({ items = [], orderStatus }) => {
   return (
@@ -42,7 +43,7 @@ const ProductDataList = ({ items = [], orderStatus }) => {
                             const imageUrl = item.productImage || '';  // Use snapshot field
                             if (imageUrl) {
                               const src = imageUrl.startsWith('http') ? imageUrl : `${API_ORIGIN}${imageUrl}`;
-                              return <img src={src} alt={item.productName || 'Product'} width={48} height={48} className="rounded-3 object-fit-cover" />;
+                              return <Image src={src} alt={item.productName || 'Product'} width={48} height={48} className="rounded-3 object-fit-cover" unoptimized />;
                             }
                             return <IconifyIcon icon="solar:box-broken" className="text-secondary fs-24 opacity-50" />;
                           })()}

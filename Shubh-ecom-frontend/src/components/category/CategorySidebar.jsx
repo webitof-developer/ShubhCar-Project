@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation';
 import { ChevronRight, FolderOpen, Folder } from 'lucide-react';
 import { getCategories } from '@/services/categoryService';
 import { useState, useEffect } from 'react';
+import { logger } from '@/utils/logger';
 
 export const CategorySidebar = () => {
   const { slug } = useParams();
@@ -23,7 +24,7 @@ export const CategorySidebar = () => {
         const hierarchy = await getCategories();
         setCategories(Array.isArray(hierarchy) ? hierarchy : []);
       } catch (error) {
-        console.error('Failed to load categories:', error);
+        logger.error('Failed to load categories:', error);
         setCategories([]);
       } finally {
         setLoading(false);

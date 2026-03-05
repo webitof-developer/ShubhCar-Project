@@ -23,6 +23,53 @@ import { getDisplayPrice, formatPrice } from '@/services/pricingService';
 import { resolveProductImages } from '@/utils/media';
 import { getProductIdentifier } from '@/utils/productType';
 
+const WishlistSkeleton = () => (
+  <Layout>
+    <div className="container mx-auto px-4 py-6 md:py-8 max-w-5xl">
+      <div className="flex items-center justify-between gap-3 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-slate-100 rounded-md animate-pulse"></div>
+          <div className="space-y-2">
+            <div className="h-6 w-32 bg-slate-200 rounded animate-pulse"></div>
+            <div className="h-4 w-24 bg-slate-100 rounded animate-pulse"></div>
+          </div>
+        </div>
+        <div className="h-9 w-32 bg-slate-100 rounded animate-pulse"></div>
+      </div>
+
+      <div className="space-y-3">
+        <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-2 bg-secondary/30 rounded-lg">
+          {[...Array(5)].map((_, i) => <div key={i} className="h-4 bg-slate-200/50 rounded animate-pulse col-span-2"></div>)}
+        </div>
+
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="grid grid-cols-12 gap-4 items-center bg-card rounded-lg border border-border/50 p-4">
+            <div className="col-span-12 md:col-span-1">
+              <div className="w-20 h-20 md:w-16 md:h-16 bg-slate-100 rounded-lg animate-pulse"></div>
+            </div>
+            <div className="col-span-12 md:col-span-4 space-y-2">
+              <div className="h-5 w-3/4 bg-slate-100 rounded animate-pulse"></div>
+              <div className="h-3 w-1/2 bg-slate-50 rounded animate-pulse"></div>
+            </div>
+            <div className="col-span-6 md:col-span-2">
+              <div className="h-6 w-20 bg-slate-100 rounded animate-pulse"></div>
+            </div>
+            <div className="col-span-6 md:col-span-2">
+              <div className="h-4 w-16 bg-slate-100 rounded animate-pulse"></div>
+            </div>
+            <div className="col-span-10 md:col-span-2">
+              <div className="h-9 w-full bg-slate-100 rounded animate-pulse"></div>
+            </div>
+            <div className="col-span-2 md:col-span-1">
+              <div className="h-9 w-9 rounded-full bg-slate-100 animate-pulse mx-auto"></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </Layout>
+);
+
 const Wishlist = () => {
   const router = useRouter();
   const [sortBy, setSortBy] = useState('date-added');
@@ -65,53 +112,6 @@ const Wishlist = () => {
   if (currentPage > totalPages && totalPages > 0) {
     setCurrentPage(1);
   }
-
-  const WishlistSkeleton = () => (
-    <Layout>
-      <div className="container mx-auto px-4 py-6 md:py-8 max-w-5xl">
-        <div className="flex items-center justify-between gap-3 mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-slate-100 rounded-md animate-pulse"></div>
-            <div className="space-y-2">
-              <div className="h-6 w-32 bg-slate-200 rounded animate-pulse"></div>
-              <div className="h-4 w-24 bg-slate-100 rounded animate-pulse"></div>
-            </div>
-          </div>
-          <div className="h-9 w-32 bg-slate-100 rounded animate-pulse"></div>
-        </div>
-
-        <div className="space-y-3">
-          <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-2 bg-secondary/30 rounded-lg">
-            {[...Array(5)].map((_, i) => <div key={i} className="h-4 bg-slate-200/50 rounded animate-pulse col-span-2"></div>)}
-          </div>
-
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="grid grid-cols-12 gap-4 items-center bg-card rounded-lg border border-border/50 p-4">
-              <div className="col-span-12 md:col-span-1">
-                <div className="w-20 h-20 md:w-16 md:h-16 bg-slate-100 rounded-lg animate-pulse"></div>
-              </div>
-              <div className="col-span-12 md:col-span-4 space-y-2">
-                <div className="h-5 w-3/4 bg-slate-100 rounded animate-pulse"></div>
-                <div className="h-3 w-1/2 bg-slate-50 rounded animate-pulse"></div>
-              </div>
-              <div className="col-span-6 md:col-span-2">
-                <div className="h-6 w-20 bg-slate-100 rounded animate-pulse"></div>
-              </div>
-              <div className="col-span-6 md:col-span-2">
-                <div className="h-4 w-16 bg-slate-100 rounded animate-pulse"></div>
-              </div>
-              <div className="col-span-10 md:col-span-2">
-                <div className="h-9 w-full bg-slate-100 rounded animate-pulse"></div>
-              </div>
-              <div className="col-span-2 md:col-span-1">
-                <div className="h-9 w-9 rounded-full bg-slate-100 animate-pulse mx-auto"></div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </Layout>
-  );
 
   if (loading) {
     return <WishlistSkeleton />;

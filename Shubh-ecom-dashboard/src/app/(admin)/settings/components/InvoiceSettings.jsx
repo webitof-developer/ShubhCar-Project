@@ -445,9 +445,16 @@ const InvoiceSettings = () => {
                     <Col md={6}>
                       <Form.Label>Contact Phone <span className="text-danger">*</span></Form.Label>
                       <Form.Control
+                        type="tel"
                         value={formData.invoice_company_phone}
-                        onChange={(e) => setFormData(prev => ({ ...prev, invoice_company_phone: e.target.value }))}
-                        placeholder="+91 1800-123-4567"
+                        onChange={(e) => {
+                          const digitsOnly = String(e.target.value || '').replace(/\D/g, '').slice(0, 10)
+                          setFormData(prev => ({ ...prev, invoice_company_phone: digitsOnly }))
+                        }}
+                        placeholder="9876543210"
+                        inputMode="numeric"
+                        pattern="[0-9]{10}"
+                        maxLength={10}
                       />
                     </Col>
                     <Col md={12}>

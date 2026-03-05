@@ -1,6 +1,5 @@
- "use client";
+"use client";
 
-import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
 import { useAuth } from '@/context/AuthContext';
@@ -12,15 +11,6 @@ import { useAuth } from '@/context/AuthContext';
 export const GlobalLoader = () => {
   const { siteName } = useSiteConfig();
   const { loading } = useAuth();
-  
-  // Prevent hydration mismatch
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) return null;
 
   // Only show when authentication is initializing
   // When loading becomes false, this component unmounts immediately.

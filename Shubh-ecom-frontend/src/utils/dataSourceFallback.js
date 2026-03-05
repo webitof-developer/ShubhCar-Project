@@ -20,6 +20,7 @@
  */
 
 import { logDataSource } from '@/config/app.config';
+import { logger } from '@/utils/logger';
 
 /**
  * Handle fallback when primary data source fails
@@ -45,12 +46,12 @@ export function handleDataSourceFallback(domain, fallbackMode, demoData, error =
     case 'error':
       // Throw error to surface to UI
       logDataSource(domain, 'ERROR', 'real failed');
-      console.error(`[FALLBACK] ${domain}: Throwing error`, error);
+      logger.error(`[FALLBACK] ${domain}: Throwing error`, error);
       throw error || new Error(`Failed to fetch ${domain}`);
     
     default:
       // Unknown fallback mode, use safe demo fallback
-      console.warn(`[FALLBACK] ${domain}: Unknown fallback mode '${fallbackMode}', using demo`);
+      logger.warn(`[FALLBACK] ${domain}: Unknown fallback mode '${fallbackMode}', using demo`);
       return demoData;
   }
 }

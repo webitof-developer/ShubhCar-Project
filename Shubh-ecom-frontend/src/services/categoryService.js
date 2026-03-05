@@ -1,4 +1,4 @@
-﻿//src/services/categoryService.js
+//src/services/categoryService.js
 
 /**
  * Category Service - Config-Driven Architecture
@@ -13,8 +13,8 @@
 import APP_CONFIG, { getDataSourceConfig, logDataSource } from '@/config/app.config';
 import { categories as demoCategories } from '@/data/categories';
 import { api } from '@/utils/apiClient';
+import { logger } from '@/utils/logger';
 
-const baseUrl = APP_CONFIG.api.baseUrl;
 const isProd = process.env.NODE_ENV === 'production';
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const cache = {
@@ -84,15 +84,15 @@ export const getCategories = async (fetchOptions) => {
   // Real mode
   try {
     logDataSource('CATEGORIES', 'REAL');
-    const url = `${baseUrl}/categories/hierarchy`;
+    const url = `/categories/hierarchy`;
     const data = await api.get(url, fetchOptions);
     const payload = unwrapPayload(data);
     const result = payload || [];
     writeCache(cache.hierarchy, result);
     return result;
   } catch (error) {
-    const url = `${baseUrl}/categories/hierarchy`;
-    console.error('[CATEGORY_SERVICE] getCategories failed:', { url, message: error.message });
+    const url = `/categories/hierarchy`;
+    logger.error('[CATEGORY_SERVICE] getCategories failed:', { url, message: error.message });
     return applyFallback(config.fallback, demoCategories, 'CATEGORIES', config.source);
   }
 };
@@ -112,15 +112,15 @@ export const getRootCategories = async (fetchOptions) => {
   // Real mode
   try {
     logDataSource('CATEGORIES', 'REAL');
-    const url = `${baseUrl}/categories/roots`;
+    const url = `/categories/roots`;
     const data = await api.get(url, fetchOptions);
     const payload = unwrapPayload(data);
     const result = payload || [];
     writeCache(cache.roots, result);
     return result;
   } catch (error) {
-    const url = `${baseUrl}/categories/roots`;
-    console.error('[CATEGORY_SERVICE] getRootCategories failed:', { url, message: error.message });
+    const url = `/categories/roots`;
+    logger.error('[CATEGORY_SERVICE] getRootCategories failed:', { url, message: error.message });
     return applyFallback(config.fallback, demoCategories.filter(cat => !cat.parentId), 'CATEGORIES', config.source);
   }
 };
@@ -143,15 +143,15 @@ export const getChildCategories = async (parentId, fetchOptions) => {
   // Real mode
   try {
     logDataSource('CATEGORIES', 'REAL');
-    const url = `${baseUrl}/categories/children/${parentId}`;
+    const url = `/categories/children/${parentId}`;
     const data = await api.get(url, fetchOptions);
     const payload = unwrapPayload(data);
     const result = payload || [];
     cache.children.set(parentId, { value: result, expiresAt: Date.now() + CACHE_TTL_MS });
     return result;
   } catch (error) {
-    const url = `${baseUrl}/categories/children/${parentId}`;
-    console.error('[CATEGORY_SERVICE] getChildCategories failed:', { url, message: error.message });
+    const url = `/categories/children/${parentId}`;
+    logger.error('[CATEGORY_SERVICE] getChildCategories failed:', { url, message: error.message });
     return applyFallback(config.fallback, demoCategories.filter(cat => cat.parentId === parentId), 'CATEGORIES', config.source);
   }
 };
@@ -175,15 +175,15 @@ export const getCategoryBySlug = async (slug, fetchOptions) => {
   // Real mode
   try {
     logDataSource('CATEGORIES', 'REAL');
-    const url = `${baseUrl}/categories/${slug}`;
+    const url = `/categories/${slug}`;
     const data = await api.get(url, fetchOptions);
     const payload = unwrapPayload(data);
     const result = payload || null;
     cache.bySlug.set(slugKey, { value: result, expiresAt: Date.now() + CACHE_TTL_MS });
     return result;
   } catch (error) {
-    const url = `${baseUrl}/categories/${slug}`;
-    console.error('[CATEGORY_SERVICE] getCategoryBySlug failed:', { url, message: error.message });
+    const url = `/categories/${slug}`;
+    logger.error('[CATEGORY_SERVICE] getCategoryBySlug failed:', { url, message: error.message });
     return applyFallback(config.fallback, demoCategories.find(cat => cat.slug === slug) || null, 'CATEGORIES', config.source);
   }
 };

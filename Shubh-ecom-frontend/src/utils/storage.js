@@ -18,6 +18,7 @@
  */
 
 import Cookies from 'js-cookie';
+import { logger } from '@/utils/logger';
 
 // In-memory fallback for SSR / cookie-blocked environments
 const memoryStorage = new Map();
@@ -76,7 +77,7 @@ export const getStorageItem = (key) => {
     // SSR / cookie unavailable: fall back to in-memory
     return memoryStorage.get(key) ?? null;
   } catch (error) {
-    console.warn(`[Storage] Failed to get "${key}":`, error);
+    logger.warn(`[Storage] Failed to get "${key}":`, error);
     return memoryStorage.get(key) ?? null;
   }
 };
@@ -98,7 +99,7 @@ export const setStorageItem = (key, value) => {
     memoryStorage.set(key, value);
     return true;
   } catch (error) {
-    console.warn(`[Storage] Failed to set "${key}":`, error);
+    logger.warn(`[Storage] Failed to set "${key}":`, error);
     memoryStorage.set(key, value);
     return false;
   }
@@ -119,7 +120,7 @@ export const removeStorageItem = (key) => {
     memoryStorage.delete(key);
     return true;
   } catch (error) {
-    console.warn(`[Storage] Failed to remove "${key}":`, error);
+    logger.warn(`[Storage] Failed to remove "${key}":`, error);
     memoryStorage.delete(key);
     return false;
   }
@@ -152,7 +153,7 @@ export const clearStorage = () => {
     memoryStorage.clear();
     return true;
   } catch (error) {
-    console.warn('[Storage] Failed to clear storage:', error);
+    logger.warn('[Storage] Failed to clear storage:', error);
     memoryStorage.clear();
     return false;
   }

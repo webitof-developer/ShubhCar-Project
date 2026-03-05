@@ -3,6 +3,7 @@ import React, { useRef, useState } from 'react';
 import { FileText, Loader2, Download } from 'lucide-react';
 import QuotationTemplate from '@/components/invoice/QuotationTemplate';
 import { Button } from '@/components/ui/button';
+import { logger } from '@/utils/logger';
 
 const QuotationButton = ({ cartItems, summary, profile }) => {
   const componentRef = useRef();
@@ -68,7 +69,7 @@ const QuotationButton = ({ cartItems, summary, profile }) => {
       }
 
     } catch (error) {
-      console.error('Failed to generate PDF:', error);
+      logger.error('Failed to generate PDF:', error);
       // Optional: Close the window if error occurs
     } finally {
       setIsGenerating(false);

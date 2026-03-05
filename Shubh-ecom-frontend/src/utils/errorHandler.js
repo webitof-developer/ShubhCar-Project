@@ -9,6 +9,7 @@
 
 import { toast } from 'sonner';
 import { getDisplayPrice } from '@/services/pricingService';
+import { logger } from '@/utils/logger';
 
 /**
  * Error categories
@@ -137,7 +138,7 @@ export function normalizeError(error, response = null) {
 export function handleError(error, context = {}) {
   const normalized = normalizeError(error, error.response);
   
-  console.error(`[ERROR_HANDLER] ${context.page || 'Unknown'}:`, {
+  logger.error(`[ERROR_HANDLER] ${context.page || 'Unknown'}:`, {
     type: normalized.type,
     message: normalized.message,
     statusCode: normalized.statusCode,

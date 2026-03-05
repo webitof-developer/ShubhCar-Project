@@ -34,6 +34,7 @@ import { usePermissions } from '@/hooks/usePermissions'
 import clsx from 'clsx'
 import { currency } from '@/context/constants'
 import { INDIA_COUNTRY, INDIA_STATES, getIndiaStateName, normalizeIndiaStateCode } from '@/helpers/indiaRegions'
+import { sanitizeIndianMobileInput, validateEmail, validateIndianPhone } from '@/helpers/validationHelpers'
 
 const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
   const { data: session } = useSession()
@@ -916,11 +917,11 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
       setCustomerCreateError('Email is required')
       return
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newCustomerForm.email.trim())) {
+    if (!validateEmail(newCustomerForm.email.trim())) {
       setCustomerCreateError('Please enter a valid email address')
       return
     }
-    if (newCustomerForm.phone.trim() && !/^[6-9]\d{9}$/.test(newCustomerForm.phone.replace(/\D/g, ''))) {
+    if (newCustomerForm.phone.trim() && !validateIndianPhone(newCustomerForm.phone)) {
       setCustomerCreateError('Please enter a valid 10-digit Indian phone number')
       return
     }
@@ -940,7 +941,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
         firstName: newCustomerForm.firstName.trim(),
         lastName: newCustomerForm.lastName.trim(),
         email: newCustomerForm.email.trim(),
-        phone: newCustomerForm.phone.trim() || undefined,
+        phone: sanitizeIndianMobileInput(newCustomerForm.phone || '') || undefined,
         password: newCustomerForm.password,
         role: 'customer',
         customerType: newCustomerForm.customerType || 'retail',
@@ -975,52 +976,19 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
     router.push(`/customer/customer-detail?id=${customerId}`)
   }
 
-  const handleViewInvoice = async (orderId) => {
-    try {
-      const token = session?.accessToken
-      if (!token) return
-      const blob = await orderAPI.getInvoicePdfByOrder(orderId, token, false)
-      const url = URL.createObjectURL(blob)
-      window.open(url, '_blank')
-    } catch (error) {
-      logger.error('Failed to load invoice:', error)
-      toast.error(error.message || 'Failed to load invoice. Ensure order is paid and confirmed.')
-    }
+  const handleViewInvoice = (orderId) => {
+    const target = `/invoice/invoice-details?id=${orderId}`
+    window.open(target, '_blank')
   }
 
-  const handleDownloadInvoice = async (orderId) => {
-    try {
-      const token = session?.accessToken
-      if (!token) return
-      const blob = await orderAPI.getInvoicePdfByOrder(orderId, token, true)
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `invoice-${orderId}.pdf`
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      URL.revokeObjectURL(url)
-    } catch (error) {
-      logger.error('Failed to download invoice:', error)
-      toast.error(error.message || 'Failed to download invoice. Ensure order is paid and confirmed.')
-    }
+  const handleDownloadInvoice = (orderId) => {
+    const target = `/invoice/invoice-details?id=${orderId}&action=download`
+    window.open(target, '_blank')
   }
 
-  const handlePrintInvoice = async (orderId) => {
-    try {
-      const token = session?.accessToken
-      if (!token) return
-      const blob = await orderAPI.getInvoicePdfByOrder(orderId, token, false)
-      const url = URL.createObjectURL(blob)
-      const popup = window.open(url, '_blank')
-      if (!popup) return
-      popup.focus()
-      popup.print()
-    } catch (error) {
-      logger.error('Failed to print invoice:', error)
-      toast.error(error.message || 'Failed to print invoice. Ensure order is paid and confirmed.')
-    }
+  const handlePrintInvoice = (orderId) => {
+    const target = `/invoice/invoice-details?id=${orderId}&action=print`
+    window.open(target, '_blank')
   }
 
   const manualDiscount = Math.max(0, Number(createForm.manualDiscount || 0))
@@ -1339,9 +1307,20 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                     <Form.Control
                       type="number"
                       min="0"
+                      step="0.01"
                       value={createForm.manualDiscount}
                       onChange={(e) => {
-                        const nextRaw = Number(e.target.value || 0)
+                        const next = e.target.value
+                        if (next === '') {
+                          setCreateForm((prev) => ({ ...prev, manualDiscount: '' }))
+                          return
+                        }
+                        const parsed = Number(next)
+                        if (!Number.isFinite(parsed)) return
+                        setCreateForm((prev) => ({ ...prev, manualDiscount: String(Math.max(0, parsed)) }))
+                      }}
+                      onBlur={() => {
+                        const nextRaw = Number(createForm.manualDiscount || 0)
                         const maxAllowed = Number.isFinite(maxAdditionalDiscountBySetting)
                           ? Math.max(0, Math.min(remainingAfterCoupon, maxAdditionalDiscountBySetting))
                           : Math.max(0, remainingAfterCoupon)
@@ -1834,8 +1813,8 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                       <th className="py-3">Customer</th>
                       <th className="py-3">Date</th>
                       <th className="py-3">Status</th>
-                      <th className="py-3">Payment</th>
-                      <th className="py-3">Shipment Tracking</th>
+                      <th className="py-3">Payment Info</th>
+                      <th className="py-3">Actions</th>
                       <th className="py-3">Invoice</th>
                       <th className="py-3 text-end pe-4 rounded-end-3">Total</th>
                     </tr>
@@ -1882,11 +1861,6 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                             </td>
                             <td className="py-3">
                               <span className="fw-bold text-primary fs-13">#{order.orderNumber || order._id?.substring(0, 8).toUpperCase()}</span>
-                              {gatewayPaymentId && (
-                                <div className="text-muted small mt-1">
-                                  Txn: <span className="font-monospace">{gatewayPaymentId}</span>
-                                </div>
-                              )}
                             </td>
                             {/* Customer column - always visible, click navigates to customer detail */}
                             <td className="py-3" onClick={(e) => e.stopPropagation()}>
@@ -1939,19 +1913,33 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                               {(() => {
                                 const paymentMethod = (order.paymentMethod || '').toLowerCase()
                                 return (
-                                  <div className="d-flex flex-column">
+                                  <div className="d-flex flex-column gap-1">
                                     <Badge bg={paymentBadge.bg} className="fs-12 fw-medium text-capitalize d-inline-flex align-items-center gap-1">
                                       {paymentMethod === 'cod' && <IconifyIcon icon="mdi:cash" className="fs-6 text-success" />}
                                       {paymentMethod === 'razorpay' && <IconifyIcon icon="simple-icons:razorpay" className="fs-6 text-primary" />}
                                       {paymentBadge.text}
                                     </Badge>
+                                    <span className="text-muted small text-capitalize">
+                                      Method: {paymentMethod || 'unknown'}
+                                    </span>
+                                    {gatewayPaymentId && (
+                                      <span className="text-muted small">
+                                        Txn: <span className="font-monospace">{gatewayPaymentId}</span>
+                                      </span>
+                                    )}
                                   </div>
                                 )
                               })()}
                             </td>
-                            <td className="py-3">
-                              <div className="d-flex flex-column align-items-start small">
-                                <span className="text-muted">NA</span>
+                            <td className="py-3" onClick={(e) => e.stopPropagation()}>
+                              <div className="d-flex align-items-center gap-2">
+                                <Button
+                                  variant="outline-primary"
+                                  size="sm"
+                                  onClick={() => handleRowClick(order._id)}
+                                >
+                                  Open
+                                </Button>
                               </div>
                             </td>
                             <td className="py-3">
@@ -2161,9 +2149,10 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                     <FloatingLabel controlId="new-customer-phone" label="Phone">
                       <Form.Control
                         type="tel"
+                        inputMode="numeric"
                         value={newCustomerForm.phone}
                         onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '').slice(0, 10)
+                          const value = sanitizeIndianMobileInput(e.target.value)
                           setNewCustomerForm((prev) => ({ ...prev, phone: value }))
                         }}
                         placeholder="10-digit mobile number"

@@ -9,6 +9,7 @@ import Link from 'next/link';
 import APP_CONFIG from '@/config/app.config';
 import { useAuth } from '@/context/AuthContext';
 import { confirmPayment } from '@/services/paymentService';
+import { logger } from '@/utils/logger';
 
 export default function ThankYouPage() {
   const { accessToken } = useAuth();
@@ -20,7 +21,7 @@ export default function ThankYouPage() {
     try {
       return JSON.parse(storedOrderData);
     } catch (error) {
-      console.error('[THANK_YOU] Failed to parse order data:', error);
+      logger.error('[THANK_YOU] Failed to parse order data:', error);
       return null;
     }
   });
@@ -41,7 +42,7 @@ export default function ThankYouPage() {
     try {
       paymentData = JSON.parse(storedPayment);
     } catch (err) {
-      console.error('[ORDER_SUCCESS] Failed to parse lastPayment:', err);
+      logger.error('[ORDER_SUCCESS] Failed to parse lastPayment:', err);
       return;
     }
 
@@ -66,7 +67,7 @@ export default function ThankYouPage() {
             return;
           }
         } catch (err) {
-          console.error('[ORDER_SUCCESS] Retry confirm failed:', err);
+          logger.error('[ORDER_SUCCESS] Retry confirm failed:', err);
         }
         await new Promise((resolve) => setTimeout(resolve, 2000));
       }

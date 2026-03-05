@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { CreditCard, Wallet, AlertCircle, Smartphone } from 'lucide-react';
 import { getPaymentMethods } from '@/services/paymentService';
+import { logger } from '@/utils/logger';
 
 export function PaymentStep({ onBack, onConfirm, placingOrder = false }) {
   const [paymentMethod, setPaymentMethod] = useState(null);
@@ -31,7 +32,7 @@ export function PaymentStep({ onBack, onConfirm, placingOrder = false }) {
         setMethods(enabled);
         setPaymentMethod(enabled[0]?.code || null);
       } catch (error) {
-        console.error('[PAYMENT_STEP] Failed to load payment methods:', error);
+        logger.error('[PAYMENT_STEP] Failed to load payment methods:', error);
         setMethods([]);
         setPaymentMethod(null);
       } finally {

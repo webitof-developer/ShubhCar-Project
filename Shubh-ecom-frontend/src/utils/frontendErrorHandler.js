@@ -19,6 +19,7 @@
  */
 
 import { toast } from 'sonner';
+import { logger } from '@/utils/logger';
 
 // ============================================================================
 // ERROR TYPES
@@ -181,7 +182,7 @@ export function handleFrontendError(error, options = {}) {
   const classified = classifyError(error);
   
   // Log error
-  console.error(`[FRONTEND_ERROR] ${context}:`, {
+  logger.error(`[FRONTEND_ERROR] ${context}:`, {
     type: classified.type,
     statusCode: classified.statusCode,
     message: classified.message,

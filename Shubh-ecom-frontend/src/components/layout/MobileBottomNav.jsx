@@ -5,17 +5,11 @@ import { Home, Grid2X2, Search, ShoppingCart, User, UserCircle } from 'lucide-re
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
-import { useEffect, useState } from 'react';
 
 const MobileBottomNav = () => {
   const pathname = usePathname();
   const { itemCount } = useCart();
   const { isAuthenticated } = useAuth();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const navItems = [
     {
@@ -51,8 +45,6 @@ const MobileBottomNav = () => {
     if (path !== '/' && path !== '#' && pathname.startsWith(path.split('?')[0])) return true;
     return false;
   };
-
-  if (!mounted) return null;
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] pb-[env(safe-area-inset-bottom)] px-2">

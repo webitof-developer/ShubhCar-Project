@@ -117,22 +117,9 @@ const OrderDetailPage = () => {
     }
   };
 
-  const handleDownloadInvoice = async () => {
-    if (!orderId || !session?.accessToken) return;
-    try {
-      const blob = await orderAPI.getInvoicePdfByOrder(orderId, session.accessToken, true);
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `invoice-${orderId}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      logger.error('Failed to download invoice:', error);
-      toast.error(error.message || 'Failed to download invoice');
-    }
+  const handleDownloadInvoice = () => {
+    if (!orderId) return;
+    window.open(`/invoice/invoice-details?id=${orderId}&action=download`, '_blank');
   };
 
   const handleDownloadCreditNote = async () => {

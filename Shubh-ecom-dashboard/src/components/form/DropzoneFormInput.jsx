@@ -5,6 +5,7 @@ import Dropzone from 'react-dropzone'
 import useFileUploader from '@/hooks/useFileUploader'
 import Link from 'next/link'
 import IconifyIcon from '../wrappers/IconifyIcon'
+import Image from 'next/image'
 const DropzoneFormInput = ({
   label,
   labelClassName,
@@ -43,7 +44,15 @@ const DropzoneFormInput = ({
                         <Row className="align-items-center">
                           {file.preview ? (
                             <Col className="col-auto">
-                              <img data-dz-thumbnail="" className="avatar-sm rounded bg-light" alt={file.name} src={file.preview} />
+                              <Image
+                                data-dz-thumbnail=""
+                                className="avatar-sm rounded bg-light"
+                                alt={file.name}
+                                src={file.preview}
+                                width={48}
+                                height={48}
+                                unoptimized
+                              />
                             </Col>
                           ) : (
                             <Col className="col-auto">

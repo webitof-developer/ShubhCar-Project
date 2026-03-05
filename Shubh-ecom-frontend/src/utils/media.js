@@ -1,8 +1,9 @@
 import APP_CONFIG from '@/config/app.config'
+import { logger } from '@/utils/logger';
 
 export const resolveAssetUrl = (url) => {
   if (!url || typeof url !== 'string') {
-    console.error('[MEDIA] Invalid asset URL', { url })
+    logger.error('[MEDIA] Invalid asset URL', { url })
     return ''
   }
   const trimmed = url.trim()
@@ -29,12 +30,12 @@ export const resolveAssetUrl = (url) => {
   }
 
   if (!origin) {
-    console.error('[MEDIA] Missing API origin for asset resolution', { url: trimmed })
+    logger.error('[MEDIA] Missing API origin for asset resolution', { url: trimmed })
     return ''
   }
 
   if (isProd && origin.includes('localhost')) {
-    console.error('[MEDIA] Refusing to use localhost origin in production', { origin, url: trimmed })
+    logger.error('[MEDIA] Refusing to use localhost origin in production', { origin, url: trimmed })
     return ''
   }
 

@@ -17,6 +17,7 @@ import { getStorageItem, setStorageItem, removeStorageItem } from '@/utils/stora
 import * as authService from '@/services/authService';
 import * as cartService from '@/services/cartService';
 import { isTokenExpired } from '@/utils/jwt';
+import { logger } from '@/utils/logger';
 
 /**
  * Authentication Context
@@ -52,58 +53,49 @@ export function AuthProvider({ children }) {
     return null;
   };
 
-  // Load auth state from localStorage on mount
+  const persistSession = ({
+    user: nextUser,
+    accessToken: nextAccessToken = null,
+    refreshToken: nextRefreshToken = null,
+  }) => {
+    setUser(nextUser || null);
+    setAccessToken(nextAccessToken || null);
+    setRefreshToken(nextRefreshToken || null);
+
+    if (nextUser) {
+      setStorageItem('user', nextUser);
+    } else {
+      removeStorageItem('user');
+    }
+    // Cookie-only auth mode: never persist tokens in localStorage/sessionStorage.
+    removeStorageItem('accessToken');
+    removeStorageItem('refreshToken');
+  };
+
+  // Bootstrap auth state from HttpOnly cookies (via refresh endpoint).
   useEffect(() => {
     const loadAuthState = async () => {
-      const storedToken = getStorageItem('accessToken');
-      const storedRefreshToken = getStorageItem('refreshToken');
-      const storedUser = getStorageItem('user');
+      // Cleanup any legacy token persistence from previous builds.
+      removeStorageItem('accessToken');
+      removeStorageItem('refreshToken');
 
-      const normalizedStoredUser = normalizeStoredUser(storedUser);
-
-      if (storedToken && normalizedStoredUser) {
-        // Check if token is expired
-        if (isTokenExpired(storedToken)) {
-
-          if (storedRefreshToken && !isTokenExpired(storedRefreshToken)) {
-            try {
-              const { accessToken: newAccessToken, refreshToken: newRefreshToken, user: newUser } = await authService.refreshAccessToken(storedRefreshToken);
-
-              // Update state with new tokens
-              setAccessToken(newAccessToken);
-              setRefreshToken(newRefreshToken);
-              setUser(newUser || normalizedStoredUser); // Use new user or fallback to stored
-
-              // Persist new tokens
-              setStorageItem('accessToken', newAccessToken);
-              setStorageItem('refreshToken', newRefreshToken);
-              if (newUser) setStorageItem('user', newUser);
-            } catch (refreshError) {
-              console.error('[AUTH_CONTEXT] Token refresh failed:', refreshError);
-              // Clear expired session
-              removeStorageItem('accessToken');
-              removeStorageItem('refreshToken');
-              removeStorageItem('user');
-            }
-          } else {
-            removeStorageItem('accessToken');
-            removeStorageItem('refreshToken');
-            removeStorageItem('user');
-          }
-        } else {
-          try {
-            setAccessToken(storedToken);
-            setRefreshToken(storedRefreshToken);
-            setUser(normalizedStoredUser);
-          } catch (error) {
-            console.error('[AUTH_CONTEXT] Failed to parse stored user:', error);
-            // Clear corrupted data
-            removeStorageItem('accessToken');
-            removeStorageItem('refreshToken');
-            removeStorageItem('user');
-          }
+      try {
+        const refreshed = await authService.refreshAccessToken();
+        const storedUser = normalizeStoredUser(getStorageItem('user'));
+        const cookieUser =
+          refreshed?.user || (await authService.getCurrentUser(refreshed?.accessToken || null));
+        if (cookieUser || storedUser) {
+          persistSession({
+            user: cookieUser || storedUser,
+            accessToken: refreshed?.accessToken || null,
+            refreshToken: refreshed?.refreshToken || null,
+          });
         }
-      } else {
+      } catch {
+        removeStorageItem('user');
+        setUser(null);
+        setAccessToken(null);
+        setRefreshToken(null);
       }
 
       setLoading(false);
@@ -118,24 +110,27 @@ export function AuthProvider({ children }) {
    */
   const login = async (email, password) => {
     try {
-      const { accessToken, refreshToken, user } = await authService.login(email, password);
+      const sessionData = await authService.login(email, password);
+      const resolvedUser =
+        sessionData?.user || (await authService.getCurrentUser(sessionData?.accessToken || null));
+      if (!resolvedUser) {
+        throw new Error('Login succeeded but user profile could not be loaded');
+      }
 
-      // Update state
-      setAccessToken(accessToken);
-      setRefreshToken(refreshToken);
-      setUser(user);
-
-      // Persist to localStorage
-      setStorageItem('accessToken', accessToken);
-      setStorageItem('refreshToken', refreshToken);
-      setStorageItem('user', user);
+      persistSession({
+        user: resolvedUser,
+        accessToken: sessionData?.accessToken || null,
+        refreshToken: sessionData?.refreshToken || null,
+      });
 
       // Phase 7: Migrate guest cart to backend (REPLACE strategy)
-      await migrateGuestCartToBackend(accessToken);
+      if (sessionData?.accessToken) {
+        await migrateGuestCartToBackend(sessionData.accessToken);
+      }
 
-      return user;
+      return resolvedUser;
     } catch (error) {
-      console.error('[AUTH_CONTEXT] Login failed:', error);
+      logger.error('[AUTH_CONTEXT] Login failed:', error);
       throw error;
     }
   };
@@ -146,24 +141,27 @@ export function AuthProvider({ children }) {
    */
   const register = async (userData) => {
     try {
-      const { accessToken, refreshToken, user } = await authService.register(userData);
+      const sessionData = await authService.register(userData);
+      const resolvedUser =
+        sessionData?.user || (await authService.getCurrentUser(sessionData?.accessToken || null));
+      if (!resolvedUser) {
+        throw new Error('Registration succeeded but user profile could not be loaded');
+      }
 
-      // Update state
-      setAccessToken(accessToken);
-      setRefreshToken(refreshToken);
-      setUser(user);
-
-      // Persist to localStorage
-      setStorageItem('accessToken', accessToken);
-      setStorageItem('refreshToken', refreshToken);
-      setStorageItem('user', user);
+      persistSession({
+        user: resolvedUser,
+        accessToken: sessionData?.accessToken || null,
+        refreshToken: sessionData?.refreshToken || null,
+      });
 
       // Phase 7: Migrate guest cart to backend (REPLACE strategy)
-      await migrateGuestCartToBackend(accessToken);
+      if (sessionData?.accessToken) {
+        await migrateGuestCartToBackend(sessionData.accessToken);
+      }
 
-      return user;
+      return resolvedUser;
     } catch (error) {
-      console.error('[AUTH_CONTEXT] Registration failed:', error);
+      logger.error('[AUTH_CONTEXT] Registration failed:', error);
       throw error;
     }
   };
@@ -196,7 +194,7 @@ export function AuthProvider({ children }) {
 
       // Note: CartContext will auto-fetch backend cart via useEffect
     } catch (error) {
-      console.error('[AUTH_CONTEXT] Cart migration failed:', error);
+      logger.error('[AUTH_CONTEXT] Cart migration failed:', error);
       // Don't block login on cart migration failure
       // User can manually add items to cart after login
     }
@@ -212,28 +210,27 @@ export function AuthProvider({ children }) {
    */
   const loginWithGoogle = async (idToken) => {
     try {
-      const {
-        accessToken: newAccessToken,
-        refreshToken: newRefreshToken,
-        user,
-      } = await authService.googleLogin(idToken);
+      const sessionData = await authService.googleLogin(idToken);
+      const resolvedUser =
+        sessionData?.user || (await authService.getCurrentUser(sessionData?.accessToken || null));
+      if (!resolvedUser) {
+        throw new Error('Google login succeeded but user profile could not be loaded');
+      }
 
-      // Update state
-      setAccessToken(newAccessToken);
-      setRefreshToken(newRefreshToken);
-      setUser(user);
-
-      // Persist to localStorage
-      setStorageItem('accessToken', newAccessToken);
-      setStorageItem('refreshToken', newRefreshToken);
-      setStorageItem('user', user);
+      persistSession({
+        user: resolvedUser,
+        accessToken: sessionData?.accessToken || null,
+        refreshToken: sessionData?.refreshToken || null,
+      });
 
       // Phase 7: Migrate guest cart to backend (REPLACE strategy)
-      await migrateGuestCartToBackend(newAccessToken);
+      if (sessionData?.accessToken) {
+        await migrateGuestCartToBackend(sessionData.accessToken);
+      }
 
-      return user;
+      return resolvedUser;
     } catch (error) {
-      console.error('[AUTH_CONTEXT] Google Login failed:', error);
+      logger.error('[AUTH_CONTEXT] Google Login failed:', error);
       throw error;
     }
   };
@@ -268,14 +265,14 @@ export function AuthProvider({ children }) {
         }
       }
     } catch (error) {
-      console.warn('[AUTH_CONTEXT] Logout API call failed (ignored)');
+      logger.warn('[AUTH_CONTEXT] Logout API call failed (ignored)');
     }
   };
 
   /**
    * Check if user is authenticated
    */
-  const isAuthenticated = Boolean(accessToken && user);
+  const isAuthenticated = Boolean(user);
 
   /**
    * Get user display name

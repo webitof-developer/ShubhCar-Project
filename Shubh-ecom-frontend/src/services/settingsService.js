@@ -1,31 +1,9 @@
-import APP_CONFIG from '@/config/app.config';
-
-const API_BASE_URL = APP_CONFIG.api.baseUrl;
-
-const readJsonSafe = async (response) => {
-  const text = await response.text();
-  if (!text) return null;
-  try {
-    return JSON.parse(text);
-  } catch {
-    return null;
-  }
-};
+import { api } from '@/utils/apiClient';
 
 export async function getPublicSettings(fetchOptions = {}) {
   try {
-    const response = await fetch(`${API_BASE_URL}/settings/public`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      cache: 'no-store',
-      ...fetchOptions,
-    });
-
-    if (!response.ok) return {};
-    const data = await readJsonSafe(response);
-    return data?.data || data || {};
+    const payload = await api.get('/settings/public', { cache: 'no-store', ...fetchOptions });
+    return payload || {};
   } catch {
     return {};
   }

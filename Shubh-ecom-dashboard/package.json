@@ -5,9 +5,9 @@
   "scripts": {
     "dev": "next dev --turbo",
     "build": "next build",
-    "check:no-console": "powershell -NoProfile -Command \"if (rg -n 'console\\.(log|debug|info)\\(' src) { exit 1 } else { exit 0 }\"",
+    "check:no-console": "powershell -NoProfile -Command \"if (rg -n 'console\\.(log|debug|info|warn|error|trace)\\(' src --glob '!**/lib/logger.js') { exit 1 } else { exit 0 }\"",
     "start": "next start -H 0.0.0.0 -p ${PORT:-3000}",
-    "lint": "next lint",
+    "lint": "eslint src",
     "format": "prettier --write 'src/**/*.{ts,tsx,js,jsx}'",
     "test": "jest",
     "test:watch": "jest --watch",

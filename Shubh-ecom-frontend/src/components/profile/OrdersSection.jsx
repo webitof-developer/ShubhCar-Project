@@ -10,6 +10,7 @@ import { useAuth } from '@/context/AuthContext';
 import { getMyOrders } from '@/services/orderService';
 import { resolveProductImages } from '@/utils/media';
 import { formatPrice } from '@/services/pricingService';
+import { logger } from '@/utils/logger';
 import {
   getOrderStatusBadgeClass,
   getOrderStatusLabel,
@@ -26,7 +27,7 @@ export const OrdersSection = () => {
         const data = await getMyOrders(accessToken, { includeItems: true });
         setOrders(Array.isArray(data) ? data : []);
       } catch (error) {
-        console.error('[PROFILE_ORDERS] Failed to load orders:', error);
+        logger.error('[PROFILE_ORDERS] Failed to load orders:', error);
         setOrders([]);
       }
     };

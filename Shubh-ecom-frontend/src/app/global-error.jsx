@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect } from 'react';
+import { logger } from '@/utils/logger';
 
 export default function GlobalError({ error, reset }) {
   useEffect(() => {
-    // Log the error to an error reporting service
-    console.error('Frontend Global Error caught:', error);
+    logger.error('Frontend Global Error caught:', error);
   }, [error]);
 
   return (

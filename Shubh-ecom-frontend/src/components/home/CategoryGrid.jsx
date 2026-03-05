@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { getRootCategories } from '@/services/categoryService';
 import { resolveAssetUrl } from '@/utils/media';
+import { logger } from '@/utils/logger';
 
 const iconMap = { Disc3, Cog, Filter, ArrowDownUp, Zap, Car };
 
@@ -22,7 +23,7 @@ export const CategoryGrid = async ({ categories } = {}) => {
     try {
       rootCategories = await getRootCategories();
     } catch (error) {
-      console.error('Failed to fetch categories:', error);
+      logger.error('Failed to fetch categories:', error);
     }
   }
   return (

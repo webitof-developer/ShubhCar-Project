@@ -18,7 +18,7 @@ import { useSiteConfig } from '@/hooks/useSiteConfig';
 const FaqPage = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const { contact } = useSiteConfig();
-    const supportPhone = contact?.phone || '+91 98765 43210';
+    const supportPhone = contact?.phone || '9876543210';
     const supportEmail = contact?.email || 'support@autospares.com';
     const supportPhoneHref = `tel:${String(supportPhone).replace(/\D/g, '')}`;
     const supportEmailHref = `mailto:${supportEmail}`;
@@ -149,7 +149,7 @@ const FaqPage = () => {
                         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                             <h2 className="text-xl font-semibold mb-6 text-slate-900 flex items-center gap-2">
                                 <Search className="w-5 h-5 text-blue-600" />
-                                Search Results for "{searchQuery}"
+                                Search Results for &quot;{searchQuery}&quot;
                             </h2>
                             {filteredFaqs.length > 0 ? (
                                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-2">
@@ -170,7 +170,7 @@ const FaqPage = () => {
                                 <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-300">
                                     <HelpCircle className="w-12 h-12 text-slate-300 mx-auto mb-4" />
                                     <h3 className="text-lg font-medium text-slate-900 mb-2">No results found</h3>
-                                    <p className="text-slate-500">We couldn't find any answers matching your search. Please try different keywords.</p>
+                                    <p className="text-slate-500">We couldn&apos;t find any answers matching your search. Please try different keywords.</p>
                                 </div>
                             )}
                             <div className="mt-8 text-center">
@@ -247,7 +247,7 @@ const FaqPage = () => {
                 <div className="container mx-auto px-4">
                     <div className="text-center max-w-2xl mx-auto mb-12">
                         <h2 className="text-2xl font-bold text-slate-900 mb-4">Still have questions?</h2>
-                        <p className="text-slate-500">Can't find the answer you're looking for? Please contact our friendly team.</p>
+                        <p className="text-slate-500">Can&apos;t find the answer you&apos;re looking for? Please contact our friendly team.</p>
                     </div>
 
                     <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">

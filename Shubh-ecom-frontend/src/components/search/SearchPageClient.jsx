@@ -32,16 +32,8 @@ const normalizeFacet = (bucket) => ({
 const FacetDropdown = ({ title, buckets, selected, onToggle }) => {
   const normalized = (buckets || []).map(normalizeFacet).filter((b) => b.key);
   const [open, setOpen] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(20);
-
-  useEffect(() => {
-    setVisibleCount(20);
-  }, [normalized.length]);
 
   if (!normalized.length) return null;
-
-  const visibleItems = normalized.slice(0, visibleCount);
-  const canLoadMore = visibleCount < normalized.length;
 
   return (
     <div className="rounded-xl border border-border/60 bg-card p-4">
@@ -57,17 +49,8 @@ const FacetDropdown = ({ title, buckets, selected, onToggle }) => {
       </button>
 
       {open && (
-        <div
-          className="space-y-2 max-h-64 overflow-auto pr-1 mt-3"
-          onScroll={(e) => {
-            const el = e.currentTarget;
-            const nearBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 10;
-            if (nearBottom && canLoadMore) {
-              setVisibleCount((prev) => Math.min(prev + 20, normalized.length));
-            }
-          }}
-        >
-          {visibleItems.map((bucket) => (
+        <div className="space-y-2 max-h-64 overflow-auto pr-1 mt-3">
+          {normalized.map((bucket) => (
             <label
               key={bucket.key}
               className="flex items-center gap-2 text-sm cursor-pointer"
@@ -82,17 +65,6 @@ const FacetDropdown = ({ title, buckets, selected, onToggle }) => {
               </span>
             </label>
           ))}
-          {canLoadMore && (
-            <button
-              type="button"
-              onClick={() =>
-                setVisibleCount((prev) => Math.min(prev + 20, normalized.length))
-              }
-              className="w-full text-xs text-primary py-1"
-            >
-              Load more
-            </button>
-          )}
         </div>
       )}
     </div>
@@ -306,18 +278,6 @@ export default function SearchPageClient() {
           <VehicleSelectionBar title="Selected Vehicle" />
         </div>
 
-        <form onSubmit={onSubmitSearch} className="mb-5">
-          <div className="relative max-w-3xl">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              value={queryInput}
-              onChange={(e) => setQueryInput(e.target.value)}
-              placeholder="Search products, brands, categories, OEM/OES numbers..."
-              className="pl-9 h-11 rounded-xl"
-            />
-          </div>
-        </form>
-
         <div className="flex gap-6">
           <aside className="hidden lg:block w-72 space-y-4 sticky top-24 self-start">
             <div className="rounded-xl border border-border/60 bg-card px-4 py-3 flex items-center justify-between gap-2">
@@ -365,6 +325,18 @@ export default function SearchPageClient() {
           </aside>
 
           <section className="flex-1 min-w-0">
+            <form onSubmit={onSubmitSearch} className="mb-5">
+              <div className="relative w-full">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={queryInput}
+                  onChange={(e) => setQueryInput(e.target.value)}
+                  placeholder="Search products, brands, categories, OEM/OES numbers..."
+                  className="pl-9 h-11 rounded-xl"
+                />
+              </div>
+            </form>
+
             <div className="mb-4 flex items-start justify-between gap-3 flex-wrap">
               <div>
                 <h1 className="text-2xl font-bold text-foreground">

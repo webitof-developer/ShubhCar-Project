@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect } from 'react';
+import logger from '@/lib/logger';
 
 export default function GlobalError({ error, reset }) {
   useEffect(() => {
-    console.error('Dashboard Global Error caught:', error);
+    logger.error('Dashboard Global Error caught:', error);
   }, [error]);
 
   return (

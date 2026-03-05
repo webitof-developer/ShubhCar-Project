@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 import Image from 'next/image';
+import { logger } from '@/utils/logger';
 
 const SearchResultsDropdown = ({ results, isLoading, isVisible, onClose, query, user }) => {
   if (!isVisible) return null;
@@ -147,11 +148,11 @@ const SearchResultsDropdown = ({ results, isLoading, isVisible, onClose, query, 
             })}
           </div>
           <Link
-            href={`/categories?search=${encodeURIComponent(query)}`}
+            href={`/search?q=${encodeURIComponent(query)}`}
             className="flex items-center justify-between px-4 py-3 bg-secondary/30 hover:bg-secondary/60 border-t border-border/50 text-sm font-medium text-primary transition-colors cursor-pointer"
             onClick={onClose}
           >
-            <span>View all items for "{query}"</span>
+            <span>View all items for &quot;{query}&quot;</span>
             <ChevronRight className="h-4 w-4" />
           </Link>
         </div>
@@ -224,7 +225,7 @@ const Header = () => {
           const results = await searchProducts(searchQuery, { limit: 6 });
           setSearchResults(results);
         } catch (error) {
-          console.error("Search error", error);
+          logger.error("Search error", error);
           setSearchResults([]);
         } finally {
           setIsSearching(false);
@@ -254,7 +255,7 @@ const Header = () => {
     e.preventDefault();
     if (searchQuery.trim()) {
       setShowResults(false);
-      router.push(`/categories?search=${encodeURIComponent(searchQuery)}`);
+      router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
     }
   };
 

@@ -50,6 +50,7 @@ import { ProductListItem } from '@/components/category/ProductListItem';
 import { ProductGridCard } from '@/components/category/ProductGridCard';
 import { SubCategoryGrid } from '@/components/category/SubCategoryGrid';
 import { PageSkeleton } from '@/components/category/PageSkeleton';
+import { logger } from '@/utils/logger';
 
 /* ── Main Content Component ─────────────────────────────────────────────────── */
 const CategoryContent = () => {
@@ -113,7 +114,7 @@ const CategoryContent = () => {
           setSiblingCategories(siblings || []);
         }
       } catch (e) {
-        console.error('[CategoryV2] meta load failed', e);
+        logger.error('[CategoryV2] meta load failed', e);
         setCategory(null); setChildCategories([]); setBreadcrumb([]);
       } finally {
         setInitialLoading(false);
@@ -383,7 +384,7 @@ const CategoryContent = () => {
                     <div className="flex flex-wrap items-center gap-2 pt-2.5 mt-2.5 border-t border-border/30">
                       {inlineSearch && (
                         <button onClick={() => setInlineSearch('')} className="inline-flex items-center gap-1.5 bg-primary/10 text-primary text-xs font-medium px-2.5 py-1 rounded-full hover:bg-primary/20 transition-colors">
-                          "{inlineSearch.length > 12 ? inlineSearch.slice(0, 12) + '…' : inlineSearch}" <X className="w-3 h-3" />
+                          &quot;{inlineSearch.length > 12 ? inlineSearch.slice(0, 12) + '…' : inlineSearch}&quot; <X className="w-3 h-3" />
                         </button>
                       )}
                       {filterType.map((type) => (

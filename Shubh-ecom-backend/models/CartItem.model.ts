@@ -1,5 +1,6 @@
 // @ts-nocheck
 const mongoose = require('mongoose');
+const logger = require('../lib/logger');
 
 const cartItemSchema = new mongoose.Schema(
   {
@@ -34,7 +35,9 @@ const syncCartItemIndexes = async () => {
     await CartItem.syncIndexes();
   } catch (error) {
     // Non-fatal: app should continue even if index sync cannot run.
-    console.warn('[CART_ITEM_MODEL] Index sync skipped:', error?.message || error);
+    logger.warn('[CART_ITEM_MODEL] Index sync skipped', {
+      error: error?.message || error,
+    });
   }
 };
 

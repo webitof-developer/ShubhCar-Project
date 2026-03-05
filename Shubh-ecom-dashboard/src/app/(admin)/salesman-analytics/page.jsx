@@ -1,7 +1,7 @@
 'use client'
 import logger from '@/lib/logger'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { Alert, Container } from 'react-bootstrap'
 import PageTitle from '@/components/PageTitle'
@@ -31,6 +31,7 @@ const SalesmanAnalyticsPage = () => {
     products: [],
     pagination: { page: 1, limit: 20, total: 0, totalPages: 1 },
   })
+  const requestSeqRef = useRef(0)
 
   const token = session?.accessToken
 
@@ -45,24 +46,28 @@ const SalesmanAnalyticsPage = () => {
     return params
   }, [filters])
 
-  const fetchReport = async () => {
+  const fetchReport = useCallback(async () => {
     if (!token) return
+    const requestSeq = ++requestSeqRef.current
     setLoading(true)
     setError('')
     try {
       const response = await salesReportsAPI.salesmanPerformance(queryParams, token)
+      if (requestSeq !== requestSeqRef.current) return
       setData(response?.data || response || {})
     } catch (err) {
+      if (requestSeq !== requestSeqRef.current) return
       setError(err.message || 'Failed to load salesman analytics')
       logger.error(err)
     } finally {
+      if (requestSeq !== requestSeqRef.current) return
       setLoading(false)
     }
-  }
+  }, [token, queryParams])
 
   useEffect(() => {
     fetchReport()
-  }, [token, queryParams])
+  }, [fetchReport])
 
   return (
     <>
@@ -80,7 +85,7 @@ const SalesmanAnalyticsPage = () => {
         </Alert>
       )}
 
-      <SalespersonDashboard data={data} loading={loading} salesmanId={filters.salesmanId} />
+      <SalespersonDashboard data={data} loading={loading} salesmanId={filters.salesmanId} filters={filters} />
     </>
   )
 }

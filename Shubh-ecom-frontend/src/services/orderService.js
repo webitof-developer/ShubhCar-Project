@@ -2,6 +2,8 @@
 
 import APP_CONFIG from '@/config/app.config';
 import { orders as demoOrders } from '@/data/orders';
+import { logger } from '@/utils/logger';
+import { api } from '@/utils/apiClient';
 
 /**
  * Order Service
@@ -13,17 +15,6 @@ import { orders as demoOrders } from '@/data/orders';
  * - Get order details (demo/real based on config)
  * Requires authentication (access token)
  */
-
-const API_BASE = APP_CONFIG.api.baseUrl;
-const readResponseBody = async (response) => {
-  const text = await response.text();
-  if (!text) return { text: '', json: null };
-  try {
-    return { text, json: JSON.parse(text) };
-  } catch {
-    return { text, json: null };
-  }
-};
 
 /**
  * Get data source configuration with fallback
@@ -79,47 +70,9 @@ export const placeOrder = async (accessToken, orderData) => {
       ...orderData,
       gateway: normalizeGateway(orderData?.paymentMethod, orderData?.gateway),
     };
-    const response = await fetch(`${API_BASE}/orders/place`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-
-    const { text, json } = await readResponseBody(response);
-    const body = json || null;
-    const errorMessage =
-      body?.message ||
-      body?.error?.message ||
-      text ||
-      `Order request failed (${response.status})`;
-
-    if (!response.ok || body?.success === false) {
-      const err = new Error(errorMessage);
-      err.status = response.status;
-      err.code = body?.code || null;
-      err.details = body?.details || null;
-      err.statusText = response.statusText;
-      err.url = response.url;
-      err.responseBody = body;
-      err.responseText = text;
-      console.error('[ORDER_SERVICE] Place order failed:', {
-        status: response.status,
-        statusText: response.statusText,
-        url: response.url,
-        body,
-        text,
-      });
-      throw err;
-    }
-
-    const result = body || {};
-    
-    return result.data || result;
+    return await api.authPost('/orders/place', payload, accessToken);
   } catch (error) {
-    console.error('[ORDER_SERVICE] Place order error:', error);
+    logger.error('[ORDER_SERVICE] Place order error:', error);
     throw error;
   }
 };
@@ -145,55 +98,24 @@ export const getMyOrders = async (accessToken, { includeItems } = {}) => {
   logDataSource('getMyOrders', false);
 
   if (!accessToken) {
-    console.warn('[ORDER_SERVICE] Missing access token for getMyOrders');
+    logger.warn('[ORDER_SERVICE] Missing access token for getMyOrders');
     return useFallback ? [...demoOrders] : [];
   }
   
   try {
     const params = new URLSearchParams();
     if (typeof includeItems === 'boolean') params.set('includeItems', String(includeItems));
-    const url = params.toString() ? `${API_BASE}/orders/my?${params.toString()}` : `${API_BASE}/orders/my`;
-    const response = await fetch(url, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-      },
-    });
-
-    const { text, json } = await readResponseBody(response);
-
-    if (!response.ok) {
-      const details = {
-        status: Number.isFinite(response?.status) ? response.status : -1,
-        statusText: response?.statusText || 'Unknown',
-        message: json?.message || text || 'No error body',
-        url: response?.url || url,
-      };
-      console.error(
-        `[ORDER_SERVICE] Failed to fetch orders | status=${details.status} ${details.statusText} | message=${details.message} | url=${details.url}`
-      );
-      
-      // Fallback to demo if configured
-      if (useFallback) {
-        console.warn('[ORDER_SERVICE] Falling back to demo orders');
-        return [...demoOrders];
-      }
-      
-      return [];
-    }
-
-    const orders = extractOrdersArray(json?.data ?? json);
-    const total =
-      json?.data?.pagination?.total ??
-      json?.pagination?.total ??
-      orders.length;
+    const path = params.toString() ? `/orders/my?${params.toString()}` : '/orders/my';
+    const payload = await api.authGet(path, accessToken);
+    const orders = extractOrdersArray(payload);
     return orders;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error(`[ORDER_SERVICE] Fetch orders error: ${message}`);
+    logger.error(`[ORDER_SERVICE] Fetch orders error: ${message}`);
     
     // Fallback to demo if configured
     if (useFallback) {
-      console.warn('[ORDER_SERVICE] Falling back to demo orders');
+      logger.warn('[ORDER_SERVICE] Falling back to demo orders');
       return [...demoOrders];
     }
     
@@ -223,7 +145,7 @@ export const getOrder = async (accessToken, orderId) => {
   logDataSource('getOrder', false);
 
   if (!accessToken) {
-    console.warn('[ORDER_SERVICE] Missing access token for getOrder');
+    logger.warn('[ORDER_SERVICE] Missing access token for getOrder');
     if (useFallback) {
       return demoOrders.find(o => o._id === orderId || o.orderNumber === orderId) || null;
     }
@@ -231,43 +153,14 @@ export const getOrder = async (accessToken, orderId) => {
   }
   
   try {
-    const response = await fetch(`${API_BASE}/orders/${orderId}`, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-      },
-    });
-
-    const { text, json } = await readResponseBody(response);
-
-    if (!response.ok) {
-      const details = {
-        status: Number.isFinite(response?.status) ? response.status : -1,
-        statusText: response?.statusText || 'Unknown',
-        message: json?.message || text || 'No error body',
-        url: response?.url || `${API_BASE}/orders/${orderId}`,
-      };
-      console.error(
-        `[ORDER_SERVICE] Failed to fetch order | status=${details.status} ${details.statusText} | message=${details.message} | url=${details.url}`
-      );
-      
-      // Fallback to demo if configured
-      if (useFallback) {
-        console.warn('[ORDER_SERVICE] Falling back to demo order');
-        const order = demoOrders.find(o => o._id === orderId || o.orderNumber === orderId);
-        return order || null;
-      }
-      
-      return null;
-    }
-    
-    return json?.data || json || null;
+    return await api.authGet(`/orders/${orderId}`, accessToken);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error(`[ORDER_SERVICE] Fetch order error: ${message}`);
+    logger.error(`[ORDER_SERVICE] Fetch order error: ${message}`);
     
     // Fallback to demo if configured  
     if (useFallback) {
-      console.warn('[ORDER_SERVICE] Falling back to demo order');
+      logger.warn('[ORDER_SERVICE] Falling back to demo order');
       const order = demoOrders.find(o => o._id === orderId || o.orderNumber === orderId);
       return order || null;
     }
@@ -286,29 +179,9 @@ export const getOrder = async (accessToken, orderId) => {
 export const cancelOrder = async (accessToken, orderId, reason) => {
   
   try {
-    const response = await fetch(`${API_BASE}/orders/${orderId}/cancel`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ reason }),
-    });
-
-    const { text, json } = await readResponseBody(response);
-
-    if (!response.ok) {
-      console.error('[ORDER_SERVICE] Cancel order failed:', {
-        status: response.status,
-        statusText: response.statusText,
-        message: json?.message || text || null,
-      });
-      throw new Error(json?.message || text || 'Failed to cancel order');
-    }
-    
-    return json?.data || json || null;
+    return await api.authPost(`/orders/${orderId}/cancel`, { reason }, accessToken);
   } catch (error) {
-    console.error('[ORDER_SERVICE] Cancel order error:', error);
+    logger.error('[ORDER_SERVICE] Cancel order error:', error);
     throw error;
   }
 };

@@ -3,6 +3,7 @@ import DropzoneFormInput from '@/components/form/DropzoneFormInput'
 import MediaPickerModal from '@/components/media/MediaPickerModal'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import { useState } from 'react'
+import Image from 'next/image'
 
 const VehicleBrandModal = ({
   show,
@@ -36,10 +37,13 @@ const VehicleBrandModal = ({
               <Form.Label className="d-block">Brand Logo</Form.Label>
               {form.logo ? (
                 <div className="position-relative d-inline-block">
-                  <img
+                  <Image
                     src={resolveMediaUrl(form.logo)}
                     alt="Brand Logo"
                     className="rounded border"
+                    width={140}
+                    height={140}
+                    unoptimized
                     style={{ width: 140, height: 140, objectFit: 'cover' }}
                   />
                   <Button

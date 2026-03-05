@@ -241,6 +241,7 @@ const searchViaElastic = async ({
   vehicleBrands,
   productTypes,
   vehicleIds,
+  vehicleProductIds,
   sort,
 }) => {
   if (!elastic.isEnabled()) return null;
@@ -259,6 +260,14 @@ const searchViaElastic = async ({
   }
   if (productTypes.length) filters.push({ terms: { productType: productTypes } });
   if (vehicleIds.length) filters.push({ terms: { vehicleIds: vehicleIds } });
+  if (Array.isArray(vehicleProductIds)) {
+    if (!vehicleProductIds.length) return { ids: [], total: 0 };
+    filters.push({
+      ids: {
+        values: vehicleProductIds.map((id) => String(id)),
+      },
+    });
+  }
 
   const must = query
     ? [
@@ -340,8 +349,9 @@ const searchCatalog = async (queryInput = {}, user) => {
 
   let items = [];
   let total = 0;
+  let usedElastic = false;
 
-  const shouldUseElastic = query.length > 0 && years.length === 0;
+  const shouldUseElastic = query.length > 0;
 
   if (shouldUseElastic) {
     try {
@@ -354,9 +364,11 @@ const searchCatalog = async (queryInput = {}, user) => {
         vehicleBrands,
         productTypes,
         vehicleIds,
+        vehicleProductIds,
         sort,
       });
       if (elasticResult) {
+        usedElastic = true;
         items = await loadByIdsPreservingOrder(elasticResult.ids);
         total = elasticResult.total;
       }
@@ -367,7 +379,7 @@ const searchCatalog = async (queryInput = {}, user) => {
     }
   }
 
-  if (!items.length) {
+  if (!usedElastic) {
     const skip = (page - 1) * limit;
     const [mongoItems, mongoTotal] = await Promise.all([
       Product.find(mongoFilter)

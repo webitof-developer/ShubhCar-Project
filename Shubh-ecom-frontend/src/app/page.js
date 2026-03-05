@@ -11,6 +11,7 @@ import { getRootCategories } from '@/services/categoryService';
 import { getManufacturerBrands } from '@/services/brandService';
 import { getFlashDealNowFromSettings, getFlashDealRangeFromSettings, getPublicSettings } from '@/services/settingsService';
 import { buildPageMetadata } from '@/lib/seo';
+import { logger } from '@/utils/logger';
 
 export const revalidate = 60;
 
@@ -126,10 +127,10 @@ const HomeContent = async () => {
   }
 
   // Debug fetching errors if any
-  if (featuredRes.status === 'rejected') console.error("Featured fetch failed:", featuredRes.reason);
-  if (newArrivalsRes.status === 'rejected') console.error("New Arrivals fetch failed:", newArrivalsRes.reason);
-  if (bestSellersRes.status === 'rejected') console.error("Best Sellers fetch failed:", bestSellersRes.reason);
-  if (dealsRes.status === 'rejected') console.error("Deals fetch failed:", dealsRes.reason);
+  if (featuredRes.status === 'rejected') logger.error("Featured fetch failed:", featuredRes.reason);
+  if (newArrivalsRes.status === 'rejected') logger.error("New Arrivals fetch failed:", newArrivalsRes.reason);
+  if (bestSellersRes.status === 'rejected') logger.error("Best Sellers fetch failed:", bestSellersRes.reason);
+  if (dealsRes.status === 'rejected') logger.error("Deals fetch failed:", dealsRes.reason);
 
   return (
     <>

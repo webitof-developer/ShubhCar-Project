@@ -11,7 +11,9 @@ import { toast } from 'sonner';
 import { GoogleLogin } from '@react-oauth/google';
 import { RegisterLoadingCard } from '@/components/register/RegisterLoadingCard';
 import { RegisterForm } from '@/components/register/RegisterForm';
-import { sanitizeIndianPhone, isValidIndianPhone } from '@/utils/phoneValidation';
+import { sanitizeIndianPhone } from '@/utils/phoneValidation';
+import { logger } from '@/utils/logger';
+import { validateEmailField, validateNameField, validatePhoneField } from '@/utils/formValidation';
 
 const RegisterPage = () => {
   const { register, loginWithGoogle, isAuthenticated, loading: authLoading } = useAuth();
@@ -63,24 +65,18 @@ const RegisterPage = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
-    if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
+    const firstNameError = validateNameField(formData.firstName, 'First name');
+    if (firstNameError) newErrors.firstName = firstNameError;
 
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!emailRegex.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
-    }
+    const lastNameError = validateNameField(formData.lastName, 'Last name');
+    if (lastNameError) newErrors.lastName = lastNameError;
 
-    // Phone validation (exactly 10 digits)
+    const emailError = validateEmailField(formData.email, true);
+    if (emailError) newErrors.email = emailError;
+
     const cleanPhone = sanitizeIndianPhone(formData.phone);
-    if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone number is required';
-    } else if (!isValidIndianPhone(cleanPhone)) {
-      newErrors.phone = 'Phone number must be exactly 10 digits';
-    }
+    const phoneError = validatePhoneField(cleanPhone, true);
+    if (phoneError) newErrors.phone = phoneError;
 
     if (!formData.password) {
       newErrors.password = 'Password is required';
@@ -117,7 +113,7 @@ const RegisterPage = () => {
       // BYPASS OTP: Redirect directly to login
       router.push('/login');
     } catch (error) {
-      console.error('[REGISTER] Error:', error);
+      logger.error('[REGISTER] Error:', error);
       toast.error(error.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
@@ -137,7 +133,7 @@ const RegisterPage = () => {
       toast.success('Login successful');
       router.push('/');
     } catch (error) {
-      console.error('[REGISTER] Google Login Error:', error);
+      logger.error('[REGISTER] Google Login Error:', error);
       toast.error(error.message || 'Google login failed');
     } finally {
       setLoading(false);

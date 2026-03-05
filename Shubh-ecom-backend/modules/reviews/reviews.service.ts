@@ -2,6 +2,7 @@ const repo = require('./reviews.repo');
 const { error } = require('../../utils/apiResponse');
 const reviewCache = require('../../cache/review.cache');
 const OrderItem = require('../../models/OrderItem.model');
+const Order = require('../../models/Order.model');
 const Product = require('../../models/Product.model');
 const ROLES = require('../../constants/roles');
 const { ORDER_STATUS } = require('../../constants/orderStatus');
@@ -56,35 +57,32 @@ class ReviewsService {
       ORDER_STATUS.SHIPPED,
       ORDER_STATUS.OUT_FOR_DELIVERY,
       ORDER_STATUS.DELIVERED,
+      ORDER_STATUS.ON_HOLD,
       ORDER_STATUS.RETURNED,
       ORDER_STATUS.REFUNDED,
     ]);
-    const allowedItemStatuses = new Set([
-      'confirmed',
-      'shipped',
-      'delivered',
-      'returned',
-    ]);
+    const allowedPaymentStatuses = new Set(['paid', 'partially_paid', 'refunded']);
 
-    const purchasedItems = await OrderItem.find({
-      productId: payload.productId,
-    })
-      .populate({
-        path: 'orderId',
-        match: { userId: user.id },
-        select: '_id orderStatus',
-      })
-      .select('status orderId')
+    const userOrders = await Order.find({ userId: user.id })
+      .select('_id orderStatus paymentStatus')
       .lean();
 
-    const hasEligiblePurchase = purchasedItems.some(
-      (item) =>
-        item.orderId &&
-        (
-          allowedItemStatuses.has(String(item.status || '').toLowerCase()) ||
-          allowedOrderStatuses.has(String(item.orderId.orderStatus || '').toLowerCase())
-        ),
-    );
+    const eligibleOrderIds = userOrders
+      .filter((order) => {
+        const orderStatus = String(order.orderStatus || '').toLowerCase();
+        const paymentStatus = String(order.paymentStatus || '').toLowerCase();
+        return allowedOrderStatuses.has(orderStatus) || allowedPaymentStatuses.has(paymentStatus);
+      })
+      .map((order) => order._id);
+
+    const hasEligiblePurchase =
+      eligibleOrderIds.length > 0 &&
+      Boolean(
+        await OrderItem.exists({
+          productId: payload.productId,
+          orderId: { $in: eligibleOrderIds },
+        }),
+      );
 
     if (!hasEligiblePurchase) {
       error('Only verified buyers can review this product', 403);

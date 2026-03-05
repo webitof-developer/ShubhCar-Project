@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { forwardRef } from 'react';
 import Image from 'next/image';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
@@ -18,12 +18,14 @@ const QuotationTemplate = forwardRef(({ items = [], summary = {}, profile = {} }
   const pincode = settings.invoice_company_pincode || '122001';
   const gstin = settings.invoice_company_gstin || 'GSTIN NOT CONFIGURED';
   const companyEmail = settings.invoice_company_email || 'support@example.com';
-  const companyPhone = settings.invoice_company_phone || '+91 1800-123-4567';
+  const companyPhone = settings.invoice_company_phone || '1800123456';
   const companyWebsite = settings.invoice_company_website || '';
 
   // Generate Quote Details
   const now = new Date();
-  const quoteNumber = `QT-${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`;
+  const quoteNumber =
+    summary?.quoteNumber ||
+    `QT-${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}`;
   
   const quoteDate = now.toLocaleDateString('en-IN', {
     day: '2-digit', month: 'long', year: 'numeric'

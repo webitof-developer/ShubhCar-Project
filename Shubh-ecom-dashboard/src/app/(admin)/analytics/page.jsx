@@ -4,21 +4,31 @@ import logger from '@/lib/logger'
 import PageTitle from '@/components/PageTitle'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import { analyticsAPI } from '@/helpers/analyticsApi'
+import { orderAPI } from '@/helpers/orderApi'
 import { currency } from '@/context/constants'
 import ReactApexChart from 'react-apexcharts'
 import { useEffect, useMemo, useState } from 'react'
 import { useSession } from 'next-auth/react'
-import { Card, CardBody, CardHeader, CardTitle, Col, Row, Spinner, Table, Button, Form } from 'react-bootstrap'
+import { Card, CardBody, CardHeader, CardTitle, Col, Row, Spinner, Table, Button, Form, Alert } from 'react-bootstrap'
 
-const formatDate = (date) => date.toISOString().split('T')[0]
 const toArray = (value) => (Array.isArray(value) ? value : [])
+const parseLocalDateInput = (value) => {
+  if (!value) return null
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return null
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  const parsed = new Date(year, month - 1, day)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
 const toStartOfDay = (value) => {
-  const d = new Date(value)
+  const d = value instanceof Date ? new Date(value) : parseLocalDateInput(value) || new Date(value)
   d.setHours(0, 0, 0, 0)
   return d
 }
 const toEndOfDay = (value) => {
-  const d = new Date(value)
+  const d = value instanceof Date ? new Date(value) : parseLocalDateInput(value) || new Date(value)
   d.setHours(23, 59, 59, 999)
   return d
 }
@@ -75,6 +85,7 @@ const AnalyticsPage = () => {
     totalStockQty: 0,
     deadStock: [],
   })
+  const [todayValidation, setTodayValidation] = useState(null)
   const paymentSplit = Array.isArray(revenue?.paymentSplit) ? revenue.paymentSplit : []
   const deadStock = Array.isArray(inventoryTurnover?.deadStock) ? inventoryTurnover.deadStock : []
 
@@ -84,7 +95,10 @@ const AnalyticsPage = () => {
       if (!customFrom || !customTo) return null
       const fromDate = toStartOfDay(customFrom)
       const toDate = toEndOfDay(customTo)
-      return { from: fromDate.toISOString(), to: toDate.toISOString() }
+      if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) return null
+      const normalizedFrom = fromDate <= toDate ? fromDate : toStartOfDay(customTo)
+      const normalizedTo = fromDate <= toDate ? toDate : toEndOfDay(customFrom)
+      return { from: normalizedFrom.toISOString(), to: normalizedTo.toISOString() }
     }
 
     let start = new Date(now)
@@ -97,7 +111,7 @@ const AnalyticsPage = () => {
     }
 
     const fromDate = toStartOfDay(start)
-    const toDate = toEndOfDay(now)
+    const toDate = now
     return { from: fromDate.toISOString(), to: toDate.toISOString() }
   }, [range, customFrom, customTo])
 
@@ -138,7 +152,7 @@ const AnalyticsPage = () => {
           analyticsAPI.reviews(session.accessToken),
           analyticsAPI.topProducts({ limit: 8, ...queryParams }, session.accessToken),
           analyticsAPI.inventory({ threshold: 8 }, session.accessToken),
-          analyticsAPI.revenueChart({ range: range === 'custom' ? 'custom' : range, ...queryParams }, session.accessToken),
+          analyticsAPI.revenueChart({ range: 'custom', ...queryParams }, session.accessToken),
           analyticsAPI.repeatCustomers(queryParams, session.accessToken),
           analyticsAPI.fulfillment(queryParams, session.accessToken),
           analyticsAPI.funnel(queryParams, session.accessToken),
@@ -172,6 +186,73 @@ const AnalyticsPage = () => {
 
     fetchAnalytics()
   }, [session, range, rangeParams])
+
+  useEffect(() => {
+    const validateTodayAgainstOrders = async () => {
+      if (!session?.accessToken || range !== 'today' || !rangeParams?.from || !rangeParams?.to) {
+        setTodayValidation(null)
+        return
+      }
+
+      try {
+        const extractRows = (response) => {
+          const payload = response?.data || response || {}
+          const orders =
+            payload?.items ||
+            payload?.orders ||
+            payload?.data?.items ||
+            payload?.data?.orders ||
+            []
+          return {
+            rows: Array.isArray(orders) ? orders : [],
+            totalPages: Number(payload?.totalPages || payload?.pagination?.totalPages || 1) || 1,
+          }
+        }
+
+        const allRows = []
+        const firstResponse = await orderAPI.list(
+          { from: rangeParams.from, to: rangeParams.to, limit: 250, page: 1, summary: true },
+          session.accessToken,
+        )
+        const firstPage = extractRows(firstResponse)
+        allRows.push(...firstPage.rows)
+
+        const lastPage = Math.min(firstPage.totalPages, 40)
+        for (let page = 2; page <= lastPage; page += 1) {
+          const nextResponse = await orderAPI.list(
+            { from: rangeParams.from, to: rangeParams.to, limit: 250, page, summary: true },
+            session.accessToken,
+          )
+          const nextPage = extractRows(nextResponse)
+          allRows.push(...nextPage.rows)
+        }
+
+        const rows = allRows
+        const orderCount = rows.length
+        const paidRevenueTotal = rows
+          .filter((row) => String(row?.paymentStatus || '').toLowerCase() === 'paid')
+          .reduce((sum, row) => sum + Number(row?.grandTotal || row?.totals?.grandTotal || 0), 0)
+
+        const dashboardOrderCount = Number(revenue?.totalOrders || 0)
+        const dashboardRevenue = Number(revenue?.totalRevenue || 0)
+        const countMismatch = orderCount !== dashboardOrderCount
+        const revenueMismatch = Math.abs(paidRevenueTotal - dashboardRevenue) > 1
+
+        setTodayValidation({
+          orderCount,
+          paidRevenueTotal,
+          dashboardOrderCount,
+          dashboardRevenue,
+          mismatch: countMismatch || revenueMismatch,
+        })
+      } catch (error) {
+        logger.error('Failed to validate today analytics against orders list', error)
+        setTodayValidation(null)
+      }
+    }
+
+    validateTodayAgainstOrders()
+  }, [session?.accessToken, range, rangeParams?.from, rangeParams?.to, revenue?.totalOrders, revenue?.totalRevenue])
 
   const chartOptions = useMemo(
     () => ({
@@ -261,6 +342,13 @@ const AnalyticsPage = () => {
           />
         </Col>
       </Row>
+      {range === 'today' && todayValidation?.mismatch && (
+        <Alert variant="warning" className="mb-3">
+          Today validation mismatch detected. Orders list shows {todayValidation.orderCount} total orders and paid revenue {currency}
+          {todayValidation.paidRevenueTotal.toFixed(2)}, while analytics summary shows {todayValidation.dashboardOrderCount} orders and paid revenue {currency}
+          {todayValidation.dashboardRevenue.toFixed(2)}.
+        </Alert>
+      )}
 
       <Row className="g-3">
         <Col xl={3} md={6}>

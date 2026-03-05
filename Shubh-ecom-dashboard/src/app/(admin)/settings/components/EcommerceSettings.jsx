@@ -151,7 +151,19 @@ const EcommerceSettings = () => {
                     <Col lg={6}>
                       <div className="mb-3">
                         <label htmlFor="store_phone" className="form-label">Owner Phone Number</label>
-                        <input id="store_phone" className="form-control" value={formData.store_phone} onChange={(e) => setFormData((prev) => ({ ...prev, store_phone: e.target.value }))} />
+                        <input
+                          id="store_phone"
+                          type="tel"
+                          className="form-control"
+                          value={formData.store_phone}
+                          onChange={(e) => {
+                            const digitsOnly = String(e.target.value || '').replace(/\D/g, '').slice(0, 10)
+                            setFormData((prev) => ({ ...prev, store_phone: digitsOnly }))
+                          }}
+                          inputMode="numeric"
+                          pattern="[0-9]{10}"
+                          maxLength={10}
+                        />
                       </div>
                     </Col>
                     <Col lg={6}>

@@ -1,4 +1,4 @@
-﻿//src/services/productService.js
+//src/services/productService.js
 
 /**
  * Product Service - Config-Driven Architecture
@@ -18,8 +18,8 @@ import { products as demoProducts } from '@/data/products';
 import { resolveProductImages } from '@/utils/media';
 import { getCategoryBySlug } from './categoryService';
 import { api } from '@/utils/apiClient';
+import { logger } from '@/utils/logger';
 
-const baseUrl = APP_CONFIG.api.baseUrl;
 const isProd = process.env.NODE_ENV === 'production';
 
 // Map frontend-friendly sort aliases -> backend enum values
@@ -205,7 +205,7 @@ export const getProducts = async ({
     if (featured) params.set('isFeatured', 'true');
     if (bestSeller) params.set('isBestSeller', 'true');
 
-    const url = `${baseUrl}/products?${params.toString()}`;
+    const url = `/products?${params.toString()}`;
     const data = await api.get(url, fetchOptions);
     const payload = unwrapPayload(data);
     return normalizeProductList(payload?.items || []);
@@ -223,8 +223,8 @@ export const getProducts = async ({
     if (onSale) catchParams.set('isOnSale', 'true');
     if (featured) catchParams.set('isFeatured', 'true');
     if (bestSeller) catchParams.set('isBestSeller', 'true');
-    const catchUrl = `${baseUrl}/products?${catchParams.toString()}`;
-    console.error('[PRODUCT_SERVICE] getProducts failed:', {
+    const catchUrl = `/products?${catchParams.toString()}`;
+    logger.error('[PRODUCT_SERVICE] getProducts failed:', {
       url: catchUrl,
       status: error.status,
       message: error.message || String(error),
@@ -286,7 +286,7 @@ export const getProductsByCategory = async (categorySlug, options = {}) => {
       params.set('vehicle_id', options.vehicleIds.join(','));
     if (options.productType) params.set('productType', options.productType);
 
-    const url = `${baseUrl}/products?${params.toString()}`;
+    const url = `/products?${params.toString()}`;
     requestUrl = url;
     const data = await api.get(url, options.fetchOptions);
     const payload = unwrapPayload(data);
@@ -294,8 +294,8 @@ export const getProductsByCategory = async (categorySlug, options = {}) => {
   } catch (error) {
     const url =
       requestUrl ||
-      `${baseUrl}/products?categorySlug=${encodeURIComponent(categorySlug)}`;
-    console.error('[PRODUCT_SERVICE] getProductsByCategory failed:', {
+      `/products?categorySlug=${encodeURIComponent(categorySlug)}`;
+    logger.error('[PRODUCT_SERVICE] getProductsByCategory failed:', {
       url,
       message: error.message,
     });
@@ -343,28 +343,40 @@ export const searchProducts = async (query, options = {}) => {
     logDataSource('PRODUCTS', 'REAL');
 
     const params = new URLSearchParams();
+    params.set('q', query);
     params.set('page', String(options.page || 1));
     params.set('limit', String(options.limit || 12));
-    params.set('search', query);
+    params.set('sort', 'relevance');
 
     if (hasVehicleFilter)
       params.set('vehicle_id', options.vehicleIds.join(','));
     if (options.productType) params.set('productType', options.productType);
+    if (options.categoryId) params.set('categoryId', options.categoryId);
+    if (options.manufacturerBrand)
+      params.set('manufacturerBrand', options.manufacturerBrand);
+    if (options.vehicleBrand) params.set('vehicleBrand', options.vehicleBrand);
+    if (options.year) params.set('year', options.year);
 
-    const url = `${baseUrl}/products?${params.toString()}`;
+    const url = `/products/search?${params.toString()}`;
     const data = await api.get(url, options.fetchOptions);
     const payload = unwrapPayload(data);
     return normalizeProductList(payload?.items || []);
   } catch (error) {
     const params = new URLSearchParams();
+    params.set('q', query);
     params.set('page', String(options.page || 1));
     params.set('limit', String(options.limit || 12));
-    params.set('search', query);
+    params.set('sort', 'relevance');
     if (hasVehicleFilter)
       params.set('vehicle_id', options.vehicleIds.join(','));
     if (options.productType) params.set('productType', options.productType);
-    const url = `${baseUrl}/products?${params.toString()}`;
-    console.error('[PRODUCT_SERVICE] searchProducts failed:', {
+    if (options.categoryId) params.set('categoryId', options.categoryId);
+    if (options.manufacturerBrand)
+      params.set('manufacturerBrand', options.manufacturerBrand);
+    if (options.vehicleBrand) params.set('vehicleBrand', options.vehicleBrand);
+    if (options.year) params.set('year', options.year);
+    const url = `/products/search?${params.toString()}`;
+    logger.error('[PRODUCT_SERVICE] searchProducts failed:', {
       url,
       message: error.message,
     });
@@ -456,7 +468,7 @@ export const searchCatalogProducts = async ({
     if (year) params.set('year', year);
     if (hasVehicleFilter) params.set('vehicle_id', vehicleIds.join(','));
 
-    const url = `${baseUrl}/products/search?${params.toString()}`;
+    const url = `/products/search?${params.toString()}`;
     const data = await api.get(url, fetchOptions);
     const payload = unwrapPayload(data) || {};
     return {
@@ -474,7 +486,7 @@ export const searchCatalogProducts = async ({
       },
     };
   } catch (error) {
-    console.error('[PRODUCT_SERVICE] searchCatalogProducts failed:', {
+    logger.error('[PRODUCT_SERVICE] searchCatalogProducts failed:', {
       message: error.message,
       status: error.status,
     });
@@ -537,7 +549,7 @@ export const getRelatedProducts = async (
     params.set('limit', String(limit + 2));
     params.set('categoryId', product.categoryId);
 
-    const url = `${baseUrl}/products?${params.toString()}`;
+    const url = `/products?${params.toString()}`;
     requestUrl = url;
     const data = await api.get(url, fetchOptions);
     const payload = unwrapPayload(data);
@@ -546,8 +558,8 @@ export const getRelatedProducts = async (
 
     return normalizeProductList(filtered);
   } catch (error) {
-    const url = requestUrl || `${baseUrl}/products`;
-    console.error('[PRODUCT_SERVICE] getRelatedProducts failed:', {
+    const url = requestUrl || `/products`;
+    logger.error('[PRODUCT_SERVICE] getRelatedProducts failed:', {
       url,
       message: error.message,
     });
@@ -570,13 +582,13 @@ export const getFeaturedProducts = async (limit = 8, fetchOptions) => {
     const params = new URLSearchParams();
     params.set('limit', String(limit));
 
-    const url = `${baseUrl}/product/featured?${params.toString()}`;
+    const url = `/product/featured?${params.toString()}`;
     const data = await api.get(url, fetchOptions);
     const payload = unwrapPayload(data);
     return normalizeProductList(payload || []);
   } catch (error) {
-    const url = `${baseUrl}/product/featured?${params.toString()}`;
-    console.error('[PRODUCT_SERVICE] getFeaturedProducts failed:', {
+    const url = `/product/featured?${params.toString()}`;
+    logger.error('[PRODUCT_SERVICE] getFeaturedProducts failed:', {
       url,
       message: error.message,
     });
@@ -603,13 +615,13 @@ export const getProductBySlug = async (slug, fetchOptions) => {
   // Real mode
   try {
     logDataSource('PRODUCTS', 'REAL');
-    const url = `${baseUrl}/products/${slug}`;
+    const url = `/products/${slug}`;
     const data = await api.get(url, fetchOptions);
     const payload = unwrapPayload(data);
     return normalizeProduct(payload || null);
   } catch (error) {
-    const url = `${baseUrl}/products/${slug}`;
-    console.error('[PRODUCT_SERVICE] getProductBySlug failed:', {
+    const url = `/products/${slug}`;
+    logger.error('[PRODUCT_SERVICE] getProductBySlug failed:', {
       url,
       message: error.message,
     });
@@ -644,14 +656,14 @@ export const getProductById = async (id, fetchOptions) => {
       return config.fallback === 'empty' ? null : null;
     }
     logDataSource('PRODUCTS', 'REAL');
-    const url = `${baseUrl}/products/id/${id}`;
+    const url = `/products/id/${id}`;
     const data = await api.get(url, fetchOptions);
     const payload = unwrapPayload(data);
     return normalizeProduct(payload || null);
   } catch (error) {
-    const url = `${baseUrl}/products/id/${id}`;
+    const url = `/products/id/${id}`;
     if (!silent) {
-      console.error('[PRODUCT_SERVICE] getProductById failed:', {
+      logger.error('[PRODUCT_SERVICE] getProductById failed:', {
         url,
         message: error.message,
       });
@@ -665,13 +677,13 @@ export const getProductById = async (id, fetchOptions) => {
 export const getProductCompatibility = async (productId, fetchOptions) => {
   if (!productId) return {};
   try {
-    const url = `${baseUrl}/products/id/${productId}/compatibility`;
+    const url = `/products/id/${productId}/compatibility`;
     const data = await api.get(url, fetchOptions);
     const payload = unwrapPayload(data);
     return payload || {};
   } catch (error) {
-    const url = `${baseUrl}/products/id/${productId}/compatibility`;
-    console.error('[PRODUCT_SERVICE] getProductCompatibility failed:', {
+    const url = `/products/id/${productId}/compatibility`;
+    logger.error('[PRODUCT_SERVICE] getProductCompatibility failed:', {
       url,
       message: error.message,
     });
@@ -683,7 +695,7 @@ export const getProductCompatibility = async (productId, fetchOptions) => {
 export const getProductAlternatives = async (productId, fetchOptions) => {
   if (!productId) return { oem: [], aftermarket: [] };
   try {
-    const url = `${baseUrl}/products/id/${productId}/alternatives`;
+    const url = `/products/id/${productId}/alternatives`;
     const data = await api.get(url, fetchOptions);
     const payload = unwrapPayload(data);
     return {
@@ -691,8 +703,8 @@ export const getProductAlternatives = async (productId, fetchOptions) => {
       aftermarket: normalizeProductList(payload?.aftermarket),
     };
   } catch (error) {
-    const url = `${baseUrl}/products/id/${productId}/alternatives`;
-    console.error('[PRODUCT_SERVICE] getProductAlternatives failed:', {
+    const url = `/products/id/${productId}/alternatives`;
+    logger.error('[PRODUCT_SERVICE] getProductAlternatives failed:', {
       url,
       message: error.message,
     });
@@ -700,3 +712,4 @@ export const getProductAlternatives = async (productId, fetchOptions) => {
     return { oem: [], aftermarket: [] };
   }
 };
+

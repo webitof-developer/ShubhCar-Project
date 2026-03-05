@@ -13,6 +13,7 @@ import { getOrder } from '@/services/orderService';
 import { getAddressById } from '@/services/userAddressService';
 import { API_BASE_URL } from '@/config/app.config';
 import './print.css';
+import { logger } from '@/utils/logger';
 
 const InvoicePage = () => {
   const { orderId } = useParams();
@@ -50,11 +51,11 @@ const InvoicePage = () => {
             setSettings(settingsData.data || settingsData || {});
           }
         } catch (err) {
-          console.error('Failed to fetch invoice settings:', err);
+          logger.error('Failed to fetch invoice settings:', err);
           // Continue with empty settings (template has defaults)
         }
       } catch (error) {
-        console.error('Failed to load invoice:', error);
+        logger.error('Failed to load invoice:', error);
         setOrderDetail(null);
       } finally {
         setInvoiceLoading(false);

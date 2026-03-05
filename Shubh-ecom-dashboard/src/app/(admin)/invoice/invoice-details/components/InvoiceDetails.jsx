@@ -3,6 +3,7 @@ import PageTitle from '@/components/PageTitle'
 import InvoiceTemplate from '@/components/invoice/InvoiceTemplate'
 import { InvoiceShell } from '@/components/invoice/InvoiceShell'
 import { invoiceAPI } from '@/helpers/invoiceApi'
+import { orderAPI } from '@/helpers/orderApi'
 import { settingsAPI } from '@/helpers/settingsApi'
 import { useSession } from 'next-auth/react'
 import { useSearchParams } from 'next/navigation'
@@ -12,22 +13,30 @@ import { Alert, Col, Row, Spinner } from 'react-bootstrap'
 const InvoiceDetails = () => {
   const { data: session } = useSession()
   const searchParams = useSearchParams()
-  const invoiceId = searchParams.get('id')
+  const recordId = searchParams.get('id')
+  const action = String(searchParams.get('action') || '').toLowerCase()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [invoice, setInvoice] = useState(null)
   const [settings, setSettings] = useState({})
+  const [printTriggered, setPrintTriggered] = useState(false)
 
   useEffect(() => {
-    if (!invoiceId || !session?.accessToken) return
+    if (!recordId || !session?.accessToken) return
     const fetchInvoice = async () => {
       try {
-        const [invoiceResponse, settingsResponse] = await Promise.all([
-          invoiceAPI.get(invoiceId, session.accessToken),
+        const [settingsResponse, invoiceResponse] = await Promise.all([
           settingsAPI.list(undefined, session.accessToken),
+          (async () => {
+            try {
+              return await invoiceAPI.get(recordId, session.accessToken)
+            } catch (byInvoiceError) {
+              return await orderAPI.getInvoiceByOrder(recordId, session.accessToken)
+            }
+          })(),
         ])
 
-        setInvoice(invoiceResponse.data?.invoice || invoiceResponse.invoice || null)
+        setInvoice(invoiceResponse?.data?.invoice || invoiceResponse?.invoice || null)
         setSettings(settingsResponse?.data || settingsResponse || {})
       } catch (err) {
         setError(err.message || 'Failed to load invoice')
@@ -36,49 +45,16 @@ const InvoiceDetails = () => {
       }
     }
     fetchInvoice()
-  }, [invoiceId, session])
-
-  const handleViewPdf = async () => {
-    if (!invoiceId || !session?.accessToken) return
-    try {
-      const blob = await invoiceAPI.getPdf(invoiceId, session.accessToken, false)
-      const url = URL.createObjectURL(blob)
-      window.open(url, '_blank')
-    } catch (err) {
-      setError(err.message || 'Failed to view invoice')
-    }
-  }
-
-  const handleDownloadPdf = async () => {
-    if (!invoiceId || !session?.accessToken) return
-    try {
-      const blob = await invoiceAPI.getPdf(invoiceId, session.accessToken, true)
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `invoice-${invoice?.invoiceNumber || invoiceId}.pdf`
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      URL.revokeObjectURL(url)
-    } catch (err) {
-      setError(err.message || 'Failed to download invoice')
-    }
-  }
-
-  const handlePrintPdf = async () => {
-    if (!invoiceId || !session?.accessToken) return
-    try {
-      const blob = await invoiceAPI.getPdf(invoiceId, session.accessToken, false)
-      const url = URL.createObjectURL(blob)
-      const popup = window.open(url, '_blank')
-      if (!popup) return
-      popup.focus()
-      popup.print()
-    } catch (err) {
-      setError(err.message || 'Failed to print invoice')
-    }
-  }
+  }, [recordId, session])
+  useEffect(() => {
+    if (loading || !invoice || printTriggered) return
+    if (action !== 'print' && action !== 'download') return
+    const timer = setTimeout(() => {
+      setPrintTriggered(true)
+      window.print()
+    }, 200)
+    return () => clearTimeout(timer)
+  }, [loading, invoice, action, printTriggered])
 
   if (loading) {
     return (
@@ -143,9 +119,9 @@ const InvoiceDetails = () => {
         <Col lg={12}>
           {error && <Alert variant="danger">{error}</Alert>}
           <div className="d-flex justify-content-end gap-2 mb-3">
-            <button className="btn btn-outline-primary btn-sm" onClick={handleViewPdf}>View PDF</button>
-            <button className="btn btn-outline-secondary btn-sm" onClick={handlePrintPdf}>Print</button>
-            <button className="btn btn-primary btn-sm" onClick={handleDownloadPdf}>Download</button>
+            <button className="btn btn-outline-primary btn-sm" onClick={() => window.open(`/invoice/invoice-details?id=${recordId}`, '_blank')}>Open in new tab</button>
+            <button className="btn btn-outline-secondary btn-sm" onClick={() => window.print()}>Print</button>
+            <button className="btn btn-primary btn-sm" onClick={() => window.print()}>Download</button>
           </div>
           <InvoiceShell>
             <InvoiceTemplate

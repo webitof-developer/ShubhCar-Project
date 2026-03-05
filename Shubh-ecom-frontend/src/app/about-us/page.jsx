@@ -152,7 +152,7 @@ const AboutPage = () => {
                   </div>
                   <div>
                     <h4 className="font-bold text-slate-900">Vision</h4>
-                    <p className="text-sm text-slate-500 leading-snug">To be the world's most trusted parts network.</p>
+                    <p className="text-sm text-slate-500 leading-snug">To be the world&apos;s most trusted parts network.</p>
                   </div>
                 </div>
               </div>
@@ -190,7 +190,7 @@ const AboutPage = () => {
         <div className="container mx-auto px-4">
           <div className="text-center max-w-2xl mx-auto mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Why India Trusts Us</h2>
-            <p className="text-slate-600 text-lg">We don't just sell parts; we deliver reliability. Here is what sets us apart from the rest.</p>
+            <p className="text-slate-600 text-lg">We don&apos;t just sell parts; we deliver reliability. Here is what sets us apart from the rest.</p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">

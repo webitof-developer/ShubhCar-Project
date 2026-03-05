@@ -2,7 +2,6 @@ const crypto = require('crypto');
 const { OAuth2Client } = require('google-auth-library');
 const userRepo = require('../users/user.repo');
 const {
-  signToken,
   verifyRefreshToken,
   signRefreshToken,
   signAccessToken,
@@ -304,13 +303,7 @@ class AuthService {
       }
     }
 
-    const token = signToken(
-      { userId: user._id, role: user.role },
-      env.JWT_SECRET,
-      env.JWT_EXPIRES_IN,
-    );
-
-    return { token, user: safeUser };
+    return this.#issueSession(user, { method: 'password_register' });
   }
 
   async login(payload, meta: AuthMeta = {}) {

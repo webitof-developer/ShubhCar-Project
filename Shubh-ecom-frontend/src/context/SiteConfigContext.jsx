@@ -3,6 +3,7 @@
 import { createContext, useState, useEffect, useMemo, useContext } from 'react';
 import APP_CONFIG from '@/config/app.config';
 import { getMergedTaxConfig } from '@/services/taxSettingsService';
+import { logger } from '@/utils/logger';
 
 const SiteConfigContext = createContext(null);
 
@@ -82,7 +83,7 @@ export const SiteConfigProvider = ({ children }) => {
                 }));
 
             } catch (error) {
-                console.warn('[SiteConfigProvider] Failed to fetch dynamic settings, using static config:', error);
+                logger.warn('[SiteConfigProvider] Failed to fetch dynamic settings, using static config:', error);
                 // State remains as staticConfig (safe fallback)
             } finally {
                 setLoading(false);

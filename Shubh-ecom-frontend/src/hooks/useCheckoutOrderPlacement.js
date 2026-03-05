@@ -5,6 +5,7 @@ import * as orderService from '@/services/orderService';
 import * as cartService from '@/services/cartService';
 import * as checkoutDraftService from '@/services/checkoutDraftService';
 import { validateCart, handleError } from '@/utils/errorHandler';
+import { logger } from '@/utils/logger';
 
 export const useCheckoutOrderPlacement = ({
   items,
@@ -30,7 +31,7 @@ export const useCheckoutOrderPlacement = ({
       toast.error('Cart Validation Failed', {
         description: cartValidation.error,
       });
-      console.error('[CHECKOUT] Cart validation failed:', cartValidation.error);
+      logger.error('[CHECKOUT] Cart validation failed:', cartValidation.error);
       return;
     }
 
@@ -38,7 +39,7 @@ export const useCheckoutOrderPlacement = ({
       toast.error('Missing shipping address', {
         description: 'Please select a shipping address before placing your order.',
       });
-      console.error('[CHECKOUT] Missing shipping address id');
+      logger.error('[CHECKOUT] Missing shipping address id');
       return;
     }
 
@@ -46,7 +47,7 @@ export const useCheckoutOrderPlacement = ({
       toast.error('Cart not ready', {
         description: 'Cart summary is missing. Please refresh and try again.',
       });
-      console.error('[CHECKOUT] Missing cart summary/cartId', { summary });
+      logger.error('[CHECKOUT] Missing cart summary/cartId', { summary });
       return;
     }
 
@@ -61,7 +62,7 @@ export const useCheckoutOrderPlacement = ({
       toast.error('Invalid totals', {
         description: 'Order totals are invalid. Please refresh and try again.',
       });
-      console.error('[CHECKOUT] Invalid totals in summary', totals);
+      logger.error('[CHECKOUT] Invalid totals in summary', totals);
       return;
     }
 
@@ -75,12 +76,12 @@ export const useCheckoutOrderPlacement = ({
         toast.error('Payment method unavailable', {
           description: 'The selected payment method is no longer available. Please choose another.',
         });
-        console.warn('[CHECKOUT] Payment method no longer enabled:', paymentMethod);
+        logger.warn('[CHECKOUT] Payment method no longer enabled:', paymentMethod);
         setCurrentStep(3);
         return;
       }
     } catch (methodError) {
-      console.error('[CHECKOUT] Failed to validate payment method:', methodError);
+      logger.error('[CHECKOUT] Failed to validate payment method:', methodError);
     }
 
     setPlacingOrder(true);
@@ -106,7 +107,7 @@ export const useCheckoutOrderPlacement = ({
             await cartService.replaceCart(accessToken, items);
           }
         } catch (syncError) {
-          console.error('[CHECKOUT] Failed to sync cart before order:', syncError);
+          logger.error('[CHECKOUT] Failed to sync cart before order:', syncError);
           toast.error('Unable to sync cart. Please try again.');
           return;
         }
@@ -165,7 +166,7 @@ export const useCheckoutOrderPlacement = ({
         router.push(APP_CONFIG.payments.redirects.success);
       }
     } catch (error) {
-      console.error('[CHECKOUT] Order placement failed:', error);
+      logger.error('[CHECKOUT] Order placement failed:', error);
       setRedirectingAfterOrder(false);
       const isDraftAlreadyProcessed =
         Number(error?.status) === 409 &&
@@ -199,7 +200,7 @@ export const useCheckoutOrderPlacement = ({
             return;
           }
         } catch (draftLoadError) {
-          console.error('[CHECKOUT] Failed to recover processed draft flow:', draftLoadError);
+          logger.error('[CHECKOUT] Failed to recover processed draft flow:', draftLoadError);
         }
       }
 

@@ -1,8 +1,7 @@
 // Product API Service
 // Centralized API calls for product CRUD operations
+import { API_BASE_URL } from '@/helpers/apiBase';
 
-const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
-const API_BASE_URL = RAW_API_URL.replace(/\/$/, '');
 const API_PREFIX = API_BASE_URL.endsWith('/api/v1') ? API_BASE_URL : `${API_BASE_URL}/api/v1`;
 
 class ProductService {

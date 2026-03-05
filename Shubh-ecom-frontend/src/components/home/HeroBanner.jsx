@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { getVehicleBrands, getModelsByBrand, getModelYears, getVehiclesByFilter } from "@/services/vehicleService";
 import { useVehicleSelection } from "@/context/VehicleContext";
+import { logger } from '@/utils/logger';
 
 // Logic to render Select Items with fallback
 const renderSelectItems = (items, labelFn = (i) => i.name, valueFn = (i) => i.id || i._id) => {
@@ -57,7 +58,7 @@ export const HeroBanner = () => {
         const data = await getVehicleBrands();
         setBrands(Array.isArray(data) ? data : []);
       } catch (error) {
-        console.error("Failed to fetch brands", error);
+        logger.error("Failed to fetch brands", error);
       }
     };
     fetchBrands();
@@ -77,7 +78,7 @@ export const HeroBanner = () => {
         const data = await getModelsByBrand(val);
         setModels(Array.isArray(data) ? data : []);
       } catch (error) {
-        console.error("Failed to fetch models", error);
+        logger.error("Failed to fetch models", error);
       }
     }
   };
@@ -97,7 +98,7 @@ export const HeroBanner = () => {
           : [];
         setYears(sorted);
       } catch (error) {
-        console.error("Failed to fetch years", error);
+        logger.error("Failed to fetch years", error);
       }
     }
   };
@@ -112,7 +113,7 @@ export const HeroBanner = () => {
         const data = await getVehiclesByFilter({ brandId, modelId, yearId: val });
         setVariants(Array.isArray(data) ? data : []);
       } catch (error) {
-        console.error("Failed to fetch variants", error);
+        logger.error("Failed to fetch variants", error);
       }
     }
   };

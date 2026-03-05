@@ -35,7 +35,7 @@ const TermsPage = () => {
               </div>
               <div className="prose prose-slate max-w-none text-slate-600 text-base leading-relaxed">
                 <p>
-                  By accessing and using <strong>{siteName}</strong> ("we," "our," or "the Platform"), you confirm that you accept these Terms of Service and agree to comply with them. If you do not agree to these terms, you must not use our services.
+                  By accessing and using <strong>{siteName}</strong> (&quot;we,&quot; &quot;our,&quot; or &quot;the Platform&quot;), you confirm that you accept these Terms of Service and agree to comply with them. If you do not agree to these terms, you must not use our services.
                 </p>
                 <p>
                   These terms apply to all visitors, users, and others who access or use the Service.
@@ -55,7 +55,7 @@ const TermsPage = () => {
                   <ul className="space-y-3 mb-0">
                     <li className="flex items-start gap-2">
                       <span className="text-purple-600 font-bold">•</span>
-                      <span><strong>Descriptions:</strong> We strive to display product colors and specifications accurately, but cannot guarantee that your device's display reflects the actual product color reliably.</span>
+                      <span><strong>Descriptions:</strong> We strive to display product colors and specifications accurately, but cannot guarantee that your device&apos;s display reflects the actual product color reliably.</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-purple-600 font-bold">•</span>

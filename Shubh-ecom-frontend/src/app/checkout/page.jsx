@@ -38,6 +38,7 @@ import * as cartService from '@/services/cartService';
 import * as checkoutDraftService from '@/services/checkoutDraftService';
 import { useCheckoutOrderPlacement } from '@/hooks/useCheckoutOrderPlacement';
 import { toast } from 'sonner';
+import { logger } from '@/utils/logger';
 
 // Step definitions - owned by page
 const CHECKOUT_STEPS = [
@@ -113,7 +114,7 @@ const CheckoutInner = () => {
           }));
         }
       } catch (error) {
-        console.error('[CHECKOUT] Failed to load checkout draft:', error);
+        logger.error('[CHECKOUT] Failed to load checkout draft:', error);
         toast.error(error.message || 'Checkout draft is unavailable');
         router.push('/cart');
       } finally {
@@ -159,7 +160,7 @@ const CheckoutInner = () => {
 
       setSummary(normalizedSummary);
     } catch (error) {
-      console.error('[CHECKOUT] Failed to fetch summary:', error);
+      logger.error('[CHECKOUT] Failed to fetch summary:', error);
       setSummary(null);
     } finally {
       setSummaryLoading(false);

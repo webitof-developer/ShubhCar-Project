@@ -4,11 +4,11 @@ import { useEffect } from 'react';
 import { Button, Container, Card } from 'react-bootstrap';
 import IconifyIcon from '@/components/wrappers/IconifyIcon';
 import Link from 'next/link';
+import logger from '@/lib/logger';
 
 export default function Error({ error, reset }) {
   useEffect(() => {
-    // Log the error to an error reporting service
-    console.error('Dashboard Error Boundary caught:', error);
+    logger.error('Dashboard Error Boundary caught:', error);
   }, [error]);
 
   return (

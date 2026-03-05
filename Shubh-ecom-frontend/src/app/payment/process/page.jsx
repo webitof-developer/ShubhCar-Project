@@ -25,6 +25,7 @@ import APP_CONFIG from '@/config/app.config';
 import { processRazorpayPayment } from '@/services/razorpayService';
 import { confirmPayment } from '@/services/paymentService';
 import * as checkoutDraftService from '@/services/checkoutDraftService';
+import { logger } from '@/utils/logger';
 
 function PaymentProcessInner() {
   const router = useRouter();
@@ -91,7 +92,7 @@ function PaymentProcessInner() {
           await handleSuccess(result.details, orderData);
         }
       } catch (err) {
-        console.error('[PAYMENT] Failed:', err);
+        logger.error('[PAYMENT] Failed:', err);
         handleFailure(err.message);
       }
     };
@@ -130,7 +131,7 @@ function PaymentProcessInner() {
             break;
           }
         } catch (confirmError) {
-          console.error('[PAYMENT] Confirm attempt failed:', confirmError);
+          logger.error('[PAYMENT] Confirm attempt failed:', confirmError);
         }
 
         await sleep(1200);
@@ -205,7 +206,7 @@ function PaymentProcessInner() {
         await handleSuccess(result.details, orderData);
       }
     } catch (err) {
-      console.error('[PAYMENT] Retry failed:', err);
+      logger.error('[PAYMENT] Retry failed:', err);
       handleFailure(err.message);
     }
   };

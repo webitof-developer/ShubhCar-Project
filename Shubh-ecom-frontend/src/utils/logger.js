@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // src/utils/logger.js
 /**
  * Structured frontend logger.
