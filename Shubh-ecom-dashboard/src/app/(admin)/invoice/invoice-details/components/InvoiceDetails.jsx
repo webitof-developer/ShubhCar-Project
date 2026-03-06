@@ -118,7 +118,7 @@ const InvoiceDetails = () => {
       <Row className="justify-content-center">
         <Col lg={12}>
           {error && <Alert variant="danger">{error}</Alert>}
-          <div className="d-flex justify-content-end gap-2 mb-3">
+          <div className="d-flex justify-content-end gap-2 mb-3 d-print-none">
             <button className="btn btn-outline-primary btn-sm" onClick={() => window.open(`/invoice/invoice-details?id=${recordId}`, '_blank')}>Open in new tab</button>
             <button className="btn btn-outline-secondary btn-sm" onClick={() => window.print()}>Print</button>
             <button className="btn btn-primary btn-sm" onClick={() => window.print()}>Download</button>

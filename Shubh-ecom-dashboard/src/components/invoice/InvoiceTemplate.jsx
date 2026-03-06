@@ -2,16 +2,14 @@
 "use client";
 import { forwardRef } from 'react';
 import Image from 'next/image';
-import { useSiteConfig } from '@/hooks/useSiteConfig';
 import { formatPrice } from '@/services/pricingService';
 import { formatTaxBreakdown } from '@/services/taxDisplayService';
 
 const InvoiceTemplate = forwardRef(({ order, items = [], address, settings = {} }, ref) => {
-  const { siteName } = useSiteConfig();
   if (!order) return null;
 
   // Use settings with fallbacks
-  const companyName = settings.invoice_company_name || `${siteName} India Pvt Ltd`;
+  const companyName = settings.invoice_company_name || `India Pvt Ltd`;
   const addressLine1 = settings.invoice_company_address_line1 || '123, Industrial Area, Phase 2';
   const addressLine2 = settings.invoice_company_address_line2 || '';
   const city = settings.invoice_company_city || 'Gurugram';
@@ -38,155 +36,167 @@ const InvoiceTemplate = forwardRef(({ order, items = [], address, settings = {} 
   const grandTotal = order.grandTotal || 0;
   const taxBreakdown = order.taxBreakdown || { cgst: 0, sgst: 0, igst: 0 };
 
-  // This ensures Taxable + Tax + Shipping = Grand Total always holds true
-  const taxableAmount = Math.max(0, grandTotal - shippingFee - taxAmount);
+  // Use uploaded invoice logo, else fallback
+  const logo = settings.invoice_logo_url || '/logodark.png';
 
-  // Use uploaded invoice logo, else static frontend logo.
-  const logo = settings.invoice_logo_url || '/logo.png';
+  // Inline styles for print specific overrides that might conflict with Bootstrap components
+  const printStyles = `
+    @media print {
+      @page { margin: 10mm; size: A4; }
+      .print-col-6 { width: 50% !important; float: left; }
+      .print-row::after { content: ""; clear: both; display: table; }
+      .print-mb-3 { margin-bottom: 1rem !important; }
+      .print-pb-2 { padding-bottom: 0.5rem !important; }
+      .print-p-10 { padding: 2rem !important; }
+      .print-text-11 { font-size: 11px !important; }
+    }
+  `;
 
   return (
-    <div ref={ref} className="text-sm leading-tight text-gray-900 p-6 print:p-10 print:text-[11px]" id="invoice-template">
-      <div className="flex flex-row justify-between items-start mb-6 pb-4 border-b-2 border-gray-200 print:mb-3 print:pb-2">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <Image src={logo} alt={companyName} width={0} height={0} sizes="100vw" className="h-14 w-auto object-contain" />
+    <div ref={ref} className="bg-white text-dark p-4 p-md-5 print-p-10" id="invoice-template" style={{ fontSize: '13px', lineHeight: '1.4' }}>
+      <style>{printStyles}</style>
+
+      {/* Header section */}
+      <div className="d-flex justify-content-between align-items-start mb-4 pb-3 border-bottom print-mb-3 print-pb-2 print-row">
+        <div className="print-col-6">
+          <div className="d-flex align-items-center gap-3 mb-2">
+            <Image src={logo} alt={companyName} width={200} height={56} priority={true} unoptimized={true} style={{ height: '56px', width: 'auto', objectFit: 'contain' }} />
           </div>
-          <div className="mt-3 text-xs text-gray-600 leading-relaxed">
-            <p>{companyName}</p>
-            <p>{addressLine1}</p>
-            {addressLine2 && <p>{addressLine2}</p>}
-            <p>{city}, {state} - {pincode}</p>
-            <p>GSTIN: {gstin}</p>
+          <div className="mt-3 text-muted small" style={{ fontSize: '12px' }}>
+            <p className="mb-0">{companyName}</p>
+            <p className="mb-0">{addressLine1}</p>
+            {addressLine2 && <p className="mb-0">{addressLine2}</p>}
+            <p className="mb-0">{city}, {state} - {pincode}</p>
+            <p className="mb-0 mt-1">GSTIN: {gstin}</p>
           </div>
         </div>
-        <div className="text-right">
-          <h2 className="text-3xl font-bold text-gray-900 mt-3 ">TAX INVOICE</h2>
-          <div className="text-xs mt-12 space-y-1">
-            <p><span className="text-gray-500">Invoice No:</span> <span className="font-semibold">{invoiceNumber}</span></p>
-            <p><span className="text-gray-500">Invoice Date:</span> <span className="font-semibold">{invoiceDate}</span></p>
-            <p><span className="text-gray-500">Order No:</span> <span className="font-semibold">{order.orderNumber}</span></p>
+        <div className="text-end print-col-6">
+          <h2 className="fw-bold text-dark mt-2 mb-4" style={{ fontSize: '24px' }}>TAX INVOICE</h2>
+          <div className="small text-muted" style={{ fontSize: '12px' }}>
+            <p className="mb-1">Invoice No: <span className="fw-bold text-dark">{invoiceNumber}</span></p>
+            <p className="mb-1">Invoice Date: <span className="fw-bold text-dark">{invoiceDate}</span></p>
+            <p className="mb-0">Order No: <span className="fw-bold text-dark">{order.orderNumber}</span></p>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-6 mb-6 print:grid-cols-2 print:gap-4 print:mb-3">
-        <div>
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Bill To</h3>
-          <div className="text-xs leading-relaxed">
-            <p className="font-semibold text-gray-900">{address?.fullName || '-'}</p>
-            <p className="text-gray-600">{address?.line1 || '-'}</p>
-            {address?.line2 && <p className="text-gray-600">{address.line2}</p>}
-            <p className="text-gray-600">{address?.city || '-'}, {address?.state || '-'} - {address?.postalCode || '-'}</p>
-            <p className="text-gray-600 mt-1">Phone: {address?.phone || '-'}</p>
+      {/* Addresses section */}
+      <div className="row mb-4 print-row print-mb-3">
+        <div className="col-6 print-col-6">
+          <h6 className="text-muted text-uppercase fw-bold mb-2" style={{ fontSize: '11px', letterSpacing: '0.5px' }}>Bill To</h6>
+          <div className="small text-muted" style={{ fontSize: '12px' }}>
+            <p className="fw-bold text-dark mb-1">{address?.fullName || '-'}</p>
+            <p className="mb-0">{address?.line1 || '-'}</p>
+            {address?.line2 && <p className="mb-0">{address.line2}</p>}
+            <p className="mb-0">{address?.city || '-'}, {address?.state || '-'} - {address?.postalCode || '-'}</p>
+            <p className="mb-0 mt-1">Phone: {address?.phone || '-'}</p>
           </div>
         </div>
-        <div>
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Ship To</h3>
-          <div className="text-xs leading-relaxed">
-            <p className="font-semibold text-gray-900">{address?.fullName || '-'}</p>
-            <p className="text-gray-600">{address?.line1 || '-'}</p>
-            {address?.line2 && <p className="text-gray-600">{address.line2}</p>}
-            <p className="text-gray-600">{address?.city || '-'}, {address?.state || '-'} - {address?.postalCode || '-'}</p>
-            <p className="text-gray-600 mt-1">Phone: {address?.phone || '-'}</p>
+        <div className="col-6 print-col-6 text-end">
+          <h6 className="text-muted text-uppercase fw-bold mb-2" style={{ fontSize: '11px', letterSpacing: '0.5px' }}>Ship To</h6>
+          <div className="small text-muted" style={{ fontSize: '12px' }}>
+            <p className="fw-bold text-dark mb-1">{address?.fullName || '-'}</p>
+            <p className="mb-0">{address?.line1 || '-'}</p>
+            {address?.line2 && <p className="mb-0">{address.line2}</p>}
+            <p className="mb-0">{address?.city || '-'}, {address?.state || '-'} - {address?.postalCode || '-'}</p>
+            <p className="mb-0 mt-1">Phone: {address?.phone || '-'}</p>
           </div>
         </div>
       </div>
 
-      <div className="mb-6">
-        <table className="w-full table-fixed">
-          <colgroup>
-            <col className="w-12" />
-            <col />
-            <col className="w-16" />
-            <col className="w-24" />
-            <col className="w-24" />
-            <col className="w-28" />
-          </colgroup>
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-600 uppercase">#</th>
-              <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-600 uppercase">Item Description</th>
-              <th className="text-center py-2.5 px-3 text-xs font-semibold text-gray-600 uppercase">Qty</th>
-              <th className="text-right py-2.5 px-3 text-xs font-semibold text-gray-600 uppercase">Unit Price</th>
-              <th className="text-right py-2.5 px-3 text-xs font-semibold text-gray-600 uppercase">Tax</th>
-              <th className="text-right py-2.5 px-3 text-xs font-semibold text-gray-600 uppercase">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item, index) => (
-              <tr key={item._id || item.id || index} className="border-b border-gray-100">
-                <td className="py-2.5 px-3 text-xs text-gray-600">{index + 1}</td>
-                <td className="py-2.5 px-3">
-                  <p className="text-xs font-medium text-gray-900 truncate">{item.product?.name || 'Product'}</p>
-                </td>
-                <td className="py-2.5 px-3 text-center text-xs text-gray-600">{item.quantity}</td>
-                <td className="py-2.5 px-3 text-right text-xs text-gray-600 whitespace-nowrap">{formatPrice(item.price || 0)}</td>
-                <td className="py-2.5 px-3 text-right text-xs text-gray-600 whitespace-nowrap">
-                  {formatPrice(item.taxAmount || 0)}
-                  <span className="text-[10px] text-gray-400 block">
-                    ({item.taxPercent || 0}%)
-                  </span>
-                </td>
-                <td className="py-2.5 px-3 text-right text-xs font-medium text-gray-900 whitespace-nowrap">{formatPrice(item.total || 0)}</td>
+      {/* Items table */}
+      <div className="mb-4">
+        <div className="table-responsive">
+          <table className="table table-sm table-borderless mb-0">
+            <thead className="bg-light">
+              <tr>
+                <th className="py-2 px-2 text-muted text-uppercase" style={{ fontSize: '12px', width: '5%' }}>#</th>
+                <th className="py-2 px-2 text-muted text-uppercase" style={{ fontSize: '12px', width: '35%' }}>Item Description</th>
+                <th className="py-2 px-2 text-muted text-uppercase text-center" style={{ fontSize: '12px', width: '10%' }}>Qty</th>
+                <th className="py-2 px-2 text-muted text-uppercase text-end" style={{ fontSize: '12px', width: '15%' }}>Unit Price</th>
+                <th className="py-2 px-2 text-muted text-uppercase text-end" style={{ fontSize: '12px', width: '15%' }}>Tax</th>
+                <th className="py-2 px-2 text-muted text-uppercase text-end" style={{ fontSize: '12px', width: '20%' }}>Amount</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {items.map((item, index) => (
+                <tr key={item._id || item.id || index} className="border-bottom">
+                  <td className="py-2 px-2 text-muted align-middle" style={{ fontSize: '13px' }}>{index + 1}</td>
+                  <td className="py-2 px-2 align-middle">
+                    <p className="mb-0 fw-medium text-dark text-truncate" style={{ fontSize: '13px', maxWidth: '250px' }}>{item.product?.name || 'Product'}</p>
+                  </td>
+                  <td className="py-2 px-2 text-center text-muted align-middle" style={{ fontSize: '13px' }}>{item.quantity}</td>
+                  <td className="py-2 px-2 text-end text-muted text-nowrap align-middle" style={{ fontSize: '13px' }}>{formatPrice(item.price || 0)}</td>
+                  <td className="py-2 px-2 text-end text-muted text-nowrap align-middle" style={{ fontSize: '13px' }}>
+                    {formatPrice(item.taxAmount || 0)}
+                    <span className="d-block text-muted" style={{ fontSize: '10px' }}>
+                      ({item.taxPercent || 0}%)
+                    </span>
+                  </td>
+                  <td className="py-2 px-2 text-end fw-medium text-dark text-nowrap align-middle" style={{ fontSize: '13px' }}>{formatPrice(item.total || 0)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <div className="flex justify-end mb-6">
-        <div className="w-72">
-          <div className="space-y-1.5 text-xs">
-            <div className="flex justify-between py-1.5">
-              <span className="text-gray-600">Subtotal</span>
-              <span className="font-medium">{formatPrice(subtotal)}</span>
+      {/* Totals section */}
+      <div className="d-flex justify-content-end mb-4">
+        <div style={{ width: '280px' }}>
+          <div className="d-flex justify-content-between py-1 border-bottom" style={{ fontSize: '13px' }}>
+            <span className="text-muted">Subtotal</span>
+            <span className="fw-medium text-dark">{formatPrice(subtotal)}</span>
+          </div>
+          
+          {discount > 0 && (
+            <div className="d-flex justify-content-between py-1 border-bottom" style={{ fontSize: '13px' }}>
+              <span className="text-success">Discount</span>
+              <span className="text-success">-{formatPrice(discount)}</span>
             </div>
-            {discount > 0 && (
-              <div className="flex justify-between py-1.5 text-green-600">
-                <span>Discount</span>
-                <span>-{formatPrice(discount)}</span>
-              </div>
-            )}
+          )}
 
-            {formatTaxBreakdown(taxBreakdown).map((component) => (
-              <div key={component.key} className="flex justify-between py-1.5">
-                <span className="text-gray-600">{component.label}</span>
-                <span>{component.formatted}</span>
-              </div>
-            ))}
-            <div className="flex justify-between py-1.5">
-              <span className="text-gray-600">Shipping</span>
-              <span>{shippingFee === 0 ? 'Free' : formatPrice(shippingFee)}</span>
+          {formatTaxBreakdown(taxBreakdown).map((component) => (
+            <div key={component.key} className="d-flex justify-content-between py-1 border-bottom" style={{ fontSize: '13px' }}>
+              <span className="text-muted">{component.label}</span>
+              <span className="text-dark">{component.formatted}</span>
             </div>
-            <div className="flex justify-between py-2 border-t-2 border-gray-900 mt-1.5">
-              <span className="text-base font-bold text-gray-900">Grand Total</span>
-              <span className="text-base font-bold text-gray-900">{formatPrice(grandTotal)}</span>
-            </div>
+          ))}
+          
+          <div className="d-flex justify-content-between py-1 border-bottom" style={{ fontSize: '13px' }}>
+            <span className="text-muted">Shipping</span>
+            <span className="text-dark">{shippingFee === 0 ? 'Free' : formatPrice(shippingFee)}</span>
+          </div>
+          
+          <div className="d-flex justify-content-between pt-2 mt-2 border-top border-dark" style={{ borderTopWidth: '2px !important' }}>
+            <span className="fw-bold text-dark" style={{ fontSize: '16px' }}>Grand Total</span>
+            <span className="fw-bold text-dark" style={{ fontSize: '16px' }}>{formatPrice(grandTotal)}</span>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-6 mb-6 pt-4 border-t border-gray-200">
-        <div>
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Payment Information</h3>
-          <div className="text-xs text-gray-600 leading-relaxed">
-            <p><span className="text-gray-500">Payment Method:</span> {order.paymentMethod}</p>
-            <p><span className="text-gray-500">Payment Status:</span> <span className="text-green-600 font-medium">{order.paymentStatus}</span></p>
+      {/* Footer Info */}
+      <div className="row mt-4 pt-3 border-top print-row">
+        <div className="col-6 print-col-6">
+          <h6 className="text-muted text-uppercase fw-bold mb-2" style={{ fontSize: '11px', letterSpacing: '0.5px' }}>Payment Information</h6>
+          <div className="small text-muted" style={{ fontSize: '12px' }}>
+            <p className="mb-0">Payment Method: <span className="text-dark">{order.paymentMethod}</span></p>
+            <p className="mb-0">Payment Status: <span className="text-success fw-medium">{order.paymentStatus}</span></p>
           </div>
         </div>
-        <div>
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Terms & Conditions</h3>
-          <div className="text-[10px] text-gray-500 space-y-0.5 leading-relaxed">
-            <p>* Goods once sold will not be taken back or exchanged.</p>
-            <p>* All disputes are subject to Gurugram jurisdiction.</p>
-            <p>* This is a computer generated invoice.</p>
+        <div className="col-6 print-col-6">
+          <h6 className="text-muted text-uppercase fw-bold mb-2" style={{ fontSize: '11px', letterSpacing: '0.5px' }}>Terms & Conditions</h6>
+          <div className="text-muted" style={{ fontSize: '10px', lineHeight: '1.5' }}>
+            <p className="mb-0">* Goods once sold will not be taken back or exchanged.</p>
+            <p className="mb-0">* All disputes are subject to Gurugram jurisdiction.</p>
+            <p className="mb-0">* This is a computer generated invoice.</p>
           </div>
         </div>
       </div>
 
-      <div className="text-center pt-4 border-t border-gray-200">
-        <p className="text-xs text-gray-600 mb-1">Thank you for shopping with {companyName}!</p>
-        <p className="text-[10px] text-gray-400">
+      <div className="text-center mt-4 pt-4 border-top">
+        <p className="text-muted mb-1" style={{ fontSize: '12px' }}>Thank you for shopping with {companyName}!</p>
+        <p className="text-muted" style={{ fontSize: '10px' }}>
           For queries, contact: {companyEmail} | {companyPhone}
           {companyWebsite && ` | ${companyWebsite}`}
         </p>

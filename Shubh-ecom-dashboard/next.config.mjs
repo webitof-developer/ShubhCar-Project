@@ -12,6 +12,14 @@ if (!process.env.NEXTAUTH_SECRET) {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
+  experimental: {
+    optimizePackageImports: [
+      'react-bootstrap',
+      '@iconify/react',
+      'react-hook-form',
+      'apexcharts'
+    ],
+  },
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: '**' },
