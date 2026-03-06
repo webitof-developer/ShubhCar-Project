@@ -13,7 +13,13 @@ import { RegisterLoadingCard } from '@/components/register/RegisterLoadingCard';
 import { RegisterForm } from '@/components/register/RegisterForm';
 import { sanitizeIndianPhone } from '@/utils/phoneValidation';
 import { logger } from '@/utils/logger';
-import { validateEmailField, validateNameField, validatePhoneField } from '@/utils/formValidation';
+import {
+  normalizeTextField,
+  validateEmailField,
+  validateNameField,
+  validatePasswordField,
+  validatePhoneField,
+} from '@/utils/formValidation';
 
 const RegisterPage = () => {
   const { register, loginWithGoogle, isAuthenticated, loading: authLoading } = useAuth();
@@ -78,15 +84,13 @@ const RegisterPage = () => {
     const phoneError = validatePhoneField(cleanPhone, true);
     if (phoneError) newErrors.phone = phoneError;
 
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password?.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
+    const passwordError = validatePasswordField(formData.password, { minLength: 6 });
+    if (passwordError) newErrors.password = passwordError;
+
     if (!formData.agreeToTerms) {
-      toast.error('Please agree to terms and conditions');
-      return false;
+      newErrors.agreeToTerms = 'Please agree to terms and conditions';
     }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -100,13 +104,17 @@ const RegisterPage = () => {
     setLoading(true);
 
     try {
-      await register({
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
+      const normalizedPayload = {
+        firstName: normalizeTextField(formData.firstName),
+        lastName: normalizeTextField(formData.lastName),
+        email: normalizeTextField(formData.email),
         phone: sanitizeIndianPhone(formData.phone),
         password: formData.password,
         customerType: formData.customerType,
+      };
+
+      await register({
+        ...normalizedPayload,
       });
 
       toast.success('Account created successfully');
@@ -181,7 +189,12 @@ const RegisterPage = () => {
             onSubmit={handleSubmit}
             onTogglePassword={() => setShowPassword(!showPassword)}
             onCustomerTypeChange={handleRadioChange}
-            onAgreeTermsChange={(checked) => setFormData(prev => ({ ...prev, agreeToTerms: checked }))}
+            onAgreeTermsChange={(checked) => {
+              setFormData(prev => ({ ...prev, agreeToTerms: checked }));
+              if (checked && errors.agreeToTerms) {
+                setErrors(prev => ({ ...prev, agreeToTerms: '' }));
+              }
+            }}
           />
 
           <div className="relative my-6">

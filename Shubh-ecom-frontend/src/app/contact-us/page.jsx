@@ -10,7 +10,14 @@ import { toast } from 'sonner';
 import { submitContactForm } from '@/services/contactService';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
 import { sanitizeIndianPhone } from '@/utils/phoneValidation';
-import { validateEmailField, validateNameField, validatePhoneField } from '@/utils/formValidation';
+import {
+  normalizeTextField,
+  validateEmailField,
+  validateMessageField,
+  validateNameField,
+  validatePhoneField,
+  validateSubjectField,
+} from '@/utils/formValidation';
 
 const fieldClassName =
   'peer h-12 rounded-[10px] border border-[#94a3b866] bg-white px-[0.95rem] pt-[0.95rem] text-foreground shadow-none transition-colors focus-visible:ring-0 focus-visible:ring-offset-0';
@@ -60,12 +67,11 @@ const ContactPage = () => {
     const phoneError = validatePhoneField(cleanPhone, false);
     if (phoneError) nextErrors.phone = phoneError;
 
-    if (!formData.subject.trim()) nextErrors.subject = 'Subject is required';
-    if (!formData.message.trim()) {
-      nextErrors.message = 'Message is required';
-    } else if (formData.message.trim().length < 10) {
-      nextErrors.message = 'Message must be at least 10 characters';
-    }
+    const subjectError = validateSubjectField(formData.subject, true);
+    if (subjectError) nextErrors.subject = subjectError;
+
+    const messageError = validateMessageField(formData.message, { minLength: 10, maxLength: 5000 });
+    if (messageError) nextErrors.message = messageError;
 
     setErrors(nextErrors);
     return { valid: Object.keys(nextErrors).length === 0, cleanPhone };
@@ -82,9 +88,16 @@ const ContactPage = () => {
     setIsSubmitting(true);
 
     try {
-      await submitContactForm({
-        ...formData,
+      const normalizedPayload = {
+        name: normalizeTextField(formData.name),
+        email: normalizeTextField(formData.email),
         phone: cleanPhone,
+        subject: normalizeTextField(formData.subject),
+        message: normalizeTextField(formData.message),
+      };
+
+      await submitContactForm({
+        ...normalizedPayload,
       });
       toast.success('Message sent successfully!', {
         description: 'We will get back to you within 24 hours.'
@@ -260,14 +273,15 @@ const ContactPage = () => {
 
                 <div className="space-y-2">
                   <div className="relative">
-                    <Input
-                      id="subject"
-                      placeholder=" "
-                      value={formData.subject}
-                      onChange={handleChange}
-                      required
-                      className={`${fieldClassName} ${errors.subject ? 'border-destructive' : ''}`}
-                    />
+                      <Input
+                        id="subject"
+                        placeholder=" "
+                        value={formData.subject}
+                        onChange={handleChange}
+                        maxLength={200}
+                        required
+                        className={`${fieldClassName} ${errors.subject ? 'border-destructive' : ''}`}
+                      />
                     <Label htmlFor="subject" className={fieldLabelClassName}>
                       Subject
                     </Label>
@@ -283,6 +297,7 @@ const ContactPage = () => {
                       className={`${fieldClassName} min-h-[150px] resize-none p-4 ${errors.message ? 'border-destructive' : ''}`}
                       value={formData.message}
                       onChange={handleChange}
+                      maxLength={5000}
                       required
                     />
                     <Label htmlFor="message" className={fieldLabelClassName}>

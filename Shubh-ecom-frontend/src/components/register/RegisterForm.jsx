@@ -34,6 +34,7 @@ export const RegisterForm = ({
             value={formData.firstName}
             onChange={onChange}
             placeholder=" "
+            required
             className={`${fieldClassName} ${errors.firstName ? 'border-destructive' : ''}`}
           />
           <Label htmlFor="firstName" className={fieldLabelClassName}>
@@ -47,6 +48,7 @@ export const RegisterForm = ({
             value={formData.lastName}
             onChange={onChange}
             placeholder=" "
+            required
             className={`${fieldClassName} ${errors.lastName ? 'border-destructive' : ''}`}
           />
           <Label htmlFor="lastName" className={fieldLabelClassName}>
@@ -63,6 +65,7 @@ export const RegisterForm = ({
           value={formData.email}
           onChange={onChange}
           placeholder=" "
+          required
           className={`${fieldClassName} ${errors.email ? 'border-destructive' : ''}`}
         />
         <Label htmlFor="email" className={fieldLabelClassName}>
@@ -84,6 +87,7 @@ export const RegisterForm = ({
           pattern="[0-9]{10}"
           maxLength={10}
           placeholder=" "
+          required
           className={`${fieldClassName} pl-14 ${errors.phone ? 'border-destructive' : ''}`}
         />
         <Label htmlFor="phone" className={fieldLabelClassName}>
@@ -99,6 +103,7 @@ export const RegisterForm = ({
           value={formData.password}
           onChange={onChange}
           placeholder=" "
+          required
           className={`${fieldClassName} pr-10 ${errors.password ? 'border-destructive' : ''}`}
         />
         <Label htmlFor="password" className={fieldLabelClassName}>
@@ -169,17 +174,18 @@ export const RegisterForm = ({
           onCheckedChange={onAgreeTermsChange}
           required
         />
-        <label htmlFor="terms" className="text-sm text-muted-foreground leading-none cursor-pointer">
+        <label htmlFor="agreeToTerms" className="text-sm text-muted-foreground leading-none cursor-pointer">
           I agree to the{' '}
-          <Link href="/terms" className="text-primary hover:underline">
+          <Link href="/terms-of-service" className="text-primary hover:underline">
             Terms & Conditions
           </Link>{' '}
           and{' '}
-          <Link href="/privacy" className="text-primary hover:underline">
+          <Link href="/privacy-policy" className="text-primary hover:underline">
             Privacy Policy
           </Link>
         </label>
       </div>
+      {errors.agreeToTerms && <p className="text-xs text-destructive -mt-2">{errors.agreeToTerms}</p>}
 
       <Button type="submit" className="w-full h-11 rounded-full tracking-widest text-base" disabled={loading}>
         {loading ? (
