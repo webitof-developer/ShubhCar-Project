@@ -52,7 +52,7 @@ import { SubCategoryGrid } from '@/components/category/SubCategoryGrid';
 import { PageSkeleton } from '@/components/category/PageSkeleton';
 import { logger } from '@/utils/logger';
 
-/* ── Main Content Component ─────────────────────────────────────────────────── */
+/* Main content component */
 const CategoryContent = () => {
   const { slug } = useParams();
   const searchParams = useSearchParams();
@@ -190,7 +190,7 @@ const CategoryContent = () => {
 
   return (
     <Layout>
-      {/* ── Breadcrumb ── */}
+      {/* Breadcrumb */}
       <div className="border-b border-border/50 bg-muted/20">
         <div className="container mx-auto px-4 py-3">
           <nav className="flex items-center gap-1.5 text-sm text-muted-foreground flex-wrap overflow-x-auto whitespace-nowrap no-scrollbar">
@@ -220,17 +220,17 @@ const CategoryContent = () => {
       </div>
 
       <div className="container mx-auto px-4 py-5 md:py-7">
-        {/* ── Vehicle Bar ── */}
+        {/* Vehicle bar */}
         <div className="mb-5">
           <VehicleSelectionBar title="Selected Vehicle" />
         </div>
 
         <div className="flex gap-5 lg:gap-6">
-          {/* ── Left Sidebar ── */}
+          {/* Left sidebar */}
           {/* Logic:
-            - Has children → show children (drill-down)
-            - Leaf + has siblings → show siblings under parent
-            - Fallback → show root categories
+            - Has children  show children (drill-down)
+            - Leaf + has siblings  show siblings under parent
+            - Fallback  show root categories
           */}
           <LeftSidebar
             currentSlug={slug}
@@ -254,7 +254,7 @@ const CategoryContent = () => {
             clearFilters={clearFilters}
           />
 
-          {/* ── Main Area ── */}
+          {/* Main area */}
           <div className="flex-1 min-w-0">
             {/* Page header */}
             <div className="flex items-start justify-between mb-4 gap-3 flex-wrap">
@@ -264,7 +264,7 @@ const CategoryContent = () => {
                 </h1>
                 <p className="text-sm text-muted-foreground mt-0.5">
                   {loadingProducts
-                    ? 'Loading products…'
+                    ? 'Loading products...'
                     : hasChildren
                       ? `${childCategories.length} sub-categories`
                       : hasProducts
@@ -294,7 +294,7 @@ const CategoryContent = () => {
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <Input
                         type="text"
-                        placeholder="Search products…"
+                        placeholder="Search products"
                         value={inlineSearch}
                         onChange={(e) => setInlineSearch(e.target.value)}
                         className="pl-9 pr-8 h-9 text-sm bg-muted/40 border-0 focus:bg-background focus:ring-2 focus:ring-primary/20 rounded-lg"
@@ -370,10 +370,10 @@ const CategoryContent = () => {
                         </SelectTrigger>
                         <SelectContent className="rounded-lg border border-zinc-200">
                           <SelectItem value="relevance">Relevance</SelectItem>
-                          <SelectItem value="price-low">Price: Low → High</SelectItem>
-                          <SelectItem value="price-high">Price: High → Low</SelectItem>
-                          <SelectItem value="name-az">Name: A → Z</SelectItem>
-                          <SelectItem value="name-za">Name: Z → A</SelectItem>
+                          <SelectItem value="price-low">Price: Low to High</SelectItem>
+                          <SelectItem value="price-high">Price: High to Low</SelectItem>
+                          <SelectItem value="name-az">Name: A to Z</SelectItem>
+                          <SelectItem value="name-za">Name: Z to A</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -384,7 +384,7 @@ const CategoryContent = () => {
                     <div className="flex flex-wrap items-center gap-2 pt-2.5 mt-2.5 border-t border-border/30">
                       {inlineSearch && (
                         <button onClick={() => setInlineSearch('')} className="inline-flex items-center gap-1.5 bg-primary/10 text-primary text-xs font-medium px-2.5 py-1 rounded-full hover:bg-primary/20 transition-colors">
-                          &quot;{inlineSearch.length > 12 ? inlineSearch.slice(0, 12) + '…' : inlineSearch}&quot; <X className="w-3 h-3" />
+                          &quot;{inlineSearch.length > 12 ? inlineSearch.slice(0, 12) + '...' : inlineSearch}&quot; <X className="w-3 h-3" />
                         </button>
                       )}
                       {filterType.map((type) => (
@@ -400,7 +400,7 @@ const CategoryContent = () => {
                   )}
                 </div>
 
-                {/* ── Product List / Grid ── */}
+                {/* Product list / grid */}
                 {loadingProducts && products.length === 0 ? (
                   <div className="space-y-3 animate-pulse">
                     {Array.from({ length: 5 }).map((_, i) => (
@@ -460,7 +460,7 @@ const CategoryContent = () => {
                         finally { setLoadingMore(false); }
                       }}
                     >
-                      {loadingMore ? 'Loading…' : 'Show More Products'}
+                      {loadingMore ? 'Loading...' : 'Show More Products'}
                     </Button>
                   </div>
                 )}
@@ -475,7 +475,7 @@ const CategoryContent = () => {
   );
 };
 
-/* ── Page ─────────────────────────────────────────────────────────────────────── */
+/* Page */
 const CategorySlugPage = () => (
   <Suspense fallback={<PageSkeleton />}>
     <CategoryContent />

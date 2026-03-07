@@ -258,7 +258,7 @@ class AuthService {
     const passwordHash = await hashPassword(password);
     const verificationFlow = decideVerificationFlow({ email, phone });
 
-    const user = await userRepo.createUser({
+    const createdUser = await userRepo.createUser({
       ...value,
       passwordHash,
       verificationStatus:
@@ -268,6 +268,10 @@ class AuthService {
       status: 'active',
       authProvider: 'password',
     });
+
+    // Must fetch the Mongoose document (not plain object) so #issueSession can call user.save()
+    const user = await userRepo.findDocById(createdUser._id);
+    if (!user) error('Failed to create user', 500);
 
     const safeUser: SafeUserShape = {
       ...(user.toObject?.() ? user.toObject() : user),

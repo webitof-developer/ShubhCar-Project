@@ -1,6 +1,6 @@
 "use client";
 import React, { useRef, useState } from 'react';
-import { FileText, Loader2, Download } from 'lucide-react';
+import { Loader2, Download } from 'lucide-react';
 import QuotationTemplate from '@/components/invoice/QuotationTemplate';
 import { Button } from '@/components/ui/button';
 import { logger } from '@/utils/logger';
@@ -8,6 +8,29 @@ import { logger } from '@/utils/logger';
 const QuotationButton = ({ cartItems, summary, profile }) => {
   const componentRef = useRef();
   const [isGenerating, setIsGenerating] = useState(false);
+  const loadHtml2Pdf = async () => {
+    if (typeof window === 'undefined') return null;
+    if (window.html2pdf) return window.html2pdf;
+
+    await new Promise((resolve, reject) => {
+      const existing = document.querySelector('script[data-html2pdf]');
+      if (existing) {
+        existing.addEventListener('load', resolve, { once: true });
+        existing.addEventListener('error', reject, { once: true });
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';
+      script.async = true;
+      script.dataset.html2pdf = 'true';
+      script.onload = resolve;
+      script.onerror = reject;
+      document.body.appendChild(script);
+    });
+
+    return window.html2pdf || null;
+  };
 
   const handleDownloadPdf = async () => {
     try {
@@ -19,9 +42,10 @@ const QuotationButton = ({ cartItems, summary, profile }) => {
           win.document.write('<html><head><title>Generating Quotation...</title></head><body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;"><div>Generating PDF...</div></body></html>');
       }
 
-      // Dynamically import html2pdf
-      const html2pdfModule = await import('html2pdf.js');
-      const html2pdf = html2pdfModule?.default || html2pdfModule;
+      const html2pdf = await loadHtml2Pdf();
+      if (!html2pdf) {
+        throw new Error('Unable to load PDF library');
+      }
       
       const element = componentRef.current;
       const filename = `Quotation-${new Date().toISOString().split('T')[0]}.pdf`;

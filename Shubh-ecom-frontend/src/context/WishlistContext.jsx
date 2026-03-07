@@ -75,14 +75,14 @@ export const WishlistProvider = ({ children }) => {
 
   const addToWishlist = useCallback(async (product) => {
     const productId = product?._id || product?.id;
-    if (!productId) return;
+    if (!productId) return false;
     if (!isAuthenticated || !accessToken) {
       setItems(prev => {
         const exists = prev.find(item => (item._id || item.id) === productId);
         if (exists) return prev;
         return [...prev, normalizeProduct(product)];
       });
-      return;
+      return true;
     }
 
     try {
@@ -96,22 +96,26 @@ export const WishlistProvider = ({ children }) => {
       } else {
         await loadWishlist();
       }
+      return true;
     } catch (error) {
       logger.error('[WISHLIST_CONTEXT] Add failed:', error);
+      return false;
     }
   }, [accessToken, isAuthenticated, loadWishlist, normalizeProduct]);
 
   const removeFromWishlist = useCallback(async (productId) => {
-    if (!productId) return;
+    if (!productId) return false;
     if (!isAuthenticated || !accessToken) {
       setItems(prev => prev.filter(item => (item._id || item.id) !== productId));
-      return;
+      return true;
     }
     try {
       await wishlistService.removeFromWishlist(productId, accessToken);
       setItems(prev => prev.filter(item => (item._id || item.id) !== productId));
+      return true;
     } catch (error) {
       logger.error('[WISHLIST_CONTEXT] Remove failed:', error);
+      return false;
     }
   }, [accessToken, isAuthenticated]);
 
@@ -125,9 +129,11 @@ export const WishlistProvider = ({ children }) => {
         await wishlistService.clearWishlist(accessToken);
       } catch (error) {
         logger.error('[WISHLIST_CONTEXT] Clear failed:', error);
+        return false;
       }
     }
     setItems([]);
+    return true;
   }, [accessToken, isAuthenticated]);
 
   const itemCount = items.length;

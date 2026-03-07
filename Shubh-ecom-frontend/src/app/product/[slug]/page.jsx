@@ -1,7 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { Layout } from '@/components/layout/Layout';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -294,13 +293,13 @@ const ProductDetail = () => {
                       className="relative w-full h-full flex-shrink-0 snap-center"
                       onClick={() => setIsPreviewOpen(true)}
                     >
-                      <Image
+                      <SafeImage
                         src={img}
                         alt={`${product.name} - Image ${i + 1}`}
+                        fallbackSrc="/placeholder.jpg"
                         fill
                         sizes="(max-width: 768px) 100vw, 50vw"
                         className="object-cover select-none pointer-events-none"
-                        draggable={false}
                       />
                     </div>
                   ))}

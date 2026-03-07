@@ -14,6 +14,7 @@ import { useAuth } from '@/context/AuthContext';
 import { getUserAddresses, addAddress, updateAddress, deleteAddress, setDefaultAddress } from '@/services/userAddressService';
 import { toast } from 'sonner';
 import { sanitizeIndianPhone, isValidIndianPhone } from '@/utils/phoneValidation';
+import { sanitizeIndianPincode, isValidIndianPincode } from '@/utils/pincodeValidation';
 import { logger } from '@/utils/logger';
 
 export const AddressSection = ({ user }) => {
@@ -84,7 +85,7 @@ export const AddressSection = ({ user }) => {
     setFormLine2(address.line2 || '');
     setFormCity(address.city || '');
     setFormState(address.state || '');
-    setFormPincode(address.postalCode || '');
+    setFormPincode(sanitizeIndianPincode(address.postalCode || ''));
     setFormPhone(sanitizeIndianPhone(address.phone || ''));
     setFormIsDefault(address.isDefaultShipping || false);
     setShowAddressModal(true);
@@ -102,6 +103,10 @@ export const AddressSection = ({ user }) => {
       toast.error('Phone number must be exactly 10 digits');
       return;
     }
+    if (!isValidIndianPincode(formPincode)) {
+      toast.error('Pincode must be exactly 6 digits');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -112,7 +117,7 @@ export const AddressSection = ({ user }) => {
         line2: formLine2.trim(),
         city: formCity.trim(),
         state: formState.trim(),
-        postalCode: formPincode.trim(),
+        postalCode: sanitizeIndianPincode(formPincode),
         phone: sanitizeIndianPhone(formPhone),
         isDefaultShipping: formIsDefault,
         isDefaultBilling: formIsDefault,
@@ -353,8 +358,11 @@ export const AddressSection = ({ user }) => {
                 <Input
                   id="pincode"
                   value={formPincode}
-                  onChange={(e) => setFormPincode(e.target.value)}
+                  onChange={(e) => setFormPincode(sanitizeIndianPincode(e.target.value))}
                   placeholder="6-digit pincode"
+                  inputMode="numeric"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
                 />
               </div>
               <div className="space-y-2">

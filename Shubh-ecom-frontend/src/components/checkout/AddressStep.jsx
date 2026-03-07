@@ -15,6 +15,7 @@ import { useAuth } from '@/context/AuthContext';
 import * as addressService from '@/services/userAddressService';
 import { toast } from 'sonner';
 import { sanitizeIndianPhone, isValidIndianPhone } from '@/utils/phoneValidation';
+import { sanitizeIndianPincode, isValidIndianPincode } from '@/utils/pincodeValidation';
 import { logger } from '@/utils/logger';
 
 /**
@@ -46,20 +47,27 @@ export function AddressStep({ onNext, initialAddressId }) {
   });
   const [errors, setErrors] = useState({});
 
+  useEffect(() => {
+    if (initialAddressId) {
+      setSelectedAddressId(String(initialAddressId));
+    }
+  }, [initialAddressId]);
+
   // Fetch addresses from backend
   useEffect(() => {
     const fetchAddresses = async () => {
       setLoadingAddresses(true);
       try {
         const data = await addressService.getAddresses(accessToken);
-        setAddresses(data);
+        const normalized = Array.isArray(data) ? data : [];
+        setAddresses(normalized);
         
         // Auto-select default shipping address
-        const defaultAddr = data.find(addr => addr.isDefaultShipping);
+        const defaultAddr = normalized.find(addr => addr.isDefaultShipping || addr.isDefault);
         if (defaultAddr && !initialAddressId) {
-          setSelectedAddressId(defaultAddr._id);
-        } else if (data.length === 1) {
-          setSelectedAddressId(data[0]._id);
+          setSelectedAddressId(String(defaultAddr._id || defaultAddr.id || ''));
+        } else if (normalized.length === 1) {
+          setSelectedAddressId(String(normalized[0]._id || normalized[0].id || ''));
         }
       } catch (error) {
         logger.error('[ADDRESS_STEP] Failed to fetch addresses:', error);
@@ -74,7 +82,12 @@ export function AddressStep({ onNext, initialAddressId }) {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    const nextValue = name === 'phone' ? sanitizeIndianPhone(value) : value;
+    const nextValue =
+      name === 'phone'
+        ? sanitizeIndianPhone(value)
+        : name === 'postalCode'
+          ? sanitizeIndianPincode(value)
+          : value;
     setFormData(prev => ({ ...prev, [name]: nextValue }));
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
@@ -91,6 +104,7 @@ export function AddressStep({ onNext, initialAddressId }) {
     if (!formData.city.trim()) newErrors.city = 'City is required';
     if (!formData.state.trim()) newErrors.state = 'State is required';
     if (!formData.postalCode.trim()) newErrors.postalCode = 'Postal code is required';
+    else if (!isValidIndianPincode(formData.postalCode)) newErrors.postalCode = 'Postal code must be exactly 6 digits';
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -107,7 +121,7 @@ export function AddressStep({ onNext, initialAddressId }) {
       
       // Add to addresses list and select it
       setAddresses(prev => [...prev, newAddress]);
-      setSelectedAddressId(newAddress._id);
+      setSelectedAddressId(String(newAddress?._id || newAddress?.id || ''));
       setIsCreatingNew(false);
       
       // Reset form
@@ -139,7 +153,7 @@ export function AddressStep({ onNext, initialAddressId }) {
     onNext(selectedAddressId);
   };
 
-  const selectedAddress = addresses.find(addr => addr._id === selectedAddressId);
+  const selectedAddress = addresses.find(addr => String(addr._id || addr.id || '') === selectedAddressId);
 
   if (loadingAddresses) {
     return (
@@ -288,6 +302,9 @@ export function AddressStep({ onNext, initialAddressId }) {
                   value={formData.postalCode}
                   onChange={handleInputChange}
                   placeholder="400001"
+                  inputMode="numeric"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
                 />
                 {errors.postalCode && <p className="text-xs text-destructive mt-1">{errors.postalCode}</p>}
               </div>

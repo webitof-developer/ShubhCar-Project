@@ -2,12 +2,12 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
+import { SafeImage } from '@/components/common/SafeImage';
 import {
   Heart,
   ChevronLeft,
@@ -72,10 +72,9 @@ const WishlistSkeleton = () => (
 
 const Wishlist = () => {
   const router = useRouter();
-  const [sortBy, setSortBy] = useState('date-added');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-  const { items, removeFromWishlist, clearWishlist, loading } = useWishlist();
+  const { items, removeFromWishlist, loading } = useWishlist();
   const { addToCart } = useCart();
   const { isAuthenticated, user } = useAuth();
 
@@ -90,28 +89,46 @@ const Wishlist = () => {
     }
   };
 
-  const handleRemove = (productId) => {
-    removeFromWishlist(productId);
-    toast.success('Removed from wishlist');
+  const handleRemove = async (productId) => {
+    const removed = await removeFromWishlist(productId);
+    if (removed) {
+      toast.success('Removed from wishlist');
+    } else {
+      toast.error('Failed to remove item');
+    }
   };
 
   const handleMoveAllToCart = async () => {
-    const results = await Promise.all(items.map((product) => addToCart(product, 1)));
-    const movedCount = results.filter(Boolean).length;
+    const moveResults = await Promise.all(
+      items.map(async (product) => {
+        const added = await addToCart(product, 1);
+        return { productId: product._id || product.id, added };
+      }),
+    );
+    const movedProductIds = moveResults
+      .filter((entry) => entry.added && entry.productId)
+      .map((entry) => entry.productId);
+    const movedCount = movedProductIds.length;
     if (movedCount > 0) {
-      clearWishlist();
+      await Promise.all(movedProductIds.map((id) => removeFromWishlist(id)));
       toast.success(`${movedCount} item${movedCount > 1 ? 's' : ''} moved to cart!`);
+    } else {
+      toast.error('No items were moved to cart');
     }
   };
 
   const totalPages = Math.ceil(items.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentItems = items.slice(startIndex, endIndex);
+  const currentItems = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return items.slice(startIndex, endIndex);
+  }, [currentPage, items]);
 
-  if (currentPage > totalPages && totalPages > 0) {
-    setCurrentPage(1);
-  }
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [currentPage, totalPages]);
 
   if (loading) {
     return <WishlistSkeleton />;
@@ -184,8 +201,9 @@ const Wishlist = () => {
                   <div className="col-span-12 md:col-span-1">
                     <Link href={`/product/${product.slug}`}>
                       <div className="relative w-20 h-20 md:w-16 md:h-16 bg-secondary rounded-lg overflow-hidden">
-                        <Image
+                        <SafeImage
                           src={resolveProductImages(product.images || [])[0] || '/placeholder.jpg'}
+                          fallbackSrc="/placeholder.jpg"
                           alt={product.name}
                           fill
                           sizes="80px"
@@ -238,7 +256,7 @@ const Wishlist = () => {
                       variant="outline"
                       size="icon"
                       onClick={() => handleRemove(product._id || product.id)}
-                      className="rounded-full border-destructive/50 text-destructive hover:bg-destructive hover:text-white hover:border-destructive transition-all"
+                      className="rounded-full border-destructive/50 text-destructive hover:!bg-destructive hover:!text-white hover:!border-destructive transition-all"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>

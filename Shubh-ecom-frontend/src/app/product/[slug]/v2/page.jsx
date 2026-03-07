@@ -6,7 +6,6 @@
 "use client";
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { Layout } from '@/components/layout/Layout';
 import {
@@ -267,13 +266,13 @@ const ProductDetailV2 = () => {
                   <div className="flex h-full">
                     {images.map((img, i) => (
                       <div key={img} className="relative w-full h-full flex-shrink-0 snap-center">
-                        <Image
+                        <SafeImage
                           src={img}
                           alt={`${product.name} ${i + 1}`}
+                          fallbackSrc="/placeholder.jpg"
                           fill
                           sizes="(max-width: 768px) 100vw, 50vw"
                           className="object-contain select-none pointer-events-none"
-                          draggable={false}
                         />
                       </div>
                     ))}

@@ -33,7 +33,7 @@ import { toast } from 'sonner';
 import { logger } from '@/utils/logger';
 
 const Profile = () => {
-  const { user: authUser, accessToken, isLoggedIn, logout } = useAuth();
+  const { user: authUser, accessToken, isAuthenticated, logout } = useAuth();
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ orders: 0, wishlist: 0, addresses: 0 });
@@ -132,7 +132,7 @@ const Profile = () => {
           <div className="container mx-auto px-4 py-8 text-center">
             <h1 className="text-3xl font-bold mb-4">My Profile</h1>
             <p className="text-muted-foreground mb-6">Please log in to view your profile.</p>
-            {!isLoggedIn && (
+            {!isAuthenticated && (
               <Button onClick={() => router.push('/login')} size="lg">Go to Login</Button>
             )}
           </div>

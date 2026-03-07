@@ -2,9 +2,11 @@
 
 "use client";
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useWishlist } from '@/context/WishlistContext';
+import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -16,6 +18,8 @@ export default function WishlistButton({
   className 
 }) {
   const { items, addToWishlist, removeFromWishlist, isInWishlist: checkWishlist } = useWishlist();
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -32,6 +36,11 @@ export default function WishlistButton({
     e.stopPropagation();
 
     if (!product || isLoading) return;
+    if (!isAuthenticated) {
+      toast.error('Please login to use wishlist');
+      router.push('/login?returnTo=/wishlist');
+      return;
+    }
 
     setIsLoading(true);
 
@@ -42,13 +51,15 @@ export default function WishlistButton({
       const productId = product._id || product.id;
       if (!productId) return;
       if (isInWishlist) {
-        removeFromWishlist(productId);
-        toast.success('Removed from wishlist');
+        const removed = await removeFromWishlist(productId);
+        if (removed) toast.success('Removed from wishlist');
       } else {
-        addToWishlist(product);
-        toast.success('Added to wishlist', {
-          description: product.name
-        });
+        const added = await addToWishlist(product);
+        if (added) {
+          toast.success('Added to wishlist', {
+            description: product.name
+          });
+        }
       }
     } catch (error) {
       toast.error('Failed to update wishlist');
