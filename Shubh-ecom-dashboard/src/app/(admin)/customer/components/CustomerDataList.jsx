@@ -767,7 +767,23 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {safeCustomers.map((customer) => (
+                    {safeCustomers.map((customer) => {
+                      const normalizedCustomerType = String(customer.customerType || 'retail').toLowerCase()
+                      const normalizedVerificationStatus = String(customer.verificationStatus || '').toLowerCase()
+                      const displayVerificationStatus =
+                        normalizedCustomerType === 'retail'
+                          ? 'not_required'
+                          : (normalizedVerificationStatus === 'not_required' ? 'pending' : (normalizedVerificationStatus || 'pending'))
+                      const verificationBadgeBg =
+                        displayVerificationStatus === 'approved'
+                          ? 'success'
+                          : displayVerificationStatus === 'pending'
+                            ? 'warning'
+                            : displayVerificationStatus === 'rejected'
+                              ? 'danger'
+                              : 'secondary'
+
+                      return (
                       <tr key={customer._id}>
                         <td>
                           <div className="form-check">
@@ -799,26 +815,22 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
                         <td>{customer.phone || '-'}</td>
                         <td className="text-center">
                           <Badge
-                            bg={customer.customerType === 'wholesale' ? 'info' : 'primary'}
+                            bg={normalizedCustomerType === 'wholesale' ? 'info' : 'primary'}
                             className="badge-subtle text-capitalize"
                           >
-                            {customer.customerType}
+                            {normalizedCustomerType}
                           </Badge>
                         </td>
                         <td className="text-center">
                           <Badge
-                            bg={
-                              customer.verificationStatus === 'approved'
-                                ? 'success'
-                                : customer.verificationStatus === 'pending'
-                                  ? 'warning'
-                                  : customer.verificationStatus === 'rejected'
-                                    ? 'danger'
-                                    : 'secondary'
-                            }
+                            bg={verificationBadgeBg}
                             className="badge-subtle text-capitalize"
                           >
-                            {customer.verificationStatus === 'not_required' ? 'Not Required' : customer.verificationStatus || 'Not Required'}
+                            {displayVerificationStatus === 'not_required'
+                              ? 'Not Required'
+                              : displayVerificationStatus === 'pending'
+                                ? 'Pending Approval'
+                                : displayVerificationStatus}
                           </Badge>
                         </td>
                         <td className="text-center">
@@ -866,7 +878,7 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
                             >
                               <IconifyIcon icon="solar:pen-2-broken" className="align-middle fs-18" />
                             </Button>
-                            {customer.customerType === 'wholesale' && customer.verificationStatus === 'pending' && (
+                            {normalizedCustomerType === 'wholesale' && displayVerificationStatus === 'pending' && (
                               <Button
                                 variant="soft-success"
                                 size="sm"
@@ -891,7 +903,8 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                      )
+                    })}
                   </tbody>
                 </table>
 

@@ -54,17 +54,15 @@ const ProductDetail = () => {
       setLoading(true);
       const productData = await getProductBySlug(slug || '');
       setProduct(productData);
-
-      // Initialize quantity with MOQ if applicable
-      if (productData) {
-        const minQ = getMinimumOrderQuantity(productData, user);
-        setQuantity(minQ);
-      }
-
       setLoading(false);
     };
     if (slug) loadProduct();
-  }, [slug, user]);
+  }, [slug]);
+
+  useEffect(() => {
+    if (!product) return;
+    setQuantity(getMinimumOrderQuantity(product, user));
+  }, [product, user]);
 
   const {
     reviews,
@@ -208,9 +206,9 @@ const ProductDetail = () => {
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-6 pb-28 md:pb-6">
+      <div className="container mx-auto px-4 py-6 pb-28 md:pb-6 overflow-x-hidden">
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6 overflow-x-auto whitespace-nowrap pb-1 no-scrollbar">
+        <nav className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground mb-6">
           <Link href="/" className="hover:text-primary transition-colors flex-shrink-0">Home</Link>
 
           {product.category && (
@@ -238,7 +236,7 @@ const ProductDetail = () => {
           )}
 
           <ChevronRight className="w-4 h-4 flex-shrink-0" />
-          <span className="font-medium text-foreground truncate">{product.name}</span>
+          <span className="basis-full font-medium text-foreground break-words">{product.name}</span>
         </nav>
 
         <div className="grid lg:grid-cols-12 gap-6 lg:gap-10 mb-12">
@@ -248,7 +246,7 @@ const ProductDetail = () => {
               <div className="flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto md:max-h-[500px] pb-2 md:pb-0 scrollbar-hide snap-x md:snap-y snap-mandatory">
                 {displayImages.map((img, i) => (
                   <button
-                    key={img}
+                    key={`${img}-${i}`}
                     onClick={() => scrollToImage(i)}
                     className={`w-16 h-16 md:w-20 md:h-20 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all snap-center ${i === activeImage ? 'border-primary' : 'border-border hover:border-primary/50'}`}
                   >
@@ -286,11 +284,11 @@ const ProductDetail = () => {
                 onScroll={handleScroll}
                 className="w-full h-full overflow-x-auto overflow-y-hidden snap-x snap-mandatory scrollbar-hide cursor-zoom-in active:cursor-grabbing flex items-center bg-white"
               >
-                <div className="flex h-full">
+                <div className="flex h-full w-full">
                   {displayImages.map((img, i) => (
                     <div
-                      key={img}
-                      className="relative w-full h-full flex-shrink-0 snap-center"
+                      key={`${img}-${i}`}
+                      className="relative w-full min-w-full h-full flex-shrink-0 snap-center"
                       onClick={() => setIsPreviewOpen(true)}
                     >
                       <SafeImage

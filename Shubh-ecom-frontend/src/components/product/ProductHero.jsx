@@ -98,7 +98,7 @@ const ProductHero = ({ product }) => {
                     <div className="flex md:flex-col gap-3 overflow-x-auto md:overflow-y-auto md:max-h-[500px] pb-2 md:pb-0 scrollbar-hide snap-x md:snap-y snap-mandatory">
                         {displayImages.map((img, i) => (
                             <button
-                                key={img}
+                                key={`${img}-${i}`}
                                 onClick={() => scrollToImage(i)}
                                 className={`w-16 h-16 md:w-20 md:h-20 flex-shrink-0 rounded-lg overflow-hidden border transition-all snap-center ${i === activeImage ? 'border-blue-600 ring-2 ring-blue-100' : 'border-gray-200 hover:border-gray-300'}`}
                             >
@@ -140,8 +140,8 @@ const ProductHero = ({ product }) => {
                     >
                         {displayImages.map((img, i) => (
                             <div
-                                key={img}
-                                className="w-full h-full flex-shrink-0 snap-center flex items-center justify-center p-0"
+                                key={`${img}-${i}`}
+                                className="w-full min-w-full h-full flex-shrink-0 snap-center flex items-center justify-center p-0"
                                 onClick={() => setIsPreviewOpen(true)}
                             >
                                 <div className="relative w-full h-full">

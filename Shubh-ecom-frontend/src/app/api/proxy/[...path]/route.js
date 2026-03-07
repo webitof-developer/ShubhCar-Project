@@ -41,7 +41,25 @@ const passthrough = async (request, context) => {
     cache: 'no-store',
   });
 
-  const responseHeaders = new Headers(upstream.headers);
+  const responseHeaders = new Headers();
+  for (const [key, value] of upstream.headers.entries()) {
+    if (key.toLowerCase() === 'set-cookie') continue;
+    responseHeaders.set(key, value);
+  }
+
+  // Preserve multiple Set-Cookie headers (critical for auth on hosted envs).
+  const setCookies = typeof upstream.headers.getSetCookie === 'function'
+    ? upstream.headers.getSetCookie()
+    : [];
+  if (setCookies.length > 0) {
+    setCookies.forEach((cookie) => responseHeaders.append('set-cookie', cookie));
+  } else {
+    const singleSetCookie = upstream.headers.get('set-cookie');
+    if (singleSetCookie) {
+      responseHeaders.append('set-cookie', singleSetCookie);
+    }
+  }
+
   responseHeaders.delete('content-encoding');
   responseHeaders.delete('transfer-encoding');
   responseHeaders.delete('connection');

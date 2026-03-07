@@ -297,7 +297,7 @@ export const CartProvider = ({ children }) => {
       }
 
       try {
-        if (isAuthenticated && accessToken) {
+        if (isAuthenticated) {
           // Authenticated: Fetch backend cart (READ-ONLY)
           if (isMounted) {
             setLoading(true);
@@ -365,7 +365,7 @@ export const CartProvider = ({ children }) => {
    * Called by AuthContext after login cart migration
    */
   const hydrateFromBackend = useCallback(async () => {
-    if (!accessToken) return;
+    if (!isAuthenticated) return;
     setLoading(true);
     setCartSource('backend');
 
@@ -380,7 +380,7 @@ export const CartProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [accessToken, syncWithBackend]);
+  }, [accessToken, isAuthenticated, syncWithBackend]);
 
   /**
    * UI-facing API: Add to cart
@@ -405,12 +405,12 @@ export const CartProvider = ({ children }) => {
     }
 
     const isRealProduct = productId && String(productId).length === 24;
-    if (cartSource === 'backend' && accessToken && !isRealProduct) {
+    if (cartSource === 'backend' && isAuthenticated && !isRealProduct) {
       toast.error('This item cannot be added right now. Please refresh products and try again.');
       return false;
     }
 
-    if (cartSource === 'backend' && accessToken && isRealProduct) {
+    if (cartSource === 'backend' && isAuthenticated && isRealProduct) {
       try {
         // Backend-first flow: avoid optimistic local rows that can disappear on sync.
         await cartService.addToCart(accessToken, {
@@ -489,7 +489,7 @@ export const CartProvider = ({ children }) => {
       return updated;
     });
     return true;
-  }, [persistGuestCart, cartSource, accessToken, syncWithBackend, user, authLoading]);
+  }, [persistGuestCart, cartSource, accessToken, isAuthenticated, syncWithBackend, user, authLoading]);
 
   /**
    * UI-facing API: Remove from cart
@@ -520,7 +520,7 @@ export const CartProvider = ({ children }) => {
         return prev;
       }
 
-      if (cartSource === 'backend' && accessToken && !backendItemId) {
+      if (cartSource === 'backend' && isAuthenticated && !backendItemId) {
         logger.warn('[CART_CONTEXT] Skip local remove in backend mode: missing backend item id');
         return prev;
       }
@@ -535,7 +535,7 @@ export const CartProvider = ({ children }) => {
     });
 
     // Phase 8: Call backend for authenticated users
-    if (cartSource === 'backend' && accessToken && backendItemId) {
+    if (cartSource === 'backend' && isAuthenticated && backendItemId) {
       try {
         await cartService.removeFromCart(accessToken, backendItemId);
 
@@ -550,12 +550,12 @@ export const CartProvider = ({ children }) => {
         toast.error('Failed to sync cart. Changes saved locally.');
       }
     } else {
-      if (cartSource === 'backend' && accessToken) {
+      if (cartSource === 'backend' && isAuthenticated) {
         logger.warn('[CART_CONTEXT] Skipped backend remove: missing valid backend item id');
       } else {
       }
     }
-  }, [persistGuestCart, cartSource, accessToken, syncWithBackend]);
+  }, [persistGuestCart, cartSource, accessToken, isAuthenticated, syncWithBackend]);
 
   /**
    * UI-facing API: Update quantity
@@ -585,7 +585,7 @@ export const CartProvider = ({ children }) => {
         return prev;
       }
 
-      if (cartSource === 'backend' && accessToken && !backendItemId) {
+      if (cartSource === 'backend' && isAuthenticated && !backendItemId) {
         logger.warn('[CART_CONTEXT] Skip local quantity update in backend mode: missing backend item id');
         return prev;
       }
@@ -599,7 +599,7 @@ export const CartProvider = ({ children }) => {
     });
 
     // Phase 8: Call backend for authenticated users
-    if (cartSource === 'backend' && accessToken && backendItemId) {
+    if (cartSource === 'backend' && isAuthenticated && backendItemId) {
       try {
         await cartService.updateCartItem(accessToken, backendItemId, enforcedQuantity);
 
@@ -614,12 +614,12 @@ export const CartProvider = ({ children }) => {
         toast.error('Failed to sync cart. Changes saved locally.');
       }
     } else {
-      if (cartSource === 'backend' && accessToken) {
+      if (cartSource === 'backend' && isAuthenticated) {
         logger.warn('[CART_CONTEXT] Skipped backend quantity update: missing valid backend item id');
       } else {
       }
     }
-  }, [persistGuestCart, cartSource, accessToken, syncWithBackend, user]);
+  }, [persistGuestCart, cartSource, accessToken, isAuthenticated, syncWithBackend, user]);
 
   /**
    * UI-facing API: Clear cart
@@ -634,7 +634,7 @@ export const CartProvider = ({ children }) => {
     if (cartSource === 'guest') {
       removeStorageItem(CART_STORAGE_KEY);
       removeStorageItem(COUPON_STORAGE_KEY);
-    } else if (cartSource === 'backend' && accessToken) {
+    } else if (cartSource === 'backend' && isAuthenticated) {
       // Phase 8: Call backend cart clear
       try {
         // Parallel execution: Clear items AND remove coupon
@@ -653,7 +653,7 @@ export const CartProvider = ({ children }) => {
         toast.error('Failed to sync cart. Changes saved locally.');
       }
     }
-  }, [cartSource, accessToken, items, appliedCoupon]);
+  }, [cartSource, accessToken, isAuthenticated, items, appliedCoupon]);
 
   // Computed values
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -674,7 +674,7 @@ export const CartProvider = ({ children }) => {
    * Apply a coupon to the cart
    */
   const applyCoupon = useCallback(async (coupon) => {
-    if (cartSource === 'backend' && accessToken) {
+    if (cartSource === 'backend' && isAuthenticated) {
       try {
         // For auth users, call backend
         const updatedCart = await cartService.applyCoupon(accessToken, coupon.code);
@@ -690,13 +690,13 @@ export const CartProvider = ({ children }) => {
       setStorageItem(COUPON_STORAGE_KEY, coupon);
       toast.success(`Coupon ${coupon.code} applied!`);
     }
-  }, [cartSource, accessToken, syncWithBackend]);
+  }, [cartSource, accessToken, isAuthenticated, syncWithBackend]);
 
   /**
    * Remove the applied coupon
    */
   const removeCoupon = useCallback(async () => {
-    if (cartSource === 'backend' && accessToken) {
+    if (cartSource === 'backend' && isAuthenticated) {
       try {
         // For auth users, call backend
         const updatedCart = await cartService.removeCoupon(accessToken);
@@ -711,7 +711,7 @@ export const CartProvider = ({ children }) => {
       removeStorageItem(COUPON_STORAGE_KEY);
       toast.success('Coupon removed');
     }
-  }, [cartSource, accessToken, syncWithBackend]);
+  }, [cartSource, accessToken, isAuthenticated, syncWithBackend]);
 
   return (
     <CartContext.Provider value={{

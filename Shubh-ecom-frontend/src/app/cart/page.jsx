@@ -138,7 +138,7 @@ const Cart = () => {
 
     setSummaryLoading(true);
     try {
-      if (cartSource === 'backend' && isAuthenticated && accessToken) {
+      if (cartSource === 'backend' && isAuthenticated) {
         const backendSummary = await cartService.getCartSummary(accessToken);
         const backendSubtotal = Number(backendSummary?.subtotal || 0);
         const backendItemsCount = Number(
@@ -232,7 +232,7 @@ const Cart = () => {
       return;
     }
 
-    if (!isAuthenticated || !accessToken || cartSource !== 'backend') {
+    if (!isAuthenticated || cartSource !== 'backend') {
       toast.error('Please login to apply coupons');
       return;
     }
@@ -253,7 +253,7 @@ const Cart = () => {
 
   const handleRemoveCoupon = async () => {
     if (!summary?.couponCode) return;
-    if (!isAuthenticated || !accessToken || cartSource !== 'backend') return;
+    if (!isAuthenticated || cartSource !== 'backend') return;
 
     try {
       setCouponLoading(true);
@@ -270,7 +270,7 @@ const Cart = () => {
   };
 
   const handleApplyCouponFromDialog = async (coupon) => {
-    if (!isAuthenticated || !accessToken || cartSource !== 'backend') {
+    if (!isAuthenticated || cartSource !== 'backend') {
       toast.error('Please login to apply coupons');
       setCouponDialogOpen(false);
       return;
@@ -332,7 +332,7 @@ const Cart = () => {
   const handleProceedToCheckout = async () => {
     if (creatingCheckoutDraft) return;
 
-    if (!isAuthenticated || !accessToken) {
+    if (!isAuthenticated) {
       toast.error('Please login to continue checkout');
       router.push('/login?returnTo=/checkout');
       return;

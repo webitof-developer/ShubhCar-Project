@@ -82,8 +82,10 @@ export function AuthProvider({ children }) {
       try {
         const refreshed = await authService.refreshAccessToken();
         const storedUser = normalizeStoredUser(getStorageItem('user'));
-        const cookieUser =
-          refreshed?.user || (await authService.getCurrentUser(refreshed?.accessToken || null));
+        const cookieUser = refreshed?.user
+          || (refreshed?.accessToken
+            ? await authService.getCurrentUser(refreshed.accessToken)
+            : null);
         if (cookieUser || storedUser) {
           persistSession({
             user: cookieUser || storedUser,

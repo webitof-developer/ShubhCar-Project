@@ -19,7 +19,10 @@ export const SafeImage = ({
 
   const shouldUnopt = typeof unoptimized === 'boolean'
     ? unoptimized
-    : (typeof currentSrc === 'string' && currentSrc.startsWith('/api/proxy/'));
+    : (typeof currentSrc === 'string' && (
+      currentSrc.startsWith('/api/proxy/') ||
+      currentSrc.includes('/api/proxy/')
+    ));
 
   return (
     <Image

@@ -67,13 +67,15 @@ const ProductDetailV2 = () => {
       setLoading(true);
       const data = await getProductBySlug(slug || '');
       setProduct(data);
-      if (data) {
-        setQuantity(getMinimumOrderQuantity(data, user));
-      }
       setLoading(false);
     };
     if (slug) load();
-  }, [slug, user]);
+  }, [slug]);
+
+  useEffect(() => {
+    if (!product) return;
+    setQuantity(getMinimumOrderQuantity(product, user));
+  }, [product, user]);
 
   /* -- Load reviews -- */
   const {
@@ -91,14 +93,14 @@ const ProductDetailV2 = () => {
   /* -- Image scroll helpers -- */
   const scrollToImage = (idx) => {
     if (scrollContainerRef.current && images.length > 0) {
-      const w = scrollContainerRef.current.scrollWidth / images.length;
+      const w = scrollContainerRef.current.clientWidth;
       scrollContainerRef.current.scrollTo({ left: w * idx, behavior: 'smooth' });
     }
     setActiveImage(idx);
   };
   const handleScroll = () => {
     if (!scrollContainerRef.current || images.length === 0) return;
-    const w = scrollContainerRef.current.scrollWidth / images.length;
+    const w = scrollContainerRef.current.clientWidth;
     const idx = Math.round(scrollContainerRef.current.scrollLeft / w);
     if (idx !== activeImage) setActiveImage(idx);
   };
@@ -140,8 +142,8 @@ const ProductDetailV2 = () => {
   );
 
   /* -- Derived data -- */
-  const images     = resolveProductImages(product.images || []).length
-    ? resolveProductImages(product.images || []) : ['/placeholder.jpg'];
+  const resolvedImages = resolveProductImages(product.images || []);
+  const images = resolvedImages.length ? resolvedImages : ['/placeholder.jpg'];
   const stockQty   = product?.stockQty ?? 0;
   const inStock    = stockQty > 0;
   const lowStock   = inStock && stockQty <= 10;
@@ -153,6 +155,7 @@ const ProductDetailV2 = () => {
   const mrp        = Number(priceData.originalPrice || product?.retailPrice?.mrp || product?.mrp || 0);
   const discountPct = mrp > unitPrice ? Math.round(((mrp - unitPrice) / mrp) * 100) : 0;
   const isOem      = isOemProduct(product.productType);
+  const activeImageSrc = images[activeImage] || images[0] || '/placeholder.jpg';
 
   const specs = [
     { label: 'Category',    value: product.category?.name },
@@ -199,10 +202,10 @@ const ProductDetailV2 = () => {
   return (
     <Layout>
       <div className="bg-muted/20 min-h-screen">
-        <div className="container mx-auto px-4 py-5 pb-28 md:pb-8">
+        <div className="container mx-auto px-4 py-5 pb-28 md:pb-8 overflow-x-hidden">
 
           {/* -- Breadcrumb -- */}
-          <nav className="flex items-center gap-1.5 text-sm text-muted-foreground mb-5 overflow-x-auto whitespace-nowrap no-scrollbar">
+          <nav className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-muted-foreground mb-5">
             <Link href="/" className="hover:text-primary transition-colors">Home</Link>
             {product.category && (
               <>
@@ -221,7 +224,7 @@ const ProductDetailV2 = () => {
               </>
             )}
             <ChevronRight className="w-3.5 h-3.5 opacity-40 shrink-0" />
-            <span className="text-foreground font-medium truncate max-w-[200px]">{product.name}</span>
+            <span className="basis-full text-foreground font-medium break-words">{product.name}</span>
           </nav>
 
           {/* -- Main Grid -- */}
@@ -231,16 +234,16 @@ const ProductDetailV2 = () => {
             <div className="lg:col-span-6 flex flex-col-reverse md:flex-row gap-3">
               {/* Thumbnails */}
               {images.length > 1 && (
-                <div className="flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto md:max-h-[520px] pb-1 md:pb-0 scrollbar-hide snap-x md:snap-y snap-mandatory">
+                <div className="flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto md:max-h-[520px] pb-1 mt-2 md:pb-0 scrollbar-hide snap-x md:snap-y snap-mandatory">
                   {images.map((img, i) => (
                     <button
-                      key={img}
+                      key={`${img}-${i}`}
                       onClick={() => scrollToImage(i)}
-                      className={`w-14 h-14 md:w-16 md:h-16 flex-shrink-0 rounded-xl overflow-hidden border-2 transition-all snap-center ${
+                      className={`w-14 h-14 md:w-16 md:h-16 flex-shrink-0 rounded-xl overflow-hidden border-2 transition-all snap-center mx-5 ${
                         i === activeImage ? 'border-primary shadow-md' : 'border-border/50 hover:border-primary/40'
                       }`}
                     >
-                      <div className="relative w-full h-full">
+                      <div className="relative w-full h-full fit-contain">
                         <SafeImage src={img} alt="" fill className="object-cover" />
                       </div>
                     </button>
@@ -251,7 +254,7 @@ const ProductDetailV2 = () => {
               {/* Main image */}
               <div
                 ref={mainImageRef}
-                className="flex-1 relative aspect-square bg-card border border-border/50 rounded-2xl overflow-hidden cursor-zoom-in group"
+                className="w-full mx-auto relative aspect-square md:aspect-[4/3] lg:aspect-[5/4] bg-card border border-border/50 rounded-2xl overflow-hidden cursor-zoom-in group"
                 onMouseEnter={() => setZoomed(true)}
                 onMouseLeave={() => setZoomed(false)}
                 onMouseMove={handleMouseMove}
@@ -261,30 +264,28 @@ const ProductDetailV2 = () => {
                 <div
                   ref={scrollContainerRef}
                   onScroll={handleScroll}
-                  className="w-full h-full overflow-x-auto overflow-y-hidden snap-x snap-mandatory scrollbar-hide flex"
+                  className="w-full h-full overflow-x-hidden overflow-y-hidden snap-x snap-mandatory flex rounded-xl"
                 >
-                  <div className="flex h-full">
                     {images.map((img, i) => (
-                      <div key={img} className="relative w-full h-full flex-shrink-0 snap-center">
-                        <SafeImage
-                          src={img}
-                          alt={`${product.name} ${i + 1}`}
-                          fallbackSrc="/placeholder.jpg"
-                          fill
-                          sizes="(max-width: 768px) 100vw, 50vw"
-                          className="object-contain select-none pointer-events-none"
-                        />
-                      </div>
-                    ))}
-                  </div>
+                      <div key={`${img}-${i}`} className="relative w-full min-w-full h-full flex-shrink-0 snap-center px-2">
+                      <SafeImage
+                        src={img}
+                        alt={`${product.name} ${i + 1}`}
+                        fallbackSrc="/placeholder.jpg"
+                        fill
+                        sizes="(max-width: 768px) 100vw, 50vw"
+                        className="object-contain select-none pointer-events-none"
+                      />
+                    </div>
+                  ))}
                 </div>
 
                 {/* Zoom preview box (desktop only) */}
                 {zoomed && (
                   <div
-                    className="hidden md:block absolute inset-0 pointer-events-none overflow-hidden"
+                    className="hidden md:block absolute inset-0 z-[5] pointer-events-none overflow-hidden"
                     style={{
-                      backgroundImage: `url(${images[activeImage]})`,
+                      backgroundImage: `url("${activeImageSrc}")`,
                       backgroundPosition: `${zoomPos.x}% ${zoomPos.y}%`,
                       backgroundSize: '250%',
                       backgroundRepeat: 'no-repeat',
@@ -353,7 +354,7 @@ const ProductDetailV2 = () => {
                   <div className="flex items-center gap-2">
                     {!isVehicleBasedProduct(product.productType) && product.manufacturerBrand && (
                       product.brandLogo
-                        ? <SafeImage src={resolveAssetUrl(product.brandLogo)} alt={product.manufacturerBrand} width={0} height={0} sizes="100vw" className="h-7 w-auto object-contain" />
+                        ? <SafeImage src={resolveAssetUrl(product.brandLogo)} alt={product.manufacturerBrand} width={0} height={0}  className="h-7 ms-5 mb-2 scale-300 w-auto object-contain" />
                         : <span className="text-[11px] font-bold uppercase tracking-widest text-primary/80 bg-primary/10 px-2 py-1 rounded-md">{product.manufacturerBrand}</span>
                     )}
                     {isVehicleBasedProduct(product.productType) && product.vehicleBrand && (

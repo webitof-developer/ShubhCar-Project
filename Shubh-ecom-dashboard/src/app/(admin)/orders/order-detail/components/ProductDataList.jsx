@@ -43,7 +43,7 @@ const ProductDataList = ({ items = [], orderStatus }) => {
                             const imageUrl = item.productImage || '';  // Use snapshot field
                             if (imageUrl) {
                               const src = imageUrl.startsWith('http') ? imageUrl : `${API_ORIGIN}${imageUrl}`;
-                              return <Image src={src} alt={item.productName || 'Product'} width={48} height={48} className="rounded-3 object-fit-cover" unoptimized />;
+                              return <Image src={src} alt={item.productName || 'Product'} width={48} height={48} sizes="48px" loading="lazy" className="rounded-3 object-fit-cover" />;
                             }
                             return <IconifyIcon icon="solar:box-broken" className="text-secondary fs-24 opacity-50" />;
                           })()}

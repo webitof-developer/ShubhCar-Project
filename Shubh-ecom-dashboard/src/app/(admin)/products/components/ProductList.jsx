@@ -195,7 +195,8 @@ const ProductCard = ({ product, onDelete, onToggleFeatured, isSelected, onSelect
                 width={50}
                 height={50}
                 className="rounded"
-                unoptimized
+                sizes="50px"
+                loading="lazy"
                 style={{ objectFit: 'cover' }}
               />
             ) : (

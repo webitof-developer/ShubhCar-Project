@@ -128,7 +128,6 @@ const WarehouseList = ({ filters = {}, onInventoryChange }) => {
                 { key: 'name', label: 'Product', render: (item) => item.name || item.productName },
                 { key: 'sku', label: 'SKU', render: (item) => item.sku || '-' },
                 { key: 'stockQty', label: 'Stock', render: (item) => item.stockQty ?? 0 },
-                { key: 'reservedQty', label: 'Reserved', render: (item) => item.reservedQty ?? 0 },
                 { key: 'availableQty', label: 'Available', render: (item) => item.availableQty ?? 0 },
                 { key: 'actions', label: 'Action', render: (item) => (
                   <Button

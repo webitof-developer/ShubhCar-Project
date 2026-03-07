@@ -34,7 +34,7 @@ export const WishlistProvider = ({ children }) => {
   }, []);
 
   const loadWishlist = useCallback(async () => {
-    if (!isAuthenticated || !accessToken) {
+    if (!isAuthenticated) {
       setItems([]);
       setLoading(false);
       return;
@@ -76,7 +76,7 @@ export const WishlistProvider = ({ children }) => {
   const addToWishlist = useCallback(async (product) => {
     const productId = product?._id || product?.id;
     if (!productId) return false;
-    if (!isAuthenticated || !accessToken) {
+    if (!isAuthenticated) {
       setItems(prev => {
         const exists = prev.find(item => (item._id || item.id) === productId);
         if (exists) return prev;
@@ -105,7 +105,7 @@ export const WishlistProvider = ({ children }) => {
 
   const removeFromWishlist = useCallback(async (productId) => {
     if (!productId) return false;
-    if (!isAuthenticated || !accessToken) {
+    if (!isAuthenticated) {
       setItems(prev => prev.filter(item => (item._id || item.id) !== productId));
       return true;
     }
@@ -124,7 +124,7 @@ export const WishlistProvider = ({ children }) => {
   }, [items]);
 
   const clearWishlist = useCallback(async () => {
-    if (isAuthenticated && accessToken) {
+    if (isAuthenticated) {
       try {
         await wishlistService.clearWishlist(accessToken);
       } catch (error) {

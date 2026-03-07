@@ -5,7 +5,8 @@ const orderEventRepo = require('./orderEvent.repo');
 const shipmentRepo = require('../shipments/shipment.repo');
 const { error } = require('../../utils/apiResponse');
 const { attachPaymentSummary } = require('./paymentSummary');
-const { ORDER_STATUS_LIST } = require('../../constants/orderStatus');
+const { ORDER_STATUS, ORDER_STATUS_LIST } = require('../../constants/orderStatus');
+const { PAYMENT_STATUS } = require('../../constants/paymentStatus');
 const mongoose = require('mongoose');
 const ProductImage = require('../../models/ProductImage.model');
 const userRepo = require('../users/user.repo');
@@ -47,6 +48,17 @@ type AdminOrderFilter = {
   salesmanId?: unknown;
   userId?: unknown;
   createdAt?: DateRangeFilter;
+  $nor?: Array<Record<string, unknown>>;
+};
+
+const checkoutPlaceholderExclusion = {
+  orderStatus: ORDER_STATUS.PENDING_PAYMENT,
+  paymentStatus: PAYMENT_STATUS.PENDING,
+  $or: [
+    { paymentMethod: null },
+    { paymentMethod: '' },
+    { paymentMethod: { $exists: false } },
+  ],
 };
 
 const isSalesmanActor = async (actor: ActorRef = {}) => {
@@ -83,6 +95,7 @@ exports.adminList = async (query: AdminListQuery = {}, actor: ActorRef = {}) => 
   const skip = pagination.skip;
   const filter: AdminOrderFilter = { isDeleted: false };
   const isSalesman = await isSalesmanActor(actor);
+  filter.$nor = [checkoutPlaceholderExclusion];
 
   if (status) filter.orderStatus = status;
   if (paymentStatus) filter.paymentStatus = paymentStatus;
@@ -250,6 +263,7 @@ exports.adminList = async (query: AdminListQuery = {}, actor: ActorRef = {}) => 
 // Admin get status counts method
 exports.adminGetStatusCounts = async (actor: ActorRef = {}) => {
   const match: Record<string, unknown> = { isDeleted: false };
+  match.$nor = [checkoutPlaceholderExclusion];
   if (await isSalesmanActor(actor)) {
     match.salesmanId = new mongoose.Types.ObjectId(actor.id);
   }

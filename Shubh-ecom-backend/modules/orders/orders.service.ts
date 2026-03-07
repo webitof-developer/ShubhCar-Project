@@ -1679,6 +1679,11 @@ class OrderService {
         payload.paymentMethod === 'razorpay' && payload.paymentCompleted
           ? PAYMENT_STATUS.PAID
           : PAYMENT_STATUS.PENDING;
+      const initialOrderStatus =
+        payload.paymentMethod === 'cod' ||
+        initialPaymentStatus === PAYMENT_STATUS.PAID
+          ? ORDER_STATUS.PLACED
+          : ORDER_STATUS.CREATED;
 
       const [order] = await orderRepo.createOrder(
         {
@@ -1701,7 +1706,7 @@ class OrderService {
           shippingFee,
           grandTotal,
           paymentStatus: initialPaymentStatus,
-          orderStatus: ORDER_STATUS.CREATED,
+          orderStatus: initialOrderStatus,
           paymentMethod: payload.paymentMethod,
           placedAt: new Date(),
         },

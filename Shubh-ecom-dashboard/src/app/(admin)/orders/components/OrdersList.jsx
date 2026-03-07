@@ -1012,6 +1012,15 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
   const customerSelectOptions = [...(Array.isArray(customerResults) ? customerResults : [])]
     .filter((customer, idx, arr) => arr.findIndex((item) => item?._id === customer?._id) === idx)
     .map((customer) => customer)
+  const now = new Date()
+  const activeCoupons = (Array.isArray(allCoupons) ? allCoupons : []).filter((coupon) => {
+    if (!coupon?.isActive) return false
+    const validFrom = coupon?.validFrom ? new Date(coupon.validFrom) : null
+    const validTo = coupon?.validTo ? new Date(coupon.validTo) : null
+    if (validFrom && !Number.isNaN(validFrom.getTime()) && validFrom > now) return false
+    if (validTo && !Number.isNaN(validTo.getTime()) && validTo < now) return false
+    return true
+  })
   const hasSavedAddresses = customerAddresses.length > 0
   const createFormContent = (
     <>
@@ -1258,6 +1267,36 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
               </Col>
             ) : (
               <>
+                <Col md={4}>
+                  <FloatingLabel controlId="manual-active-coupon" label="Active Coupon">
+                    <Form.Select
+                      value={createForm.couponCode || ''}
+                      onChange={(e) => {
+                        const code = String(e.target.value || '').toUpperCase()
+                        setCouponSearch(code)
+                        setCreateForm((prev) => ({ ...prev, couponCode: code }))
+                        if (code) {
+                          searchCoupons(code)
+                        } else {
+                          setCouponOptions(allCoupons.slice(0, 20))
+                        }
+                      }}>
+                      <option value="">Select active coupon</option>
+                      {activeCoupons.map((coupon) => {
+                        const code = String(coupon.code || '').toUpperCase()
+                        const discountLabel =
+                          coupon.discountType === 'percent'
+                            ? `${Number(coupon.discountValue || 0)}%`
+                            : `${currency}${Number(coupon.discountValue || 0)}`
+                        return (
+                          <option key={coupon._id || code} value={code}>
+                            {`${code} (${discountLabel})`}
+                          </option>
+                        )
+                      })}
+                    </Form.Select>
+                  </FloatingLabel>
+                </Col>
                 <Col md={4}>
                   <div className="position-relative">
                     <FloatingLabel controlId="manual-coupon" label="Coupon Code">

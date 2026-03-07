@@ -81,15 +81,19 @@ class UsersService {
     const passwordHash = await hashPassword(password);
 
     // 📌 Verification flow
-    const verification = decideVerificationFlow({ email, phone });
+    const verificationType = decideVerificationFlow({ email, phone });
+    const normalizedCustomerType = String(payload.customerType || 'retail').toLowerCase();
+    const accountVerificationStatus =
+      normalizedCustomerType === 'wholesale' ? 'pending' : 'not_required';
 
     const user = await userRepo.create({
       ...payload,
       role: payload.role || 'customer',
       roleId: undefined,
       passwordHash,
-      verificationStatus: verification.status,
-      verificationType: verification.type,
+      customerType: normalizedCustomerType,
+      verificationStatus: accountVerificationStatus,
+      verificationType,
     });
 
     // 📣 Emit async events (email / SMS / audit)
@@ -97,7 +101,7 @@ class UsersService {
       userId: user._id,
       email: user.email,
       phone: user.phone,
-      verificationType: verification.type,
+      verificationType,
     });
 
     return this._sanitize(user);
@@ -559,7 +563,7 @@ class UsersService {
         } else {
           const password = crypto.randomBytes(6).toString('hex');
           const passwordHash = await hashPassword(password);
-          const verification = decideVerificationFlow({ email, phone });
+          const verificationType = decideVerificationFlow({ email, phone });
           await userRepo.create({
             firstName,
             lastName,
@@ -570,7 +574,7 @@ class UsersService {
             status: normalizedStatus,
             passwordHash,
             verificationStatus,
-            verificationType: verification.type,
+            verificationType,
             verifiedAt: verificationStatus === 'approved' ? new Date() : null,
           });
           results.created += 1;
@@ -791,6 +795,19 @@ class UsersService {
       // Optional: validate allowed values
       if (!['retail', 'wholesale'].includes(String(updateData.customerType))) {
         error('Invalid customerType', 400);
+      }
+
+      const nextCustomerType = String(updateData.customerType);
+      const currentCustomerType = String(user.customerType || 'retail');
+      if (nextCustomerType !== currentCustomerType) {
+        if (nextCustomerType === 'retail') {
+          updateData.verificationStatus = 'not_required';
+          updateData.verifiedAt = null;
+          updateData.wholesaleInfo = null;
+        } else if (nextCustomerType === 'wholesale') {
+          updateData.verificationStatus = 'pending';
+          updateData.verifiedAt = null;
+        }
       }
     }
 

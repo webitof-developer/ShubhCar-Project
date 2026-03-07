@@ -5,7 +5,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
 import { Dialog, DialogTitle, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import Image from 'next/image';
+import { SafeImage } from '@/components/common/SafeImage';
 
 export function ImagePreviewModal({ images, initialIndex = 0, isOpen, onClose }) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
@@ -79,7 +79,7 @@ export function ImagePreviewModal({ images, initialIndex = 0, isOpen, onClose })
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogTitle hidden>Image Preview</DialogTitle>
-      <DialogContent className="max-w-[100vw] max-h-[80vh] w-full h-full p-0 bg-zinc-800/95">
+      <DialogContent className="max-w-[100vw] max-h-[80vh] w-full h-full p-0 bg-zinc-800/95 overflow-hidden [&>button[data-radix-dialog-close]]:hidden">
         {/* Close Button */}
         <Button
           variant="ghost"
@@ -120,8 +120,9 @@ export function ImagePreviewModal({ images, initialIndex = 0, isOpen, onClose })
           onTouchEnd={onTouchEnd}
         >
           <div className="relative w-full h-full max-w-full max-h-full">
-            <Image
+            <SafeImage
               src={images[currentIndex] || '/placeholder.jpg'}
+              fallbackSrc="/placeholder.jpg"
               alt={`Product image ${currentIndex + 1}`}
               fill
               className="object-contain transition-transform duration-300 select-none"

@@ -257,14 +257,18 @@ class AuthService {
 
     const passwordHash = await hashPassword(password);
     const verificationFlow = decideVerificationFlow({ email, phone });
+    const normalizedCustomerType = String(customerType || 'retail').toLowerCase();
+    const accountVerificationStatus =
+      normalizedCustomerType === 'wholesale'
+        ? 'pending'
+        : 'not_required';
 
     const createdUser = await userRepo.createUser({
       ...value,
       passwordHash,
-      verificationStatus:
-        verificationFlow === 'none' ? 'not_required' : 'pending',
+      verificationStatus: accountVerificationStatus,
       role: ROLES.CUSTOMER,
-      customerType,
+      customerType: normalizedCustomerType,
       status: 'active',
       authProvider: 'password',
     });

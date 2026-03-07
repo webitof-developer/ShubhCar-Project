@@ -46,6 +46,17 @@ export const refreshAccessToken = async (refreshToken) => {
   try {
     return await api.post('/auth/refresh', refreshToken ? { refreshToken } : {});
   } catch (error) {
+    const message = String(error?.message || '').toLowerCase();
+    const isMissingRefreshToken =
+      error?.status === 401 ||
+      message.includes('missing refresh token') ||
+      message.includes('refresh token');
+
+    // Guests will naturally hit this path on bootstrap; treat as no-session.
+    if (isMissingRefreshToken) {
+      return null;
+    }
+
     logger.error('[AUTH_SERVICE] Refresh token error:', error);
     throw error;
   }

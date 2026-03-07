@@ -73,11 +73,6 @@ const getDemoAddresses = () => {
  * @returns {Promise<Array>} - Array of addresses
  */
 const fetchRealAddresses = async (accessToken) => {
-  if (!accessToken) {
-    logger.warn('[ADDRESS_SERVICE] No access token for real fetch');
-    return null;
-  }
-
   try {
     const payload = await api.authGet('/user-addresses', accessToken);
     return normalizeAddressList(payload);
@@ -91,8 +86,6 @@ const fetchRealAddresses = async (accessToken) => {
  * Add address via backend API
  */
 const addRealAddress = async (accessToken, addressData) => {
-  if (!accessToken) return null;
-
   try {
     const payload = await api.authPost('/user-addresses', addressData, accessToken);
     return payload || null;
@@ -106,8 +99,6 @@ const addRealAddress = async (accessToken, addressData) => {
  * Update address via backend API
  */
 const updateRealAddress = async (accessToken, id, addressData) => {
-  if (!accessToken) return null;
-
   try {
     const payload = await api.authPut(`/user-addresses/${id}`, addressData, accessToken);
     return payload || null;
@@ -121,8 +112,6 @@ const updateRealAddress = async (accessToken, id, addressData) => {
  * Delete address via backend API
  */
 const deleteRealAddress = async (accessToken, id) => {
-  if (!accessToken) return false;
-
   try {
     await api.authDelete(`/user-addresses/${id}`, accessToken);
     return true;

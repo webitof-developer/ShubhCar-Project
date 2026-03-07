@@ -47,7 +47,7 @@ const Profile = () => {
   // Fetch profile data on mount
   useEffect(() => {
     const fetchProfile = async () => {
-      if (!accessToken) {
+      if (!isAuthenticated) {
         setLoading(false);
         return;
       }
@@ -64,11 +64,11 @@ const Profile = () => {
     };
 
     fetchProfile();
-  }, [accessToken]);
+  }, [accessToken, isAuthenticated]);
 
   useEffect(() => {
     const fetchStats = async () => {
-      if (!accessToken) return;
+      if (!isAuthenticated) return;
       try {
         const [orders, wishlist, addresses] = await Promise.all([
           getMyOrders(accessToken).catch(() => []),
@@ -87,7 +87,7 @@ const Profile = () => {
     };
 
     fetchStats();
-  }, [accessToken]);
+  }, [accessToken, isAuthenticated]);
 
   const handleProfileUpdate = async () => {
     try {

@@ -410,12 +410,17 @@ const CustomerDetailSkeleton = () => {
 }
 
 const ProfileCard = ({ customer, onApproveWholesale, approving }) => {
-  const showApprove = customer?.customerType === 'wholesale' && customer?.verificationStatus === 'pending'
-  const verificationLabel = customer.verificationStatus === 'approved'
+  const normalizedCustomerType = String(customer?.customerType || 'retail').toLowerCase()
+  const normalizedVerificationStatus = String(customer?.verificationStatus || '').toLowerCase()
+  const displayVerificationStatus = normalizedCustomerType === 'retail'
+    ? 'not_required'
+    : (normalizedVerificationStatus === 'not_required' ? 'pending' : (normalizedVerificationStatus || 'pending'))
+  const showApprove = normalizedCustomerType === 'wholesale' && displayVerificationStatus === 'pending'
+  const verificationLabel = displayVerificationStatus === 'approved'
     ? 'Approved'
-    : customer.verificationStatus === 'pending'
-      ? 'Pending'
-      : customer.verificationStatus === 'rejected'
+    : displayVerificationStatus === 'pending'
+      ? 'Pending Approval'
+      : displayVerificationStatus === 'rejected'
         ? 'Rejected'
         : 'Not Required'
 

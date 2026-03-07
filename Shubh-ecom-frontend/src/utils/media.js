@@ -12,13 +12,16 @@ export const resolveAssetUrl = (url) => {
   }
   const origin = APP_CONFIG.api.origin
   const isProd = process.env.NODE_ENV === 'production'
-  const toRawProxy = (path) => `/api/proxy/__raw__${path.startsWith('/') ? '' : '/'}${path}`
 
   if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
     try {
       const parsed = new URL(trimmed)
+      if (parsed.pathname.startsWith('/api/proxy/')) {
+        return `${parsed.pathname}${parsed.search}`
+      }
       if (origin && parsed.origin === origin) {
-        return toRawProxy(`${parsed.pathname}${parsed.search}`)
+        // Return same-origin backend URLs directly so next/image can optimize and cache.
+        return trimmed
       }
     } catch {
       return trimmed
@@ -40,7 +43,8 @@ export const resolveAssetUrl = (url) => {
   }
 
   if (trimmed.startsWith('/uploads/')) {
-    return toRawProxy(trimmed)
+    // Direct backend URL allows optimized resized delivery in frontend image components.
+    return `${origin}${trimmed}`
   }
 
   return `${origin}${trimmed}`

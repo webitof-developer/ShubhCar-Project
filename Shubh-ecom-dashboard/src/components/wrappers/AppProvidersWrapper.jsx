@@ -12,6 +12,7 @@ const LayoutProvider = dynamic(() => import('@/context/useLayoutContext').then((
 
 import { TitleProvider } from '@/context/useTitleContext'
 const AppProvidersWrapper = ({ children }) => {
+  const authBasePath = process.env.NEXT_PUBLIC_NEXTAUTH_BASE_PATH || '/api/auth'
   const handleChangeTitle = () => {
     if (document.visibilityState == 'show') document.title = 'Please come back'
     else document.title = DEFAULT_PAGE_TITLE
@@ -39,7 +40,12 @@ const AppProvidersWrapper = ({ children }) => {
     }
   }, [])
   return (
-    <SessionProvider>
+    <SessionProvider
+      basePath={authBasePath}
+      refetchOnWindowFocus={false}
+      refetchWhenOffline={false}
+      refetchInterval={0}
+    >
       <LayoutProvider>
         <TitleProvider>
        

@@ -100,7 +100,7 @@ const CheckoutInner = () => {
 
   useEffect(() => {
     const loadDraft = async () => {
-      if (!draftId || !isAuthenticated || !accessToken) return;
+      if (!draftId || !isAuthenticated) return;
 
       setDraftLoading(true);
       try {
@@ -126,7 +126,7 @@ const CheckoutInner = () => {
   }, [draftId, isAuthenticated, accessToken, router]);
 
   const fetchSummary = useCallback(async () => {
-    if (!accessToken) return;
+    if (!isAuthenticated) return;
     if (!items.length) {
       setSummary(null);
       return;
@@ -165,7 +165,7 @@ const CheckoutInner = () => {
     } finally {
       setSummaryLoading(false);
     }
-  }, [accessToken, items, checkoutData.addressId]);
+  }, [accessToken, isAuthenticated, items, checkoutData.addressId]);
 
   useEffect(() => {
     fetchSummary();
