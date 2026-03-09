@@ -42,10 +42,10 @@ const OrdersV2 = () => {
 
   useEffect(() => {
     const load = async () => {
-      if (!isAuthenticated || !accessToken) { setOrders([]); setLoadingOrders(false); return; }
+      if (!isAuthenticated) { setOrders([]); setLoadingOrders(false); return; }
       setLoadingOrders(true);
       try {
-        const data = await getMyOrders(accessToken, { includeItems: true });
+        const data = await getMyOrders(accessToken || null, { includeItems: true });
         setOrders(Array.isArray(data) ? data : []);
       } catch (e) {
         logger.error('[ORDERS V2] failed', e);

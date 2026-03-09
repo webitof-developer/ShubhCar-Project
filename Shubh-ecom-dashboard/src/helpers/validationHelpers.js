@@ -32,6 +32,24 @@ export const sanitizeIndianMobileInput = (value) => {
 };
 
 /**
+ * Sanitizes Indian postal code input to digits only (max 6 digits)
+ * @param {string} value - Raw input value
+ * @returns {string} - Digits only, max 6 chars
+ */
+export const sanitizeIndianPostalCodeInput = (value) => {
+  return formatPhoneInput(String(value || '')).slice(0, 6);
+};
+
+/**
+ * Validates Indian postal code format (exactly 6 digits)
+ * @param {string} postalCode - Postal code to validate
+ * @returns {boolean} - True if valid
+ */
+export const validateIndianPostalCode = (postalCode) => {
+  return /^\d{6}$/.test(String(postalCode || '').trim());
+};
+
+/**
  * Validates email format
  * @param {string} email - Email to validate
  * @returns {boolean} - True if valid

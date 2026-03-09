@@ -82,11 +82,19 @@ app.set('trust proxy', 1);
 app.use(
   '/uploads',
   express.static(path.join(__dirname, 'uploads'), {
-    setHeaders: (res) => {
+    setHeaders: (res, filePath: string) => {
       // Security: Uploaded files are untrusted content; prevent MIME sniffing.
       res.setHeader('X-Content-Type-Options', 'nosniff');
-      // Security: Serve uploads as downloads to prevent active-content execution.
-      res.setHeader('Content-Disposition', 'attachment');
+      const normalizedPath = String(filePath || '').toLowerCase();
+      const isImageAsset =
+        normalizedPath.endsWith('.jpg') ||
+        normalizedPath.endsWith('.jpeg') ||
+        normalizedPath.endsWith('.png') ||
+        normalizedPath.endsWith('.webp') ||
+        normalizedPath.endsWith('.gif') ||
+        normalizedPath.endsWith('.avif');
+      // Allow safe image formats to render inline; force download for everything else.
+      res.setHeader('Content-Disposition', isImageAsset ? 'inline' : 'attachment');
     },
   }),
 );

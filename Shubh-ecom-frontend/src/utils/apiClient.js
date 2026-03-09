@@ -90,8 +90,17 @@ async function request(path, options = {}) {
     : await response.text().catch(() => '');
 
   if (!response.ok) {
+    const nestedMessage =
+      typeof body === 'object'
+        ? body?.message ||
+          body?.error?.message ||
+          body?.data?.message ||
+          body?.errors?.[0]?.message ||
+          null
+        : null;
     const message =
-      (typeof body === 'object' ? body?.message : body) ||
+      nestedMessage ||
+      (typeof body === 'string' ? body : null) ||
       `Request failed: ${response.status} ${response.statusText}`;
     throw new ApiError(message, response.status, typeof body === 'object' ? body : {});
   }

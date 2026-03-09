@@ -4,6 +4,7 @@ const listInvoicesQuerySchema = Joi.object({
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(200).default(50),
   type: Joi.string().valid('invoice', 'credit_note'),
+  search: Joi.string().trim().max(100).allow(''),
 });
 
 const pdfQuerySchema = Joi.object({

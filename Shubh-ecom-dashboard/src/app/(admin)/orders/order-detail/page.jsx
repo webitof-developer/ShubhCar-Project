@@ -383,6 +383,7 @@ const OrderDetailPage = () => {
                 />
               )}
               <Documents
+                order={order}
                 onDownloadInvoice={handleDownloadInvoice}
                 invoiceDisabled={order.paymentStatus !== 'paid'}
                 onDownloadCreditNote={handleDownloadCreditNote}

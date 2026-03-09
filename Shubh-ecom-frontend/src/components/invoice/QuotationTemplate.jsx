@@ -31,9 +31,10 @@ const QuotationTemplate = forwardRef(({ items = [], summary = {}, profile = {} }
     day: '2-digit', month: 'long', year: 'numeric'
   });
 
-  // Valid Until (15 days from now)
+  // Valid Until (default 15 days from now or settings override)
   const validUntilDate = new Date(now);
-  validUntilDate.setDate(validUntilDate.getDate() + 15);
+  const validityDays = Number(settings.quotation_validity_days || 15);
+  validUntilDate.setDate(validUntilDate.getDate() + validityDays);
   const validUntil = validUntilDate.toLocaleDateString('en-IN', {
     day: '2-digit', month: 'long', year: 'numeric'
   });
@@ -56,6 +57,16 @@ const QuotationTemplate = forwardRef(({ items = [], summary = {}, profile = {} }
   const displayTotal = showIncludingTax
     ? subtotal + shippingFee - discount
     : grandTotal;
+
+  // Terms & Notes
+  const quotationTermsText = String(settings.quotation_terms || settings.invoice_terms || '').trim();
+  const quotationNotesText = String(settings.quotation_notes || settings.invoice_notes || '').trim();
+  const quotationTerms = quotationTermsText
+    ? quotationTermsText.split('\n').map((line) => line.trim()).filter(Boolean)
+    : [
+      'Prices are valid for the stated validity period.',
+      'Taxes and availability are subject to confirmation.',
+    ];
 
   // Logo
   const logo = settings.invoice_logo_url || '/logo.png';
@@ -100,13 +111,13 @@ const QuotationTemplate = forwardRef(({ items = [], summary = {}, profile = {} }
         </div>
         <div className="text-right">
           <h2 className="text-3xl font-bold text-black mb-10">QUOTATION</h2>
-          <div className="text-xs mt-10 space-y-1.5">
-            <p><span className="text-gray-500 w-24 inline-block">Quote No:</span> <span className="font-semibold">{quoteNumber}</span></p>
-            <p><span className="text-gray-500 w-24 inline-block">Date:</span> <span className="font-semibold">{quoteDate}</span></p>
-            <p><span className="text-gray-500 w-24 inline-block">Valid Until:</span> <span className="font-semibold text-orange-600">{validUntil}</span></p>
-          </div>
-        </div>
+      <div className="text-xs mt-10 space-y-1.5">
+        <p><span className="text-gray-500 w-24 inline-block">Quote No:</span> <span className="font-semibold">{quoteNumber}</span></p>
+        <p><span className="text-gray-500 w-24 inline-block">Date:</span> <span className="font-semibold">{quoteDate}</span></p>
+        <p><span className="text-gray-500 w-24 inline-block">Valid Until:</span> <span className="font-semibold text-orange-600">{validUntil}</span></p>
       </div>
+    </div>
+  </div>
 
       {/* Bill To (Current User or Guest) */}
       <div className="mb-8">
@@ -254,6 +265,19 @@ const QuotationTemplate = forwardRef(({ items = [], summary = {}, profile = {} }
               <span className="font-bold text-orange-600">{formatPrice(displayTotal)}</span>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Terms */}
+      <div className="mt-6 border-t border-gray-200 pt-4">
+        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Terms & Notes</h3>
+        <div className="text-[11px] text-gray-600 space-y-1">
+          {quotationTerms.map((line, idx) => (
+            <p key={`q-term-${idx}`} className="m-0">* {line}</p>
+          ))}
+          {quotationNotesText && (
+            <p className="m-0"><strong>Note:</strong> {quotationNotesText}</p>
+          )}
         </div>
       </div>
 

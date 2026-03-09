@@ -40,19 +40,6 @@ export function AuthProvider({ children }) {
   const [refreshToken, setRefreshToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const normalizeStoredUser = (rawUser) => {
-    if (!rawUser) return null;
-    if (typeof rawUser === 'object') return rawUser;
-    if (typeof rawUser === 'string') {
-      try {
-        return JSON.parse(rawUser);
-      } catch {
-        return null;
-      }
-    }
-    return null;
-  };
-
   const persistSession = ({
     user: nextUser,
     accessToken: nextAccessToken = null,
@@ -81,17 +68,23 @@ export function AuthProvider({ children }) {
 
       try {
         const refreshed = await authService.refreshAccessToken();
-        const storedUser = normalizeStoredUser(getStorageItem('user'));
         const cookieUser = refreshed?.user
           || (refreshed?.accessToken
             ? await authService.getCurrentUser(refreshed.accessToken)
             : null);
-        if (cookieUser || storedUser) {
+
+        if (cookieUser) {
           persistSession({
-            user: cookieUser || storedUser,
+            user: cookieUser,
             accessToken: refreshed?.accessToken || null,
             refreshToken: refreshed?.refreshToken || null,
           });
+        } else {
+          // Refresh/cookie session did not resolve to a real user: clear stale auth.
+          removeStorageItem('user');
+          setUser(null);
+          setAccessToken(null);
+          setRefreshToken(null);
         }
       } catch {
         removeStorageItem('user');

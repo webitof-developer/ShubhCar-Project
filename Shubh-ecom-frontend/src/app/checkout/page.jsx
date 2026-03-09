@@ -104,7 +104,7 @@ const CheckoutInner = () => {
 
       setDraftLoading(true);
       try {
-        const draft = await checkoutDraftService.getDraft(accessToken, draftId);
+        const draft = await checkoutDraftService.getDraft(accessToken || null, draftId);
         const shippingAddressId = draft?.addressIds?.shippingAddressId || null;
 
         if (shippingAddressId) {
@@ -133,7 +133,7 @@ const CheckoutInner = () => {
     }
     setSummaryLoading(true);
     try {
-      const data = await cartService.getCartSummary(accessToken, checkoutData.addressId);
+      const data = await cartService.getCartSummary(accessToken || null, checkoutData.addressId);
       const normalizedSummary = data && typeof data === 'object' ? { ...data } : data;
 
       if (normalizedSummary) {

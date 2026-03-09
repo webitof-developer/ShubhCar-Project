@@ -34,7 +34,13 @@ import { usePermissions } from '@/hooks/usePermissions'
 import clsx from 'clsx'
 import { currency } from '@/context/constants'
 import { INDIA_COUNTRY, INDIA_STATES, getIndiaStateName, normalizeIndiaStateCode } from '@/helpers/indiaRegions'
-import { sanitizeIndianMobileInput, validateEmail, validateIndianPhone } from '@/helpers/validationHelpers'
+import {
+  sanitizeIndianMobileInput,
+  sanitizeIndianPostalCodeInput,
+  validateEmail,
+  validateIndianPhone,
+  validateIndianPostalCode,
+} from '@/helpers/validationHelpers'
 
 const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
   const { data: session } = useSession()
@@ -678,6 +684,16 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
       return
     }
 
+    if (!validateIndianPostalCode(createForm.shippingAddress.postalCode)) {
+      setCreateError('Shipping postal code must be exactly 6 digits (numbers only)')
+      return
+    }
+
+    if (!createForm.billingSameAsShipping && !validateIndianPostalCode(createForm.billingAddress.postalCode)) {
+      setCreateError('Billing postal code must be exactly 6 digits (numbers only)')
+      return
+    }
+
     if (createForm.paymentMethod === 'razorpay' && !createForm.paymentCompleted) {
       setCreateError('Razorpay order can only be created after payment is completed')
       return
@@ -1026,8 +1042,20 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
     <>
       {createError && (
         <Alert variant="danger" className="py-2">
-          <div className="fw-semibold">Manual order creation failed</div>
-          <div className="small mt-1">{createError}</div>
+          <div className="d-flex align-items-start justify-content-between gap-2">
+            <div>
+              <div className="fw-semibold">Manual order creation failed</div>
+              <div className="small mt-1">{createError}</div>
+            </div>
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              className="p-0 text-decoration-underline text-danger"
+              onClick={() => setCreateError('')}>
+              Clear
+            </Button>
+          </div>
         </Alert>
       )}
 
@@ -1064,10 +1092,15 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
             </Col>
             <Col md={8}>
               <Row className="g-2">
-                <Col md={10}>
+                <Col md={12}>
                   <div className="position-relative">
-                    <FloatingLabel controlId="manual-customer" label={requiredLabel('Customer')}>
+                    <Form.Label htmlFor="manual-customer-search" className="mb-1 small text-muted">
+                      {requiredLabel('Customer')}
+                    </Form.Label>
+                    <InputGroup>
                       <Form.Control
+                        id="manual-customer-search"
+                        className={customerSearch.trim().length > 0 ? 'border-end-0' : ''}
                         value={customerSearch}
                         onChange={(e) => {
                           const next = e.target.value
@@ -1090,11 +1123,37 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                         placeholder="Search customer"
                         required
                       />
-                    </FloatingLabel>
+                      {customerSearch.trim().length > 0 && (
+                        <InputGroup.Text className="bg-white border-start-0 px-2">
+                          <button
+                            type="button"
+                            className="btn btn-link btn-sm p-0 text-decoration-underline text-secondary"
+                            title="Clear customer search"
+                            onClick={() => {
+                              setCustomerSearch('')
+                              setCustomerResults([])
+                              handleSelectCustomerById('')
+                            }}>
+                            Clear
+                          </button>
+                        </InputGroup.Text>
+                      )}
+                      <Button
+                        variant="outline-primary"
+                        className="d-inline-flex align-items-center gap-1"
+                        title="Add new customer"
+                        onClick={() => {
+                          setCustomerCreateError('')
+                          setShowCustomerModal(true)
+                        }}>
+                        <IconifyIcon icon="bx:plus" />
+                        <span className="d-none d-sm-inline">Add New</span>
+                      </Button>
+                    </InputGroup>
                     {customerSearch.trim().length > 0 && customerSelectOptions.length > 0 && (
                       <div
                         className="border rounded-2 bg-white position-absolute start-0 end-0 mt-1 overflow-auto"
-                        style={{ zIndex: 2200, maxHeight: 220 }}>
+                        style={{ zIndex: 2200, maxHeight: 220, top: '100%' }}>
                         {customerSelectOptions.map((customer) => (
                           <button
                             key={customer._id}
@@ -1107,19 +1166,6 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                       </div>
                     )}
                   </div>
-                </Col>
-                <Col md={2} className="d-flex align-items-end">
-                  <Button
-                    variant="outline-secondary"
-                    className="d-inline-flex align-items-center justify-content-center p-0"
-                    title="Add new customer"
-                    style={{ width: 44, height: 44 }}
-                    onClick={() => {
-                      setCustomerCreateError('')
-                      setShowCustomerModal(true)
-                    }}>
-                    <IconifyIcon icon="bx:plus" />
-                  </Button>
                 </Col>
               </Row>
               {customerLoading && <div className="text-muted small mt-2">Searching customers...</div>}
@@ -1507,8 +1553,13 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                   <Col md={4}>
                     <FloatingLabel controlId="ship-postal" label={requiredLabel('Postal Code')}>
                       <Form.Control
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]{6}"
+                        minLength={6}
+                        maxLength={6}
                         value={createForm.shippingAddress.postalCode}
-                        onChange={(e) => updateAddressField('shippingAddress', 'postalCode', e.target.value)}
+                        onChange={(e) => updateAddressField('shippingAddress', 'postalCode', sanitizeIndianPostalCodeInput(e.target.value))}
                         placeholder="Postal Code"
                         required
                       />
@@ -1635,8 +1686,13 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                     <Col md={4}>
                       <FloatingLabel controlId="bill-postal" label={requiredLabel('Postal Code')}>
                         <Form.Control
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]{6}"
+                          minLength={6}
+                          maxLength={6}
                           value={createForm.billingAddress.postalCode}
-                          onChange={(e) => updateAddressField('billingAddress', 'postalCode', e.target.value)}
+                          onChange={(e) => updateAddressField('billingAddress', 'postalCode', sanitizeIndianPostalCodeInput(e.target.value))}
                           placeholder="Postal Code"
                           required
                         />
@@ -2150,7 +2206,17 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
               <Modal.Body>
                 {customerCreateError && (
                   <Alert variant="danger" className="py-2">
-                    {customerCreateError}
+                    <div className="d-flex align-items-start justify-content-between gap-2">
+                      <span>{customerCreateError}</span>
+                      <Button
+                        type="button"
+                        variant="link"
+                        size="sm"
+                        className="p-0 text-decoration-underline text-danger"
+                        onClick={() => setCustomerCreateError('')}>
+                        Clear
+                      </Button>
+                    </div>
                   </Alert>
                 )}
                 <Row className="g-2">

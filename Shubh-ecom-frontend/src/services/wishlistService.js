@@ -57,17 +57,12 @@ const saveDemoWishlist = (wishlist) => {
  * @returns {Promise<Array>} - Array of product IDs or product objects
  */
 const fetchRealWishlist = async (accessToken) => {
-  if (!accessToken) {
-    logger.warn('[WISHLIST_SERVICE] No access token for real fetch');
-    return null;
-  }
-
   try {
-    const payload = await api.authGet('/wishlist', accessToken);
+    const payload = await api.authGet('/wishlist', accessToken || null);
     return normalizeWishlistArray(payload);
   } catch (error) {
     logger.error('[WISHLIST_SERVICE] Wishlist fetch error:', error);
-    return null;
+    throw error;
   }
 };
 
@@ -75,13 +70,11 @@ const fetchRealWishlist = async (accessToken) => {
  * Add product to wishlist via backend API
  */
 const addToRealWishlist = async (accessToken, productId) => {
-  if (!accessToken) return null;
-
   try {
-    return await api.authPost('/wishlist', { productId }, accessToken);
+    return await api.authPost('/wishlist', { productId }, accessToken || null);
   } catch (error) {
     logger.error('[WISHLIST_SERVICE] Add to wishlist error:', error);
-    return null;
+    throw error;
   }
 };
 
@@ -89,13 +82,11 @@ const addToRealWishlist = async (accessToken, productId) => {
  * Remove product from wishlist via backend API
  */
 const removeFromRealWishlist = async (accessToken, productId) => {
-  if (!accessToken) return null;
-
   try {
-    return await api.authDelete(`/wishlist/${productId}`, accessToken);
+    return await api.authDelete(`/wishlist/${productId}`, accessToken || null);
   } catch (error) {
     logger.error('[WISHLIST_SERVICE] Remove from wishlist error:', error);
-    return null;
+    throw error;
   }
 };
 
@@ -103,16 +94,14 @@ const removeFromRealWishlist = async (accessToken, productId) => {
  * Clear entire wishlist via backend API
  */
 const clearRealWishlist = async (accessToken) => {
-  if (!accessToken) return false;
-
   // TODO: Backend may not have DELETE /wishlist (clear all) endpoint
   // Verify backend route exists before using this function
   try {
-    await api.authDelete('/wishlist', accessToken);
+    await api.authDelete('/wishlist', accessToken || null);
     return true;
   } catch (error) {
     logger.error('[WISHLIST_SERVICE] Clear wishlist error:', error);
-    return false;
+    throw error;
   }
 };
 
@@ -138,12 +127,7 @@ export const getWishlist = async (accessToken = null) => {
   logDataSource('PROFILE.WISHLIST', 'REAL');
   try {
     const wishlist = await fetchRealWishlist(accessToken);
-    
-    if (!wishlist) {
-      return handleDataSourceFallback('PROFILE.WISHLIST', config.fallback, []);
-    }
-    
-    return wishlist;
+    return normalizeWishlistArray(wishlist);
   } catch (error) {
     return handleDataSourceFallback('PROFILE.WISHLIST', config.fallback, [], error);
   }
@@ -177,13 +161,7 @@ export const addToWishlist = async (productId, accessToken = null) => {
   // Real mode: Backend API
   logDataSource('PROFILE.WISHLIST', 'REAL', 'adding to wishlist');
   try {
-    const updatedWishlist = await addToRealWishlist(accessToken, productId);
-    
-    if (!updatedWishlist) {
-      return handleDataSourceFallback('PROFILE.WISHLIST', config.fallback, []);
-    }
-    
-    return updatedWishlist;
+    return await addToRealWishlist(accessToken, productId);
   } catch (error) {
     return handleDataSourceFallback('PROFILE.WISHLIST', config.fallback, [], error);
   }
@@ -212,13 +190,7 @@ export const removeFromWishlist = async (productId, accessToken = null) => {
   // Real mode: Backend API
   logDataSource('PROFILE.WISHLIST', 'REAL', 'removing from wishlist');
   try {
-    const updatedWishlist = await removeFromRealWishlist(accessToken, productId);
-    
-    if (!updatedWishlist) {
-      return handleDataSourceFallback('PROFILE.WISHLIST', config.fallback, []);
-    }
-    
-    return updatedWishlist;
+    return await removeFromRealWishlist(accessToken, productId);
   } catch (error) {
     return handleDataSourceFallback('PROFILE.WISHLIST', config.fallback, [], error);
   }
@@ -281,13 +253,8 @@ export const clearWishlist = async (accessToken = null) => {
   // Real mode: Backend API
   logDataSource('PROFILE.WISHLIST', 'REAL', 'clearing wishlist');
   try {
-    const success = await clearRealWishlist(accessToken);
-    
-    if (!success && config.fallback === 'error') {
-      throw new Error('Failed to clear wishlist');
-    }
-    
-    return success;
+    await clearRealWishlist(accessToken);
+    return true;
   } catch (error) {
     if (config.fallback === 'error') {
       throw error;

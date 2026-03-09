@@ -27,19 +27,19 @@ const InvoicePage = () => {
   useEffect(() => {
     const load = async () => {
       if (authLoading) return;
-      if (!isAuthenticated || !accessToken || !orderId) {
+      if (!isAuthenticated || !orderId) {
         setInvoiceLoading(false);
         return;
       }
       
       try {
         // Fetch order data
-        const data = await getOrder(accessToken, orderId);
+        const data = await getOrder(accessToken || null, orderId);
         setOrderDetail(data || null);
 
         // Fetch shipping address
         if (data?.order?.shippingAddressId) {
-          const addr = await getAddressById(data.order.shippingAddressId, accessToken);
+          const addr = await getAddressById(data.order.shippingAddressId, accessToken || null);
           setAddress(addr || null);
         }
 

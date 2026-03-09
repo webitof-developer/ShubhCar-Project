@@ -657,7 +657,13 @@ export const PaymentInformation = ({ order, onPaymentUpdate, updatingPayment, on
   )
 }
 
-export const Documents = ({ onDownloadInvoice, invoiceDisabled, onDownloadCreditNote, creditNoteDisabled }) => {
+export const Documents = ({ order, onDownloadInvoice, invoiceDisabled, onDownloadCreditNote, creditNoteDisabled }) => {
+  const paymentStatus = String(order?.paymentStatus || '').toLowerCase()
+  const hasCapturedPayment = ['paid', 'partially_paid', 'refunded'].includes(paymentStatus)
+  const showCreditNoteInfo = !creditNoteDisabled
+  const showUnpaidCancellationInfo =
+    ['cancelled', 'returned'].includes(String(order?.orderStatus || '').toLowerCase()) && !hasCapturedPayment
+
   return (
     <Card className="mb-3 border-0 shadow-sm">
       <CardHeader className="bg-light-subtle border-bottom border-light">
@@ -683,6 +689,25 @@ export const Documents = ({ onDownloadInvoice, invoiceDisabled, onDownloadCredit
             <span className="d-flex align-items-center gap-2"> <IconifyIcon icon="solar:document-medicine-broken" /> Credit Note</span>
             <IconifyIcon icon="solar:download-minimalistic-broken" />
           </Button>
+          {invoiceDisabled ? (
+            <p className="mb-0 mt-2 text-muted fs-12">
+              Invoice becomes available after successful payment capture.
+            </p>
+          ) : null}
+          {showCreditNoteInfo ? (
+            <div className="mt-2 rounded bg-light p-2">
+              <p className="mb-1 fs-12 fw-semibold text-dark">Credit note information</p>
+              <p className="mb-0 text-muted fs-12">
+                Credit note reverses the original invoice for accounting and tax purposes. Refund settlement is tracked
+                separately against the original payment method.
+              </p>
+            </div>
+          ) : null}
+          {showUnpaidCancellationInfo ? (
+            <p className="mb-0 mt-2 text-muted fs-12">
+              This order was cancelled before payment capture. No refund is pending.
+            </p>
+          ) : null}
         </div>
       </CardBody>
     </Card>

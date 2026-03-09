@@ -9,6 +9,7 @@ import { useWishlist } from '@/context/WishlistContext';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { logger } from '@/utils/logger';
 
 export default function WishlistButton({ 
   product, 
@@ -35,7 +36,19 @@ export default function WishlistButton({
     e.preventDefault();
     e.stopPropagation();
 
-    if (!product || isLoading) return;
+    if (isLoading) return;
+    if (!product) {
+      toast.error('Product not available');
+      return;
+    }
+
+    const productId = product._id || product.id;
+    if (!productId) {
+      logger.warn('[WISHLIST_BUTTON] Missing product id', product);
+      toast.error('Unable to update wishlist for this product');
+      return;
+    }
+
     if (!isAuthenticated) {
       toast.error('Please login to use wishlist');
       router.push('/login?returnTo=/wishlist');
@@ -47,9 +60,7 @@ export default function WishlistButton({
     try {
       // Debounce: Wait 300ms before allowing another toggle
       await new Promise(resolve => setTimeout(resolve, 300));
-      
-      const productId = product._id || product.id;
-      if (!productId) return;
+
       if (isInWishlist) {
         const removed = await removeFromWishlist(productId);
         if (removed) toast.success('Removed from wishlist');
@@ -62,6 +73,7 @@ export default function WishlistButton({
         }
       }
     } catch (error) {
+      logger.error('[WISHLIST_BUTTON] Toggle failed:', error?.message || error);
       toast.error('Failed to update wishlist');
     } finally {
       setIsLoading(false);

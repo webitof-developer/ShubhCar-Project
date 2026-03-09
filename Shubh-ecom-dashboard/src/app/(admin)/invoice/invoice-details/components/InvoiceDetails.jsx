@@ -6,12 +6,13 @@ import { invoiceAPI } from '@/helpers/invoiceApi'
 import { orderAPI } from '@/helpers/orderApi'
 import { settingsAPI } from '@/helpers/settingsApi'
 import { useSession } from 'next-auth/react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Alert, Col, Row, Spinner } from 'react-bootstrap'
 
 const InvoiceDetails = () => {
   const { data: session } = useSession()
+  const router = useRouter()
   const searchParams = useSearchParams()
   const recordId = searchParams.get('id')
   const action = String(searchParams.get('action') || '').toLowerCase()
@@ -78,12 +79,15 @@ const InvoiceDetails = () => {
 
   const adaptedOrder = {
     _id: invoice._id,
+    type: invoice.type,
+    invoiceNumber: invoice.invoiceNumber,
     orderNumber: invoice.orderSnapshot?.orderNumber || invoice.invoiceNumber || invoice._id,
+    relatedInvoiceNumber: invoice.relatedInvoiceId?.invoiceNumber || invoice.originalInvoiceNumber || '',
     placedAt: invoice.orderSnapshot?.placedAt || invoice.issuedAt || invoice.createdAt,
     createdAt: invoice.createdAt,
     paymentMethod: invoice.orderSnapshot?.paymentMethod || '-',
     paymentStatus: invoice.paymentStatus || '-',
-    taxableAmount: Number(invoice.totals?.subtotal || 0),
+    subtotal: Number(invoice.totals?.subtotal || 0),
     discountAmount: Number(invoice.totals?.discountTotal || 0),
     taxAmount: Number(invoice.totals?.taxTotal || 0),
     shippingFee: Number(invoice.totals?.shippingFee || 0),
@@ -118,10 +122,14 @@ const InvoiceDetails = () => {
       <Row className="justify-content-center">
         <Col lg={12}>
           {error && <Alert variant="danger">{error}</Alert>}
-          <div className="d-flex justify-content-end gap-2 mb-3 d-print-none">
-            <button className="btn btn-outline-primary btn-sm" onClick={() => window.open(`/invoice/invoice-details?id=${recordId}`, '_blank')}>Open in new tab</button>
-            <button className="btn btn-outline-secondary btn-sm" onClick={() => window.print()}>Print</button>
-            <button className="btn btn-primary btn-sm" onClick={() => window.print()}>Download</button>
+          <div className="d-flex justify-content-between align-items-center gap-2 mb-3 d-print-none">
+            <button className="btn btn-outline-secondary btn-sm" onClick={() => router.push('/invoice/invoice-list')}>
+              Back
+            </button>
+            <div className="d-flex gap-2">
+              <button className="btn btn-outline-secondary btn-sm" onClick={() => window.print()}>Print</button>
+              <button className="btn btn-primary btn-sm" onClick={() => window.print()}>Download</button>
+            </div>
           </div>
           <InvoiceShell>
             <InvoiceTemplate

@@ -10,8 +10,21 @@
  */
 export const InvoiceShell = ({ children, className = '' }) => {
   return (
-    <div className="bg-secondary/10 p-4 print:bg-transparent print:p-0 overflow-hidden">
-      <div className={`max-w-[760px] mx-auto bg-white shadow-lg print:shadow-none print:max-w-none ${className}`}>
+    <div className={`invoice-shell ${className}`} style={{ background: 'rgba(148, 163, 184, 0.1)', padding: '16px', overflow: 'hidden' }}>
+      <style>{`
+        @media print {
+          .invoice-shell {
+            padding: 0 !important;
+            background: transparent !important;
+          }
+          .invoice-shell__page {
+            max-width: none !important;
+            width: 100% !important;
+            box-shadow: none !important;
+          }
+        }
+      `}</style>
+      <div className="invoice-shell__page" style={{ maxWidth: '760px', margin: '0 auto', background: '#ffffff', boxShadow: '0 6px 20px rgba(15, 23, 42, 0.08)' }}>
         {children}
       </div>
     </div>

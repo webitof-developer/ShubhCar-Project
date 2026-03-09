@@ -77,6 +77,9 @@ export function OrderRow({ order, accessToken }) {
     paymentMethodNormalized.includes('cod') ||
     paymentMethodNormalized.includes('cash');
   const isRazorpayOrder = paymentMethodNormalized.includes('razor');
+  const hasCapturedPayment = ['paid', 'partially_paid', 'refunded'].includes(
+    String(displayOrder?.paymentStatus || '').toLowerCase(),
+  );
   const normalizedPaymentStatus =
     displayOrder?.orderStatus === 'cancelled' &&
     displayOrder?.paymentStatus === 'pending'
@@ -504,6 +507,11 @@ export function OrderRow({ order, accessToken }) {
                       <p className='text-[11px] text-muted-foreground'>
                         This order has been {displayOrder?.orderStatus}. Please
                         contact support if you need assistance.
+                      </p>
+                      <p className='text-[11px] text-muted-foreground mt-2'>
+                        {hasCapturedPayment
+                          ? 'Any credit note issued for this order is an accounting document. Refund settlement is tracked separately and may take 5-7 business days.'
+                          : 'This order was cancelled before payment capture. No refund is pending.'}
                       </p>
                       {displayOrder?.orderStatus === 'cancelled' &&
                         isRazorpayOrder && (

@@ -61,8 +61,7 @@ export const WishlistProvider = ({ children }) => {
       }
       setItems(normalized);
     } catch (error) {
-      logger.error('[WISHLIST_CONTEXT] Failed to load wishlist:', error);
-      setItems([]);
+      logger.error('[WISHLIST_CONTEXT] Failed to load wishlist:', error?.message || error);
     } finally {
       setLoading(false);
     }
@@ -86,7 +85,7 @@ export const WishlistProvider = ({ children }) => {
     }
 
     try {
-      const created = await wishlistService.addToWishlist(productId, accessToken);
+      const created = await wishlistService.addToWishlist(productId, accessToken || null);
       if (created?.product) {
         const next = normalizeProduct(created.product);
         setItems(prev => {
@@ -98,7 +97,7 @@ export const WishlistProvider = ({ children }) => {
       }
       return true;
     } catch (error) {
-      logger.error('[WISHLIST_CONTEXT] Add failed:', error);
+      logger.error('[WISHLIST_CONTEXT] Add failed:', error?.message || error);
       return false;
     }
   }, [accessToken, isAuthenticated, loadWishlist, normalizeProduct]);
@@ -110,11 +109,11 @@ export const WishlistProvider = ({ children }) => {
       return true;
     }
     try {
-      await wishlistService.removeFromWishlist(productId, accessToken);
+      await wishlistService.removeFromWishlist(productId, accessToken || null);
       setItems(prev => prev.filter(item => (item._id || item.id) !== productId));
       return true;
     } catch (error) {
-      logger.error('[WISHLIST_CONTEXT] Remove failed:', error);
+      logger.error('[WISHLIST_CONTEXT] Remove failed:', error?.message || error);
       return false;
     }
   }, [accessToken, isAuthenticated]);
@@ -126,9 +125,9 @@ export const WishlistProvider = ({ children }) => {
   const clearWishlist = useCallback(async () => {
     if (isAuthenticated) {
       try {
-        await wishlistService.clearWishlist(accessToken);
+        await wishlistService.clearWishlist(accessToken || null);
       } catch (error) {
-        logger.error('[WISHLIST_CONTEXT] Clear failed:', error);
+        logger.error('[WISHLIST_CONTEXT] Clear failed:', error?.message || error);
         return false;
       }
     }

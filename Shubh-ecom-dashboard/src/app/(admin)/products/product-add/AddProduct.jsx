@@ -15,8 +15,9 @@ import { API_BASE_URL, API_ORIGIN } from '@/helpers/apiBase'
 import { settingsAPI } from '@/helpers/settingsApi'
 import MediaPickerModal from '@/components/media/MediaPickerModal'
 import Image from 'next/image'
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+const MAX_IMAGE_BYTES = 2 * 1024 * 1024
 const MAX_IMAGE_COUNT = 5
+const WEBP_QUALITY = 0.82
 const toLocalDatetimeInput = (value) => {
   if (!value) return ''
   const date = new Date(value)
@@ -563,18 +564,50 @@ const AddProduct = () => {
     return url.startsWith('http') ? url : `${API_ORIGIN}${url}`
   }
 
-  const handleImageSelection = (event) => {
+  const convertImageToWebp = async (file) => {
+    if (!file || file.type === 'image/webp') return file
+    if (typeof window === 'undefined' || typeof createImageBitmap !== 'function') return file
+    try {
+      const bitmap = await createImageBitmap(file)
+      const canvas = document.createElement('canvas')
+      canvas.width = bitmap.width
+      canvas.height = bitmap.height
+      const context = canvas.getContext('2d')
+      if (!context) return file
+      context.drawImage(bitmap, 0, 0)
+      if (typeof bitmap.close === 'function') {
+        bitmap.close()
+      }
+      const webpBlob = await new Promise((resolve) => {
+        canvas.toBlob((blob) => resolve(blob), 'image/webp', WEBP_QUALITY)
+      })
+      if (!webpBlob) return file
+      const baseName = file.name.replace(/\.[^/.]+$/, '')
+      return new File([webpBlob], `${baseName}.webp`, { type: 'image/webp' })
+    } catch {
+      return file
+    }
+  }
+
+  const handleImageSelection = async (event) => {
     const files = Array.from(event.target.files || [])
     if (!files.length) return
 
     const tooLarge = files.filter((file) => file.size > MAX_IMAGE_BYTES)
     if (tooLarge.length) {
-      const message = `${tooLarge.length} file(s) exceed the 5 MB limit.`
+      const message = `${tooLarge.length} file(s) exceed the 2 MB limit.`
       setError(message)
       toast.error(message)
     }
 
     const validFiles = files.filter((file) => file.size <= MAX_IMAGE_BYTES)
+    const convertedFiles = await Promise.all(validFiles.map((file) => convertImageToWebp(file)))
+    const sizeSafeFiles = convertedFiles.filter((file) => file.size <= MAX_IMAGE_BYTES)
+    if (sizeSafeFiles.length < convertedFiles.length) {
+      const message = 'Some converted images exceed the 2 MB limit and were skipped.'
+      setError(message)
+      toast.error(message)
+    }
     const existingCount = safeExistingImages.length + selectedImages.length
     const availableSlots = MAX_IMAGE_COUNT - existingCount
 
@@ -586,12 +619,12 @@ const AddProduct = () => {
       return
     }
 
-    let accepted = validFiles
-    if (validFiles.length > availableSlots) {
+    let accepted = sizeSafeFiles
+    if (sizeSafeFiles.length > availableSlots) {
       const message = `You can upload only ${availableSlots} more image(s).`
       setError(message)
       toast.error(message)
-      accepted = validFiles.slice(0, availableSlots)
+      accepted = sizeSafeFiles.slice(0, availableSlots)
     }
 
     if (accepted.length) {
@@ -599,6 +632,33 @@ const AddProduct = () => {
     }
 
     event.target.value = ''
+  }
+
+  const removeExistingImage = (imageId) => {
+    if (!imageId) return
+    setImagesToDelete((prev) => (prev.includes(imageId) ? prev : [...prev, imageId]))
+    setExistingImages((prev) => {
+      const current = Array.isArray(prev) ? prev : []
+      const next = current.filter((img) => img._id !== imageId)
+      if (featuredImageId === imageId) {
+        setFeaturedImageId(next[0]?._id || null)
+      }
+      return next
+    })
+  }
+
+  const removeSelectedImage = (indexToRemove) => {
+    setSelectedImages((prev) => {
+      const next = prev.filter((_, idx) => idx !== indexToRemove)
+      if (!featuredImageId) {
+        setFeaturedNewIndex((current) => {
+          if (indexToRemove === current) return 0
+          if (indexToRemove < current) return Math.max(0, current - 1)
+          return current >= next.length ? 0 : current
+        })
+      }
+      return next
+    })
   }
 
   const saveCompatibility = async (targetId, token) => {
@@ -784,7 +844,11 @@ const AddProduct = () => {
       if (selectedImages.length > 0) {
         try {
           const formDataUpload = new FormData()
-          selectedImages.forEach(file => {
+          const uploadQueue =
+            !featuredImageId && selectedImages.length > 1 && featuredNewIndex > 0
+              ? [selectedImages[featuredNewIndex], ...selectedImages.filter((_, index) => index !== featuredNewIndex)]
+              : selectedImages
+          uploadQueue.forEach(file => {
             formDataUpload.append('images', file)
           })
 
@@ -942,9 +1006,10 @@ const AddProduct = () => {
         })
       )
 
-      const validFiles = files.filter((file) => file.size <= MAX_IMAGE_BYTES)
-      if (validFiles.length < files.length) {
-        toast.error('Some images exceed the size limit and were skipped.')
+      const convertedFiles = await Promise.all(files.map((file) => convertImageToWebp(file)))
+      const validFiles = convertedFiles.filter((file) => file.size <= MAX_IMAGE_BYTES)
+      if (validFiles.length < convertedFiles.length) {
+        toast.error('Some images exceed the 2 MB limit and were skipped.')
       }
 
       setSelectedImages((prev) => [...prev, ...validFiles])
@@ -958,6 +1023,35 @@ const AddProduct = () => {
     ? safeExistingImages.find((img) => img._id === featuredImageId)
     : null
   const featuredNewImage = selectedImages[featuredNewIndex]
+
+  const clearFeaturedImage = () => {
+    if (featuredExistingImage?._id) {
+      const nextExisting = safeExistingImages.find((img) => img._id !== featuredExistingImage._id)
+      if (nextExisting?._id) {
+        setFeaturedImageId(nextExisting._id)
+        setFeaturedNewIndex(0)
+        return
+      }
+      if (selectedImages.length > 0) {
+        setFeaturedImageId(null)
+        setFeaturedNewIndex(0)
+        return
+      }
+      setFeaturedImageId(null)
+      return
+    }
+    if (featuredNewImage) {
+      if (safeExistingImages.length > 0) {
+        setFeaturedImageId(safeExistingImages[0]._id)
+        setFeaturedNewIndex(0)
+        return
+      }
+      const nextIndex = selectedImages.length > 1
+        ? (featuredNewIndex === 0 ? 1 : 0)
+        : 0
+      setFeaturedNewIndex(nextIndex)
+    }
+  }
 
   return (
     <Col xl={12} lg={12} className="product-editor">
@@ -991,6 +1085,125 @@ const AddProduct = () => {
             </Card>
 
             <Card className="product-editor-card mb-3">
+              <CardHeader className="border-0 pb-0">
+                <div className="d-flex align-items-center justify-content-between">
+                  <CardTitle as={'h4'} className="mb-0 product-editor-title">Product Type</CardTitle>
+                  <div className="btn-group btn-group-sm" role="group" aria-label="Product type">
+                    <button
+                      type="button"
+                      className={`btn ${formData.productType === 'OEM' ? 'btn-primary' : 'btn-outline-secondary'}`}
+                      onClick={() => handleProductTypeChange('OEM')}
+                    >
+                      OEM
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn ${formData.productType === 'OES' ? 'btn-primary' : 'btn-outline-secondary'}`}
+                      onClick={() => handleProductTypeChange('OES')}
+                    >
+                      OES
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn ${formData.productType === 'AFTERMARKET' ? 'btn-primary' : 'btn-outline-secondary'}`}
+                      onClick={() => handleProductTypeChange('AFTERMARKET')}
+                    >
+                      Aftermarket
+                    </button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardBody>
+                <Row className="g-3">
+                  {(formData.productType === 'OEM' || formData.productType === 'OES') && (
+                    <>
+                      <Col lg={4} md={6}>
+                        <label className="form-label">Vehicle Brand</label>
+                        <select
+                          className="form-select product-field"
+                          name="vehicleBrand"
+                          value={formData.vehicleBrand}
+                          onChange={handleInputChange}
+                          disabled={loadingVehicleBrands}
+                          required
+                        >
+                          <option value="">
+                            {loadingVehicleBrands ? 'Loading vehicle brands...' : 'Select vehicle brand'}
+                          </option>
+                          {vehicleBrands.map((brand) => (
+                            <option key={brand._id} value={brand.name}>
+                              {brand.name}
+                            </option>
+                          ))}
+                        </select>
+                      </Col>
+                      {formData.productType === 'OEM' && (
+                        <Col lg={4} md={6}>
+                          <label className="form-label">OEM Number</label>
+                          <input
+                            type="text"
+                            name="oemNumber"
+                            className="form-control product-field"
+                            placeholder="OEM Number"
+                            value={formData.oemNumber}
+                            onChange={handleInputChange}
+                            required
+                          />
+                        </Col>
+                      )}
+                      {formData.productType === 'OES' && (
+                        <Col lg={4} md={6}>
+                          <label className="form-label">OES Number</label>
+                          <input
+                            type="text"
+                            name="oesNumber"
+                            className="form-control product-field"
+                            placeholder="OES Number"
+                            value={formData.oesNumber}
+                            onChange={handleInputChange}
+                            required
+                          />
+                        </Col>
+                      )}
+                    </>
+                  )}
+                  {formData.productType === 'AFTERMARKET' && (
+                    <>
+                      <Col lg={4} md={6}>
+                        <label className="form-label">Manufacturer Brand</label>
+                        <select
+                          className="form-select product-field"
+                          name="manufacturerBrand"
+                          value={formData.manufacturerBrand}
+                          onChange={handleInputChange}
+                          required
+                        >
+                          <option value="">Select manufacturer</option>
+                          {manufacturerBrands.map((brand) => (
+                            <option key={brand._id} value={brand.name}>
+                              {brand.name}
+                            </option>
+                          ))}
+                        </select>
+                      </Col>
+                      <Col lg={4} md={6}>
+                        <label className="form-label">BPC</label>
+                        <input
+                          type="text"
+                          name="hlaapNo"
+                          className="form-control product-field"
+                          placeholder="BPC"
+                          value={formData.hlaapNo}
+                          onChange={handleInputChange}
+                        />
+                      </Col>
+                    </>
+                  )}
+                </Row>
+              </CardBody>
+            </Card>
+
+            <Card className="product-editor-card mb-3">
               <CardBody>
                 <label className="form-label fw-semibold">Short Description</label>
                 <textarea
@@ -1020,29 +1233,6 @@ const AddProduct = () => {
               <CardHeader className="border-0 pb-0">
                 <div className="d-flex align-items-center justify-content-between">
                   <CardTitle as={'h4'} className="mb-0 product-editor-title">Product Data</CardTitle>
-                  <div className="btn-group btn-group-sm" role="group" aria-label="Product type">
-                    <button
-                      type="button"
-                      className={`btn ${formData.productType === 'OEM' ? 'btn-primary' : 'btn-outline-secondary'}`}
-                      onClick={() => handleProductTypeChange('OEM')}
-                    >
-                      OEM
-                    </button>
-                    <button
-                      type="button"
-                      className={`btn ${formData.productType === 'OES' ? 'btn-primary' : 'btn-outline-secondary'}`}
-                      onClick={() => handleProductTypeChange('OES')}
-                    >
-                      OES
-                    </button>
-                    <button
-                      type="button"
-                      className={`btn ${formData.productType === 'AFTERMARKET' ? 'btn-primary' : 'btn-outline-secondary'}`}
-                      onClick={() => handleProductTypeChange('AFTERMARKET')}
-                    >
-                      Aftermarket
-                    </button>
-                  </div>
                 </div>
               </CardHeader>
               <CardBody>
@@ -1090,25 +1280,6 @@ const AddProduct = () => {
                       ))}
                     </select>
                   </Col>
-                  {formData.productType === 'AFTERMARKET' && (
-                    <Col lg={3} md={6}>
-                      <label className="form-label">Manufacturer Brand</label>
-                      <select
-                        className="form-select product-field"
-                        name="manufacturerBrand"
-                        value={formData.manufacturerBrand}
-                        onChange={handleInputChange}
-                        required
-                      >
-                        <option value="">Select manufacturer</option>
-                        {manufacturerBrands.map((brand) => (
-                          <option key={brand._id} value={brand.name}>
-                            {brand.name}
-                          </option>
-                        ))}
-                      </select>
-                    </Col>
-                  )}
                   <Col lg={3} md={6}>
                     <label className="form-label">SKU</label>
                     <input
@@ -1147,59 +1318,6 @@ const AddProduct = () => {
                       </small>
                     )}
                   </Col>
-                  {(formData.productType === 'OEM' || formData.productType === 'OES') && (
-                    <>
-                      <Col lg={3} md={6}>
-                        <label className="form-label">Vehicle Brand</label>
-                        <select
-                          className="form-select product-field"
-                          name="vehicleBrand"
-                          value={formData.vehicleBrand}
-                          onChange={handleInputChange}
-                          disabled={loadingVehicleBrands}
-                          required
-                        >
-                          <option value="">
-                            {loadingVehicleBrands ? 'Loading vehicle brands...' : 'Select vehicle brand'}
-                          </option>
-                          {vehicleBrands.map((brand) => (
-                            <option key={brand._id} value={brand.name}>
-                              {brand.name}
-                            </option>
-                          ))}
-                        </select>
-                      </Col>
-                      {formData.productType === 'OEM' && (
-                        <Col lg={3} md={6}>
-                          <label className="form-label">OEM Number</label>
-                          <input
-                            type="text"
-                            name="oemNumber"
-                            className="form-control product-field"
-                            placeholder="OEM Number"
-                            value={formData.oemNumber}
-                            onChange={handleInputChange}
-                            required
-                          />
-                        </Col>
-                      )}
-                      {formData.productType === 'OES' && (
-                        <Col lg={3} md={6}>
-                          <label className="form-label">OES Number</label>
-                          <input
-                            type="text"
-                            name="oesNumber"
-                            className="form-control product-field"
-                            placeholder="OES Number"
-                            value={formData.oesNumber}
-                            onChange={handleInputChange}
-                            required
-                          />
-                        </Col>
-                      )}
-                    </>
-                  )}
-
                   <Col lg={3} md={6}>
                     <label className="form-label">Select Tax</label>
                     <select
@@ -1215,19 +1333,6 @@ const AddProduct = () => {
                       ))}
                     </select>
                   </Col>
-                  {formData.productType === 'AFTERMARKET' && (
-                    <Col lg={3} md={6}>
-                      <label className="form-label">HLAAP No.</label>
-                      <input
-                        type="text"
-                        name="hlaapNo"
-                        className="form-control product-field"
-                        placeholder="HLAAP Number"
-                        value={formData.hlaapNo}
-                        onChange={handleInputChange}
-                      />
-                    </Col>
-                  )}
                   <Col lg={3} md={6}>
                     <label className="form-label">Quantity (Stock)</label>
                     <input
@@ -1447,25 +1552,59 @@ const AddProduct = () => {
                 </div>
               </div>
 
-              <div className="product-image-drop mb-3">
+              <div className="product-image-drop mb-3" style={{ position: 'relative' }}>
                 {featuredExistingImage ? (
-                  <Image
-                    src={getImageSrc(featuredExistingImage.url)}
-                    alt="Featured"
-                    width={720}
-                    height={720}
-                    unoptimized
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '14px' }}
-                  />
+                  <>
+                    <div className="featured-image-frame">
+                      <Image
+                        src={getImageSrc(featuredExistingImage.url)}
+                        alt="Featured"
+                        width={720}
+                        height={720}
+                        unoptimized
+                        style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '14px', background: '#fff', padding: '8px' }}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-light border border-primary-subtle text-primary d-inline-flex align-items-center justify-content-center p-0 shadow-sm"
+                      style={{ position: 'absolute', top: 10, right: 10, width: 34, height: 34, borderRadius: '999px', zIndex: 2 }}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        clearFeaturedImage()
+                      }}
+                      title="Switch featured image"
+                      aria-label="Change featured selection"
+                    >
+                      <IconifyIcon icon="bx:refresh" className="fs-4" />
+                    </button>
+                  </>
                 ) : featuredNewImage ? (
-                  <Image
-                    src={URL.createObjectURL(featuredNewImage)}
-                    alt="Featured"
-                    width={720}
-                    height={720}
-                    unoptimized
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '14px' }}
-                  />
+                  <>
+                    <div className="featured-image-frame">
+                      <Image
+                        src={URL.createObjectURL(featuredNewImage)}
+                        alt="Featured"
+                        width={720}
+                        height={720}
+                        unoptimized
+                        style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '14px', background: '#fff', padding: '8px' }}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-light border border-primary-subtle text-primary d-inline-flex align-items-center justify-content-center p-0 shadow-sm"
+                      style={{ position: 'absolute', top: 10, right: 10, width: 34, height: 34, borderRadius: '999px', zIndex: 2 }}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        clearFeaturedImage()
+                      }}
+                      title="Switch featured image"
+                      aria-label="Change featured selection"
+                    >
+                      <IconifyIcon icon="bx:refresh" className="fs-4" />
+                    </button>
+                  </>
                 ) : (
                   <div>
                     <IconifyIcon icon="solar:gallery-broken" className="fs-48 mb-2" />
@@ -1479,8 +1618,19 @@ const AddProduct = () => {
                 <span className="text-muted small">Gallery images</span>
                 <span className="text-muted small">{safeExistingImages.length + selectedImages.length}/5</span>
               </div>
+              <div className="text-muted small mb-2">Only image files up to 2 MB are allowed.</div>
 
-              <div className="d-flex flex-wrap gap-2" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+              <div
+                className="product-image-grid"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 72px))',
+                  gap: '8px',
+                  maxHeight: '220px',
+                  overflowY: 'auto',
+                  alignContent: 'flex-start',
+                }}
+              >
                 {safeExistingImages.length === 0 && selectedImages.length === 0 && (
                   <div className="text-muted small">No gallery images yet</div>
                 )}
@@ -1489,29 +1639,32 @@ const AddProduct = () => {
                   <div
                     key={image._id}
                     className={`product-image-thumb ${featuredImageId === image._id ? 'active' : ''}`}
+                    style={{ position: 'relative', width: 72, height: 72, overflow: 'hidden', borderRadius: 14 }}
                     onClick={() => {
                       setFeaturedImageId(image._id)
                       setFeaturedNewIndex(0)
                     }}
                   >
-                    <Image src={getImageSrc(image.url)} alt={image.altText || 'Product'} width={140} height={140} unoptimized />
+                    <div className="product-image-thumb-frame">
+                      <Image
+                        src={getImageSrc(image.url)}
+                        alt={image.altText || 'Product'}
+                        width={140}
+                        height={140}
+                        unoptimized
+                        style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#fff', padding: '4px' }}
+                      />
+                    </div>
                     <button
                       type="button"
-                      className="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 p-0"
-                      style={{ width: 20, height: 20, borderRadius: '50%' }}
+                      className="btn btn-danger d-inline-flex align-items-center justify-content-center p-0 shadow-sm"
+                      style={{ position: 'absolute', top: 6, right: 6, width: 22, height: 22, borderRadius: '999px', zIndex: 2 }}
                       onClick={(e) => {
                         e.stopPropagation()
-                        setImagesToDelete(prev => [...prev, image._id])
-                        setExistingImages(prev =>
-                          (Array.isArray(prev) ? prev : []).filter((img) => img._id !== image._id)
-                        )
-                        if (featuredImageId === image._id) {
-                          const remaining = safeExistingImages.filter((img) => img._id !== image._id)
-                          setFeaturedImageId(remaining[0]?._id || null)
-                        }
+                        removeExistingImage(image._id)
                       }}
                     >
-                      <IconifyIcon icon="solar:close-circle-bold" className="fs-12" />
+                      <IconifyIcon icon="solar:close-circle-bold" className="fs-14" />
                     </button>
                   </div>
                 ))}
@@ -1520,22 +1673,32 @@ const AddProduct = () => {
                   <div
                     key={`${file.name}-${index}`}
                     className={`product-image-thumb ${!featuredImageId && featuredNewIndex === index ? 'active' : ''}`}
+                    style={{ position: 'relative', width: 72, height: 72, overflow: 'hidden', borderRadius: 14 }}
                     onClick={() => {
                       setFeaturedImageId(null)
                       setFeaturedNewIndex(index)
                     }}
                   >
-                    <Image src={URL.createObjectURL(file)} alt={file.name} width={140} height={140} unoptimized />
+                    <div className="product-image-thumb-frame">
+                      <Image
+                        src={URL.createObjectURL(file)}
+                        alt={file.name}
+                        width={140}
+                        height={140}
+                        unoptimized
+                        style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#fff', padding: '4px' }}
+                      />
+                    </div>
                     <button
                       type="button"
-                      className="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 p-0"
-                      style={{ width: 20, height: 20, borderRadius: '50%' }}
+                      className="btn btn-danger d-inline-flex align-items-center justify-content-center p-0 shadow-sm"
+                      style={{ position: 'absolute', top: 6, right: 6, width: 22, height: 22, borderRadius: '999px', zIndex: 2 }}
                       onClick={(e) => {
                         e.stopPropagation()
-                        setSelectedImages(prev => prev.filter((_, i) => i !== index))
+                        removeSelectedImage(index)
                       }}
                     >
-                      <IconifyIcon icon="solar:close-circle-bold" className="fs-12" />
+                      <IconifyIcon icon="solar:close-circle-bold" className="fs-14" />
                     </button>
                   </div>
                 ))}

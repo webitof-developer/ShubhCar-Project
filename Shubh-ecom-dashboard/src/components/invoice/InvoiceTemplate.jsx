@@ -7,6 +7,10 @@ import { formatTaxBreakdown } from '@/services/taxDisplayService';
 
 const InvoiceTemplate = forwardRef(({ order, items = [], address, settings = {} }, ref) => {
   if (!order) return null;
+  const isCreditNote = order.type === 'credit_note';
+  const documentTitle = isCreditNote ? 'CREDIT NOTE' : 'TAX INVOICE';
+  const documentNumberLabel = isCreditNote ? 'Credit Note No' : 'Invoice No';
+  const documentDateLabel = isCreditNote ? 'Credit Note Date' : 'Invoice Date';
 
   // Use settings with fallbacks
   const companyName = settings.invoice_company_name || `India Pvt Ltd`;
@@ -19,8 +23,17 @@ const InvoiceTemplate = forwardRef(({ order, items = [], address, settings = {} 
   const companyEmail = settings.invoice_company_email || 'support@example.com';
   const companyPhone = settings.invoice_company_phone || '1800123456';
   const companyWebsite = settings.invoice_company_website || '';
+  const termsText = String(isCreditNote ? (settings.credit_note_terms || settings.invoice_terms || '') : (settings.invoice_terms || '')).trim();
+  const notesText = String(isCreditNote ? (settings.credit_note_notes || settings.invoice_notes || '') : (settings.invoice_notes || '')).trim();
+  const termsLines = termsText
+    ? termsText.split('\n').map((line) => line.trim()).filter(Boolean)
+    : [
+      'Goods once sold will not be taken back or exchanged.',
+      'All disputes are subject to Gurugram jurisdiction.',
+      'This is a computer generated invoice.',
+    ];
 
-  const invoiceNumber = `INV-${order.orderNumber || order._id}`;
+  const invoiceNumber = order.invoiceNumber || `INV-${order.orderNumber || order._id}`;
   const invoiceDateSource = order.placedAt || order.createdAt;
   const invoiceDate = invoiceDateSource ? new Date(invoiceDateSource).toLocaleDateString('en-IN', {
     day: '2-digit',
@@ -28,13 +41,21 @@ const InvoiceTemplate = forwardRef(({ order, items = [], address, settings = {} 
     year: 'numeric',
   }) : 'N/A';
 
-  // Display taxable amount as subtotal for consistency with cart/checkout
-  const subtotal = order.taxableAmount || (Math.max(0, (order.grandTotal || 0) - (order.shippingFee || 0) - (order.taxAmount || 0))) || 0;
+  // Invoice subtotal should use the persisted order subtotal from backend.
+  const subtotal = Number(
+    order.subtotal ??
+    order.taxableAmount ??
+    Math.max(0, (order.grandTotal || 0) - (order.shippingFee || 0) - (order.taxAmount || 0)),
+  ) || 0;
   const discount = order.discountAmount || 0;
   const taxAmount = order.taxAmount || 0;
   const shippingFee = order.shippingFee || 0;
   const grandTotal = order.grandTotal || 0;
   const taxBreakdown = order.taxBreakdown || { cgst: 0, sgst: 0, igst: 0 };
+  const pricesIncludeTax =
+    Math.abs((subtotal - discount + shippingFee) - grandTotal) < 0.01;
+  const subtotalLabel = pricesIncludeTax ? 'Subtotal (Incl. Tax)' : 'Subtotal';
+  const taxLabel = pricesIncludeTax ? 'Included Tax' : 'Tax';
 
   // Use uploaded invoice logo, else fallback
   const logo = settings.invoice_logo_url || '/logodark.png';
@@ -42,13 +63,16 @@ const InvoiceTemplate = forwardRef(({ order, items = [], address, settings = {} 
   // Inline styles for print specific overrides that might conflict with Bootstrap components
   const printStyles = `
     @media print {
-      @page { margin: 10mm; size: A4; }
+      @page { margin: 2mm; size: A4; }
       .print-col-6 { width: 50% !important; float: left; }
       .print-row::after { content: ""; clear: both; display: table; }
-      .print-mb-3 { margin-bottom: 1rem !important; }
+      .print-mb-3 { margin-bottom: 0.75rem !important; }
       .print-pb-2 { padding-bottom: 0.5rem !important; }
-      .print-p-10 { padding: 2rem !important; }
+      .print-p-10 { padding: 0.5rem !important; }
       .print-text-11 { font-size: 11px !important; }
+      .print-compact-box { padding: 0.625rem !important; margin-bottom: 0.75rem !important; }
+      .print-no-break { break-inside: avoid-page; page-break-inside: avoid; }
+      .print-footer-stack { break-inside: avoid-page; page-break-inside: avoid; }
     }
   `;
 
@@ -71,11 +95,14 @@ const InvoiceTemplate = forwardRef(({ order, items = [], address, settings = {} 
           </div>
         </div>
         <div className="text-end print-col-6">
-          <h2 className="fw-bold text-dark mt-2 mb-4" style={{ fontSize: '24px' }}>TAX INVOICE</h2>
+          <h2 className="fw-bold text-dark mt-2 mb-4" style={{ fontSize: '24px' }}>{documentTitle}</h2>
           <div className="small text-muted" style={{ fontSize: '12px' }}>
-            <p className="mb-1">Invoice No: <span className="fw-bold text-dark">{invoiceNumber}</span></p>
-            <p className="mb-1">Invoice Date: <span className="fw-bold text-dark">{invoiceDate}</span></p>
+            <p className="mb-1">{documentNumberLabel}: <span className="fw-bold text-dark">{invoiceNumber}</span></p>
+            <p className="mb-1">{documentDateLabel}: <span className="fw-bold text-dark">{invoiceDate}</span></p>
             <p className="mb-0">Order No: <span className="fw-bold text-dark">{order.orderNumber}</span></p>
+            {isCreditNote && order.relatedInvoiceNumber ? (
+              <p className="mb-0 mt-1">Original Invoice: <span className="fw-bold text-dark">{order.relatedInvoiceNumber}</span></p>
+            ) : null}
           </div>
         </div>
       </div>
@@ -114,12 +141,18 @@ const InvoiceTemplate = forwardRef(({ order, items = [], address, settings = {} 
                 <th className="py-2 px-2 text-muted text-uppercase" style={{ fontSize: '12px', width: '35%' }}>Item Description</th>
                 <th className="py-2 px-2 text-muted text-uppercase text-center" style={{ fontSize: '12px', width: '10%' }}>Qty</th>
                 <th className="py-2 px-2 text-muted text-uppercase text-end" style={{ fontSize: '12px', width: '15%' }}>Unit Price</th>
-                <th className="py-2 px-2 text-muted text-uppercase text-end" style={{ fontSize: '12px', width: '15%' }}>Tax</th>
+                <th className="py-2 px-2 text-muted text-uppercase text-end" style={{ fontSize: '12px', width: '15%' }}>{taxLabel}</th>
                 <th className="py-2 px-2 text-muted text-uppercase text-end" style={{ fontSize: '12px', width: '20%' }}>Amount</th>
               </tr>
             </thead>
             <tbody>
-              {items.map((item, index) => (
+              {items.map((item, index) => {
+                const grossLineAmount = Number(item.price || 0) * Number(item.quantity || 0);
+                const displayLineAmount = pricesIncludeTax
+                  ? grossLineAmount
+                  : Number(item.total || grossLineAmount);
+
+                return (
                 <tr key={item._id || item.id || index} className="border-bottom">
                   <td className="py-2 px-2 text-muted align-middle" style={{ fontSize: '13px' }}>{index + 1}</td>
                   <td className="py-2 px-2 align-middle">
@@ -133,9 +166,10 @@ const InvoiceTemplate = forwardRef(({ order, items = [], address, settings = {} 
                       ({item.taxPercent || 0}%)
                     </span>
                   </td>
-                  <td className="py-2 px-2 text-end fw-medium text-dark text-nowrap align-middle" style={{ fontSize: '13px' }}>{formatPrice(item.total || 0)}</td>
+                  <td className="py-2 px-2 text-end fw-medium text-dark text-nowrap align-middle" style={{ fontSize: '13px' }}>{formatPrice(displayLineAmount)}</td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -145,7 +179,7 @@ const InvoiceTemplate = forwardRef(({ order, items = [], address, settings = {} 
       <div className="d-flex justify-content-end mb-4">
         <div style={{ width: '280px' }}>
           <div className="d-flex justify-content-between py-1 border-bottom" style={{ fontSize: '13px' }}>
-            <span className="text-muted">Subtotal</span>
+            <span className="text-muted">{subtotalLabel}</span>
             <span className="fw-medium text-dark">{formatPrice(subtotal)}</span>
           </div>
           
@@ -158,7 +192,9 @@ const InvoiceTemplate = forwardRef(({ order, items = [], address, settings = {} 
 
           {formatTaxBreakdown(taxBreakdown).map((component) => (
             <div key={component.key} className="d-flex justify-content-between py-1 border-bottom" style={{ fontSize: '13px' }}>
-              <span className="text-muted">{component.label}</span>
+              <span className="text-muted">
+                {pricesIncludeTax ? `Included ${component.label}` : component.label}
+              </span>
               <span className="text-dark">{component.formatted}</span>
             </div>
           ))}
@@ -175,31 +211,46 @@ const InvoiceTemplate = forwardRef(({ order, items = [], address, settings = {} 
         </div>
       </div>
 
-      {/* Footer Info */}
-      <div className="row mt-4 pt-3 border-top print-row">
-        <div className="col-6 print-col-6">
-          <h6 className="text-muted text-uppercase fw-bold mb-2" style={{ fontSize: '11px', letterSpacing: '0.5px' }}>Payment Information</h6>
-          <div className="small text-muted" style={{ fontSize: '12px' }}>
-            <p className="mb-0">Payment Method: <span className="text-dark">{order.paymentMethod}</span></p>
-            <p className="mb-0">Payment Status: <span className="text-success fw-medium">{order.paymentStatus}</span></p>
-          </div>
+      {isCreditNote ? (
+        <div className="mb-4 rounded border border-info-subtle bg-info-subtle px-3 py-2 print-compact-box print-no-break" style={{ fontSize: '12px' }}>
+          <p className="mb-1 fw-semibold text-dark">Credit note information</p>
+          <p className="mb-0 text-muted">
+            This credit note reverses the original invoice for accounting and tax purposes. Refund settlement, if
+            applicable, is tracked separately against the original payment method.
+          </p>
         </div>
-        <div className="col-6 print-col-6">
-          <h6 className="text-muted text-uppercase fw-bold mb-2" style={{ fontSize: '11px', letterSpacing: '0.5px' }}>Terms & Conditions</h6>
-          <div className="text-muted" style={{ fontSize: '10px', lineHeight: '1.5' }}>
-            <p className="mb-0">* Goods once sold will not be taken back or exchanged.</p>
-            <p className="mb-0">* All disputes are subject to Gurugram jurisdiction.</p>
-            <p className="mb-0">* This is a computer generated invoice.</p>
-          </div>
-        </div>
-      </div>
+      ) : null}
 
-      <div className="text-center mt-4 pt-4 border-top">
-        <p className="text-muted mb-1" style={{ fontSize: '12px' }}>Thank you for shopping with {companyName}!</p>
-        <p className="text-muted" style={{ fontSize: '10px' }}>
-          For queries, contact: {companyEmail} | {companyPhone}
-          {companyWebsite && ` | ${companyWebsite}`}
-        </p>
+      {/* Footer Info */}
+      <div className="print-footer-stack">
+        <div className="row mt-4 pt-3 border-top print-row">
+          <div className="col-6 print-col-6">
+            <h6 className="text-muted text-uppercase fw-bold mb-2" style={{ fontSize: '11px', letterSpacing: '0.5px' }}>Payment Information</h6>
+            <div className="small text-muted" style={{ fontSize: '12px' }}>
+              <p className="mb-0">Payment Method: <span className="text-dark">{order.paymentMethod}</span></p>
+              <p className="mb-0">Payment Status: <span className="text-success fw-medium">{order.paymentStatus}</span></p>
+            </div>
+          </div>
+          <div className="col-6 print-col-6">
+            <h6 className="text-muted text-uppercase fw-bold mb-2" style={{ fontSize: '11px', letterSpacing: '0.5px' }}>Terms & Conditions</h6>
+            <div className="text-muted" style={{ fontSize: '10px', lineHeight: '1.5' }}>
+              {termsLines.map((line, idx) => (
+                <p key={`term-${idx}`} className="mb-0">* {line}</p>
+              ))}
+              {notesText && (
+                <p className="mb-0 mt-1"><strong>Note:</strong> {notesText}</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="text-center mt-3 pt-3 border-top">
+          <p className="text-muted mb-1" style={{ fontSize: '12px' }}>Thank you for shopping with {companyName}!</p>
+          <p className="text-muted mb-0" style={{ fontSize: '10px' }}>
+            For queries, contact: {companyEmail} | {companyPhone}
+            {companyWebsite && ` | ${companyWebsite}`}
+          </p>
+        </div>
       </div>
     </div>
   );

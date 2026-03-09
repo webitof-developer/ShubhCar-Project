@@ -13,7 +13,7 @@ import { api } from '@/utils/apiClient';
  * - Place orders (always real - cannot place demo orders)
  * - Fetch user orders (demo/real based on config)
  * - Get order details (demo/real based on config)
- * Requires authentication (access token)
+ * Requires authentication (Bearer token OR auth cookie)
  */
 
 /**
@@ -50,7 +50,7 @@ const logDataSource = (method, isDemo) => {
 
 /**
  * Place an order (ALWAYS REAL - Cannot place demo orders)
- * @param {string} accessToken - Access token
+ * @param {string} accessToken - Access token (optional if auth cookie exists)
  * @param {object} orderData - Order data
  * @param {string} orderData.paymentMethod - "cod" | "online"
  * @param {string} orderData.shippingAddressId - Address ID
@@ -84,7 +84,7 @@ export const placeOrder = async (accessToken, orderData) => {
  * @param {boolean} options.includeItems - Include order items
  * @returns {Promise<Array>} - List of orders
  */
-export const getMyOrders = async (accessToken, { includeItems } = {}) => {
+export const getMyOrders = async (accessToken = null, { includeItems } = {}) => {
   const config = APP_CONFIG.dataSource.orders;
   const { useDemo, useFallback } = getDataSourceConfig(config.source, config.fallback);
   
@@ -97,16 +97,11 @@ export const getMyOrders = async (accessToken, { includeItems } = {}) => {
   // Real mode
   logDataSource('getMyOrders', false);
 
-  if (!accessToken) {
-    logger.warn('[ORDER_SERVICE] Missing access token for getMyOrders');
-    return useFallback ? [...demoOrders] : [];
-  }
-  
   try {
     const params = new URLSearchParams();
     if (typeof includeItems === 'boolean') params.set('includeItems', String(includeItems));
     const path = params.toString() ? `/orders/my?${params.toString()}` : '/orders/my';
-    const payload = await api.authGet(path, accessToken);
+    const payload = await api.authGet(path, accessToken || null);
     const orders = extractOrdersArray(payload);
     return orders;
   } catch (error) {
@@ -118,19 +113,23 @@ export const getMyOrders = async (accessToken, { includeItems } = {}) => {
       logger.warn('[ORDER_SERVICE] Falling back to demo orders');
       return [...demoOrders];
     }
-    
-    return [];
+
+    if (config.fallback === 'empty') {
+      return [];
+    }
+
+    throw error;
   }
 };
 
 
 /**
  * Get order details by ID (DEMO/REAL based on config)
- * @param {string} accessToken - Access token
+ * @param {string} accessToken - Access token (optional if auth cookie exists)
  * @param {string} orderId - Order ID
  * @returns {Promise<object|null>} - Order details or null
  */
-export const getOrder = async (accessToken, orderId) => {
+export const getOrder = async (accessToken = null, orderId) => {
   const config = APP_CONFIG.dataSource.orders;
   const { useDemo, useFallback } = getDataSourceConfig(config.source, config.fallback);
   
@@ -144,16 +143,8 @@ export const getOrder = async (accessToken, orderId) => {
   // Real mode
   logDataSource('getOrder', false);
 
-  if (!accessToken) {
-    logger.warn('[ORDER_SERVICE] Missing access token for getOrder');
-    if (useFallback) {
-      return demoOrders.find(o => o._id === orderId || o.orderNumber === orderId) || null;
-    }
-    return null;
-  }
-  
   try {
-    return await api.authGet(`/orders/${orderId}`, accessToken);
+    return await api.authGet(`/orders/${orderId}`, accessToken || null);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     logger.error(`[ORDER_SERVICE] Fetch order error: ${message}`);
@@ -164,8 +155,12 @@ export const getOrder = async (accessToken, orderId) => {
       const order = demoOrders.find(o => o._id === orderId || o.orderNumber === orderId);
       return order || null;
     }
-    
-    return null;
+
+    if (config.fallback === 'empty') {
+      return null;
+    }
+
+    throw error;
   }
 };
 

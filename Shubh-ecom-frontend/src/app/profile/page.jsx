@@ -53,7 +53,7 @@ const Profile = () => {
       }
       try {
         setLoading(true);
-        const profile = await getCurrentUser(accessToken);
+        const profile = await getCurrentUser(accessToken || null);
         setProfileData(profile);
       } catch (error) {
         logger.error('[PROFILE_PAGE] Failed to load profile:', error);
@@ -71,9 +71,9 @@ const Profile = () => {
       if (!isAuthenticated) return;
       try {
         const [orders, wishlist, addresses] = await Promise.all([
-          getMyOrders(accessToken).catch(() => []),
-          getWishlist(accessToken).catch(() => []),
-          getUserAddresses(accessToken).catch(() => []),
+          getMyOrders(accessToken || null).catch(() => []),
+          getWishlist(accessToken || null).catch(() => []),
+          getUserAddresses(accessToken || null).catch(() => []),
         ]);
         setStats({
           orders: Array.isArray(orders) ? orders.length : 0,
@@ -92,7 +92,7 @@ const Profile = () => {
   const handleProfileUpdate = async () => {
     try {
       setLoading(true);
-      const profile = await getCurrentUser(accessToken);
+      const profile = await getCurrentUser(accessToken || null);
       setProfileData(profile);
     } catch (error) {
       logger.error('[PROFILE_PAGE] Refetch failed:', error);

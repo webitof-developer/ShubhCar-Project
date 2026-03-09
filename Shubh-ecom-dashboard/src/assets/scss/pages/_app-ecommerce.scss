@@ -157,6 +157,7 @@
           border: 1px dashed rgba(15, 23, 42, 0.2);
           background: linear-gradient(135deg, rgba(240, 244, 255, 0.9), rgba(247, 248, 255, 0.6));
           min-height: 240px;
+          position: relative;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -171,6 +172,17 @@
           @include media-breakpoint-down(md) {
                min-height: 160px;
           }
+     }
+
+     .featured-image-frame {
+          width: 100%;
+          aspect-ratio: 1 / 1;
+          max-height: 360px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 14px;
+          background: #fff;
      }
 
      .product-image-thumb {
@@ -190,6 +202,23 @@
           }
      }
 
+     .product-image-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(72px, 72px));
+          gap: 8px;
+          max-height: 220px;
+          overflow-y: auto;
+          align-content: flex-start;
+
+          @include media-breakpoint-down(md) {
+               grid-template-columns: repeat(auto-fill, minmax(60px, 60px));
+          }
+
+          .text-muted {
+               grid-column: 1 / -1;
+          }
+     }
+
      .product-image-thumb.active {
           border-color: var(--bs-primary);
           box-shadow: 0 6px 16px rgba(37, 99, 235, 0.18);
@@ -198,7 +227,37 @@
      .product-image-thumb img {
           width: 100%;
           height: 100%;
-          object-fit: cover;
+          object-fit: contain;
+     }
+
+     .product-image-thumb-frame {
+          width: 100%;
+          height: 100%;
+          background: #fff;
+          border: 1px solid rgba(15, 23, 42, 0.08);
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+     }
+
+     .product-image-remove-btn {
+          position: absolute;
+          top: 6px;
+          right: 6px;
+          width: 22px;
+          height: 22px;
+          border: 0;
+          border-radius: 50%;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          color: #fff;
+          background: rgba(220, 53, 69, 0.95);
+          line-height: 1;
+          z-index: 2;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
      }
 }
 

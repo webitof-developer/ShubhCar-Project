@@ -22,9 +22,9 @@ export const OrdersSection = () => {
 
   useEffect(() => {
     const loadOrders = async () => {
-      if (!isAuthenticated || !accessToken) return;
+      if (!isAuthenticated) return;
       try {
-        const data = await getMyOrders(accessToken, { includeItems: true });
+        const data = await getMyOrders(accessToken || null, { includeItems: true });
         setOrders(Array.isArray(data) ? data : []);
       } catch (error) {
         logger.error('[PROFILE_ORDERS] Failed to load orders:', error);

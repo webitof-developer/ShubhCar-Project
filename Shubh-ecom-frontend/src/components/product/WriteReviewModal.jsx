@@ -33,13 +33,13 @@ export const WriteReviewModal = ({ productId, productName, onSubmitted }) => {
       toast.error('Product not found');
       return;
     }
-    if (!isAuthenticated || !accessToken) {
+    if (!isAuthenticated) {
       toast.error('Please login to submit a review');
       return;
     }
     try {
       setSubmitting(true);
-      await createReview(accessToken, {
+      await createReview(accessToken || null, {
         productId,
         rating,
         title: title?.trim(),

@@ -17,6 +17,7 @@ import { useSiteConfig } from '@/hooks/useSiteConfig';
 import { searchProducts } from '@/services/productService';
 import { getDisplayPrice, formatPrice } from '@/services/pricingService';
 import { getProductIdentifier, getProductTypeLabel, isOemProduct, isVehicleBasedProduct } from '@/utils/productType';
+import { resolveProductImages } from '@/utils/media';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -45,6 +46,7 @@ const SearchResultsDropdown = ({ results, isLoading, isVisible, onClose, query, 
               // Fallback for MRP/Original price logic
               const retailMrp = Number(product?.retailPrice?.mrp || product?.mrp || 0);
               const showOriginalPrice = originalPrice || (retailMrp > price ? retailMrp : null);
+              const imageSrc = resolveProductImages(product?.images || [])[0] || '/placeholder.png';
 
               return (
                 <Link
@@ -55,7 +57,7 @@ const SearchResultsDropdown = ({ results, isLoading, isVisible, onClose, query, 
                 >
                   <div className="relative h-20 w-20 shrink-0 rounded-lg overflow-hidden bg-white border border-border/40 shadow-sm group-hover:shadow-md transition-shadow">
                     <Image
-                      src={product.images?.[0]?.url || '/placeholder.png'}
+                      src={imageSrc}
                       alt={product.name}
                       fill
                       className="object-contain p-2"

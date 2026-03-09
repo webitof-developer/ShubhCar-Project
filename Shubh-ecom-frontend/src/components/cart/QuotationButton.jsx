@@ -4,17 +4,30 @@ import { Loader2, Download } from 'lucide-react';
 import QuotationTemplate from '@/components/invoice/QuotationTemplate';
 import { Button } from '@/components/ui/button';
 import { logger } from '@/utils/logger';
+import { toast } from 'sonner';
 
 const QuotationButton = ({ cartItems, summary, profile }) => {
   const componentRef = useRef();
   const [isGenerating, setIsGenerating] = useState(false);
+  const withTimeout = (promise, timeoutMs, label) =>
+    Promise.race([
+      promise,
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`${label} timed out`)), timeoutMs),
+      ),
+    ]);
+
   const loadHtml2Pdf = async () => {
     if (typeof window === 'undefined') return null;
     if (window.html2pdf) return window.html2pdf;
 
-    await new Promise((resolve, reject) => {
+    await withTimeout(new Promise((resolve, reject) => {
       const existing = document.querySelector('script[data-html2pdf]');
       if (existing) {
+        if (window.html2pdf) {
+          resolve();
+          return;
+        }
         existing.addEventListener('load', resolve, { once: true });
         existing.addEventListener('error', reject, { once: true });
         return;
@@ -27,17 +40,18 @@ const QuotationButton = ({ cartItems, summary, profile }) => {
       script.onload = resolve;
       script.onerror = reject;
       document.body.appendChild(script);
-    });
+    }), 12000, 'Loading PDF library');
 
     return window.html2pdf || null;
   };
 
   const handleDownloadPdf = async () => {
+    let win = null;
     try {
       setIsGenerating(true);
       
       // Open window early to avoid popup blockers and show loading state
-      const win = window.open('', '_blank');
+      win = window.open('', '_blank');
       if (win) {
           win.document.write('<html><head><title>Generating Quotation...</title></head><body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;"><div>Generating PDF...</div></body></html>');
       }
@@ -46,8 +60,12 @@ const QuotationButton = ({ cartItems, summary, profile }) => {
       if (!html2pdf) {
         throw new Error('Unable to load PDF library');
       }
-      
+
       const element = componentRef.current;
+      if (!element) {
+        throw new Error('Quotation content not ready');
+      }
+
       const filename = `Quotation-${new Date().toISOString().split('T')[0]}.pdf`;
       const opt = {
         margin: [10, 10],
@@ -58,11 +76,19 @@ const QuotationButton = ({ cartItems, summary, profile }) => {
       };
 
       // Temporarily make visible for capture
+      const previousDisplay = element.style.display;
       element.style.display = 'block';
-      
-      // Generate Blob URL
-      const pdfBlobUrl = await html2pdf().set(opt).from(element).output('bloburl');
-      element.style.display = 'none';
+      let pdfBlobUrl;
+      try {
+        // Generate Blob URL
+        pdfBlobUrl = await withTimeout(
+          html2pdf().set(opt).from(element).output('bloburl'),
+          20000,
+          'Generating quotation PDF',
+        );
+      } finally {
+        element.style.display = previousDisplay || 'none';
+      }
 
       // Update the opened window with the PDF in an iframe and a custom Download button
       if (win) {
@@ -94,7 +120,10 @@ const QuotationButton = ({ cartItems, summary, profile }) => {
 
     } catch (error) {
       logger.error('Failed to generate PDF:', error);
-      // Optional: Close the window if error occurs
+      if (win && !win.closed) {
+        win.close();
+      }
+      toast.error(error?.message || 'Failed to generate quotation PDF');
     } finally {
       setIsGenerating(false);
     }

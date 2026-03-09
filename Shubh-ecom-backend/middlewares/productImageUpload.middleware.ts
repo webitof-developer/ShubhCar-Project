@@ -39,7 +39,7 @@ const fileFilter = (req: any, file: any, cb: any) => {
 const uploadProductImages = multer({
   storage,
   fileFilter,
-  limits: { files: 5, fileSize: 5 * 1024 * 1024 },
+  limits: { files: 5, fileSize: 2 * 1024 * 1024 },
 });
 
 const validateUploadedProductImages = async (req: any, res: any, next: any) => {

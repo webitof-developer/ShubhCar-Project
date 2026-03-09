@@ -21,7 +21,8 @@ export const SafeImage = ({
     ? unoptimized
     : (typeof currentSrc === 'string' && (
       currentSrc.startsWith('/api/proxy/') ||
-      currentSrc.includes('/api/proxy/')
+      currentSrc.includes('/api/proxy/') ||
+      currentSrc.includes('/uploads/')
     ));
 
   return (

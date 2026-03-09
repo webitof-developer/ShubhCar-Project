@@ -35,7 +35,8 @@ export const logout = async (accessToken, refreshToken) => {
 
 export const getCurrentUser = async (accessToken) => {
   try {
-    return await api.authGet('/users/me', accessToken || null);
+    const data = await api.authGet('/users/me', accessToken || null);
+    return data?.user || data || null;
   } catch (error) {
     logger.error('[AUTH_SERVICE] Get user error:', error);
     return null;

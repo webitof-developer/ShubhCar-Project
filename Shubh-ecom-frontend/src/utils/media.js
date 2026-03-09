@@ -55,7 +55,10 @@ export const resolveProductImages = (images = []) => {
   return images
     .map((image) => {
       if (!image) return ''
-      const url = typeof image === 'string' ? image : image.url
+      const url =
+        typeof image === 'string'
+          ? image
+          : image.url || image.imageUrl || image.src || ''
       return resolveAssetUrl(url)
     })
     .filter(Boolean)

@@ -61,15 +61,27 @@ const readAssetBuffer = async (assetUrl = '') => {
   return fs.readFile(source);
 };
 
+const getDocumentLabels = (invoice) => ({
+  title: invoice.type === 'credit_note' ? 'Credit Note' : 'Tax Invoice',
+  numberLabel: invoice.type === 'credit_note' ? 'Credit Note #' : 'Invoice #',
+  dateLabel: invoice.type === 'credit_note' ? 'Credit Note Date' : 'Issue Date',
+});
+
 const drawInvoiceHeader = (doc, invoice, settings, logoBuffer) => {
-  const title = invoice.type === 'credit_note' ? 'Credit Note' : 'Tax Invoice';
+  const { title, numberLabel, dateLabel } = getDocumentLabels(invoice);
+  const originalInvoiceNumber = invoice.displayMeta?.originalInvoiceNumber || '-';
+  const originalInvoiceDate = invoice.displayMeta?.originalInvoiceDate || '-';
 
   doc.fontSize(22).font('Helvetica-Bold').fillColor('#111827').text(title, 44, 46);
 
   doc.fontSize(10).font('Helvetica').fillColor('#374151');
-  doc.text(`Invoice #: ${invoice.invoiceNumber || '-'}`, 44, 78);
-  doc.text(`Issue Date: ${getDateLabel(invoice.issuedAt)}`, 44, 92);
+  doc.text(`${numberLabel}: ${invoice.invoiceNumber || '-'}`, 44, 78);
+  doc.text(`${dateLabel}: ${getDateLabel(invoice.issuedAt)}`, 44, 92);
   doc.text(`Order #: ${invoice.orderSnapshot?.orderNumber || '-'}`, 44, 106);
+  if (invoice.type === 'credit_note') {
+    doc.text(`Original Invoice #: ${originalInvoiceNumber}`, 44, 120);
+    doc.text(`Original Invoice Date: ${originalInvoiceDate}`, 44, 134);
+  }
 
   if (logoBuffer) {
     try {
@@ -79,7 +91,8 @@ const drawInvoiceHeader = (doc, invoice, settings, logoBuffer) => {
     }
   }
 
-  doc.fontSize(12).font('Helvetica-Bold').fillColor('#111827').text(settings.invoice_company_name || '-', 44, 136);
+  const companyInfoY = invoice.type === 'credit_note' ? 160 : 136;
+  doc.fontSize(12).font('Helvetica-Bold').fillColor('#111827').text(settings.invoice_company_name || '-', 44, companyInfoY);
 
   const companyAddress = [
     settings.invoice_company_address_line1,
@@ -92,26 +105,26 @@ const drawInvoiceHeader = (doc, invoice, settings, logoBuffer) => {
     .join(', ');
 
   doc.fontSize(10).font('Helvetica').fillColor('#374151');
-  doc.text(companyAddress || '-', 44, 154, { width: 360 });
-  doc.text(`GSTIN: ${settings.invoice_company_gstin || '-'}`, 44, 168);
-  doc.text(`Email: ${settings.invoice_company_email || '-'}`, 44, 182);
-  doc.text(`Phone: ${settings.invoice_company_phone || '-'}`, 44, 196);
+  doc.text(companyAddress || '-', 44, companyInfoY + 18, { width: 360 });
+  doc.text(`GSTIN: ${settings.invoice_company_gstin || '-'}`, 44, companyInfoY + 32);
+  doc.text(`Email: ${settings.invoice_company_email || '-'}`, 44, companyInfoY + 46);
+  doc.text(`Phone: ${settings.invoice_company_phone || '-'}`, 44, companyInfoY + 60);
 };
 
-const drawBillingSection = (doc, invoice) => {
+const drawBillingSection = (doc, invoice, y = 222) => {
   doc
-    .rect(44, 222, 508, 90)
+    .rect(44, y, 508, 90)
     .fillOpacity(0.95)
     .fill('#f8fafc')
     .fillOpacity(1)
     .strokeColor('#e5e7eb')
     .stroke();
 
-  doc.fontSize(11).font('Helvetica-Bold').fillColor('#111827').text('Bill To', 56, 234);
+  doc.fontSize(11).font('Helvetica-Bold').fillColor('#111827').text('Bill To', 56, y + 12);
   doc.fontSize(10).font('Helvetica').fillColor('#374151');
-  doc.text(invoice.customerSnapshot?.name || '-', 56, 250);
-  doc.text(invoice.customerSnapshot?.email || '-', 56, 264);
-  doc.text(invoice.customerSnapshot?.phone || '-', 56, 278);
+  doc.text(invoice.customerSnapshot?.name || '-', 56, y + 28);
+  doc.text(invoice.customerSnapshot?.email || '-', 56, y + 42);
+  doc.text(invoice.customerSnapshot?.phone || '-', 56, y + 56);
 
   const address = invoice.customerSnapshot?.address || {};
   const addressText = [
@@ -125,7 +138,7 @@ const drawBillingSection = (doc, invoice) => {
     .filter(Boolean)
     .join(', ');
 
-  doc.text(addressText || '-', 260, 250, { width: 280 });
+  doc.text(addressText || '-', 260, y + 28, { width: 280 });
 };
 
 const drawItemsHeader = (doc, y) => {
@@ -155,12 +168,18 @@ const drawItemRow = (doc, item, index, y, currency) => {
   doc.text(getMoney(item.unitPrice, currency), 336, y + 7, { width: 80, align: 'right' });
   doc.text(`${item.taxPercent || 0}`, 424, y + 7, { width: 45, align: 'right' });
   doc.text(getMoney(item.lineTotal, currency), 474, y + 7, { width: 70, align: 'right' });
+  return rowHeight;
 };
 
 const drawTotals = (doc, invoice, y) => {
   const totalsX = 352;
   const totalsWidth = 200;
   const currency = invoice.totals?.currency || 'INR';
+  const pricesIncludeTax =
+    Math.abs(
+      Number((invoice.totals?.subtotal || 0) - (invoice.totals?.discountTotal || 0)) - Number(invoice.totals?.grandTotal || 0),
+    ) < 0.01;
+  const taxLabel = pricesIncludeTax ? 'Included Tax' : 'Tax';
 
   doc
     .rect(totalsX, y, totalsWidth, 96)
@@ -176,7 +195,7 @@ const drawTotals = (doc, invoice, y) => {
     align: 'right',
   });
 
-  doc.text('Tax', totalsX + 10, y + 30, { width: 90 });
+  doc.text(taxLabel, totalsX + 10, y + 30, { width: 90 });
   doc.text(getMoney(invoice.totals?.taxTotal, currency), totalsX + 100, y + 30, {
     width: 90,
     align: 'right',
@@ -196,18 +215,49 @@ const drawTotals = (doc, invoice, y) => {
   });
 };
 
-const drawFooter = (doc, settings) => {
+const drawCreditNoteInfo = (doc, invoice, y) => {
+  if (invoice.type !== 'credit_note') return y;
+
+  const refundStatus = invoice.displayMeta?.refundStatus || '';
+  const refundReason = invoice.displayMeta?.refundReason || 'Order cancellation / return reversal';
+  const refundInfo =
+    refundStatus === 'pending' || refundStatus === 'failed'
+      ? 'No payment captured. Refund not applicable.'
+      : 'Refund settlement, if applicable, is processed separately via the original payment method.';
+
+  const height = 56;
+  doc
+    .roundedRect(44, y, 508, height, 8)
+    .fillOpacity(1)
+    .fill('#f8fbff')
+    .strokeColor('#93c5fd')
+    .stroke();
+
+  doc.fontSize(10).font('Helvetica-Bold').fillColor('#111827').text('Credit note information', 56, y + 10);
+  doc.fontSize(9).font('Helvetica').fillColor('#4b5563');
+  doc.text(`Reason: ${refundReason}`, 56, y + 24, { width: 480 });
+  doc.text(refundInfo, 56, y + 36, { width: 480 });
+  return y + height;
+};
+
+const drawFooter = (doc, settings, invoice) => {
   const footerY = doc.page.height - 72;
+  const termsText = invoice?.type === 'credit_note'
+    ? (settings.credit_note_terms || settings.invoice_terms || '')
+    : (settings.invoice_terms || '');
+  const notesText = invoice?.type === 'credit_note'
+    ? (settings.credit_note_notes || settings.invoice_notes || '')
+    : (settings.invoice_notes || '');
   doc
     .fontSize(9)
     .font('Helvetica')
     .fillColor('#4b5563')
-    .text(settings.invoice_terms || '', 44, footerY, { width: 508, align: 'left' });
+    .text(termsText || '', 44, footerY, { width: 508, align: 'left' });
   doc
     .fontSize(9)
     .font('Helvetica-Oblique')
     .fillColor('#6b7280')
-    .text(settings.invoice_notes || '', 44, footerY + 18, { width: 508, align: 'left' });
+    .text(notesText || '', 44, footerY + 18, { width: 508, align: 'left' });
 };
 
 const streamInvoicePdf = async (
@@ -220,6 +270,18 @@ const streamInvoicePdf = async (
   const filename = `${filePrefix}-${invoice.invoiceNumber || invoice._id}.pdf`;
 
   const settings = await settingsService.getInvoiceSettings().catch(() => ({}));
+  const [relatedInvoice, order] = await Promise.all([
+    invoice.type === 'credit_note' && invoice.relatedInvoiceId
+      ? Invoice.findById(invoice.relatedInvoiceId).lean().catch(() => null)
+      : Promise.resolve(null),
+    invoice.orderId ? Order.findById(invoice.orderId).lean().catch(() => null) : Promise.resolve(null),
+  ]);
+  invoice.displayMeta = {
+    originalInvoiceNumber: relatedInvoice?.invoiceNumber || '-',
+    originalInvoiceDate: getDateLabel(relatedInvoice?.issuedAt),
+    refundReason: order?.cancelReason || order?.refundMeta?.reason || '',
+    refundStatus: String(order?.paymentStatus || '').toLowerCase(),
+  };
   const [templateBuffer, logoBuffer] = await Promise.all([
     readAssetBuffer(settings.invoice_template_image_url).catch(() => null),
     readAssetBuffer(settings.invoice_logo_url).catch(() => null),
@@ -252,35 +314,64 @@ const streamInvoicePdf = async (
     .stroke();
 
   drawInvoiceHeader(doc, invoice, settings, logoBuffer);
-  drawBillingSection(doc, invoice);
+  const billingY = invoice.type === 'credit_note' ? 246 : 222;
+  drawBillingSection(doc, invoice, billingY);
 
   const currency = invoice.totals?.currency || 'INR';
   const items = Array.isArray(invoice.items) ? invoice.items : [];
-  let tableY = 330;
+  const pageBottomY = doc.page.height - 96;
+  const firstPageTableY = invoice.type === 'credit_note' ? 354 : 330;
+  let tableY = firstPageTableY;
+  let itemIndex = 0;
 
-  drawItemsHeader(doc, tableY);
-  tableY += 24;
+  const drawItemsPageHeader = (isContinuation = false) => {
+    if (isContinuation) {
+      doc.addPage();
+      if (templateBuffer) {
+        try {
+          doc.image(templateBuffer, 0, 0, {
+            width: doc.page.width,
+            height: doc.page.height,
+          });
+        } catch (err) {
+          logger.warn('Invoice template image rendering failed on continuation page', { error: err.message });
+        }
+      }
+      doc
+        .rect(30, 30, doc.page.width - 60, doc.page.height - 60)
+        .fillOpacity(templateBuffer ? 0.92 : 1)
+        .fill('#ffffff')
+        .fillOpacity(1)
+        .strokeColor('#e5e7eb')
+        .stroke();
+      doc.fontSize(14).font('Helvetica-Bold').fillColor('#111827').text(`${getDocumentLabels(invoice).title} Items`, 44, 46);
+      doc.fontSize(9).font('Helvetica').fillColor('#6b7280').text(`Document #: ${invoice.invoiceNumber || '-'}`, 44, 64);
+      tableY = 92;
+    }
 
-  const maxRowsOnPage = 15;
-  items.slice(0, maxRowsOnPage).forEach((item, index) => {
-    drawItemRow(doc, item, index, tableY, currency);
+    drawItemsHeader(doc, tableY);
+    tableY += 24;
+  };
+
+  drawItemsPageHeader(false);
+
+  while (itemIndex < items.length) {
+    if (tableY + 22 > pageBottomY - 140) {
+      drawItemsPageHeader(true);
+    }
+    drawItemRow(doc, items[itemIndex], itemIndex, tableY, currency);
     tableY += 22;
-  });
-
-  if (items.length > maxRowsOnPage) {
-    doc
-      .font('Helvetica-Oblique')
-      .fontSize(9)
-      .fillColor('#6b7280')
-      .text(
-        `+${items.length - maxRowsOnPage} more items omitted in PDF preview`,
-        44,
-        tableY + 8,
-      );
+    itemIndex += 1;
   }
 
-  drawTotals(doc, invoice, 640);
-  drawFooter(doc, settings);
+  if (tableY + 170 > pageBottomY) {
+    drawItemsPageHeader(true);
+  }
+
+  drawTotals(doc, invoice, tableY + 12);
+  let postTotalsY = tableY + 124;
+  postTotalsY = drawCreditNoteInfo(doc, invoice, postTotalsY + 12);
+  drawFooter(doc, settings, invoice);
 
   doc.end();
 };
@@ -312,10 +403,20 @@ router.get(
   auth([ROLES.ADMIN]),
   validate(listInvoicesQuerySchema, 'query'),
   asyncHandler(async (req, res) => {
-    const { page = 1, limit = 50, type } = req.query;
+    const { page = 1, limit = 50, type, search = '' } = req.query;
 
     const query: Record<string, unknown> = {};
     if (type) query.type = type;
+    if (search) {
+      const normalizedSearch = String(search).trim();
+      const escapedSearch = normalizedSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const searchRegex = new RegExp(escapedSearch, 'i');
+      query.$or = [
+        { invoiceNumber: searchRegex },
+        { 'orderSnapshot.orderNumber': searchRegex },
+        { 'customerSnapshot.name': searchRegex },
+      ];
+    }
 
     const invoices = await Invoice.find(query)
       .sort({ issuedAt: -1 })
