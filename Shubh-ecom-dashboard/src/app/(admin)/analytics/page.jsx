@@ -33,6 +33,59 @@ const toEndOfDay = (value) => {
   return d
 }
 
+const ANALYTICS_STATUS_CARDS = [
+  {
+    key: 'paidOrders',
+    title: 'Paid Orders',
+    countFormatter: (revenue) => Number(revenue.paidOrders || 0).toLocaleString(),
+    icon: 'solar:card-send-bold-duotone',
+    iconVariant: 'success',
+  },
+  {
+    key: 'pendingOrders',
+    title: 'Pending Orders',
+    countFormatter: (revenue) => Number(revenue.pendingOrders || 0).toLocaleString(),
+    metaFormatter: (revenue) => `(${currency}${Number(revenue.pendingRevenue || 0).toLocaleString()})`,
+    icon: 'solar:clock-circle-bold-duotone',
+    iconVariant: 'warning',
+  },
+  {
+    key: 'cancelRate',
+    title: 'Cancel Rate',
+    countFormatter: (revenue) => `${Number(revenue.cancelRate || 0).toFixed(2)}%`,
+    icon: 'solar:close-circle-bold-duotone',
+    iconVariant: 'danger',
+  },
+  {
+    key: 'refundRate',
+    title: 'Refund Rate',
+    countFormatter: (revenue) => `${Number(revenue.refundRate || 0).toFixed(2)}%`,
+    icon: 'solar:restart-circle-bold-duotone',
+    iconVariant: 'info',
+  },
+]
+
+const ANALYTICS_STATUS_SUMMARY = [
+  {
+    key: 'cancelledOrders',
+    label: 'Cancelled',
+    icon: 'solar:close-circle-broken',
+    variant: 'danger',
+  },
+  {
+    key: 'refundedOrders',
+    label: 'Refunded',
+    icon: 'solar:restart-circle-broken',
+    variant: 'info',
+  },
+  {
+    key: 'pendingOrders',
+    label: 'Pending Payment',
+    icon: 'solar:clock-circle-broken',
+    variant: 'warning',
+  },
+]
+
 const AnalyticsPage = () => {
   const { data: session } = useSession()
   const [loading, setLoading] = useState(true)
@@ -197,12 +250,7 @@ const AnalyticsPage = () => {
       try {
         const extractRows = (response) => {
           const payload = response?.data || response || {}
-          const orders =
-            payload?.items ||
-            payload?.orders ||
-            payload?.data?.items ||
-            payload?.data?.orders ||
-            []
+          const orders = payload?.items || payload?.orders || payload?.data?.items || payload?.data?.orders || []
           return {
             rows: Array.isArray(orders) ? orders : [],
             totalPages: Number(payload?.totalPages || payload?.pagination?.totalPages || 1) || 1,
@@ -259,6 +307,7 @@ const AnalyticsPage = () => {
       chart: {
         height: 320,
         type: 'line',
+        offsetX: -10,
         toolbar: {
           show: false,
           tools: {
@@ -292,18 +341,26 @@ const AnalyticsPage = () => {
       labels: chartData.labels || [],
       markers: { size: 0 },
       xaxis: { type: 'category', categories: chartData.labels || [] },
-      yaxis: [
-        { title: { text: 'Orders' } },
-        { opposite: true, title: { text: 'Revenue' } },
-      ],
+      yaxis: [{ title: { text: 'Orders' } }, { opposite: true, title: { text: 'Revenue' } }],
       tooltip: { shared: true, intersect: false },
-      grid: { borderColor: '#f1f3fa' },
+      grid: {
+        borderColor: '#f1f3fa',
+        padding: {
+          left: 0,
+          right: 0,
+        },
+      },
       legend: { offsetY: 7 },
     }),
-    [chartData]
+    [chartData],
   )
 
-  if (loading) return <div className="text-center py-5"><Spinner animation="border" /></div>
+  if (loading)
+    return (
+      <div className="text-center py-5">
+        <Spinner animation="border" />
+      </div>
+    )
 
   return (
     <>
@@ -311,70 +368,83 @@ const AnalyticsPage = () => {
       <Row className="g-3 align-items-center mb-3">
         <Col xl={8} className="d-flex flex-wrap gap-2">
           {['today', 'week', 'month', 'custom'].map((key) => (
-            <Button
-              key={key}
-              variant={range === key ? 'primary' : 'outline-primary'}
-              size="sm"
-              onClick={() => setRange(key)}
-            >
+            <Button key={key} variant={range === key ? 'primary' : 'outline-primary'} size="sm" onClick={() => setRange(key)}>
               {key === 'today' ? 'Today' : key === 'week' ? 'Week' : key === 'month' ? 'Month' : 'Custom'}
             </Button>
           ))}
         </Col>
         <Col xl={4} className="d-flex align-items-center gap-2 justify-content-xl-end flex-wrap flex-xl-nowrap">
-          <Form.Control
-            type="date"
-            size="sm"
-            value={customFrom}
-            onChange={(e) => setCustomFrom(e.target.value)}
-            disabled={range !== 'custom'}
-            className="w-auto"
-            style={{ minWidth: 170 }}
-          />
-          <Form.Control
-            type="date"
-            size="sm"
-            value={customTo}
-            onChange={(e) => setCustomTo(e.target.value)}
-            disabled={range !== 'custom'}
-            className="w-auto"
-            style={{ minWidth: 170 }}
-          />
+          <div className="position-relative">
+            <IconifyIcon
+              icon="solar:calendar-mark-bold-duotone"
+              className="position-absolute top-50 translate-middle-y text-muted"
+              style={{ left: 12, pointerEvents: 'none', zIndex: 1 }}
+            />
+            <Form.Control
+              type="date"
+              size="sm"
+              value={customFrom}
+              onChange={(e) => setCustomFrom(e.target.value)}
+              disabled={range !== 'custom'}
+              className="w-auto"
+              style={{ minWidth: 170, paddingLeft: 36 }}
+            />
+          </div>
+          <div className="position-relative">
+            <IconifyIcon
+              icon="solar:calendar-mark-bold-duotone"
+              className="position-absolute top-50 translate-middle-y text-muted"
+              style={{ left: 12, pointerEvents: 'none', zIndex: 1 }}
+            />
+            <Form.Control
+              type="date"
+              size="sm"
+              value={customTo}
+              onChange={(e) => setCustomTo(e.target.value)}
+              disabled={range !== 'custom'}
+              className="w-auto"
+              style={{ minWidth: 170, paddingLeft: 36 }}
+            />
+          </div>
         </Col>
       </Row>
       {range === 'today' && todayValidation?.mismatch && (
         <Alert variant="warning" className="mb-3">
           Today validation mismatch detected. Orders list shows {todayValidation.orderCount} total orders and paid revenue {currency}
-          {todayValidation.paidRevenueTotal.toFixed(2)}, while analytics summary shows {todayValidation.dashboardOrderCount} orders and paid revenue {currency}
+          {todayValidation.paidRevenueTotal.toFixed(2)}, while analytics summary shows {todayValidation.dashboardOrderCount} orders and paid revenue{' '}
+          {currency}
           {todayValidation.dashboardRevenue.toFixed(2)}.
         </Alert>
       )}
 
       <Row className="g-3">
         <Col xl={3} md={6}>
-          <Card className="h-100">
-            <CardBody>
+          <Card style={{ height: 'fit-content' }}>
+            <CardBody className="py-2">
               <div className="d-flex align-items-center gap-3">
                 <div className="avatar-md bg-soft-primary rounded flex-centered">
                   <IconifyIcon icon="solar:wallet-money-bold-duotone" className="fs-24 text-primary" />
                 </div>
                 <div>
-                  <p className="text-muted mb-0">Total Revenue</p>
-                  <h4 className="mb-0">{currency}{Number(revenue.totalRevenue || 0).toLocaleString()}</h4>
+                  <p className="text-muted mb-1">Total Revenue</p>
+                  <h4 className="mb-0">
+                    {currency}
+                    {Number(revenue.totalRevenue || 0).toLocaleString()}
+                  </h4>
                 </div>
               </div>
             </CardBody>
           </Card>
         </Col>
         <Col xl={3} md={6}>
-          <Card className="h-100">
-            <CardBody>
+          <Card style={{ height: 'fit-content' }}>
+            <CardBody className="py-2">
               <div className="d-flex align-items-center gap-3">
                 <div className="avatar-md bg-soft-success rounded flex-centered">
                   <IconifyIcon icon="solar:cart-4-bold-duotone" className="fs-24 text-success" />
                 </div>
                 <div>
-                  <p className="text-muted mb-0">Total Orders</p>
+                  <p className="text-muted mb-1">Total Orders</p>
                   <h4 className="mb-0">{Number(revenue.totalOrders || 0).toLocaleString()}</h4>
                 </div>
               </div>
@@ -382,14 +452,14 @@ const AnalyticsPage = () => {
           </Card>
         </Col>
         <Col xl={3} md={6}>
-          <Card className="h-100">
-            <CardBody>
+          <Card style={{ height: 'fit-content' }}>
+            <CardBody className="py-2">
               <div className="d-flex align-items-center gap-3">
                 <div className="avatar-md bg-soft-info rounded flex-centered">
                   <IconifyIcon icon="solar:user-bold-duotone" className="fs-24 text-info" />
                 </div>
                 <div>
-                  <p className="text-muted mb-0">Total Customers</p>
+                  <p className="text-muted mb-1">Total Customers</p>
                   <h4 className="mb-0">{Number(users.totalUsers || 0).toLocaleString()}</h4>
                 </div>
               </div>
@@ -397,15 +467,18 @@ const AnalyticsPage = () => {
           </Card>
         </Col>
         <Col xl={3} md={6}>
-          <Card className="h-100">
-            <CardBody>
+          <Card style={{ height: 'fit-content' }}>
+            <CardBody className="py-2">
               <div className="d-flex align-items-center gap-3">
                 <div className="avatar-md bg-soft-warning rounded flex-centered">
                   <IconifyIcon icon="solar:ticket-bold-duotone" className="fs-24 text-warning" />
                 </div>
                 <div>
-                  <p className="text-muted mb-0">Avg Order Value</p>
-                  <h4 className="mb-0">{currency}{Number(revenue.avgOrderValue || 0).toFixed(2)}</h4>
+                  <p className="text-muted mb-1">Avg Order Value</p>
+                  <h4 className="mb-0">
+                    {currency}
+                    {Number(revenue.avgOrderValue || 0).toFixed(2)}
+                  </h4>
                 </div>
               </div>
             </CardBody>
@@ -413,47 +486,33 @@ const AnalyticsPage = () => {
         </Col>
       </Row>
 
-      <Row className="mt-3 g-3">
-        <Col xl={3} md={6}>
-          <Card className="h-100">
-            <CardBody>
-              <p className="text-muted mb-1">Paid Orders</p>
-              <h4 className="mb-1">{Number(revenue.paidOrders || 0).toLocaleString()}</h4>
-              <p className="mb-0 text-muted">Revenue: {currency}{Number(revenue.totalRevenue || 0).toLocaleString()}</p>
-            </CardBody>
-          </Card>
-        </Col>
-        <Col xl={3} md={6}>
-          <Card className="h-100">
-            <CardBody>
-              <p className="text-muted mb-1">Pending Orders</p>
-              <h4 className="mb-1">{Number(revenue.pendingOrders || 0).toLocaleString()}</h4>
-              <p className="mb-0 text-muted">Value: {currency}{Number(revenue.pendingRevenue || 0).toLocaleString()}</p>
-            </CardBody>
-          </Card>
-        </Col>
-        <Col xl={3} md={6}>
-          <Card className="h-100">
-            <CardBody>
-              <p className="text-muted mb-1">Cancel Rate</p>
-              <h4 className="mb-0">{Number(revenue.cancelRate || 0).toFixed(2)}%</h4>
-            </CardBody>
-          </Card>
-        </Col>
-        <Col xl={3} md={6}>
-          <Card className="h-100">
-            <CardBody>
-              <p className="text-muted mb-1">Refund Rate</p>
-              <h4 className="mb-0">{Number(revenue.refundRate || 0).toFixed(2)}%</h4>
-            </CardBody>
-          </Card>
-        </Col>
+      <Row className=" g-3">
+        {ANALYTICS_STATUS_CARDS.map((item) => (
+          <Col xl={3} md={6} key={item.key}>
+            <Card style={{ height: 'fit-content' }}>
+              <CardBody className="py-2">
+                <div className="d-flex align-items-start gap-3">
+                  <div className={`avatar-md bg-soft-${item.iconVariant} rounded flex-centered flex-shrink-0`}>
+                    <IconifyIcon icon={item.icon} className={`fs-24 text-${item.iconVariant}`} />
+                  </div>
+                  <div className="flex-grow-1">
+                    <p className="text-muted mb-1">{item.title}</p>
+                    <h4 className="mb-0">
+                      {item.countFormatter(revenue)}
+                      {item.metaFormatter && <span className="text-muted fs-6 fw-normal ms-2">{item.metaFormatter(revenue)}</span>}
+                    </h4>
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+          </Col>
+        ))}
       </Row>
 
-      <Row className="mt-3 g-3">
+      <Row className="mt-2 g-3">
         <Col xl={8}>
           <Card className="h-100">
-            <CardBody>
+            <CardBody className=" pe-3 py-3">
               <CardTitle as="h4">Orders vs Revenue</CardTitle>
               <div dir="ltr">
                 <ReactApexChart options={chartOptions} series={chartOptions.series} height={320} type="line" className="apex-charts" />
@@ -481,12 +540,17 @@ const AnalyticsPage = () => {
                       <tr key={`${row._id}-${idx}`}>
                         <td>{row._id || 'Unknown'}</td>
                         <td className="text-end">{Number(row.orders || 0).toLocaleString()}</td>
-                        <td className="text-end">{currency}{Number(row.revenue || 0).toLocaleString()}</td>
+                        <td className="text-end">
+                          {currency}
+                          {Number(row.revenue || 0).toLocaleString()}
+                        </td>
                       </tr>
                     ))}
                     {paymentSplit.length === 0 && (
                       <tr>
-                        <td colSpan="3" className="text-center py-3">No payment data</td>
+                        <td colSpan="3" className="text-center py-3">
+                          No payment data
+                        </td>
                       </tr>
                     )}
                   </tbody>
@@ -514,7 +578,10 @@ const AnalyticsPage = () => {
               </div>
               <div className="d-flex justify-content-between">
                 <span className="text-muted">Average LTV</span>
-                <span className="fw-semibold">{currency}{Number(repeatSummary.averageLtv || 0).toFixed(2)}</span>
+                <span className="fw-semibold">
+                  {currency}
+                  {Number(repeatSummary.averageLtv || 0).toFixed(2)}
+                </span>
               </div>
             </CardBody>
           </Card>
@@ -588,12 +655,17 @@ const AnalyticsPage = () => {
                       <tr key={`${item.state}-${idx}`}>
                         <td>{item.state}</td>
                         <td className="text-end">{Number(item.orders || 0).toLocaleString()}</td>
-                        <td className="text-end">{currency}{Number(item.revenue || 0).toLocaleString()}</td>
+                        <td className="text-end">
+                          {currency}
+                          {Number(item.revenue || 0).toLocaleString()}
+                        </td>
                       </tr>
                     ))}
                     {salesByState.length === 0 && (
                       <tr>
-                        <td colSpan="3" className="text-center py-3">No state data</td>
+                        <td colSpan="3" className="text-center py-3">
+                          No state data
+                        </td>
                       </tr>
                     )}
                   </tbody>
@@ -622,12 +694,17 @@ const AnalyticsPage = () => {
                       <tr key={`${item.city}-${idx}`}>
                         <td>{item.city}</td>
                         <td className="text-end">{Number(item.orders || 0).toLocaleString()}</td>
-                        <td className="text-end">{currency}{Number(item.revenue || 0).toLocaleString()}</td>
+                        <td className="text-end">
+                          {currency}
+                          {Number(item.revenue || 0).toLocaleString()}
+                        </td>
                       </tr>
                     ))}
                     {salesByCity.length === 0 && (
                       <tr>
-                        <td colSpan="3" className="text-center py-3">No city data</td>
+                        <td colSpan="3" className="text-center py-3">
+                          No city data
+                        </td>
                       </tr>
                     )}
                   </tbody>
@@ -662,7 +739,9 @@ const AnalyticsPage = () => {
                     ))}
                     {topCategories.length === 0 && (
                       <tr>
-                        <td colSpan="2" className="text-center py-3">No category data</td>
+                        <td colSpan="2" className="text-center py-3">
+                          No category data
+                        </td>
                       </tr>
                     )}
                   </tbody>
@@ -694,7 +773,9 @@ const AnalyticsPage = () => {
                     ))}
                     {topBrands.length === 0 && (
                       <tr>
-                        <td colSpan="2" className="text-center py-3">No brand data</td>
+                        <td colSpan="2" className="text-center py-3">
+                          No brand data
+                        </td>
                       </tr>
                     )}
                   </tbody>
@@ -752,7 +833,9 @@ const AnalyticsPage = () => {
                     ))}
                     {deadStock.length === 0 && (
                       <tr>
-                        <td colSpan="3" className="text-center py-3">No dead stock</td>
+                        <td colSpan="3" className="text-center py-3">
+                          No dead stock
+                        </td>
                       </tr>
                     )}
                   </tbody>
@@ -787,7 +870,9 @@ const AnalyticsPage = () => {
                     ))}
                     {topProducts.length === 0 && (
                       <tr>
-                        <td colSpan="2" className="text-center py-3">No top products yet</td>
+                        <td colSpan="2" className="text-center py-3">
+                          No top products yet
+                        </td>
                       </tr>
                     )}
                   </tbody>
@@ -821,7 +906,9 @@ const AnalyticsPage = () => {
                     ))}
                     {lowStock.length === 0 && (
                       <tr>
-                        <td colSpan="3" className="text-center py-3">No low stock items</td>
+                        <td colSpan="3" className="text-center py-3">
+                          No low stock items
+                        </td>
                       </tr>
                     )}
                   </tbody>
@@ -865,24 +952,19 @@ const AnalyticsPage = () => {
             </CardHeader>
             <CardBody>
               <Row className="g-2">
-                <Col md={4}>
-                  <div className="d-flex justify-content-between">
-                    <span className="text-muted">Cancelled</span>
-                    <span className="fw-semibold">{Number(revenue.cancelledOrders || 0).toLocaleString()}</span>
-                  </div>
-                </Col>
-                <Col md={4}>
-                  <div className="d-flex justify-content-between">
-                    <span className="text-muted">Refunded</span>
-                    <span className="fw-semibold">{Number(revenue.refundedOrders || 0).toLocaleString()}</span>
-                  </div>
-                </Col>
-                <Col md={4}>
-                  <div className="d-flex justify-content-between">
-                    <span className="text-muted">Pending Payment</span>
-                    <span className="fw-semibold">{Number(revenue.pendingOrders || 0).toLocaleString()}</span>
-                  </div>
-                </Col>
+                {ANALYTICS_STATUS_SUMMARY.map((item) => (
+                  <Col md={4} key={item.key}>
+                    <div className="d-flex align-items-center justify-content-between gap-3 rounded border px-3 py-2 h-100">
+                      <div className="d-flex align-items-center gap-2">
+                        <div className={`avatar-sm bg-soft-${item.variant} rounded flex-centered flex-shrink-0`}>
+                          <IconifyIcon icon={item.icon} className={`fs-18 text-${item.variant}`} />
+                        </div>
+                        <span className="text-muted">{item.label}</span>
+                      </div>
+                      <span className="fw-semibold ms-3">{Number(revenue[item.key] || 0).toLocaleString()}</span>
+                    </div>
+                  </Col>
+                ))}
               </Row>
             </CardBody>
           </Card>

@@ -31,6 +31,11 @@ const resetPasswordSchema = Joi.object({
   newPassword: Joi.string().min(6).required(),
 });
 
+const verifyResetPasswordOtpSchema = Joi.object({
+  identifier: Joi.string().required(),
+  otp: Joi.string().length(6).required(),
+});
+
 const sendPhoneOtpSchema = Joi.object({
   phone: Joi.string()
     .pattern(/^[6-9]\d{9}$/)
@@ -69,6 +74,7 @@ module.exports = {
   refreshSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  verifyResetPasswordOtpSchema,
   sendPhoneOtpSchema,
   verifyPhoneOtpSchema,
   sendEmailOtpSchema,

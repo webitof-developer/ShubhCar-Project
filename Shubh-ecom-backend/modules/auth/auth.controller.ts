@@ -101,7 +101,12 @@ exports.logoutAll = asyncHandler(async (req: AuthRequest, res: Response) => {
 
 exports.forgotPassword = asyncHandler(async (req: AuthRequest, res: Response) => {
   await authService.forgotPassword(req.body);
-  return success(res, null, 'If account exists, OTP has been sent');
+  return success(res, null, 'OTP has been sent');
+});
+
+exports.verifyResetPasswordOtp = asyncHandler(async (req: AuthRequest, res: Response) => {
+  await authService.verifyResetPasswordOtp(req.body);
+  return success(res, null, 'OTP verified successfully');
 });
 
 exports.resetPassword = asyncHandler(async (req: AuthRequest, res: Response) => {

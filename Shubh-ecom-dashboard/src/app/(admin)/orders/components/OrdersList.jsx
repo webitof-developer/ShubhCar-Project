@@ -116,6 +116,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
   const [showCustomerModal, setShowCustomerModal] = useState(false)
   const [creatingCustomer, setCreatingCustomer] = useState(false)
   const [customerCreateError, setCustomerCreateError] = useState('')
+  const [showCustomerPassword, setShowCustomerPassword] = useState(false)
   const [newCustomerForm, setNewCustomerForm] = useState({
     firstName: '',
     lastName: '',
@@ -971,6 +972,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
       }
       handleSelectCustomer(createdUser)
       setShowCustomerModal(false)
+      setShowCustomerPassword(false)
       setNewCustomerForm({
         firstName: '',
         lastName: '',
@@ -2196,6 +2198,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
             onHide={() => {
               setShowCustomerModal(false)
               setCustomerCreateError('')
+              setShowCustomerPassword(false)
             }}
             centered
             contentClassName="create-modal">
@@ -2266,14 +2269,25 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                     </FloatingLabel>
                   </Col>
                   <Col md={6}>
-                    <FloatingLabel controlId="new-customer-password" label="Password *">
-                      <Form.Control
-                        type="password"
-                        value={newCustomerForm.password}
-                        onChange={(e) => setNewCustomerForm((prev) => ({ ...prev, password: e.target.value }))}
-                        placeholder="Password"
-                        required
-                      />
+                      <FloatingLabel controlId="new-customer-password" label="Password *">
+                      <div className="position-relative">
+                        <Form.Control
+                          type={showCustomerPassword ? 'text' : 'password'}
+                          value={newCustomerForm.password}
+                          onChange={(e) => setNewCustomerForm((prev) => ({ ...prev, password: e.target.value }))}
+                          placeholder="Password"
+                          required
+                          className="pe-5"
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-link position-absolute top-50 end-0 translate-middle-y text-muted p-0 me-3"
+                          onClick={() => setShowCustomerPassword((prev) => !prev)}
+                          aria-label={showCustomerPassword ? 'Hide password' : 'Show password'}
+                        >
+                          <IconifyIcon icon={showCustomerPassword ? 'bi:eye-slash-fill' : 'bi:eye-fill'} width={18} height={18} />
+                        </button>
+                      </div>
                     </FloatingLabel>
                   </Col>
                   <Col md={6}>
@@ -2294,6 +2308,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                   onClick={() => {
                     setShowCustomerModal(false)
                     setCustomerCreateError('')
+                    setShowCustomerPassword(false)
                   }}>
                   Cancel
                 </Button>

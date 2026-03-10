@@ -14,6 +14,7 @@ const {
   refreshSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  verifyResetPasswordOtpSchema,
   sendPhoneOtpSchema,
   verifyPhoneOtpSchema,
   googleAuthSchema,
@@ -418,6 +419,13 @@ router.post(
   passwordResetLimiter,
   validate(forgotPasswordSchema),
   controller.forgotPassword,
+);
+
+router.post(
+  '/verify-reset-password-otp',
+  passwordResetLimiter,
+  validate(verifyResetPasswordOtpSchema),
+  controller.verifyResetPasswordOtp,
 );
 
 /**

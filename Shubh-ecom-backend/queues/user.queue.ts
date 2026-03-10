@@ -1,6 +1,7 @@
 // @ts-nocheck
 ﻿const logger = require('../config/logger');
 const { sendSMS } = require('../utils/sms');
+const { sendEmail } = require('../utils/email');
 const { generateOtp } = require('../utils/otp');
 const { saveOtp } = require('../cache/otp.cache');
 const emailNotification = require('../services/emailNotification.service');
@@ -54,11 +55,33 @@ const sendEmailOtp = async ({ email, otp: otpInput }) => {
   const otp = otpInput || generateOtp();
   await saveOtp(email, otp);
 
-  await emailNotification.send({
-    templateName: 'forgot_password_otp',
-    to: email,
-    variables: { otp, appName: process.env.APP_NAME || 'App' },
-  });
+  try {
+    await emailNotification.send({
+      templateName: 'forgot_password_otp',
+      to: email,
+      variables: { otp, appName: process.env.APP_NAME || 'App' },
+    });
+  } catch (err) {
+    if (String(err?.message || '').includes('Email template forgot_password_otp not found')) {
+      logger.warn('forgot_password_otp template missing, falling back to direct email');
+      await sendEmail({
+        to: email,
+        subject: `Your ${process.env.APP_NAME || 'App'} password reset OTP`,
+        html: `
+          <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #0f172a;">
+            <h2 style="margin-bottom: 8px;">Password Reset OTP</h2>
+            <p>Use the OTP below to reset your password:</p>
+            <div style="font-size: 28px; font-weight: 700; letter-spacing: 6px; margin: 16px 0; color: #2563eb;">
+              ${otp}
+            </div>
+            <p>This OTP is valid for 10 minutes.</p>
+          </div>
+        `,
+      });
+    } else {
+      throw err;
+    }
+  }
 
   logger.info(`Forgot-password OTP sent to ${email}`);
 };

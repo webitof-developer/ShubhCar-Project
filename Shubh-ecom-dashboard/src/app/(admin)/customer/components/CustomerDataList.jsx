@@ -83,6 +83,7 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
   const [showErrorModal, setShowErrorModal] = useState(false)
   const [selectedCustomers, setSelectedCustomers] = useState([])
   const [initialFormSnapshot, setInitialFormSnapshot] = useState(null)
+  const [showPassword, setShowPassword] = useState(false)
   const safeCustomers = Array.isArray(customers) ? customers : []
 
   // Select all handler
@@ -288,6 +289,7 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
     setModalError(null)
     setValidationErrors({})
     setTouchedFields({})
+    setShowPassword(false)
     setShowModal(true)
   }
 
@@ -308,6 +310,7 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
     setModalError(null)
     setValidationErrors({})
     setTouchedFields({})
+    setShowPassword(false)
     setShowModal(true)
   }
 
@@ -316,6 +319,7 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
     setModalError(null)
     setValidationErrors({})
     setTouchedFields({})
+    setShowPassword(false)
     setEditMode(false)
     setEditingCustomerId(null)
     setInitialFormSnapshot(null)
@@ -399,7 +403,8 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
       }
         : {
           ...normalizedForm,
-          role: 'customer'
+          role: 'customer',
+          verificationStatus: normalizedForm.customerType === 'wholesale' ? 'approved' : 'not_required',
         }
 
       // Remove password if edit mode and password is empty
@@ -414,7 +419,7 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
 
       const url = editMode
         ? `${API_BASE_URL}/users/admin/${editingCustomerId}`
-        : `${API_BASE_URL}/users/register`
+        : `${API_BASE_URL}/users/admin`
 
       const method = editMode ? 'PATCH' : 'POST'
 
@@ -1048,18 +1053,29 @@ const CustomerDataList = ({ defaultFilter = 'all' }) => {
                 Password {editMode ? '(leave blank to keep current)' : ''}
                 {!editMode && <span className="text-danger ms-1">*</span>}
               </Form.Label>
-              <Form.Control
-                type="password"
-                value={formData.password}
-                onChange={(e) => {
-                  const value = e.target.value
-                  setFormData({ ...formData, password: value })
-                  setTouchedFields({ ...touchedFields, password: true })
-                }}
-                required={!editMode}
-                minLength={6}
-                isInvalid={touchedFields.password && validationErrors.password}
-              />
+              <div className="position-relative">
+                <Form.Control
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  onChange={(e) => {
+                    const value = e.target.value
+                    setFormData({ ...formData, password: value })
+                    setTouchedFields({ ...touchedFields, password: true })
+                  }}
+                  required={!editMode}
+                  minLength={6}
+                  isInvalid={touchedFields.password && validationErrors.password}
+                  className="pe-5"
+                />
+                <button
+                  type="button"
+                  className="btn btn-link position-absolute top-50 end-0 translate-middle-y text-muted p-0 me-3"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  <IconifyIcon icon={showPassword ? 'bi:eye-slash-fill' : 'bi:eye-fill'} width={18} height={18} />
+                </button>
+              </div>
               {touchedFields.password && validationErrors.password && (
                 <Form.Control.Feedback type="invalid">
                   {validationErrors.password}

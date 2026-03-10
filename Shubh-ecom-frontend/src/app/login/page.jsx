@@ -194,7 +194,9 @@ const LoginContent = () => {
                 />
                 Remember me
               </label>
-              <span className="text-muted-foreground/80">Protected by enterprise-grade encryption</span>
+              <Link href="/reset-password" className="text-primary hover:underline">
+                Forgot password?
+              </Link>
             </div>
 
             <Button type="submit" className="w-full h-11 rounded-full tracking-widest text-base" disabled={loading}>
@@ -235,9 +237,6 @@ const LoginContent = () => {
           </div>
 
           <div className="mt-6 flex items-center justify-between text-sm text-muted-foreground">
-            {/* <Link href="/reset-password" className="text-primary hover:underline">
-              Forgot password?
-            </Link> */}
             <p>
               Don&apos;t have an account?{' '}
               <Link href="/register" className="text-primary font-medium hover:underline">

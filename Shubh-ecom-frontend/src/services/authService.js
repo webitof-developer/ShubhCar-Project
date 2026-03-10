@@ -71,3 +71,30 @@ export const googleLogin = async (idToken) => {
     throw error;
   }
 };
+
+export const forgotPassword = async (identifier) => {
+  try {
+    return await api.post('/auth/forgot-password', { identifier });
+  } catch (error) {
+    logger.error('[AUTH_SERVICE] Forgot password error:', error);
+    throw error;
+  }
+};
+
+export const resetPassword = async ({ identifier, otp, newPassword }) => {
+  try {
+    return await api.post('/auth/reset-password', { identifier, otp, newPassword });
+  } catch (error) {
+    logger.error('[AUTH_SERVICE] Reset password error:', error);
+    throw error;
+  }
+};
+
+export const verifyResetPasswordOtp = async ({ identifier, otp }) => {
+  try {
+    return await api.post('/auth/verify-reset-password-otp', { identifier, otp });
+  } catch (error) {
+    logger.error('[AUTH_SERVICE] Verify reset password OTP error:', error);
+    throw error;
+  }
+};

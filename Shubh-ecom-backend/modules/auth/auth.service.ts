@@ -26,6 +26,7 @@ const {
   loginSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  verifyResetPasswordOtpSchema,
 } = require('./auth.validator');
 const {
   saveOtp,
@@ -473,18 +474,22 @@ class AuthService {
     const { error: err, value } = forgotPasswordSchema.validate(payload);
     if (err) error(err.details.map((d) => d.message).join(', '));
 
-    const identifier = value.identifier;
+    const identifier = String(value.identifier || '').trim().toLowerCase();
 
     const user = identifier.includes('@')
       ? await userRepo.findDocByEmail(identifier)
       : await userRepo.findDocByPhone(identifier);
 
     if (!user) {
-      return true;
+      error('No account found for this email', 404);
     }
 
     if (user.authProvider && user.authProvider !== 'password') {
-      return true; // do not issue OTPs for non-password accounts
+      error('This account uses social or OTP login. Please use that sign-in method.', 400);
+    }
+
+    if (user.status !== 'active') {
+      error('Account disabled', 403);
     }
 
     const otp = randomOtp();
@@ -510,11 +515,50 @@ class AuthService {
     return true;
   }
 
+  async verifyResetPasswordOtp(payload) {
+    const { error: err, value } = verifyResetPasswordOtpSchema.validate(payload);
+    if (err) error(err.details.map((d) => d.message).join(', '));
+
+    const identifier = String(value.identifier || '').trim().toLowerCase();
+    const { otp } = value;
+
+    const user = identifier.includes('@')
+      ? await userRepo.findDocByEmail(identifier)
+      : await userRepo.findDocByPhone(identifier);
+
+    if (!user || !user.resetPassword?.otpHash) {
+      error('Invalid or expired OTP', 400);
+    }
+
+    if (user.resetPassword.expiresAt < Date.now()) {
+      user.resetPassword = undefined;
+      await user.save();
+      error('OTP expired', 400);
+    }
+
+    if (user.resetPassword.attempts >= 5) {
+      user.resetPassword = undefined;
+      await user.save();
+      error('Too many attempts', 429);
+    }
+
+    const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
+
+    if (otpHash !== user.resetPassword.otpHash) {
+      user.resetPassword.attempts += 1;
+      await user.save();
+      error('Invalid OTP', 400);
+    }
+
+    return true;
+  }
+
   async resetPassword(payload) {
     const { error: err, value } = resetPasswordSchema.validate(payload);
     if (err) error(err.details.map((d) => d.message).join(', '));
 
-    const { identifier, otp, newPassword } = value;
+    const identifier = String(value.identifier || '').trim().toLowerCase();
+    const { otp, newPassword } = value;
 
     const user = identifier.includes('@')
       ? await userRepo.findDocByEmail(identifier)
