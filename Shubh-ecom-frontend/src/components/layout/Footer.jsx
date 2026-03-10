@@ -25,7 +25,14 @@ const Footer = () => {
           <div className="col-span-2 lg:col-span-4 space-y-6">
             <Link href="/" className="inline-block">
               <div className="h-16 w-56 relative md:h-20 md:w-80">
-                <Image src="/logo.png" alt="ShubhCars" fill className="object-contain object-left" onError={(e) => e.currentTarget.style.display = 'none'} />
+                <Image
+                  src="/logo.png"
+                  alt="ShubhCars"
+                  fill
+                  sizes="(max-width: 768px) 224px, 320px"
+                  className="object-contain object-left"
+                  onError={(e) => e.currentTarget.style.display = 'none'}
+                />
               </div>
             </Link>
             <p className="text-slate-400 leading-relaxed max-w-sm">
@@ -132,13 +139,34 @@ const Footer = () => {
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-3">
                 <div className="h-8 bg-white/10 rounded px-2 flex items-center justify-center border border-white/10">
-                  <Image src="/payments/visa.svg" alt="Visa" width={56} height={16} className="h-4 w-auto object-contain" />
+                  <Image
+                    src="/payments/visa.svg"
+                    alt="Visa"
+                    width={56}
+                    height={16}
+                    className="object-contain"
+                    style={{ width: '56px', height: '16px' }}
+                  />
                 </div>
                 <div className="h-8 bg-white/10 rounded px-2 flex items-center justify-center border border-white/10">
-                  <Image src="/payments/mastercard.svg" alt="Mastercard" width={72} height={20} className="h-5 w-auto object-contain" />
+                  <Image
+                    src="/payments/mastercard.svg"
+                    alt="Mastercard"
+                    width={72}
+                    height={20}
+                    className="object-contain"
+                    style={{ width: '72px', height: '20px' }}
+                  />
                 </div>
                 <div className="h-8 bg-white/10 rounded px-2 flex items-center justify-center border border-white/10">
-                  <Image src="/payments/upi.svg" alt="UPI" width={40} height={12} className="h-3 w-auto object-contain" />
+                  <Image
+                    src="/payments/upi.svg"
+                    alt="UPI"
+                    width={40}
+                    height={12}
+                    className="object-contain"
+                    style={{ width: '40px', height: '12px' }}
+                  />
                 </div>
               </div>
             </div>

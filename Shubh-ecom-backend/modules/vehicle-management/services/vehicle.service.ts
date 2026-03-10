@@ -4,8 +4,10 @@ const { generateVehicleCode } = require('../../../utils/numbering');
 const Brand = require('../../../models/Brand.model');
 const VehicleModel = require('../models/VehicleModel.model');
 const VehicleYear = require('../models/VehicleYear.model');
+const VehicleAttribute = require('../models/VehicleAttribute.model');
 const VehicleAttributeValue = require('../models/VehicleAttributeValue.model');
 const Vehicle = require('../models/Vehicle.model');
+const { randomUUID } = require('crypto');
 const { error } = require('../../../utils/apiResponse');
 const { getOffsetPagination, buildPaginationMeta } = require('../../../utils/pagination');
 
@@ -13,6 +15,12 @@ const normalizeName = (value = '') => value.trim().toLowerCase();
 const normalizeVariantName = (value = '') => value.trim().toLowerCase();
 const VARIANT_NAME_KEY = 'variant name';
 const MAX_VARIANT_NAME_LENGTH = 100;
+const GENERATION_ATTRIBUTE_KEYS = [
+  'generation',
+  'generation / variant',
+  'generation-variant',
+  'generation variant',
+];
 
 const buildSignature = (ids) =>
   ids
@@ -22,6 +30,9 @@ const buildSignature = (ids) =>
 
 const isVariantNameAttribute = (name) =>
   normalizeName(name) === VARIANT_NAME_KEY;
+
+const isGenerationAttributeName = (name = '') =>
+  GENERATION_ATTRIBUTE_KEYS.includes(normalizeName(name));
 
 type VehicleAttributeValueItem = {
   attributeId?: { _id?: unknown; name?: string } | string | null;
@@ -84,6 +95,13 @@ const mapAttributeValues = (attributeValues: VehicleAttributeValueItem[] = []) =
   return { attributes, byName };
 };
 
+const resolveGenerationFromByName = (byName: Record<string, string> = {}) => {
+  for (const key of GENERATION_ATTRIBUTE_KEYS) {
+    if (byName[key]) return byName[key];
+  }
+  return '';
+};
+
 const mapVehicle = (vehicle: Record<string, unknown>) => {
   const attributeValueIds = Array.isArray(vehicle.attributeValueIds)
     ? (vehicle.attributeValueIds as VehicleAttributeValueItem[])
@@ -110,8 +128,30 @@ const mapVehicle = (vehicle: Record<string, unknown>) => {
       fuelType: byName['fuel type'] || '',
       transmission: byName['transmission'] || '',
       engineCapacity: byName['engine capacity'] || '',
+      generation: resolveGenerationFromByName(byName),
     },
   };
+};
+
+const hasGenerationAttributeValue = (
+  attributeValues: Array<{ attributeId?: { name?: string } | null }> = [],
+) =>
+  attributeValues.some((value) =>
+    isGenerationAttributeName(value?.attributeId?.name || ''),
+  );
+
+const buildVehicleOptionLabel = (vehicle: Record<string, unknown>) => {
+  const name =
+    String(
+      vehicle?.variantName ||
+      (vehicle?.display as Record<string, unknown>)?.variantName ||
+      'Variant',
+    ).trim() || 'Variant';
+  const display = (vehicle?.display as Record<string, unknown>) || {};
+  const meta = [display.fuelType, display.transmission, display.engineCapacity]
+    .filter(Boolean)
+    .join(' | ');
+  return meta ? `${name} (${meta})` : name;
 };
 
 const VEHICLE_CODE_REGEX = /^VEH-\d{6}$/;
@@ -154,6 +194,299 @@ const toCsvBuffer = async (workbook) => {
 const toXlsxBuffer = async (workbook) => {
   const buffer = await workbook.xlsx.writeBuffer();
   return Buffer.from(buffer);
+};
+
+type VehicleImportParsedRow = {
+  sourceRow: number;
+  brandName: string;
+  modelName: string;
+  variantName: string;
+  generationValue: string;
+  yearStart: number;
+  yearEnd: number;
+  status: 'active' | 'inactive';
+  sourceName: string;
+  fallbackUsed: boolean;
+};
+
+type VehicleImportDryRunSummary = {
+  totalRows: number;
+  validRows: number;
+  skippedRows: number;
+  expandedYearRows: number;
+  missingGenerationCount: number;
+  fallbackGroupCount: number;
+  errors: Array<{ row: number; message: string }>;
+};
+
+type VehicleImportRun = {
+  runId: string;
+  createdAt: string;
+  scope: { brandName: string; modelContains: string };
+  summary: VehicleImportDryRunSummary;
+  rows: VehicleImportParsedRow[];
+};
+
+type VehicleImportHistoryItem = {
+  runId: string;
+  createdAt: string;
+  status: 'dry_run' | 'completed' | 'failed';
+  scope: { brandName: string; modelContains: string };
+  summary: VehicleImportDryRunSummary;
+  commit?: {
+    processedRows: number;
+    createdVehicles: number;
+    updatedVehicles: number;
+    skippedRows: number;
+    errors: Array<{ row: number; message: string }>;
+  };
+};
+
+const IMPORT_RUN_TTL_MS = 6 * 60 * 60 * 1000;
+const MAX_IMPORT_HISTORY = 25;
+const importRuns = new Map<string, VehicleImportRun>();
+const importHistory: VehicleImportHistoryItem[] = [];
+
+const normalizeCell = (value: unknown = '') => String(value || '').trim();
+
+const parseYearFromText = (value = '') => {
+  const text = normalizeCell(value);
+  if (!text) return null;
+  const match = text.match(/(19|20)\d{2}/);
+  return match ? Number(match[0]) : null;
+};
+
+const resolveYearBounds = (row: Record<string, string>) => {
+  const fromRaw = normalizeCell(row.year_start || row.year_from);
+  const toRaw = normalizeCell(row.year_end || row.year_to);
+  const rangeRaw = normalizeCell(row.year_range || row.years_csv);
+
+  let start = parseYearFromText(fromRaw);
+  let end = parseYearFromText(toRaw);
+
+  if (!start || !end) {
+    const years = (rangeRaw.match(/(19|20)\d{2}/g) || []).map(Number);
+    if (!start && years.length) start = years[0];
+    if (!end && years.length) end = years[years.length - 1];
+  }
+
+  if (!start || !end) return { yearStart: null, yearEnd: null };
+  if (start > end) [start, end] = [end, start];
+  return { yearStart: start, yearEnd: end };
+};
+
+const buildImportScope = (scope: Record<string, unknown> = {}) => {
+  const usePilot = String(scope.pilot || '').toLowerCase() === 'true';
+  if (usePilot) {
+    return { brandName: 'TOYOTA', modelContains: 'ETIOS' };
+  }
+  return {
+    brandName: normalizeCell(scope.brandName || ''),
+    modelContains: normalizeCell(scope.modelContains || ''),
+  };
+};
+
+const shouldIncludeScopeRow = (
+  row: { brandName: string; modelName: string },
+  scope: { brandName: string; modelContains: string },
+) => {
+  if (scope.brandName && normalizeName(row.brandName) !== normalizeName(scope.brandName)) {
+    return false;
+  }
+  if (scope.modelContains && !normalizeName(row.modelName).includes(normalizeName(scope.modelContains))) {
+    return false;
+  }
+  return true;
+};
+
+const cleanupImportRuns = () => {
+  const now = Date.now();
+  for (const [runId, run] of importRuns.entries()) {
+    const createdAt = new Date(run.createdAt).getTime();
+    if (!Number.isFinite(createdAt) || now - createdAt > IMPORT_RUN_TTL_MS) {
+      importRuns.delete(runId);
+    }
+  }
+};
+
+const pushImportHistory = (item: VehicleImportHistoryItem) => {
+  importHistory.unshift(item);
+  if (importHistory.length > MAX_IMPORT_HISTORY) {
+    importHistory.length = MAX_IMPORT_HISTORY;
+  }
+};
+
+const parseImportWorkbook = async (
+  fileBuffer: Buffer,
+  scope: { brandName: string; modelContains: string },
+) => {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(fileBuffer);
+  const sheet = workbook.getWorksheet('VehicleSchemaReady') || workbook.worksheets[0];
+  if (!sheet) {
+    error('No worksheet found in import file', 400);
+  }
+
+  const headers = sheet
+    .getRow(1)
+    .values
+    .slice(1)
+    .map((value) => normalizeName(normalizeCell(value)));
+  const headerIndex: Record<string, number> = {};
+  headers.forEach((header, idx) => {
+    headerIndex[header] = idx + 1;
+  });
+
+  const getValue = (row, key: string) => {
+    const idx = headerIndex[normalizeName(key)];
+    if (!idx || idx < 1) return '';
+    return normalizeCell(row.getCell(idx).value);
+  };
+
+  const errors: Array<{ row: number; message: string }> = [];
+  const rows: VehicleImportParsedRow[] = [];
+  let totalRows = 0;
+  let validRows = 0;
+  let skippedRows = 0;
+  let expandedYearRows = 0;
+  let missingGenerationCount = 0;
+  let fallbackGroupCount = 0;
+
+  for (let i = 2; i <= sheet.rowCount; i += 1) {
+    const row = sheet.getRow(i);
+
+    const brandName = getValue(row, 'brand_name') || getValue(row, 'brand');
+    const modelName = getValue(row, 'model_name') || getValue(row, 'model');
+    const variantName = getValue(row, 'variant_name') || getValue(row, 'body_type') || 'Standard';
+    const generationValue = getValue(row, 'generation_value') || getValue(row, 'generation / variant');
+    const sourceName = getValue(row, 'source_name') || getValue(row, 'source') || '';
+    const importReady = normalizeName(getValue(row, 'import_ready'));
+    const status = normalizeName(getValue(row, 'status')) === 'inactive' ? 'inactive' : 'active';
+
+    if (!brandName && !modelName) continue;
+    if (!shouldIncludeScopeRow({ brandName, modelName }, scope)) continue;
+    totalRows += 1;
+
+    if (importReady && importReady !== 'yes') {
+      skippedRows += 1;
+      errors.push({ row: i, message: 'Row marked as not import-ready' });
+      continue;
+    }
+
+    const { yearStart, yearEnd } = resolveYearBounds({
+      year_start: getValue(row, 'year_start'),
+      year_end: getValue(row, 'year_end'),
+      year_from: getValue(row, 'year from'),
+      year_to: getValue(row, 'year to'),
+      year_range: getValue(row, 'year range'),
+      years_csv: getValue(row, 'years_csv'),
+    });
+
+    if (!brandName || !modelName || !variantName || !yearStart || !yearEnd) {
+      skippedRows += 1;
+      errors.push({ row: i, message: 'Missing required fields (brand/model/variant/year range)' });
+      continue;
+    }
+
+    if (yearEnd - yearStart > 60) {
+      skippedRows += 1;
+      errors.push({ row: i, message: 'Year range is too large' });
+      continue;
+    }
+
+    const fallbackUsed = !generationValue;
+    if (fallbackUsed) {
+      missingGenerationCount += 1;
+      fallbackGroupCount += 1;
+    }
+
+    rows.push({
+      sourceRow: i,
+      brandName,
+      modelName,
+      variantName,
+      generationValue,
+      yearStart,
+      yearEnd,
+      status,
+      sourceName,
+      fallbackUsed,
+    });
+    validRows += 1;
+    expandedYearRows += yearEnd - yearStart + 1;
+  }
+
+  const summary: VehicleImportDryRunSummary = {
+    totalRows,
+    validRows,
+    skippedRows,
+    expandedYearRows,
+    missingGenerationCount,
+    fallbackGroupCount,
+    errors: errors.slice(0, 200),
+  };
+
+  return { rows, summary };
+};
+
+const findOrCreateVehicleBrand = async (name: string, status: string) => {
+  const existing = await Brand.findOne({ name }).lean();
+  if (existing) {
+    if (existing.type !== 'vehicle') {
+      error(`Brand "${name}" exists with non-vehicle type`, 400);
+    }
+    await Brand.updateOne({ _id: existing._id }, { $set: { status, isDeleted: false } });
+    return existing._id;
+  }
+
+  const created = await Brand.create({
+    name,
+    slug: normalizeName(name).replace(/\s+/g, '-'),
+    type: 'vehicle',
+    status,
+    isDeleted: false,
+  });
+  return created._id;
+};
+
+const findOrCreateVehicleModel = async (brandId: unknown, name: string, status: string) => {
+  const existing = await VehicleModel.findOne({ brandId, name }).lean();
+  if (existing) {
+    await VehicleModel.updateOne({ _id: existing._id }, { $set: { status, isDeleted: false } });
+    return existing._id;
+  }
+
+  const created = await VehicleModel.create({
+    brandId,
+    name,
+    slug: normalizeName(name).replace(/\s+/g, '-'),
+    status,
+    isDeleted: false,
+  });
+  return created._id;
+};
+
+const findOrCreateYear = async (year: number, status: string) => {
+  const existing = await VehicleYear.findOne({ year }).lean();
+  if (existing) {
+    await VehicleYear.updateOne({ _id: existing._id }, { $set: { status, isDeleted: false } });
+    return existing._id;
+  }
+  const created = await VehicleYear.create({ year, status, isDeleted: false });
+  return created._id;
+};
+
+const findGenerationAttribute = async () => {
+  const all = await VehicleAttribute.find({}).lean();
+  const existing = all.find((item) => isGenerationAttributeName(item.name || ''));
+  if (existing) return existing;
+  const created = await VehicleAttribute.create({
+    name: 'Generation',
+    type: 'dropdown',
+    status: 'active',
+    isDeleted: false,
+  });
+  return created;
 };
 
 class VehiclesService {
@@ -317,6 +650,11 @@ class VehiclesService {
     );
     if (hasVariantNameAttribute) {
       error('Variant Name cannot be sent as a variant attribute', 400);
+    }
+
+    const status = String(payload.status || 'active').toLowerCase();
+    if (status === 'active' && !hasGenerationAttributeValue(attributeValues)) {
+      error('Generation attribute is required for active vehicles', 400);
     }
 
     const attributeSignature = buildSignature(uniqueIds);
@@ -497,6 +835,18 @@ class VehiclesService {
       attributeValueIds = uniqueIds;
     }
 
+    const status = String(updated.status || existing.status || 'active').toLowerCase();
+    if (status === 'active') {
+      const generationValues = await VehicleAttributeValue.find({
+        _id: { $in: attributeValueIds.map((item) => String(item)) },
+      })
+        .populate('attributeId', 'name')
+        .lean();
+      if (!hasGenerationAttributeValue(generationValues)) {
+        error('Generation attribute is required for active vehicles', 400);
+      }
+    }
+
     const attributeSignature = buildSignature(
       attributeValueIds.map((item) => String(item)),
     );
@@ -606,6 +956,287 @@ class VehiclesService {
     return Array.from(map.values()).sort((a, b) =>
       a.name.localeCompare(b.name),
     );
+  }
+
+  async importDryRun(payload: { fileBuffer?: Buffer; scope?: Record<string, unknown> } = {}) {
+    const fileBuffer = payload.fileBuffer;
+    if (!fileBuffer || !Buffer.isBuffer(fileBuffer)) {
+      error('Import file is required', 400);
+    }
+
+    cleanupImportRuns();
+    const scope = buildImportScope(payload.scope || {});
+    const { rows, summary } = await parseImportWorkbook(fileBuffer as Buffer, scope);
+    const runId = randomUUID();
+    const run: VehicleImportRun = {
+      runId,
+      createdAt: new Date().toISOString(),
+      scope,
+      summary,
+      rows,
+    };
+    importRuns.set(runId, run);
+
+    const historyItem: VehicleImportHistoryItem = {
+      runId,
+      createdAt: run.createdAt,
+      status: 'dry_run',
+      scope,
+      summary,
+    };
+    pushImportHistory(historyItem);
+
+    return {
+      runId,
+      createdAt: run.createdAt,
+      scope,
+      summary,
+      sampleRows: rows.slice(0, 25),
+    };
+  }
+
+  async importCommit(payload: { runId?: string } = {}) {
+    cleanupImportRuns();
+    const runId = String(payload.runId || '').trim();
+    if (!runId) error('runId is required', 400);
+    const run = importRuns.get(runId);
+    if (!run) {
+      error('Import run not found or expired', 404);
+      return null;
+    }
+
+    const generationAttribute = await findGenerationAttribute();
+    const generationValueMap = new Map<string, unknown>();
+    const commitErrors: Array<{ row: number; message: string }> = [];
+    let createdVehicles = 0;
+    let updatedVehicles = 0;
+    let skippedRows = 0;
+    let processedRows = 0;
+
+    const ensureGenerationValueId = async (value: string) => {
+      const normalized = normalizeCell(value);
+      if (!normalized) return null;
+      const cacheKey = normalizeName(normalized);
+      if (generationValueMap.has(cacheKey)) return generationValueMap.get(cacheKey);
+
+      let found = await VehicleAttributeValue.findOne({
+        attributeId: generationAttribute._id,
+        value: normalized,
+      }).lean();
+      if (!found) {
+        found = await VehicleAttributeValue.create({
+          attributeId: generationAttribute._id,
+          value: normalized,
+          status: 'active',
+          isDeleted: false,
+        });
+      }
+      generationValueMap.set(cacheKey, found._id);
+      return found._id;
+    };
+
+    for (const sourceRow of run.rows) {
+      try {
+        const brandId = await findOrCreateVehicleBrand(sourceRow.brandName, sourceRow.status);
+        const modelId = await findOrCreateVehicleModel(brandId, sourceRow.modelName, sourceRow.status);
+        const generationValueId = await ensureGenerationValueId(sourceRow.generationValue);
+
+        for (let yearNum = sourceRow.yearStart; yearNum <= sourceRow.yearEnd; yearNum += 1) {
+          const yearId = await findOrCreateYear(yearNum, sourceRow.status);
+          const variantNameNormalized = normalizeVariantName(sourceRow.variantName);
+          const attributeValueIds = generationValueId ? [generationValueId] : [];
+          const attributeSignature = attributeValueIds.length
+            ? buildSignature(attributeValueIds)
+            : '__none__';
+
+          const possibleSignatures = attributeSignature === '__none__'
+            ? ['__none__', '']
+            : [attributeSignature];
+
+          const existing = await Vehicle.findOne({
+            brandId,
+            modelId,
+            yearId,
+            variantNameNormalized,
+            attributeSignature: { $in: possibleSignatures },
+            isDeleted: false,
+          }).lean();
+
+          if (existing) {
+            await Vehicle.updateOne(
+              { _id: existing._id },
+              {
+                $set: {
+                  variantName: sourceRow.variantName,
+                  variantNameNormalized,
+                  attributeValueIds,
+                  attributeSignature,
+                  status: sourceRow.status,
+                  isDeleted: false,
+                },
+              },
+            );
+            updatedVehicles += 1;
+          } else {
+            await Vehicle.create({
+              brandId,
+              modelId,
+              yearId,
+              variantName: sourceRow.variantName,
+              variantNameNormalized,
+              attributeValueIds,
+              attributeSignature,
+              status: sourceRow.status,
+              isDeleted: false,
+            });
+            createdVehicles += 1;
+          }
+          processedRows += 1;
+        }
+      } catch (e) {
+        skippedRows += 1;
+        commitErrors.push({
+          row: sourceRow.sourceRow,
+          message: e instanceof Error ? e.message : 'Import commit failed',
+        });
+      }
+    }
+
+    importRuns.delete(runId);
+    const commit = {
+      processedRows,
+      createdVehicles,
+      updatedVehicles,
+      skippedRows,
+      errors: commitErrors.slice(0, 200),
+    };
+
+    const historyEntry = importHistory.find((item) => item.runId === runId);
+    if (historyEntry) {
+      historyEntry.status = commitErrors.length ? 'failed' : 'completed';
+      historyEntry.commit = commit;
+    } else {
+      pushImportHistory({
+        runId,
+        createdAt: run.createdAt,
+        status: commitErrors.length ? 'failed' : 'completed',
+        scope: run.scope,
+        summary: run.summary,
+        commit,
+      });
+    }
+
+    return {
+      runId,
+      status: commitErrors.length ? 'failed' : 'completed',
+      summary: run.summary,
+      commit,
+    };
+  }
+
+  async getImportHistory(query: Record<string, unknown> = {}) {
+    cleanupImportRuns();
+    const limit = Math.min(50, Math.max(1, Number(query.limit || 10)));
+    return {
+      items: importHistory.slice(0, limit),
+      total: importHistory.length,
+    };
+  }
+
+  async listModificationGroups(query: Record<string, unknown> = {}) {
+    if (!query.brandId) error('brandId is required', 400);
+    if (!query.modelId) error('modelId is required', 400);
+    if (!query.yearId) error('yearId is required', 400);
+
+    const selectedYearDoc = await VehicleYear.findById(query.yearId).lean();
+    if (!selectedYearDoc) error('Vehicle year not found', 404);
+    const selectedYear = Number(selectedYearDoc.year);
+    if (!Number.isFinite(selectedYear)) error('Invalid selected year', 400);
+
+    const filter: Record<string, unknown> = {
+      brandId: query.brandId,
+      modelId: query.modelId,
+      isDeleted: false,
+    };
+    filter.status =
+      query.status && String(query.status).trim()
+        ? String(query.status).trim()
+        : 'active';
+
+    const rows = await Vehicle.find(filter)
+      .populate('brandId', 'name logo status')
+      .populate('modelId', 'name image status')
+      .populate('yearId', 'year status')
+      .populate({
+        path: 'attributeValueIds',
+        select: 'value attributeId status',
+        populate: { path: 'attributeId', select: 'name type status' },
+      })
+      .lean();
+
+    const groups = new Map<string, {
+      groupKey: string;
+      groupTitle: string;
+      yearSet: Set<number>;
+      options: Array<Record<string, unknown>>;
+    }>();
+
+    rows.map(mapVehicle).forEach((vehicle) => {
+      const yearValue = Number((vehicle?.year as Record<string, unknown>)?.year);
+      if (!Number.isFinite(yearValue)) return;
+      const display = (vehicle?.display as Record<string, unknown>) || {};
+      const groupTitleRaw = String(display.generation || vehicle.variantName || 'Other').trim() || 'Other';
+      const groupKey = normalizeName(groupTitleRaw);
+      const entry = groups.get(groupKey) || {
+        groupKey,
+        groupTitle: groupTitleRaw,
+        yearSet: new Set<number>(),
+        options: [],
+      };
+      entry.yearSet.add(yearValue);
+      if (yearValue === selectedYear) {
+        entry.options.push({
+          vehicleId: vehicle._id,
+          label: buildVehicleOptionLabel(vehicle),
+          variantName: vehicle.variantName || display.variantName || 'Variant',
+          display: vehicle.display || {},
+          year: yearValue,
+        });
+      }
+      groups.set(groupKey, entry);
+    });
+
+    const data = Array.from(groups.values())
+      .map((group) => {
+        const years = Array.from(group.yearSet.values()).sort((a, b) => a - b);
+        const yearStart = years[0];
+        const yearEnd = years[years.length - 1];
+        const yearRangeLabel =
+          yearStart === yearEnd ? String(yearStart) : `${yearStart} - ${yearEnd}`;
+        const lifecycle = yearEnd >= new Date().getFullYear() ? 'ongoing' : 'discontinued';
+        return {
+          groupKey: group.groupKey,
+          groupTitle: group.groupTitle,
+          yearStart,
+          yearEnd,
+          yearRangeLabel,
+          lifecycle,
+          options: group.options.sort((a, b) =>
+            String(a.label || '').localeCompare(String(b.label || ''), 'en', { sensitivity: 'base' }),
+          ),
+        };
+      })
+      .filter((group) => group.options.length > 0)
+      .sort((a, b) =>
+        String(a.groupTitle || '').localeCompare(String(b.groupTitle || ''), 'en', { sensitivity: 'base' }),
+      );
+
+    return {
+      selectedYearId: String(query.yearId),
+      selectedYear,
+      groups: data,
+      totalGroups: data.length,
+    };
   }
 }
 

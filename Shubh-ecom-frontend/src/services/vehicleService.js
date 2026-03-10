@@ -13,6 +13,7 @@ const cache = {
   modelsByBrand: new Map(),
   yearsByModel: new Map(),
   vehiclesByFilter: new Map(),
+  modificationGroupsByFilter: new Map(),
 };
 
 export const getVehicleBrands = async () => {
@@ -59,4 +60,16 @@ export const getVehiclesByFilter = async ({ brandId, modelId, yearId } = {}) => 
   const normalized = Array.isArray(list) ? list : []
   cache.vehiclesByFilter.set(key, normalized)
   return normalized
+}
+
+export const getVehicleModificationGroups = async ({ brandId, modelId, yearId } = {}) => {
+  if (!brandId || !modelId || !yearId) return []
+  const key = `${brandId}:${modelId}:${yearId}`
+  if (cache.modificationGroupsByFilter.has(key)) return cache.modificationGroupsByFilter.get(key)
+  const params = new URLSearchParams({ brandId, modelId, yearId })
+  const data = await api.get(`/vehicles/modifications?${params.toString()}`)
+  const payload = data?.data || data || {}
+  const groups = Array.isArray(payload.groups) ? payload.groups : []
+  cache.modificationGroupsByFilter.set(key, groups)
+  return groups
 }

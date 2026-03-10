@@ -55,7 +55,7 @@ export const CartItem = ({
         {/* Image Container with Badges */}
         <Link
           href={productLink}
-          className='w-24 h-24 md:w-32 md:h-32 bg-secondary rounded-lg overflow-hidden shrink-0 group relative block'>
+          className='w-28 h-24 md:w-36 md:h-28 bg-secondary rounded-lg overflow-hidden shrink-0 group relative block'>
           <SafeImage
             src={
               resolveProductImages(product.images || [])[0] ||

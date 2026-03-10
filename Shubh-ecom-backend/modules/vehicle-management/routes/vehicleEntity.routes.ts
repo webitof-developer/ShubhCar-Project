@@ -1,6 +1,7 @@
 const express = require('express');
 const auth = require('../../../middlewares/auth.middleware');
 const validate = require('../../../middlewares/validate.middleware');
+const multer = require('multer');
 const ROLES = require('../../../constants/roles');
 const controller = require('../controllers/vehicle.controller');
 const validateId = require('../../../middlewares/objectId.middleware');
@@ -9,11 +10,23 @@ const {
   vehicleExportQuerySchema,
   vehicleAvailableYearsQuerySchema,
   vehicleAvailableAttributesQuerySchema,
+  vehicleModificationGroupsQuerySchema,
+  vehicleImportCommitSchema,
+  vehicleImportHistoryQuerySchema,
   vehicleCreateSchema,
   vehicleUpdateSchema,
 } = require('../vehicleManagement.validator');
 
 const router = express.Router();
+const importUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const name = String(file?.originalname || '').toLowerCase();
+    if (name.endsWith('.xlsx')) return cb(null, true);
+    return cb(new Error('Only XLSX files are allowed'));
+  },
+});
 
 /**
  * @openapi
@@ -71,6 +84,42 @@ router.get(
   '/filters/attributes',
   validate(vehicleAvailableAttributesQuerySchema, 'query'),
   controller.availableAttributes,
+);
+
+/**
+ * @openapi
+ * /api/v1/vehicles/modifications:
+ *   get:
+ *     summary: Grouped vehicle modifications by generation and year range
+ *     tags: [Vehicle]
+ *     responses:
+ *       200: { description: Modification groups }
+ */
+router.get(
+  '/modifications',
+  validate(vehicleModificationGroupsQuerySchema, 'query'),
+  controller.modificationGroups,
+);
+
+router.post(
+  '/import/dry-run',
+  auth([ROLES.ADMIN]),
+  importUpload.single('file'),
+  controller.importDryRun,
+);
+
+router.post(
+  '/import/commit',
+  auth([ROLES.ADMIN]),
+  validate(vehicleImportCommitSchema),
+  controller.importCommit,
+);
+
+router.get(
+  '/import/history',
+  auth([ROLES.ADMIN]),
+  validate(vehicleImportHistoryQuerySchema, 'query'),
+  controller.importHistory,
 );
 
 /**

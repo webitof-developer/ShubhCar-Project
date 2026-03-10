@@ -112,6 +112,7 @@ const Cart = () => {
   const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [couponLoading, setCouponLoading] = useState(false);
+  const [applyingCouponCode, setApplyingCouponCode] = useState('');
   const [couponFxState, setCouponFxState] = useState(null); // 'applied' | 'removed' | null
   const [creatingCheckoutDraft, setCreatingCheckoutDraft] = useState(false);
   const [availableCoupons, setAvailableCoupons] = useState([]);
@@ -239,6 +240,7 @@ const Cart = () => {
 
     try {
       setCouponLoading(true);
+      setApplyingCouponCode(code);
       await cartService.applyCoupon(accessToken, code);
       setCouponCode('');
       await fetchSummary();
@@ -248,6 +250,7 @@ const Cart = () => {
       toast.error(error.message || 'Failed to apply coupon');
     } finally {
       setCouponLoading(false);
+      setApplyingCouponCode('');
     }
   };
 
@@ -257,6 +260,7 @@ const Cart = () => {
 
     try {
       setCouponLoading(true);
+      setApplyingCouponCode(summary.couponCode || '');
       await cartService.removeCoupon(accessToken);
       setCouponCode('');
       await fetchSummary();
@@ -266,6 +270,7 @@ const Cart = () => {
       toast.error(error.message || 'Failed to remove coupon');
     } finally {
       setCouponLoading(false);
+      setApplyingCouponCode('');
     }
   };
 
@@ -278,6 +283,7 @@ const Cart = () => {
 
     try {
       setCouponLoading(true);
+      setApplyingCouponCode(coupon.code);
       await cartService.applyCoupon(accessToken, coupon.code);
       setCouponDialogOpen(false);
       await fetchSummary();
@@ -287,6 +293,7 @@ const Cart = () => {
       toast.error(error.message || 'Failed to apply coupon');
     } finally {
       setCouponLoading(false);
+      setApplyingCouponCode('');
     }
   };
 
@@ -501,7 +508,7 @@ const Cart = () => {
           </div>
 
           <div className="lg:col-span-1">
-            <CartSummary items={items} summary={summary} user={user} cartTaxLabel={cartTaxLabel} showIncludingTax={showIncludingTax} showTaxTotals={showTaxTotals} summarySubtotal={summarySubtotal} summaryDiscount={summaryDiscount} summaryTax={summaryTax} summaryTotal={summaryTotal} couponCode={couponCode} setCouponCode={setCouponCode} handleApplyCoupon={handleApplyCoupon} handleRemoveCoupon={handleRemoveCoupon} couponDialogOpen={couponDialogOpen} setCouponDialogOpen={setCouponDialogOpen} availableCoupons={availableCoupons} couponsLoading={couponsLoading} handleApplyCouponFromDialog={handleApplyCouponFromDialog} handleCopyCouponCode={handleCopyCouponCode} copiedCoupon={copiedCoupon} formatCouponValue={formatCouponValue} onProceedToCheckout={handleProceedToCheckout} proceedLoading={creatingCheckoutDraft} couponLoading={couponLoading} summaryLoading={summaryLoading} couponFxState={couponFxState} />
+            <CartSummary items={items} summary={summary} user={user} cartTaxLabel={cartTaxLabel} showIncludingTax={showIncludingTax} showTaxTotals={showTaxTotals} summarySubtotal={summarySubtotal} summaryDiscount={summaryDiscount} summaryTax={summaryTax} summaryTotal={summaryTotal} couponCode={couponCode} setCouponCode={setCouponCode} handleApplyCoupon={handleApplyCoupon} handleRemoveCoupon={handleRemoveCoupon} couponDialogOpen={couponDialogOpen} setCouponDialogOpen={setCouponDialogOpen} availableCoupons={availableCoupons} couponsLoading={couponsLoading} handleApplyCouponFromDialog={handleApplyCouponFromDialog} handleCopyCouponCode={handleCopyCouponCode} copiedCoupon={copiedCoupon} formatCouponValue={formatCouponValue} onProceedToCheckout={handleProceedToCheckout} proceedLoading={creatingCheckoutDraft} couponLoading={couponLoading} applyingCouponCode={applyingCouponCode} summaryLoading={summaryLoading} couponFxState={couponFxState} />
           </div>
         </div>
 

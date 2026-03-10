@@ -8,15 +8,22 @@ import { Search } from "lucide-react";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getVehicleBrands, getModelsByBrand, getModelYears, getVehiclesByFilter } from "@/services/vehicleService";
+import {
+  getVehicleBrands,
+  getModelsByBrand,
+  getModelYears,
+  getVehicleModificationGroups,
+} from "@/services/vehicleService";
 import { useVehicleSelection } from "@/context/VehicleContext";
-import { logger } from '@/utils/logger';
+import { logger } from "@/utils/logger";
 
-// Logic to render Select Items with fallback
 const renderSelectItems = (items, labelFn = (i) => i.name, valueFn = (i) => i.id || i._id) => {
   if (!items || items.length === 0) {
     return <SelectItem value="none" disabled>No entries found</SelectItem>;
@@ -34,23 +41,45 @@ const buildVehicleLabel = (vehicle) => {
   const name = vehicle.variantName || vehicle.display?.variantName || "Variant";
   const meta = [vehicle.display?.fuelType, vehicle.display?.transmission, vehicle.display?.engineCapacity]
     .filter(Boolean)
-    .join(" • ");
+    .join(" | ");
   return meta ? `${name} (${meta})` : name;
+};
+
+const renderModificationItems = (groups) => {
+  if (!Array.isArray(groups) || groups.length === 0) {
+    return <SelectItem value="none" disabled>No modifications found</SelectItem>;
+  }
+
+  return groups.map((group) => (
+    <SelectGroup key={group.groupKey || `${group.groupTitle}-${group.yearRangeLabel}`}>
+      <SelectLabel className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        {group.groupTitle} {group.yearRangeLabel ? `(${group.yearRangeLabel})` : ""}
+        {group.lifecycle ? ` • ${group.lifecycle}` : ""}
+      </SelectLabel>
+      {(Array.isArray(group.options) ? group.options : []).map((option) => (
+        <SelectItem key={option.vehicleId || option._id} value={String(option.vehicleId || option._id)}>
+          {option.label || buildVehicleLabel(option)}
+        </SelectItem>
+      ))}
+      <SelectSeparator />
+    </SelectGroup>
+  ));
 };
 
 export const HeroBanner = () => {
   const router = useRouter();
   const { setSelection } = useVehicleSelection();
 
-  // Vehicle Finder State
   const [brandId, setBrandId] = useState("");
   const [modelId, setModelId] = useState("");
   const [yearId, setYearId] = useState("");
   const [variantId, setVariantId] = useState("");
+
   const [brands, setBrands] = useState([]);
   const [models, setModels] = useState([]);
   const [years, setYears] = useState([]);
-  const [variants, setVariants] = useState([]);
+  const [modificationGroups, setModificationGroups] = useState([]);
+  const [modificationOptions, setModificationOptions] = useState([]);
 
   useEffect(() => {
     const fetchBrands = async () => {
@@ -71,7 +100,8 @@ export const HeroBanner = () => {
     setVariantId("");
     setModels([]);
     setYears([]);
-    setVariants([]);
+    setModificationGroups([]);
+    setModificationOptions([]);
 
     if (val) {
       try {
@@ -88,7 +118,8 @@ export const HeroBanner = () => {
     setYearId("");
     setVariantId("");
     setYears([]);
-    setVariants([]);
+    setModificationGroups([]);
+    setModificationOptions([]);
 
     if (val) {
       try {
@@ -106,14 +137,20 @@ export const HeroBanner = () => {
   const handleYearChange = async (val) => {
     setYearId(val);
     setVariantId("");
-    setVariants([]);
+    setModificationGroups([]);
+    setModificationOptions([]);
 
     if (val) {
       try {
-        const data = await getVehiclesByFilter({ brandId, modelId, yearId: val });
-        setVariants(Array.isArray(data) ? data : []);
+        const groups = await getVehicleModificationGroups({ brandId, modelId, yearId: val });
+        const normalizedGroups = Array.isArray(groups) ? groups : [];
+        setModificationGroups(normalizedGroups);
+        const options = normalizedGroups.flatMap((group) =>
+          Array.isArray(group.options) ? group.options : []
+        );
+        setModificationOptions(options);
       } catch (error) {
-        logger.error("Failed to fetch variants", error);
+        logger.error("Failed to fetch modifications", error);
       }
     }
   };
@@ -123,7 +160,9 @@ export const HeroBanner = () => {
       const brand = brands.find((item) => toId(item._id || item.id) === toId(brandId));
       const model = models.find((item) => toId(item._id || item.id) === toId(modelId));
       const year = years.find((item) => toId(item._id || item.id) === toId(yearId));
-      const vehicle = variants.find((item) => toId(item._id || item.id) === toId(variantId));
+      const vehicle = modificationOptions.find((item) =>
+        toId(item.vehicleId || item._id || item.id) === toId(variantId)
+      );
 
       setSelection({
         brandId,
@@ -133,9 +172,10 @@ export const HeroBanner = () => {
         yearId,
         yearLabel: year?.year ? String(year.year) : "",
         vehicleIds: [variantId],
-        vehicleLabels: vehicle ? [buildVehicleLabel(vehicle)] : [],
+        vehicleLabels: vehicle ? [vehicle.label || buildVehicleLabel(vehicle)] : [],
       });
     }
+
     router.push(`/categories`);
   };
 
@@ -143,11 +183,10 @@ export const HeroBanner = () => {
     brandId &&
     (!models.length || modelId) &&
     (!years.length || yearId) &&
-    (!variants.length || variantId);
+    (!modificationOptions.length || variantId);
 
   return (
     <section className="relative min-h-[550px] md:min-h-[600px] h-auto py-20 md:py-0 flex items-center justify-center overflow-hidden">
-      {/* Background Image with Overlay */}
       <div className="absolute inset-0 z-0">
         <Image
           src="https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?q=80&w=2672&auto=format&fit=crop"
@@ -157,14 +196,11 @@ export const HeroBanner = () => {
           sizes="100vw"
           className="object-cover object-center"
         />
-        {/* Dark Overlay */}
         <div className="absolute inset-0 bg-slate-900/70" />
-        {/* Subtle Gradient */}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-transparent to-slate-900/30" />
       </div>
 
       <div className="relative z-10 container mx-auto px-4 text-center">
-        {/* Main Heading */}
         <div className="max-w-4xl mx-auto mb-12 animate-fade-in-up">
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 tracking-tight">
             Find Parts For Your Vehicle
@@ -176,10 +212,8 @@ export const HeroBanner = () => {
           </p>
         </div>
 
-        {/* Search Bar / Filter Strip */}
         <div className="max-w-5xl mx-auto bg-white/10 backdrop-blur-md border border-white/20 p-4 md:p-6 rounded-2xl shadow-2xl animate-fade-in-up delay-100">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-center">
-            {/* Brand */}
             <Select value={brandId} onValueChange={handleBrandChange}>
               <SelectTrigger className="h-12 w-full bg-white/10 hover:bg-white/20 border border-white/20 focus:ring-2 focus:ring-primary text-white font-medium data-[placeholder]:text-white [&>span]:text-white [&_svg]:!text-white [&_svg]:!opacity-100 disabled:opacity-80 disabled:cursor-not-allowed">
                 <SelectValue placeholder="Select Brand" />
@@ -189,8 +223,7 @@ export const HeroBanner = () => {
               </SelectContent>
             </Select>
 
-            {/* Model */}
-            <Select value={modelId} onValueChange={handleModelChange} disabled={!brandId || (models.length === 0)}>
+            <Select value={modelId} onValueChange={handleModelChange} disabled={!brandId || models.length === 0}>
               <SelectTrigger className="h-12 w-full bg-white/10 hover:bg-white/20 border border-white/20 focus:ring-2 focus:ring-primary text-white font-medium data-[placeholder]:text-white [&>span]:text-white [&_svg]:!text-white [&_svg]:!opacity-100 disabled:opacity-80 disabled:cursor-not-allowed">
                 <SelectValue placeholder="Select Model" />
               </SelectTrigger>
@@ -199,8 +232,7 @@ export const HeroBanner = () => {
               </SelectContent>
             </Select>
 
-            {/* Year */}
-            <Select value={yearId} onValueChange={handleYearChange} disabled={!modelId || (years.length === 0)}>
+            <Select value={yearId} onValueChange={handleYearChange} disabled={!modelId || years.length === 0}>
               <SelectTrigger className="h-12 w-full bg-white/10 hover:bg-white/20 border border-white/20 focus:ring-2 focus:ring-primary text-white font-medium data-[placeholder]:text-white [&>span]:text-white [&_svg]:!text-white [&_svg]:!opacity-100 disabled:opacity-80 disabled:cursor-not-allowed">
                 <SelectValue placeholder="Select Year" />
               </SelectTrigger>
@@ -209,17 +241,15 @@ export const HeroBanner = () => {
               </SelectContent>
             </Select>
 
-            {/* Variant */}
-            <Select value={variantId} onValueChange={setVariantId} disabled={!yearId || (variants.length === 0)}>
+            <Select value={variantId} onValueChange={setVariantId} disabled={!yearId || modificationGroups.length === 0}>
               <SelectTrigger className="h-12 w-full bg-white/10 hover:bg-white/20 border border-white/20 focus:ring-2 focus:ring-primary text-white font-medium data-[placeholder]:text-white [&>span]:text-white [&_svg]:!text-white [&_svg]:!opacity-100 disabled:opacity-80 disabled:cursor-not-allowed">
-                <SelectValue placeholder="Select Variant" />
+                <SelectValue placeholder={!yearId ? "Select Year" : (modificationOptions.length ? "Select Modification" : "No Modifications Found")} />
               </SelectTrigger>
               <SelectContent className="max-h-[300px]">
-                {renderSelectItems(variants, buildVehicleLabel)}
+                {renderModificationItems(modificationGroups)}
               </SelectContent>
             </Select>
 
-            {/* Search Button */}
             <Button
               onClick={handleSearch}
               disabled={!isSearchEnabled}

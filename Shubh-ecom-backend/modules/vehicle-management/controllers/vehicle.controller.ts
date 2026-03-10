@@ -44,6 +44,29 @@ exports.availableAttributes = asyncHandler(async (req: VehicleManagementRequest,
   return success(res, data);
 });
 
+exports.modificationGroups = asyncHandler(async (req: VehicleManagementRequest, res: Response) => {
+  const data = await service.listModificationGroups(req.query);
+  return success(res, data);
+});
+
+exports.importDryRun = asyncHandler(async (req: VehicleManagementRequest, res: Response) => {
+  const data = await service.importDryRun({
+    fileBuffer: req.file?.buffer,
+    scope: req.body,
+  });
+  return success(res, data, 'Vehicle import dry-run completed');
+});
+
+exports.importCommit = asyncHandler(async (req: VehicleManagementRequest, res: Response) => {
+  const data = await service.importCommit(req.body);
+  return success(res, data, 'Vehicle import committed');
+});
+
+exports.importHistory = asyncHandler(async (req: VehicleManagementRequest, res: Response) => {
+  const data = await service.getImportHistory(req.query);
+  return success(res, data);
+});
+
 exports.export = asyncHandler(async (req: VehicleManagementRequest, res: Response) => {
   const data = await service.exportVehicles(req.query.format);
   res.setHeader('Content-Type', data.contentType);

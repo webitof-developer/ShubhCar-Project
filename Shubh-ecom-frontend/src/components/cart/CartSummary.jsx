@@ -34,6 +34,7 @@ export const CartSummary = ({
   onProceedToCheckout,
   proceedLoading = false,
   couponLoading = false,
+  applyingCouponCode = '',
   summaryLoading = false,
   couponFxState = null,
 }) => {
@@ -121,7 +122,9 @@ export const CartSummary = ({
                       </div>
                     )}
 
-                    {!couponsLoading && availableCoupons.map((coupon) => (
+                    {!couponsLoading && availableCoupons.map((coupon) => {
+                      const isApplyingThisCoupon = couponLoading && applyingCouponCode === coupon.code;
+                      return (
                       <div
                         key={coupon.code}
                         className={`p-4 rounded-lg border-2 transition-all ${summary?.couponCode === coupon.code
@@ -165,7 +168,7 @@ export const CartSummary = ({
                                 onClick={() => handleApplyCouponFromDialog(coupon)}
                                 disabled={couponLoading}
                               >
-                                {couponLoading ? (
+                                {isApplyingThisCoupon ? (
                                   <span className="inline-flex items-center gap-1">
                                     <Loader2 className="w-3 h-3 animate-spin" /> Applying
                                   </span>
@@ -195,7 +198,7 @@ export const CartSummary = ({
                           </div>
                         </div>
                       </div>
-                    ))}
+                    )})}
                   </div>
                 </DialogContent>
               </Dialog>
@@ -262,7 +265,9 @@ export const CartSummary = ({
                       </div>
                     )}
 
-                    {!couponsLoading && availableCoupons.map((coupon) => (
+                    {!couponsLoading && availableCoupons.map((coupon) => {
+                      const isApplyingThisCoupon = couponLoading && applyingCouponCode === coupon.code;
+                      return (
                       <div
                         key={coupon.code}
                         className="p-4 rounded-lg border-2 border-border hover:border-primary/50 transition-all"
@@ -290,7 +295,7 @@ export const CartSummary = ({
                               onClick={() => handleApplyCouponFromDialog(coupon)}
                               disabled={couponLoading}
                             >
-                              {couponLoading ? (
+                              {isApplyingThisCoupon ? (
                                 <span className="inline-flex items-center gap-1">
                                   <Loader2 className="w-3 h-3 animate-spin" /> Applying
                                 </span>
@@ -319,7 +324,7 @@ export const CartSummary = ({
                           </div>
                         </div>
                       </div>
-                    ))}
+                    )})}
                   </div>
                 </DialogContent>
               </Dialog>

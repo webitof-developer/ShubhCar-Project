@@ -60,6 +60,7 @@ const SearchResultsDropdown = ({ results, isLoading, isVisible, onClose, query, 
                       src={imageSrc}
                       alt={product.name}
                       fill
+                      sizes="80px"
                       className="object-contain p-2"
                     />
                   </div>
@@ -284,6 +285,7 @@ const Header = () => {
                   src="/logodark.png"
                   alt={`${siteName || 'Site'} Logo`}
                   fill
+                  sizes="(max-width: 768px) 128px, 160px"
                   className="object-contain"
                   priority
                 />

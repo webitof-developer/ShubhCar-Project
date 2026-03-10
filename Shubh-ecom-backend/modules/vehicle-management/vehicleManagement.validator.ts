@@ -122,6 +122,18 @@ const vehicleAvailableAttributesQuerySchema = Joi.object({
   modelId: Joi.string().required(),
   yearId: Joi.string(),
 });
+const vehicleModificationGroupsQuerySchema = Joi.object({
+  brandId: Joi.string().required(),
+  modelId: Joi.string().required(),
+  yearId: Joi.string().required(),
+  status: Joi.string().valid('active', 'inactive'),
+});
+const vehicleImportCommitSchema = Joi.object({
+  runId: Joi.string().required(),
+});
+const vehicleImportHistoryQuerySchema = Joi.object({
+  limit: Joi.number().integer().min(1).max(50).default(10),
+});
 const vehicleCreateSchema = Joi.object({
   vehicleCode: Joi.string().trim().uppercase().pattern(/^VEH-\d{6}$/),
   brandId: Joi.string().required(),
@@ -167,6 +179,9 @@ module.exports = {
   vehicleExportQuerySchema,
   vehicleAvailableYearsQuerySchema,
   vehicleAvailableAttributesQuerySchema,
+  vehicleModificationGroupsQuerySchema,
+  vehicleImportCommitSchema,
+  vehicleImportHistoryQuerySchema,
   vehicleCreateSchema,
   vehicleUpdateSchema,
 };

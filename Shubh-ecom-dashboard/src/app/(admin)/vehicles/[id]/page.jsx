@@ -9,6 +9,24 @@ import { API_BASE_URL } from '@/helpers/apiBase'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import { toast } from 'react-toastify'
 
+const GENERATION_ATTRIBUTE_KEYS = new Set([
+  'generation',
+  'generation / variant',
+  'generation-variant',
+  'generation variant',
+])
+
+const normalizeName = (value = '') => String(value).trim().toLowerCase()
+
+const getGenerationValue = (vehicle) => {
+  const fromDisplay = String(vehicle?.display?.generation || '').trim()
+  if (fromDisplay) return fromDisplay
+  const fromAttribute = (vehicle?.attributes || []).find((item) =>
+    GENERATION_ATTRIBUTE_KEYS.has(normalizeName(item?.attributeName)),
+  )
+  return String(fromAttribute?.value || '').trim()
+}
+
 const VehicleDetailPage = () => {
   const { data: session } = useSession()
   const params = useParams()
@@ -96,22 +114,39 @@ const VehicleDetailPage = () => {
             <Card>
               <CardBody>
                 <h5 className="mb-3">Model Year: {group.year || '-'}</h5>
-                <div className="table-responsive">
+                <div className="table-responsive border rounded-3" style={{ maxHeight: '65vh', overflow: 'auto' }}>
                   <Table hover responsive className="table-nowrap mb-0 align-middle">
-                    <thead>
+                    <thead className="position-sticky top-0" style={{ zIndex: 2 }}>
                       <tr>
-                        <th>Variant Name</th>
-                        <th>Fuel Type</th>
-                        <th>Transmission</th>
-                        <th>Engine Capacity</th>
-                        <th>Status</th>
-                        <th>Action</th>
+                        <th className="bg-white">Variant Name</th>
+                        <th className="bg-white">Modification Group</th>
+                        <th className="bg-white">Fuel Type</th>
+                        <th className="bg-white">Transmission</th>
+                        <th className="bg-white">Engine Capacity</th>
+                        <th className="bg-white">Status</th>
+                        <th className="bg-white">Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       {group.variants.map((variant) => (
                         <tr key={variant._id}>
                           <td className="fw-semibold">{variant.variantName || variant.display?.variantName || '-'}</td>
+                          <td>
+                            {getGenerationValue(variant) ? (
+                              <span className="badge bg-primary-subtle text-primary fw-medium">
+                                {getGenerationValue(variant)}
+                              </span>
+                            ) : (
+                              <span
+                                className={`badge fw-medium ${variant.status === 'active'
+                                  ? 'bg-danger-subtle text-danger'
+                                  : 'bg-warning-subtle text-warning'
+                                  }`}
+                              >
+                                Missing Generation
+                              </span>
+                            )}
+                          </td>
                           <td>{variant.display?.fuelType || '-'}</td>
                           <td>{variant.display?.transmission || '-'}</td>
                           <td>{variant.display?.engineCapacity || '-'}</td>
@@ -137,7 +172,7 @@ const VehicleDetailPage = () => {
                         </tr>
                       ))}
                       {group.variants.length === 0 && (
-                        <tr><td colSpan="6" className="text-center">No variants</td></tr>
+                        <tr><td colSpan="7" className="text-center">No variants</td></tr>
                       )}
                     </tbody>
                   </Table>

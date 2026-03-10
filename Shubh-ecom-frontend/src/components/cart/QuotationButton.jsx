@@ -6,124 +6,128 @@ import { Button } from '@/components/ui/button';
 import { logger } from '@/utils/logger';
 import { toast } from 'sonner';
 
+const normalizeErrorMessage = (err, fallback = 'Failed to generate quotation') => {
+  if (!err) return fallback;
+  if (err instanceof Error && err.message) return err.message;
+  if (typeof err === 'string') return err;
+  if (typeof err === 'object') {
+    if (typeof err.message === 'string' && err.message.trim()) return err.message;
+    if (typeof err.type === 'string' && err.type.trim()) {
+      return `Unexpected browser error: ${err.type}`;
+    }
+  }
+  return fallback;
+};
+
+const renderPrintFallback = (win, element, filename) => {
+  if (!win || !element) return false;
+  const previousDisplay = element.style.display;
+  element.style.display = 'block';
+  const html = element.innerHTML;
+  element.style.display = previousDisplay || 'none';
+
+  win.document.open();
+  win.document.write(`
+      <html>
+        <head>
+          <title>${filename}</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <style>
+            body { margin: 0; font-family: Arial, sans-serif; background: #f3f4f6; }
+            .toolbar { position: sticky; top: 0; z-index: 10; background: #111827; color: #fff; padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; }
+            .btn { background: #2663EB; color: #fff; border: 0; border-radius: 6px; padding: 8px 12px; cursor: pointer; font-weight: 600; }
+            .canvas { display: flex; justify-content: center; padding: 16px; }
+            .sheet { width: 210mm; min-height: 297mm; background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,0.15); }
+            #quotation-template { box-sizing: border-box; max-width: 210mm; margin: 0 auto; color: #111827; }
+            #quotation-template * { box-sizing: border-box; }
+            #quotation-template table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+            #quotation-template thead tr { background: #f9fafb; border-top: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb; }
+            #quotation-template th,
+            #quotation-template td { padding: 10px 12px; font-size: 12px; vertical-align: top; }
+            #quotation-template th { text-transform: uppercase; color: #4b5563; font-weight: 600; letter-spacing: 0.02em; }
+            #quotation-template tbody tr { border-bottom: 1px solid #f3f4f6; }
+            #quotation-template h2 { margin: 0; font-size: 34px; line-height: 1.1; }
+            #quotation-template h3 { margin: 0 0 8px 0; }
+            #quotation-template p { margin: 0 0 6px 0; }
+            #quotation-template img { max-width: 100%; height: auto; }
+            #quotation-template .text-right { text-align: right; }
+            #quotation-template .text-center { text-align: center; }
+            #quotation-template .font-bold { font-weight: 700; }
+            #quotation-template .font-semibold { font-weight: 600; }
+            #quotation-template .text-orange-600 { color: #ea580c !important; }
+            #quotation-template .text-green-600 { color: #16a34a !important; }
+            #quotation-template .border-t-2 { border-top: 2px solid #d1d5db !important; }
+            @media print {
+              .toolbar { display: none; }
+              body { background: #fff; }
+              .canvas { padding: 0; }
+              .sheet { box-shadow: none; width: auto; min-height: auto; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="toolbar">
+            <span>${filename}</span>
+            <button class="btn" onclick="window.print()">Print / Save as PDF</button>
+          </div>
+          <div class="canvas">
+            <div class="sheet">${html}</div>
+          </div>
+        </body>
+      </html>
+    `);
+  win.document.close();
+  return true;
+};
+
 const QuotationButton = ({ cartItems, summary, profile }) => {
   const componentRef = useRef();
+  const previewWindowRef = useRef(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const withTimeout = (promise, timeoutMs, label) =>
-    Promise.race([
-      promise,
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error(`${label} timed out`)), timeoutMs),
-      ),
-    ]);
-
-  const loadHtml2Pdf = async () => {
-    if (typeof window === 'undefined') return null;
-    if (window.html2pdf) return window.html2pdf;
-
-    await withTimeout(new Promise((resolve, reject) => {
-      const existing = document.querySelector('script[data-html2pdf]');
-      if (existing) {
-        if (window.html2pdf) {
-          resolve();
-          return;
-        }
-        existing.addEventListener('load', resolve, { once: true });
-        existing.addEventListener('error', reject, { once: true });
-        return;
-      }
-
-      const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';
-      script.async = true;
-      script.dataset.html2pdf = 'true';
-      script.onload = resolve;
-      script.onerror = reject;
-      document.body.appendChild(script);
-    }), 12000, 'Loading PDF library');
-
-    return window.html2pdf || null;
-  };
 
   const handleDownloadPdf = async () => {
     let win = null;
+    let element = null;
+    const filename = `Quotation-${new Date().toISOString().split('T')[0]}.pdf`;
     try {
       setIsGenerating(true);
-      
-      // Open window early to avoid popup blockers and show loading state
+      toast.message('Preparing quotation preview...');
+
+      if (previewWindowRef.current && !previewWindowRef.current.closed) {
+        previewWindowRef.current.close();
+      }
+
       win = window.open('', '_blank');
+      previewWindowRef.current = win;
+      if (!win) {
+        throw new Error('Popup blocked. Please allow popups for quotation preview.');
+      }
+      try {
+        win.opener = null;
+      } catch {}
       if (win) {
-          win.document.write('<html><head><title>Generating Quotation...</title></head><body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;"><div>Generating PDF...</div></body></html>');
+        win.document.write('<html><head><title>Generating Quotation...</title></head><body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;"><div>Generating PDF...</div></body></html>');
       }
 
-      const html2pdf = await loadHtml2Pdf();
-      if (!html2pdf) {
-        throw new Error('Unable to load PDF library');
-      }
-
-      const element = componentRef.current;
+      element = componentRef.current;
       if (!element) {
         throw new Error('Quotation content not ready');
       }
 
-      const filename = `Quotation-${new Date().toISOString().split('T')[0]}.pdf`;
-      const opt = {
-        margin: [10, 10],
-        filename: filename,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
-
-      // Temporarily make visible for capture
-      const previousDisplay = element.style.display;
-      element.style.display = 'block';
-      let pdfBlobUrl;
-      try {
-        // Generate Blob URL
-        pdfBlobUrl = await withTimeout(
-          html2pdf().set(opt).from(element).output('bloburl'),
-          20000,
-          'Generating quotation PDF',
-        );
-      } finally {
-        element.style.display = previousDisplay || 'none';
+      const fallbackOk = renderPrintFallback(win, element, filename);
+      if (fallbackOk) {
+        toast.message('Opened print view fallback.');
+        return;
       }
 
-      // Update the opened window with the PDF in an iframe and a custom Download button
-      if (win) {
-        win.document.open();
-        win.document.write(`
-          <html>
-            <head>
-              <title>${filename}</title>
-              <style>
-                body { margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; font-family: sans-serif; background: #525659; }
-                .toolbar { background: #323639; color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 10; }
-                .filename { font-size: 14px; font-weight: 500; }
-                .btn { background-color: #2663EB; color: white; text-decoration: none; padding: 8px 16px; border-radius: 4px; font-size: 13px; font-weight: 500; transition: background 0.2s; }
-                .btn:hover { background-color: #1d4ed8; }
-                iframe { flex: 1; width: 100%; border: none; }
-              </style>
-            </head>
-            <body>
-              <div class="toolbar">
-                <span class="filename">${filename}</span>
-                <a href="${pdfBlobUrl}" download="${filename}" class="btn">Download / Save PDF</a>
-              </div>
-              <iframe src="${pdfBlobUrl}#toolbar=0&navpanes=0&scrollbar=0" type="application/pdf"></iframe>
-            </body>
-          </html>
-        `);
-        win.document.close();
-      }
-
+      throw new Error('Unable to open print view');
     } catch (error) {
-      logger.error('Failed to generate PDF:', error);
+      const message = normalizeErrorMessage(error);
+      logger.error('Failed to generate quotation:', { message, raw: error });
       if (win && !win.closed) {
         win.close();
       }
-      toast.error(error?.message || 'Failed to generate quotation PDF');
+      toast.error(message);
     } finally {
       setIsGenerating(false);
     }
@@ -132,11 +136,9 @@ const QuotationButton = ({ cartItems, summary, profile }) => {
   return (
     <>
       <div style={{ display: 'none' }}>
-        {/* Helper wrapper to force HEX colors for html2canvas compatibility */}
-        <div 
-          ref={componentRef} 
+        <div
+          ref={componentRef}
           style={{
-            // Force reset of theme variables to HEX to avoid 'lab'/'oklch' parsing errors in html2canvas
             '--color-background': '#ffffff',
             '--color-foreground': '#0f172a',
             '--color-card': '#ffffff',
@@ -160,14 +162,14 @@ const QuotationButton = ({ cartItems, summary, profile }) => {
             backgroundColor: '#ffffff',
           }}
         >
-            <QuotationTemplate 
-                items={cartItems} 
-                summary={summary}
-                profile={profile}
-            />
+          <QuotationTemplate
+            items={cartItems}
+            summary={summary}
+            profile={profile}
+          />
         </div>
       </div>
-      
+
       <Button
         onClick={handleDownloadPdf}
         disabled={isGenerating}

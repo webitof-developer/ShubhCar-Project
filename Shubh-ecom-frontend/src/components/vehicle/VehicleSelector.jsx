@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -6,7 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
-import { getVehicleBrands, getModelsByBrand, getModelYears, getVehiclesByFilter } from "@/services/vehicleService";
+import {
+  getVehicleBrands,
+  getModelsByBrand,
+  getModelYears,
+  getVehicleModificationGroups,
+} from "@/services/vehicleService";
 import { useVehicleSelection } from "@/context/VehicleContext";
 
 const toId = (value) => String(value || "");
@@ -15,7 +19,7 @@ const buildVehicleLabel = (vehicle) => {
   const name = vehicle.variantName || vehicle.display?.variantName || "Variant";
   const meta = [vehicle.display?.fuelType, vehicle.display?.transmission, vehicle.display?.engineCapacity]
     .filter(Boolean)
-    .join(" • ");
+    .join(" | ");
   return meta ? `${name} (${meta})` : name;
 };
 
@@ -28,6 +32,7 @@ export const VehicleSelector = ({
   const [brands, setBrands] = useState([]);
   const [models, setModels] = useState([]);
   const [years, setYears] = useState([]);
+  const [modificationGroups, setModificationGroups] = useState([]);
   const [vehicles, setVehicles] = useState([]);
   const [brandId, setBrandId] = useState("");
   const [modelId, setModelId] = useState("");
@@ -41,7 +46,7 @@ export const VehicleSelector = ({
     setBrandId(selection.brandId || "");
     setModelId(selection.modelId || "");
     setYearId(selection.yearId || "");
-    setSelectedVehicleIds(Array.isArray(selection.vehicleIds) ? selection.vehicleIds : []);
+    setSelectedVehicleIds(Array.isArray(selection.vehicleIds) ? selection.vehicleIds.map(toId) : []);
   }, [selection]);
 
   useEffect(() => {
@@ -66,6 +71,7 @@ export const VehicleSelector = ({
       setYearId("");
       setYears([]);
       setVehicles([]);
+      setModificationGroups([]);
       setSelectedVehicleIds([]);
       return;
     }
@@ -88,6 +94,7 @@ export const VehicleSelector = ({
       setYears([]);
       setYearId("");
       setVehicles([]);
+      setModificationGroups([]);
       setSelectedVehicleIds([]);
       return;
     }
@@ -111,16 +118,22 @@ export const VehicleSelector = ({
   useEffect(() => {
     if (!brandId || !modelId || !yearId) {
       setVehicles([]);
+      setModificationGroups([]);
       setSelectedVehicleIds([]);
       return;
     }
     const fetchVehicles = async () => {
       setLoading((prev) => ({ ...prev, vehicles: true }));
       try {
-        const data = await getVehiclesByFilter({ brandId, modelId, yearId });
-        setVehicles(Array.isArray(data) ? data : []);
+        const groups = await getVehicleModificationGroups({ brandId, modelId, yearId });
+        const normalizedGroups = Array.isArray(groups) ? groups : [];
+        setModificationGroups(normalizedGroups);
+        const options = normalizedGroups.flatMap((group) =>
+          Array.isArray(group.options) ? group.options : []
+        );
+        setVehicles(options);
       } catch (err) {
-        setError(err.message || "Failed to load variants");
+        setError(err.message || "Failed to load modifications");
       } finally {
         setLoading((prev) => ({ ...prev, vehicles: false }));
       }
@@ -138,7 +151,7 @@ export const VehicleSelector = ({
 
   const selectedVehicles = useMemo(() => {
     const selectedSet = new Set(selectedVehicleIds.map((id) => toId(id)));
-    return vehicles.filter((v) => selectedSet.has(toId(v._id)));
+    return vehicles.filter((v) => selectedSet.has(toId(v.vehicleId || v._id)));
   }, [vehicles, selectedVehicleIds]);
 
   const handleApply = () => {
@@ -149,7 +162,7 @@ export const VehicleSelector = ({
     const brand = brands.find((item) => toId(item._id || item.id) === toId(brandId));
     const model = models.find((item) => toId(item._id || item.id) === toId(modelId));
     const year = years.find((item) => toId(item._id || item.id) === toId(yearId));
-    const vehicleLabels = selectedVehicles.map(buildVehicleLabel);
+    const vehicleLabels = selectedVehicles.map((vehicle) => vehicle.label || buildVehicleLabel(vehicle));
     setSelection({
       brandId,
       brandName: brand?.name || "",
@@ -172,13 +185,14 @@ export const VehicleSelector = ({
     setModels([]);
     setYears([]);
     setVehicles([]);
+    setModificationGroups([]);
     setSelectedVehicleIds([]);
     setError("");
   };
 
   return (
     <div className="rounded-xl border border-border/60 bg-card p-4 md:p-5">
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4 flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold">Select Your Vehicle</h3>
           <p className="text-sm text-muted-foreground">Choose your exact variant for compatibility.</p>
@@ -248,28 +262,32 @@ export const VehicleSelector = ({
         ) : vehicles.length === 0 ? (
           <div className="text-sm text-muted-foreground">No variants found for this selection.</div>
         ) : (
-          <div className="max-h-64 overflow-y-auto rounded-lg border border-border/60">
-            {vehicles.map((vehicle) => {
-              const id = toId(vehicle._id);
-              const checked = selectedVehicleIds.includes(id);
-              const attributes = Array.isArray(vehicle.attributes) ? vehicle.attributes : [];
-              return (
-                <label
-                  key={id}
-                  className="flex cursor-pointer items-start gap-3 border-b border-border/60 px-3 py-3 last:border-b-0"
-                >
-                  <Checkbox checked={checked} onCheckedChange={() => toggleVehicle(id)} />
-                  <div className="flex-1">
-                    <div className="text-sm font-medium text-foreground">{buildVehicleLabel(vehicle)}</div>
-                    {attributes.length > 0 ? (
-                      <div className="mt-1 text-xs text-muted-foreground">
-                        {attributes.map((attr) => `${attr.attributeName}: ${attr.value}`).join(" · ")}
+          <div className="max-h-72 overflow-y-auto rounded-lg border border-border/60">
+            {modificationGroups.map((group) => (
+              <div key={group.groupKey || `${group.groupTitle}-${group.yearRangeLabel}`}>
+                <div className="border-b border-border/60 bg-muted/30 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {group.groupTitle} {group.yearRangeLabel ? `(${group.yearRangeLabel})` : ""}
+                  {group.lifecycle ? ` • ${group.lifecycle}` : ""}
+                </div>
+                {(Array.isArray(group.options) ? group.options : []).map((vehicle) => {
+                  const id = toId(vehicle.vehicleId || vehicle._id);
+                  const checked = selectedVehicleIds.includes(id);
+                  return (
+                    <label
+                      key={id}
+                      className="flex cursor-pointer items-start gap-3 border-b border-border/60 px-3 py-3 last:border-b-0"
+                    >
+                      <Checkbox checked={checked} onCheckedChange={() => toggleVehicle(id)} />
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-foreground">
+                          {vehicle.label || buildVehicleLabel(vehicle)}
+                        </div>
                       </div>
-                    ) : null}
-                  </div>
-                </label>
-              );
-            })}
+                    </label>
+                  );
+                })}
+              </div>
+            ))}
           </div>
         )}
       </div>

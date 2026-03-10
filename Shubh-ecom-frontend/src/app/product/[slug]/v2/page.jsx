@@ -13,7 +13,7 @@ import {
   Minus, Plus, Info, ChevronLeft, CheckCircle2, Share2, Truck,
   RotateCcw, CreditCard, Package, AlertTriangle, Copy,
 } from 'lucide-react';
-import { getProductBySlug } from '@/services/productService';
+import { getProductBySlug, getProductCompatibility } from '@/services/productService';
 import { useAuth } from '@/context/AuthContext';
 import { isProductVisible } from '@/services/productAccessService';
 import { Button } from '@/components/ui/button';
@@ -37,19 +37,21 @@ import { useProductReviews } from '@/hooks/useProductReviews';
 import { SafeImage } from '@/components/common/SafeImage';
 import { useSiteConfig } from '@/hooks/useSiteConfig';
 import { canViewWholesalePrices, getMinimumOrderQuantity } from '@/services/userTypeService';
+import { useVehicleSelection } from '@/context/VehicleContext';
 
 /* -- Trust Badges ---------------------------------------------------------- */
 const TRUST_BADGES = [
-  { icon: ShieldCheck, label: '100% Genuine' },
-  { icon: RotateCcw,   label: 'Easy Returns' },
-  { icon: Truck,       label: 'Fast Dispatch' },
-  { icon: CreditCard,  label: 'Secure Payment' },
+  { icon: ShieldCheck, label: '100% Genuine', description: 'Verified parts from trusted sellers' },
+  { icon: RotateCcw,   label: 'Easy Returns', description: 'Straightforward replacement support' },
+  { icon: Truck,       label: 'Fast Dispatch', description: 'Quick processing on in-stock items' },
+  { icon: CreditCard,  label: 'Secure Payment', description: 'Protected checkout and payment flow' },
 ];
 const ProductDetailV2 = () => {
   const { slug } = useParams();
   const router = useRouter();
   const { addToCart, cart } = useCart();
   const { user } = useAuth();
+  const { selection, isActive: isVehicleSelectionActive } = useVehicleSelection();
 
   const [product, setProduct]         = useState(null);
   const [loading, setLoading]         = useState(true);
@@ -58,8 +60,10 @@ const ProductDetailV2 = () => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [zoomed, setZoomed]           = useState(false);
   const [zoomPos, setZoomPos]         = useState({ x: 50, y: 50 });
+  const [fitmentStatus, setFitmentStatus] = useState({ loading: false, matches: false, checked: false });
   const scrollContainerRef            = useRef(null);
   const mainImageRef                  = useRef(null);
+  const zoomDelayRef                  = useRef(null);
 
   /* -- Load product -- */
   useEffect(() => {
@@ -67,15 +71,49 @@ const ProductDetailV2 = () => {
       setLoading(true);
       const data = await getProductBySlug(slug || '');
       setProduct(data);
+      if (data) {
+        setQuantity(getMinimumOrderQuantity(data, user));
+      }
       setLoading(false);
     };
     if (slug) load();
-  }, [slug]);
+  }, [slug, user]);
 
   useEffect(() => {
-    if (!product) return;
-    setQuantity(getMinimumOrderQuantity(product, user));
-  }, [product, user]);
+    const selectedIds = Array.isArray(selection?.vehicleIds) ? selection.vehicleIds.map((id) => String(id)) : [];
+    if (!product?._id || !isVehicleSelectionActive || !selectedIds.length) {
+      return;
+    }
+
+    const checkFitment = async () => {
+      setFitmentStatus({ loading: true, matches: false, checked: false });
+      try {
+        const compatibility = await getProductCompatibility(product._id);
+        const ids = new Set();
+        Object.values(compatibility || {}).forEach((list) => {
+          if (!Array.isArray(list)) return;
+          list.forEach((item) => {
+            const id = String(item?._id || '');
+            if (id) ids.add(id);
+          });
+        });
+        const matches = selectedIds.some((id) => ids.has(id));
+        setFitmentStatus({ loading: false, matches, checked: true });
+      } catch {
+        setFitmentStatus({ loading: false, matches: false, checked: true });
+      }
+    };
+
+    checkFitment();
+  }, [product?._id, selection?.vehicleIds, isVehicleSelectionActive]);
+
+  useEffect(() => {
+    return () => {
+      if (zoomDelayRef.current) {
+        clearTimeout(zoomDelayRef.current);
+      }
+    };
+  }, []);
 
   /* -- Load reviews -- */
   const {
@@ -113,6 +151,21 @@ const ProductDetailV2 = () => {
       x: ((e.clientX - rect.left) / rect.width) * 100,
       y: ((e.clientY - rect.top) / rect.height) * 100,
     });
+  };
+  const handleZoomEnter = () => {
+    if (zoomDelayRef.current) {
+      clearTimeout(zoomDelayRef.current);
+    }
+    zoomDelayRef.current = setTimeout(() => {
+      setZoomed(true);
+    }, 140);
+  };
+  const handleZoomLeave = () => {
+    if (zoomDelayRef.current) {
+      clearTimeout(zoomDelayRef.current);
+      zoomDelayRef.current = null;
+    }
+    setZoomed(false);
   };
 
   /* -- Guard states -- */
@@ -228,18 +281,18 @@ const ProductDetailV2 = () => {
           </nav>
 
           {/* -- Main Grid -- */}
-          <div className="grid lg:grid-cols-12 gap-6 lg:gap-8 mb-10">
+          <div className="grid lg:grid-cols-12 gap-6 lg:gap-10 mb-10">
 
             {/* -- LEFT: Image Gallery -- */}
-            <div className="lg:col-span-6 flex flex-col-reverse md:flex-row gap-3">
+            <div className="lg:col-span-5 flex flex-col-reverse md:flex-row items-start gap-3">
               {/* Thumbnails */}
               {images.length > 1 && (
-                <div className="flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto md:max-h-[520px] pb-1 mt-2 md:pb-0 scrollbar-hide snap-x md:snap-y snap-mandatory">
+                <div className="flex md:flex-none md:w-16 md:flex-col gap-2 overflow-x-auto md:overflow-y-auto md:max-h-[520px] pb-1 mt-2 md:mt-0 md:pb-0 scrollbar-hide snap-x md:snap-y snap-mandatory">
                   {images.map((img, i) => (
                     <button
                       key={`${img}-${i}`}
                       onClick={() => scrollToImage(i)}
-                      className={`w-14 h-14 md:w-16 md:h-16 flex-shrink-0 rounded-xl overflow-hidden border-2 transition-all snap-center mx-5 ${
+                      className={`w-14 h-14 md:w-16 md:h-16 flex-shrink-0 rounded-xl overflow-hidden border-2 transition-all snap-center ${
                         i === activeImage ? 'border-primary shadow-md' : 'border-border/50 hover:border-primary/40'
                       }`}
                     >
@@ -254,9 +307,9 @@ const ProductDetailV2 = () => {
               {/* Main image */}
               <div
                 ref={mainImageRef}
-                className="w-full mx-auto relative aspect-square md:aspect-[4/3] lg:aspect-[5/4] bg-card border border-border/50 rounded-2xl overflow-hidden cursor-zoom-in group"
-                onMouseEnter={() => setZoomed(true)}
-                onMouseLeave={() => setZoomed(false)}
+                className="w-full min-w-0 flex-1 mx-auto relative aspect-square bg-card border border-border/50 rounded-2xl overflow-hidden cursor-zoom-in group"
+                onMouseEnter={handleZoomEnter}
+                onMouseLeave={handleZoomLeave}
                 onMouseMove={handleMouseMove}
                 onClick={() => setIsPreviewOpen(true)}
               >
@@ -264,34 +317,38 @@ const ProductDetailV2 = () => {
                 <div
                   ref={scrollContainerRef}
                   onScroll={handleScroll}
-                  className="w-full h-full overflow-x-hidden overflow-y-hidden snap-x snap-mandatory flex rounded-xl"
+                  className="w-full h-full overflow-x-auto overflow-y-hidden snap-x snap-mandatory scrollbar-hide cursor-zoom-in active:cursor-grabbing flex rounded-xl"
                 >
-                    {images.map((img, i) => (
-                      <div key={`${img}-${i}`} className="relative w-full min-w-full h-full flex-shrink-0 snap-center px-2">
-                      <SafeImage
-                        src={img}
-                        alt={`${product.name} ${i + 1}`}
-                        fallbackSrc="/placeholder.jpg"
-                        fill
-                        sizes="(max-width: 768px) 100vw, 50vw"
-                        className="object-contain select-none pointer-events-none"
-                      />
+                  {images.map((img, i) => (
+                    <div key={`${img}-${i}`} className="relative w-full min-w-full h-full flex-shrink-0 snap-center">
+                      <div
+                        className="relative h-full w-full transition-transform duration-200 will-change-transform"
+                        style={{
+                          transform: zoomed && i === activeImage ? 'scale(1.30)' : 'scale(1)',
+                          transformOrigin: `${zoomPos.x}% ${zoomPos.y}%`,
+                        }}
+                      >
+                        <SafeImage
+                          src={img}
+                          alt={`${product.name} ${i + 1}`}
+                          fallbackSrc="/placeholder.jpg"
+                          fill
+                          sizes="(max-width: 768px) 100vw, 50vw"
+                          className="object-contain select-none pointer-events-none"
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
 
-                {/* Zoom preview box (desktop only) */}
-                {zoomed && (
-                  <div
-                    className="hidden md:block absolute inset-0 z-[5] pointer-events-none overflow-hidden"
-                    style={{
-                      backgroundImage: `url("${activeImageSrc}")`,
-                      backgroundPosition: `${zoomPos.x}% ${zoomPos.y}%`,
-                      backgroundSize: '250%',
-                      backgroundRepeat: 'no-repeat',
-                    }}
-                  />
-                )}
+                <div
+                  className={`hidden md:flex absolute right-3 bottom-3 z-[6] items-center gap-2 rounded-full border border-white/60 bg-black/45 px-3 py-1.5 text-[11px] font-medium text-white backdrop-blur-sm transition-all duration-200 ${
+                    zoomed ? 'opacity-0 translate-y-1' : 'opacity-100'
+                  }`}
+                >
+                  <span className="inline-block h-2 w-2 rounded-full bg-primary" />
+                  Hover to zoom
+                </div>
 
                 {/* Type badge */}
                 <span className={`absolute top-3 left-3 z-20 text-[11px] font-bold px-2 py-1 rounded-lg text-white shadow ${isOem ? 'bg-blue-600' : 'bg-slate-600'}`}>
@@ -346,7 +403,7 @@ const ProductDetailV2 = () => {
             </div>
 
             {/* -- RIGHT: Product Info (sticky) -- */}
-            <div className="lg:col-span-6">
+            <div className="lg:col-span-7">
               <div className="lg:sticky lg:top-6 bg-card border border-border/50 rounded-2xl p-5 md:p-6 flex flex-col gap-4">
 
                 {/* Brand row */}
@@ -369,6 +426,20 @@ const ProductDetailV2 = () => {
                 {/* Name */}
                 <div>
                   <h1 className="text-xl md:text-2xl font-bold text-foreground leading-snug mb-1.5">{product.name}</h1>
+                  {isVehicleSelectionActive && (
+                    <Badge className={fitmentStatus.loading
+                      ? 'bg-slate-100 text-slate-700 border border-slate-200 mb-2'
+                      : fitmentStatus.matches
+                        ? 'bg-green-100 text-green-800 border border-green-200 mb-2'
+                        : 'bg-amber-100 text-amber-800 border border-amber-200 mb-2'}
+                    >
+                      {fitmentStatus.loading
+                        ? 'Checking fitment...'
+                        : fitmentStatus.matches
+                          ? 'Fits selected vehicle'
+                          : 'Check compatibility for selected vehicle'}
+                    </Badge>
+                  )}
                   {/* Part# / SKU chip */}
                   <div className="flex flex-wrap gap-2">
                     {getProductIdentifier(product) !== 'N/A' && (
@@ -493,19 +564,26 @@ const ProductDetailV2 = () => {
                   />
                 </div>
 
-                {/* Trust badge strip */}
-                <div className="grid grid-cols-4 gap-2 pt-1 border-t border-border/30 pt-6">
-                  {TRUST_BADGES.map(({ icon: Icon, label }) => (
-                    <div key={label} className="flex flex-col items-center gap-1 text-center">
-                      <div className="w-8 h-8 rounded-xl bg-primary/8 flex items-center justify-center">
-                        <Icon className="w-4 h-4 text-primary/70" />
-                      </div>
-                      <span className="text-[10px] text-muted-foreground leading-tight">{label}</span>
-                    </div>
-                  ))}
-                </div>
-
               </div>
+            </div>
+          </div>
+
+          <div className="mb-8 rounded-[28px] border border-border/50 bg-gradient-to-r from-slate-50 via-white to-slate-50 p-4 md:p-5 shadow-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+              {TRUST_BADGES.map(({ icon: Icon, label, description }) => (
+                <div
+                  key={label}
+                  className="flex items-center gap-4 rounded-2xl border border-slate-200/80 bg-white px-4 py-4 shadow-[0_10px_30px_rgba(15,23,42,0.04)]"
+                >
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-primary/10">
+                    <Icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground leading-none">{label}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{description}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 

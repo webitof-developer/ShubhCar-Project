@@ -1138,18 +1138,27 @@ class ProductService {
       }
 
       // Flatten attributes
-      const attributes = v.attributeValueIds?.map(attrVal => ({
-        name: attrVal.attributeId?.name,
-        value: attrVal.value
-      })) || [];
+        const attributes = v.attributeValueIds?.map(attrVal => ({
+          name: attrVal.attributeId?.name,
+          value: attrVal.value
+        })) || [];
+        const generation = attributes.find((a) =>
+          ['generation', 'generation / variant', 'generation-variant', 'generation variant']
+            .includes(String(a.name || '').trim().toLowerCase())
+        )?.value || '';
+        const yearValue = Number(v.yearId?.year || 0);
+        const lifecycle = yearValue >= new Date().getFullYear() ? 'ongoing' : 'discontinued';
 
-      grouped[brandName].push({
-        _id: v._id,
-        model: v.modelId?.name,
-        year: v.yearId?.year,
-        variant: v.variantName,
-        fuel: attributes.find(a => a.name === 'Fuel Type')?.value || 'N/A', // Example logic
-        engine: attributes.find(a => a.name === 'Engine')?.value || 'N/A',
+        grouped[brandName].push({
+          _id: v._id,
+          model: v.modelId?.name,
+          year: v.yearId?.year,
+          variant: v.variantName,
+          generation,
+          yearRangeLabel: v.yearId?.year ? String(v.yearId.year) : '',
+          lifecycle,
+          fuel: attributes.find(a => a.name === 'Fuel Type')?.value || 'N/A', // Example logic
+          engine: attributes.find(a => a.name === 'Engine')?.value || 'N/A',
         power: attributes.find(a => a.name === 'Power')?.value || 'N/A',
         engineCode: attributes.find(a => a.name === 'Engine Code')?.value || 'N/A',
         attributes // Keep all for dynamic rendering

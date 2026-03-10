@@ -30,7 +30,6 @@ export const GlobalLoader = () => {
             alt="Loading..."
             fill
             className="object-contain"
-            priority
             sizes="96px"
           />
         </div>

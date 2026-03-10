@@ -6,12 +6,15 @@ import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { useRouter } from "next/navigation";
-import { getVehicleBrands, getModelsByBrand, getModelYears, getVehiclesByFilter } from "@/services/vehicleService"; // Restored getVehicleBrands
+import { getVehicleBrands, getModelsByBrand, getModelYears, getVehicleModificationGroups } from "@/services/vehicleService"; // Restored getVehicleBrands
 import { useVehicleSelection } from "@/context/VehicleContext";
 import { logger } from '@/utils/logger';
 
@@ -35,8 +38,28 @@ const buildVehicleLabel = (vehicle) => {
   const name = vehicle.variantName || vehicle.display?.variantName || "Variant";
   const meta = [vehicle.display?.fuelType, vehicle.display?.transmission, vehicle.display?.engineCapacity]
     .filter(Boolean)
-    .join(" • ");
+    .join(" | ");
   return meta ? `${name} (${meta})` : name;
+};
+
+const renderModificationItems = (groups) => {
+  if (!Array.isArray(groups) || groups.length === 0) {
+    return <SelectItem value="none" disabled>No modifications found</SelectItem>;
+  }
+  return groups.map((group) => (
+    <SelectGroup key={group.groupKey || `${group.groupTitle}-${group.yearRangeLabel}`}>
+      <SelectLabel className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        {group.groupTitle} {group.yearRangeLabel ? `(${group.yearRangeLabel})` : ''}
+        {group.lifecycle ? ` • ${group.lifecycle}` : ''}
+      </SelectLabel>
+      {(Array.isArray(group.options) ? group.options : []).map((option) => (
+        <SelectItem key={option.vehicleId || option._id} value={String(option.vehicleId || option._id)}>
+          {option.label || buildVehicleLabel(option)}
+        </SelectItem>
+      ))}
+      <SelectSeparator />
+    </SelectGroup>
+  ));
 };
 
 export const VehicleFinder = () => {
@@ -51,7 +74,8 @@ export const VehicleFinder = () => {
   const [brands, setBrands] = useState([]);
   const [models, setModels] = useState([]);
   const [years, setYears] = useState([]);
-  const [variants, setVariants] = useState([]); // These are actual vehicles now
+  const [modificationGroups, setModificationGroups] = useState([]);
+  const [modificationOptions, setModificationOptions] = useState([]);
 
   useEffect(() => {
     const fetchBrands = async () => {
@@ -72,7 +96,8 @@ export const VehicleFinder = () => {
     setVariantId("");
     setModels([]);
     setYears([]);
-    setVariants([]);
+    setModificationGroups([]);
+    setModificationOptions([]);
 
     if (val) {
       try {
@@ -89,7 +114,8 @@ export const VehicleFinder = () => {
     setYearId("");
     setVariantId("");
     setYears([]);
-    setVariants([]);
+    setModificationGroups([]);
+    setModificationOptions([]);
 
     if (val) {
       try {
@@ -108,15 +134,18 @@ export const VehicleFinder = () => {
   const handleYearChange = async (val) => {
     setYearId(val);
     setVariantId("");
-    setVariants([]);
+    setModificationGroups([]);
+    setModificationOptions([]);
 
     if (val) {
       try {
-        // Use getVehiclesByFilter instead of getVariantsByYear
-        const data = await getVehiclesByFilter({ brandId, modelId, yearId: val });
-        setVariants(Array.isArray(data) ? data : []);
+        const groups = await getVehicleModificationGroups({ brandId, modelId, yearId: val });
+        const normalizedGroups = Array.isArray(groups) ? groups : [];
+        setModificationGroups(normalizedGroups);
+        const options = normalizedGroups.flatMap((group) => Array.isArray(group.options) ? group.options : []);
+        setModificationOptions(options);
       } catch (error) {
-        logger.error("Failed to fetch variants", error);
+        logger.error("Failed to fetch modifications", error);
       }
     }
   };
@@ -127,7 +156,7 @@ export const VehicleFinder = () => {
       const brand = brands.find((item) => toId(item._id || item.id) === toId(brandId));
       const model = models.find((item) => toId(item._id || item.id) === toId(modelId));
       const year = years.find((item) => toId(item._id || item.id) === toId(yearId));
-      const vehicle = variants.find((item) => toId(item._id || item.id) === toId(variantId));
+      const vehicle = modificationOptions.find((item) => toId(item.vehicleId || item._id || item.id) === toId(variantId));
       
       setSelection({
         brandId,
@@ -137,7 +166,7 @@ export const VehicleFinder = () => {
         yearId,
         yearLabel: year?.year ? String(year.year) : "",
         vehicleIds: [variantId],
-        vehicleLabels: vehicle ? [buildVehicleLabel(vehicle)] : [],
+        vehicleLabels: vehicle ? [vehicle.label || buildVehicleLabel(vehicle)] : [],
       });
     }
 
@@ -152,14 +181,15 @@ export const VehicleFinder = () => {
     setVariantId("");
     setModels([]);
     setYears([]);
-    setVariants([]);
+    setModificationGroups([]);
+    setModificationOptions([]);
   };
 
   const isSearchEnabled = 
     brandId && 
     (!models.length || modelId) && 
     (!years.length || yearId) && 
-    (!variants.length || variantId);
+    (!modificationOptions.length || variantId);
 
   return (
     <section className="py-8 md:py-12">
@@ -220,17 +250,17 @@ export const VehicleFinder = () => {
               </SelectContent>
             </Select>
 
-            {/* Variant */}
+            {/* Modification */}
             <Select 
               value={variantId} 
               onValueChange={setVariantId} 
-              disabled={!yearId || (variants.length === 0)}
+              disabled={!yearId || (modificationGroups.length === 0)}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder={!yearId ? "Select Year First" : (variants.length ? "Select Variant" : "No Variants Found")} />
+                <SelectValue placeholder={!yearId ? "Select Year First" : (modificationOptions.length ? "Select Modification" : "No Modifications Found")} />
               </SelectTrigger>
               <SelectContent className="bg-popover border-zinc-200" sideOffset={5}>
-                {renderSelectItems(variants, buildVehicleLabel)}
+                {renderModificationItems(modificationGroups)}
               </SelectContent>
             </Select>
           </div>
@@ -251,3 +281,5 @@ export const VehicleFinder = () => {
     </section>
   );
 }
+
+

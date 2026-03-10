@@ -12,6 +12,27 @@ import VehicleBrandModal from '@/components/vehicles/VehicleBrandModal'
 import VehicleModelModal from '@/components/vehicles/VehicleModelModal'
 import VehicleYearModal from '@/components/vehicles/VehicleYearModal'
 
+const GENERATION_ATTRIBUTE_KEYS = new Set([
+  'generation',
+  'generation / variant',
+  'generation-variant',
+  'generation variant',
+])
+
+const normalizeName = (value = '') => String(value).trim().toLowerCase()
+
+const findGenerationAttribute = (items = []) =>
+  items.find((attribute) => GENERATION_ATTRIBUTE_KEYS.has(normalizeName(attribute?.name)))
+
+const getGenerationValue = (vehicle) => {
+  const fromDisplay = String(vehicle?.display?.generation || '').trim()
+  if (fromDisplay) return fromDisplay
+  const attr = (vehicle?.attributes || []).find((item) =>
+    GENERATION_ATTRIBUTE_KEYS.has(normalizeName(item?.attributeName)),
+  )
+  return String(attr?.value || '').trim()
+}
+
 const VehiclesPage = () => {
   const { data: session } = useSession()
   const [vehicles, setVehicles] = useState([])
@@ -47,6 +68,25 @@ const VehiclesPage = () => {
   const [yearForm, setYearForm] = useState({ year: '', status: 'active' })
   const [brandUploading, setBrandUploading] = useState(false)
   const [modelUploading, setModelUploading] = useState(false)
+  const [previewFilters, setPreviewFilters] = useState({ brandId: '', modelId: '', yearId: '' })
+  const [previewGroups, setPreviewGroups] = useState([])
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [previewYears, setPreviewYears] = useState([])
+  const [importFile, setImportFile] = useState(null)
+  const [importScope, setImportScope] = useState({ pilot: true, brandName: 'TOYOTA', modelContains: 'ETIOS' })
+  const [importBusy, setImportBusy] = useState(false)
+  const [dryRunResult, setDryRunResult] = useState(null)
+  const [importHistory, setImportHistory] = useState([])
+
+  const generationAttribute = useMemo(
+    () => findGenerationAttribute(attributes),
+    [attributes],
+  )
+
+  const missingGenerationInPage = useMemo(
+    () => vehicles.filter((item) => !getGenerationValue(item)).length,
+    [vehicles],
+  )
 
   const totalPages = Math.max(1, Math.ceil(total / limit))
   const mediaBaseUrl = API_ORIGIN
@@ -143,10 +183,144 @@ const VehiclesPage = () => {
     setLoading(false)
   }
 
+  const fetchImportHistory = async () => {
+    if (!session?.accessToken) return
+    const response = await fetch(`${API_BASE_URL}/vehicles/import/history?limit=5`, {
+      headers: { Authorization: `Bearer ${session.accessToken}` },
+    })
+    if (!response.ok) return
+    const result = await response.json()
+    const data = result.data || result
+    setImportHistory(Array.isArray(data.items) ? data.items : [])
+  }
+
+  const fetchModificationPreview = async (brandId, modelId, yearId) => {
+    if (!brandId || !modelId || !yearId || !session?.accessToken) {
+      setPreviewGroups([])
+      return
+    }
+
+    setPreviewLoading(true)
+    try {
+      const params = new URLSearchParams({ brandId, modelId, yearId })
+      const response = await fetch(`${API_BASE_URL}/vehicles/modifications?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${session.accessToken}` },
+      })
+      if (!response.ok) {
+        setPreviewGroups([])
+        return
+      }
+      const result = await response.json()
+      const data = result?.data || result || {}
+      setPreviewGroups(Array.isArray(data.groups) ? data.groups : [])
+    } finally {
+      setPreviewLoading(false)
+    }
+  }
+
+  const updatePreviewFilter = (key, value) => {
+    setPreviewFilters((prev) => {
+      const next = { ...prev, [key]: value }
+      if (key === 'brandId') {
+        next.modelId = ''
+        next.yearId = ''
+        setPreviewYears([])
+      }
+      if (key === 'modelId') {
+        next.yearId = ''
+        setPreviewYears([])
+      }
+      return next
+    })
+  }
+
+  const fetchPreviewYears = async (modelId) => {
+    if (!modelId || !session?.accessToken) {
+      setPreviewYears([])
+      return
+    }
+    const response = await fetch(`${API_BASE_URL}/vehicles/filters/years?modelId=${modelId}`, {
+      headers: { Authorization: `Bearer ${session.accessToken}` },
+    })
+    if (!response.ok) {
+      setPreviewYears([])
+      return
+    }
+    const result = await response.json()
+    const data = result?.data || result
+    const list = Array.isArray(data) ? data : (Array.isArray(data?.items) ? data.items : [])
+    const sorted = [...list].sort((a, b) => Number(b.year || 0) - Number(a.year || 0))
+    setPreviewYears(sorted)
+  }
+
+  const handleDryRunImport = async () => {
+    if (!session?.accessToken) return
+    if (!importFile) {
+      toast.error('Please select an XLSX file first')
+      return
+    }
+
+    setImportBusy(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', importFile)
+      formData.append('pilot', String(importScope.pilot))
+      if (!importScope.pilot) {
+        if (importScope.brandName) formData.append('brandName', importScope.brandName)
+        if (importScope.modelContains) formData.append('modelContains', importScope.modelContains)
+      }
+
+      const response = await fetch(`${API_BASE_URL}/vehicles/import/dry-run`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.accessToken}` },
+        body: formData,
+      })
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        toast.error(result?.message || 'Dry-run failed')
+        return
+      }
+      const data = result?.data || result
+      setDryRunResult(data)
+      toast.success('Dry-run completed')
+      fetchImportHistory()
+    } finally {
+      setImportBusy(false)
+    }
+  }
+
+  const handleCommitImport = async () => {
+    if (!session?.accessToken || !dryRunResult?.runId) return
+    setImportBusy(true)
+    try {
+      const response = await fetch(`${API_BASE_URL}/vehicles/import/commit`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ runId: dryRunResult.runId }),
+      })
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        toast.error(result?.message || 'Import commit failed')
+        return
+      }
+      const data = result?.data || result
+      setDryRunResult((prev) => ({ ...(prev || {}), commit: data?.commit, status: data?.status }))
+      toast.success(`Import ${data?.status || 'completed'}`)
+      fetchVehicles()
+      fetchImportHistory()
+    } finally {
+      setImportBusy(false)
+    }
+  }
+
   useEffect(() => {
     if (session?.accessToken) {
       Promise.all([fetchBrands(), fetchModels(), fetchYears(), fetchAttributes()])
         .finally(() => setLoading(false))
+      fetchImportHistory()
     } else {
       setLoading(false)
     }
@@ -157,6 +331,22 @@ const VehiclesPage = () => {
       fetchVehicles()
     }
   }, [session, page, filters])
+
+  useEffect(() => {
+    if (!previewFilters.modelId) {
+      setPreviewYears([])
+      return
+    }
+    fetchPreviewYears(previewFilters.modelId)
+  }, [previewFilters.modelId, session?.accessToken])
+
+  useEffect(() => {
+    if (!previewFilters.brandId || !previewFilters.modelId || !previewFilters.yearId) {
+      setPreviewGroups([])
+      return
+    }
+    fetchModificationPreview(previewFilters.brandId, previewFilters.modelId, previewFilters.yearId)
+  }, [previewFilters, session?.accessToken])
 
   const handleOpenModal = (item = null) => {
     if (item) {
@@ -364,6 +554,14 @@ const VehiclesPage = () => {
       return
     }
 
+    const generationValueId = generationAttribute?._id
+      ? attributeSelections[generationAttribute._id]
+      : ''
+    if (vehicleForm.status === 'active' && !generationValueId) {
+      toast.error('Generation is required for active vehicles')
+      return
+    }
+
     // In edit mode, skip API call if nothing changed
     if (editingVehicle && vehicleFormSnapshot && attributeSelectionsSnapshot) {
       const formSame = Object.keys(vehicleFormSnapshot).every(
@@ -452,6 +650,68 @@ const VehiclesPage = () => {
         <Col xs={12}>
           <Card>
             <CardBody>
+              <div className="border rounded-3 p-3 mb-3">
+                <div className="d-flex justify-content-between align-items-center mb-2">
+                  <h6 className="mb-0">Bulk Import (XLSX)</h6>
+                  <span className="text-muted fs-12">Upload / Dry Run / Commit</span>
+                </div>
+                <Row className="g-2 align-items-end">
+                  <Col md={3}>
+                    <Form.Label className="mb-1">Import File</Form.Label>
+                    <Form.Control
+                      type="file"
+                      accept=".xlsx"
+                      onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                    />
+                  </Col>
+                  <Col md={2}>
+                    <Form.Check
+                      type="switch"
+                      id="pilot-import-toggle"
+                      label="Toyota Etios pilot"
+                      checked={importScope.pilot}
+                      onChange={(e) => setImportScope((prev) => ({ ...prev, pilot: e.target.checked }))}
+                    />
+                  </Col>
+                  <Col md={2}>
+                    <Form.Label className="mb-1">Brand Scope</Form.Label>
+                    <Form.Control
+                      value={importScope.brandName}
+                      onChange={(e) => setImportScope((prev) => ({ ...prev, brandName: e.target.value }))}
+                      disabled={importScope.pilot}
+                      placeholder="e.g. TOYOTA"
+                    />
+                  </Col>
+                  <Col md={2}>
+                    <Form.Label className="mb-1">Model Contains</Form.Label>
+                    <Form.Control
+                      value={importScope.modelContains}
+                      onChange={(e) => setImportScope((prev) => ({ ...prev, modelContains: e.target.value }))}
+                      disabled={importScope.pilot}
+                      placeholder="e.g. ETIOS"
+                    />
+                  </Col>
+                  <Col md={3} className="d-flex gap-2">
+                    <Button variant="outline-primary" onClick={handleDryRunImport} disabled={importBusy || !importFile}>
+                      {importBusy ? 'Running...' : 'Run Dry-Run'}
+                    </Button>
+                    <Button variant="primary" onClick={handleCommitImport} disabled={importBusy || !dryRunResult?.runId}>
+                      Commit Import
+                    </Button>
+                  </Col>
+                </Row>
+                {dryRunResult?.summary && (
+                  <Row className="g-2 mt-2">
+                    <Col md={2}><div className="small text-muted">Rows: <strong>{dryRunResult.summary.totalRows}</strong></div></Col>
+                    <Col md={2}><div className="small text-muted">Valid: <strong>{dryRunResult.summary.validRows}</strong></div></Col>
+                    <Col md={2}><div className="small text-muted">Skipped: <strong>{dryRunResult.summary.skippedRows}</strong></div></Col>
+                    <Col md={2}><div className="small text-muted">Year Rows: <strong>{dryRunResult.summary.expandedYearRows}</strong></div></Col>
+                    <Col md={2}><div className="small text-muted">Missing Gen: <strong>{dryRunResult.summary.missingGenerationCount}</strong></div></Col>
+                    <Col md={2}><div className="small text-muted">Fallback: <strong>{dryRunResult.summary.fallbackGroupCount}</strong></div></Col>
+                  </Row>
+                )}
+              </div>
+
               <Row className="g-3 mb-3">
                 <Col md={3}>
                   <Form.Select value={filters.brandId} onChange={(e) => updateFilter('brandId', e.target.value)}>
@@ -489,20 +749,119 @@ const VehiclesPage = () => {
                 </Col>
               </Row>
 
-              <div className="table-responsive">
+              <Row className="g-2 mb-3">
+                <Col md={3}>
+                  <div className="border rounded-3 p-2 bg-light-subtle">
+                    <div className="text-muted small">Missing generation (this page)</div>
+                    <div className="fw-semibold">{missingGenerationInPage}</div>
+                  </div>
+                </Col>
+                <Col md={3}>
+                  <div className="border rounded-3 p-2 bg-light-subtle">
+                    <div className="text-muted small">Fallback grouping (last dry-run)</div>
+                    <div className="fw-semibold">{dryRunResult?.summary?.fallbackGroupCount ?? '-'}</div>
+                  </div>
+                </Col>
+                <Col md={6}>
+                  <div className="border rounded-3 p-2 bg-light-subtle">
+                    <div className="text-muted small">Last import run</div>
+                    <div className="fw-semibold">
+                      {importHistory[0]
+                        ? `${String(importHistory[0].status || '').toUpperCase()} (${new Date(importHistory[0].createdAt).toLocaleString()})`
+                        : 'No runs yet'}
+                    </div>
+                  </div>
+                </Col>
+              </Row>
+
+              <div className="border rounded-3 p-3 mb-3 bg-light-subtle">
+                <div className="d-flex justify-content-between align-items-center mb-2">
+                  <h6 className="mb-0">Frontend Modification Group Preview</h6>
+                  <span className="text-muted fs-12">Brand + Model + Year</span>
+                </div>
+                <Row className="g-2 align-items-end">
+                  <Col md={3}>
+                    <Form.Label className="mb-1">Brand</Form.Label>
+                    <Form.Select
+                      value={previewFilters.brandId}
+                      onChange={(e) => updatePreviewFilter('brandId', e.target.value)}
+                    >
+                      <option value="">Select brand</option>
+                      {brands.map((brand) => (
+                        <option key={brand._id} value={brand._id}>{brand.name}</option>
+                      ))}
+                    </Form.Select>
+                  </Col>
+                  <Col md={3}>
+                    <Form.Label className="mb-1">Model</Form.Label>
+                    <Form.Select
+                      value={previewFilters.modelId}
+                      onChange={(e) => updatePreviewFilter('modelId', e.target.value)}
+                      disabled={!previewFilters.brandId}
+                    >
+                      <option value="">Select model</option>
+                      {models
+                        .filter((model) => {
+                          if (!previewFilters.brandId) return true
+                          const brandRef = model?.brandId?._id || model?.brandId
+                          return String(brandRef || '') === String(previewFilters.brandId)
+                        })
+                        .map((model) => (
+                          <option key={model._id} value={model._id}>{model.name}</option>
+                        ))}
+                    </Form.Select>
+                  </Col>
+                  <Col md={2}>
+                    <Form.Label className="mb-1">Year</Form.Label>
+                    <Form.Select
+                      value={previewFilters.yearId}
+                      onChange={(e) => updatePreviewFilter('yearId', e.target.value)}
+                      disabled={!previewFilters.modelId}
+                    >
+                      <option value="">Select year</option>
+                      {previewYears.map((year) => (
+                        <option key={year._id} value={year._id}>{year.year}</option>
+                      ))}
+                    </Form.Select>
+                  </Col>
+                  <Col md={4}>
+                    {previewLoading ? (
+                      <div className="d-flex align-items-center gap-2 text-muted">
+                        <Spinner animation="border" size="sm" />
+                        <span>Loading grouped modifications...</span>
+                      </div>
+                    ) : previewGroups.length ? (
+                      <div className="small text-muted">
+                        {previewGroups.slice(0, 2).map((group) => (
+                          <div key={group.groupKey || group.groupTitle}>
+                            <strong>{group.groupTitle}</strong> ({group.yearRangeLabel}) - {group.options?.length || 0} option(s)
+                            {group.lifecycle ? ` - ${group.lifecycle === 'discontinued' ? 'ended' : 'ongoing'}` : ''}
+                          </div>
+                        ))}
+                        {previewGroups.length > 2 && <div>+{previewGroups.length - 2} more groups</div>}
+                      </div>
+                    ) : (
+                      <div className="small text-muted">Select brand, model and year to preview dropdown grouping.</div>
+                    )}
+                  </Col>
+                </Row>
+              </div>
+
+              <div className="table-responsive border rounded-3" style={{ maxHeight: '65vh', overflow: 'auto' }}>
                 <Table hover responsive className="table-nowrap mb-0 align-middle">
-                  <thead>
+                  <thead className="position-sticky top-0" style={{ zIndex: 2 }}>
                     <tr>
-                      <th>Vehicle Code</th>
-                      <th>Brand</th>
-                      <th>Model</th>
-                      <th>Variant Name</th>
-                      <th>Model Year</th>
-                      <th>Fuel Type</th>
-                      <th>Transmission</th>
-                      <th>Engine Capacity</th>
-                      <th>Status</th>
-                      <th>Actions</th>
+                      <th className="bg-white">Vehicle Code</th>
+                      <th className="bg-white">Brand</th>
+                      <th className="bg-white">Model</th>
+                      <th className="bg-white">Variant Name</th>
+                      <th className="bg-white">Modification Group</th>
+                      <th className="bg-white">Model Year</th>
+                      <th className="bg-white">Fuel Type</th>
+                      <th className="bg-white">Transmission</th>
+                      <th className="bg-white">Engine Capacity</th>
+                      <th className="bg-white">Status</th>
+                      <th className="bg-white">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -512,6 +871,22 @@ const VehiclesPage = () => {
                         <td>{item.brand?.name || brandMap.get(item.brandId)?.name || 'N/A'}</td>
                         <td>{item.model?.name || modelMap.get(item.modelId)?.name || 'N/A'}</td>
                         <td className="fw-semibold">{item.variantName || item.display?.variantName || '-'}</td>
+                        <td>
+                          {getGenerationValue(item) ? (
+                            <span className="badge bg-primary-subtle text-primary fw-medium">
+                              {getGenerationValue(item)}
+                            </span>
+                          ) : (
+                            <span
+                              className={`badge fw-medium ${item.status === 'active'
+                                ? 'bg-danger-subtle text-danger'
+                                : 'bg-warning-subtle text-warning'
+                                }`}
+                            >
+                              Missing Generation
+                            </span>
+                          )}
+                        </td>
                         <td>{item.year?.year || yearMap.get(item.yearId)?.year || '-'}</td>
                         <td>{item.display?.fuelType || '-'}</td>
                         <td>{item.display?.transmission || '-'}</td>
@@ -553,7 +928,7 @@ const VehiclesPage = () => {
                     ))}
                     {vehicles.length === 0 && (
                       <tr>
-                        <td colSpan="10" className="text-center">No vehicles found</td>
+                        <td colSpan="11" className="text-center">No vehicles found</td>
                       </tr>
                     )}
                   </tbody>
@@ -651,20 +1026,55 @@ const VehiclesPage = () => {
                 </Form.Group>
               </Col>
             </Row>
-            <Form.Group className="mb-3">
-              <Form.Label className="fw-semibold">Variant Name</Form.Label>
-              <Form.Control
-                type="text"
-                placeholder="Enter variant name"
-                className="fs-5 fw-semibold"
-                value={vehicleForm.variantName}
-                onChange={(e) =>
-                  setVehicleForm((prev) => ({ ...prev, variantName: e.target.value }))
-                }
-              />
-            </Form.Group>
             <Row>
-              {attributes.filter((attribute) => attribute.name !== 'Variant Name').map((attribute) => (
+              <Col md={7}>
+                <Form.Group className="mb-3">
+                  <Form.Label className="fw-semibold">Variant Name</Form.Label>
+                  <Form.Control
+                    type="text"
+                    placeholder="Enter variant name"
+                    className="fs-5 fw-semibold"
+                    value={vehicleForm.variantName}
+                    onChange={(e) =>
+                      setVehicleForm((prev) => ({ ...prev, variantName: e.target.value }))
+                    }
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={5}>
+                <Form.Group className="mb-3">
+                  <Form.Label className="fw-semibold">
+                    Generation
+                    <span className="text-danger ms-1">*</span>
+                  </Form.Label>
+                  <Form.Select
+                    value={generationAttribute?._id ? attributeSelections[generationAttribute._id] || '' : ''}
+                    onChange={(e) => {
+                      if (!generationAttribute?._id) return
+                      setAttributeSelections((prev) => ({
+                        ...prev,
+                        [generationAttribute._id]: e.target.value,
+                      }))
+                    }}
+                    disabled={!generationAttribute?._id}
+                  >
+                    <option value="">
+                      {generationAttribute?._id ? 'Select generation' : 'Generation attribute not configured'}
+                    </option>
+                    {(generationAttribute?.values || []).map((value) => (
+                      <option key={value._id} value={value._id}>{value.value}</option>
+                    ))}
+                  </Form.Select>
+                  <div className="form-text">
+                    Used in customer-facing modification grouping.
+                  </div>
+                </Form.Group>
+              </Col>
+            </Row>
+            <Row>
+              {attributes
+                .filter((attribute) => !['variant name', ...GENERATION_ATTRIBUTE_KEYS].includes(normalizeName(attribute.name)))
+                .map((attribute) => (
                 <Col md={4} key={attribute._id}>
                   <Form.Group className="mb-3">
                     <Form.Label>{attribute.name}</Form.Label>
@@ -695,6 +1105,11 @@ const VehiclesPage = () => {
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
               </Form.Select>
+              {vehicleForm.status === 'active' ? (
+                <div className="form-text text-danger">Active vehicles require Generation.</div>
+              ) : (
+                <div className="form-text text-warning">Legacy inactive vehicles can be saved without Generation.</div>
+              )}
             </Form.Group>
           </Form>
         </Modal.Body>

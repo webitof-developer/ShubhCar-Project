@@ -4,6 +4,7 @@
 const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL
   ? new URL(process.env.NEXT_PUBLIC_API_URL).origin
   : 'http://localhost:5000';
+const IS_DEV = process.env.NODE_ENV !== 'production';
 
 // ─── Security Headers ─────────────────────────────────────────────────────────
 const securityHeaders = [
@@ -27,7 +28,6 @@ const securityHeaders = [
       'geolocation=()',
       'payment=(self "https://checkout.razorpay.com")',
       'usb=()',
-      'interest-cohort=()',
     ].join(', '),
   },
 
@@ -38,22 +38,24 @@ const securityHeaders = [
       `default-src 'self'`,
 
       // Scripts: self + Next.js internals + Razorpay SDK
-      `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com`,
+      `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://accounts.google.com`,
 
       // Styles: self + inline (Next.js injects critical CSS inline)
       `style-src 'self' 'unsafe-inline'`,
 
       // Images: self + data URIs + any HTTPS host (product images from CDN/S3)
-      `img-src 'self' data: blob: https:`,
+      IS_DEV
+        ? `img-src 'self' data: blob: https: http:`
+        : `img-src 'self' data: blob: https:`,
 
       // Fonts: self only (using local/system fonts, no Google Fonts)
       `font-src 'self' data:`,
 
       // API calls + WebSocket (Next.js HMR in dev) + Razorpay telemetry/status endpoints + blob
-      `connect-src 'self' blob: data: ${API_ORIGIN} https://checkout.razorpay.com https://api.razorpay.com https://lumberjack.razorpay.com wss: ws:`,
+      `connect-src 'self' blob: data: ${API_ORIGIN} https://checkout.razorpay.com https://api.razorpay.com https://lumberjack.razorpay.com https://accounts.google.com https://www.googleapis.com https://oauth2.googleapis.com wss: ws:`,
 
       // Razorpay opens its own iframes for 3DS / OTP screens + blobs for PDFs
-      `frame-src 'self' blob: data: https://checkout.razorpay.com https://api.razorpay.com`,
+      `frame-src 'self' blob: data: https://checkout.razorpay.com https://api.razorpay.com https://accounts.google.com`,
 
       // Allow web workers to load from blob URLs (some client-side utilities rely on this)
       `worker-src 'self' blob:`,

@@ -106,6 +106,8 @@ async function transform(inputPath, outputPath) {
     { header: 'model_name', key: 'model_name', width: 30 },
     { header: 'model_slug', key: 'model_slug', width: 30 },
     { header: 'variant_name', key: 'variant_name', width: 30 },
+    { header: 'generation_value', key: 'generation_value', width: 30 },
+    { header: 'grouping_source', key: 'grouping_source', width: 18 },
     { header: 'year_start', key: 'year_start', width: 10 },
     { header: 'year_end', key: 'year_end', width: 10 },
     { header: 'years_csv', key: 'years_csv', width: 40 },
@@ -122,6 +124,8 @@ async function transform(inputPath, outputPath) {
 
   let total = 0;
   let ready = 0;
+  let activeMissingGeneration = 0;
+  let fallbackToVariantName = 0;
 
   for (let r = 2; r <= inSheet.rowCount; r += 1) {
     const row = inSheet.getRow(r);
@@ -144,7 +148,9 @@ async function transform(inputPath, outputPath) {
     if (!brandName && !modelName) continue;
     total += 1;
 
+    const generationValue = generationVariant || '';
     const variantName = generationVariant || bodyType || 'Standard';
+    const groupingSource = generationValue ? 'generation' : 'variantName';
     const { start: yearStart, end: yearEnd } = resolveYearRange({
       yearFrom,
       yearTo,
@@ -153,6 +159,8 @@ async function transform(inputPath, outputPath) {
     const years = expandYears(yearStart, yearEnd);
 
     const status = normalize(sourceStatus).toLowerCase() === 'inactive' ? 'inactive' : 'active';
+    if (status === 'active' && !generationValue) activeMissingGeneration += 1;
+    if (!generationValue) fallbackToVariantName += 1;
     const importReady = Boolean(brandName && modelName && variantName && yearStart && yearEnd);
     if (importReady) ready += 1;
 
@@ -165,6 +173,8 @@ async function transform(inputPath, outputPath) {
       model_name: modelName,
       model_slug: toSlug(modelName),
       variant_name: variantName,
+      generation_value: generationValue,
+      grouping_source: groupingSource,
       year_start: yearStart || '',
       year_end: yearEnd || '',
       years_csv: years.join(','),
@@ -183,6 +193,8 @@ async function transform(inputPath, outputPath) {
   await outWb.xlsx.writeFile(outputPath);
   console.error(`Input rows processed: ${total}`);
   console.error(`Import-ready rows: ${ready}`);
+  console.error(`Active rows missing generation: ${activeMissingGeneration}`);
+  console.error(`Rows using variantName fallback grouping: ${fallbackToVariantName}`);
   console.error(`Output written: ${outputPath}`);
 }
 

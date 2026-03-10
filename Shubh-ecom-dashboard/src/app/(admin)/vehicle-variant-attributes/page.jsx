@@ -7,6 +7,18 @@ import { API_BASE_URL } from '@/helpers/apiBase'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import { toast } from 'react-toastify'
 
+const GENERATION_ATTRIBUTE_KEYS = new Set([
+  'generation',
+  'generation / variant',
+  'generation-variant',
+  'generation variant',
+])
+
+const normalizeName = (value = '') => String(value).trim().toLowerCase()
+
+const isGenerationAttribute = (attribute) =>
+  GENERATION_ATTRIBUTE_KEYS.has(normalizeName(attribute?.name))
+
 const VehicleVariantAttributesPage = () => {
   const { data: session } = useSession()
   const [attributes, setAttributes] = useState([])
@@ -40,6 +52,15 @@ const VehicleVariantAttributesPage = () => {
     return values.filter((item) => item.attributeId === filterAttributeId)
   }, [values, filterAttributeId])
 
+  const sortedAttributes = useMemo(() => {
+    return [...attributes].sort((a, b) => {
+      const aPriority = isGenerationAttribute(a) ? 0 : 1
+      const bPriority = isGenerationAttribute(b) ? 0 : 1
+      if (aPriority !== bPriority) return aPriority - bPriority
+      return String(a?.name || '').localeCompare(String(b?.name || ''))
+    })
+  }, [attributes])
+
   const fetchAttributes = async () => {
     const response = await fetch(`${API_BASE_URL}/vehicle-attributes?limit=200`, {
       headers: { Authorization: `Bearer ${session?.accessToken}` },
@@ -63,13 +84,40 @@ const VehicleVariantAttributesPage = () => {
   }
 
   useEffect(() => {
-    if (session?.accessToken) {
-      Promise.all([fetchAttributes(), fetchValues()])
-        .finally(() => setLoading(false))
-    } else {
-      setLoading(false)
+    const run = async () => {
+      if (!session?.accessToken) {
+        setLoading(false)
+        return
+      }
+
+      try {
+        const [attributesResponse, valuesResponse] = await Promise.all([
+          fetch(`${API_BASE_URL}/vehicle-attributes?limit=200`, {
+            headers: { Authorization: `Bearer ${session.accessToken}` },
+          }),
+          fetch(`${API_BASE_URL}/vehicle-attribute-values?limit=500`, {
+            headers: { Authorization: `Bearer ${session.accessToken}` },
+          }),
+        ])
+
+        if (attributesResponse.ok) {
+          const result = await attributesResponse.json()
+          const data = result.data || result
+          setAttributes(data.items || [])
+        }
+
+        if (valuesResponse.ok) {
+          const result = await valuesResponse.json()
+          const data = result.data || result
+          setValues(data.items || [])
+        }
+      } finally {
+        setLoading(false)
+      }
     }
-  }, [session])
+
+    run()
+  }, [session?.accessToken])
 
   const openAttributeModal = (item = null) => {
     if (item) {
@@ -237,20 +285,30 @@ const VehicleVariantAttributesPage = () => {
                 <h5 className="mb-0">Attributes</h5>
                 <Button variant="primary" onClick={() => openAttributeModal()}>Add Attribute</Button>
               </div>
-              <div className="table-responsive">
+              <div className="alert alert-info py-2 mb-3">
+                <small><strong>Generation</strong> is finder-critical and used to group customer-facing modifications.</small>
+              </div>
+              <div className="table-responsive border rounded-3" style={{ maxHeight: '50vh', overflow: 'auto' }}>
                 <Table hover responsive className="table-nowrap mb-0 align-middle">
-                  <thead>
+                  <thead className="position-sticky top-0" style={{ zIndex: 2 }}>
                     <tr>
-                      <th>Name</th>
-                      <th>Type</th>
-                      <th>Status</th>
-                      <th>Action</th>
+                      <th className="bg-white">Name</th>
+                      <th className="bg-white">Type</th>
+                      <th className="bg-white">Status</th>
+                      <th className="bg-white">Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {attributes.map((item) => (
+                    {sortedAttributes.map((item) => (
                       <tr key={item._id}>
-                        <td>{item.name}</td>
+                        <td>
+                          <div className="d-flex align-items-center gap-2">
+                            <span>{item.name}</span>
+                            {isGenerationAttribute(item) && (
+                              <span className="badge bg-primary-subtle text-primary">Finder-critical</span>
+                            )}
+                          </div>
+                        </td>
                         <td className="text-capitalize">{item.type || 'dropdown'}</td>
                         <td>
                           <span className={`badge px-3 py-2 rounded-pill fs-12 fw-medium ${item.status === 'active'
@@ -305,19 +363,19 @@ const VehicleVariantAttributesPage = () => {
                   onChange={e => setFilterAttributeId(e.target.value)}
                 >
                   <option value="">All Attributes</option>
-                  {attributes.map((attr) => (
-                    <option key={attr._id} value={attr._id}>{attr.name}</option>
-                  ))}
+                    {sortedAttributes.map((attr) => (
+                      <option key={attr._id} value={attr._id}>{attr.name}</option>
+                    ))}
                 </Form.Select>
               </Form.Group>
-              <div className="table-responsive">
+              <div className="table-responsive border rounded-3" style={{ maxHeight: '50vh', overflow: 'auto' }}>
                 <Table hover responsive className="table-nowrap mb-0 align-middle">
-                  <thead>
+                  <thead className="position-sticky top-0" style={{ zIndex: 2 }}>
                     <tr>
-                      <th>Attribute</th>
-                      <th>Value</th>
-                      <th>Status</th>
-                      <th>Action</th>
+                      <th className="bg-white">Attribute</th>
+                      <th className="bg-white">Value</th>
+                      <th className="bg-white">Status</th>
+                      <th className="bg-white">Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -422,7 +480,7 @@ const VehicleVariantAttributesPage = () => {
                 onChange={e => setValueForm({ ...valueForm, attributeId: e.target.value })}
               >
                 <option value="">Select attribute</option>
-                {attributes.map((attr) => (
+                {sortedAttributes.map((attr) => (
                   <option key={attr._id} value={attr._id}>{attr.name}</option>
                 ))}
               </Form.Select>

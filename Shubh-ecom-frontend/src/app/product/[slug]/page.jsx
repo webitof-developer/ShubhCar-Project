@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Layout } from '@/components/layout/Layout';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { ChevronRight, ShieldCheck, Star, Minus, Plus, Info, ChevronLeft, CheckCircle2 } from 'lucide-react';
-import { getProductBySlug } from '@/services/productService';
+import { getProductBySlug, getProductCompatibility } from '@/services/productService';
 import { useAuth } from '@/context/AuthContext';
 import { isProductVisible } from '@/services/productAccessService';
 import { Button } from '@/components/ui/button';
@@ -31,12 +31,14 @@ import { ProductDetailTabs } from '@/components/product/ProductDetailTabs';
 import { useProductReviews } from '@/hooks/useProductReviews';
 import { SafeImage } from '@/components/common/SafeImage';
 import { canViewWholesalePrices, getMinimumOrderQuantity } from '@/services/userTypeService';
+import { useVehicleSelection } from '@/context/VehicleContext';
 
 const ProductDetail = () => {
   const { slug } = useParams();
   const router = useRouter();
   const { addToCart, cart } = useCart();
   const { user } = useAuth();
+  const { selection, isActive: isVehicleSelectionActive } = useVehicleSelection();
   const { tax: siteTax } = useSiteConfig();
 
   const [product, setProduct] = useState(null);
@@ -47,6 +49,7 @@ const ProductDetail = () => {
   const [activeImage, setActiveImage] = useState(0);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [fitmentStatus, setFitmentStatus] = useState({ loading: false, matches: false, checked: false });
   const scrollContainerRef = useRef(null);
 
   useEffect(() => {
@@ -54,15 +57,41 @@ const ProductDetail = () => {
       setLoading(true);
       const productData = await getProductBySlug(slug || '');
       setProduct(productData);
+      if (productData) {
+        setQuantity(getMinimumOrderQuantity(productData, user));
+      }
       setLoading(false);
     };
     if (slug) loadProduct();
-  }, [slug]);
+  }, [slug, user]);
 
   useEffect(() => {
-    if (!product) return;
-    setQuantity(getMinimumOrderQuantity(product, user));
-  }, [product, user]);
+    const selectedIds = Array.isArray(selection?.vehicleIds) ? selection.vehicleIds.map((id) => String(id)) : [];
+    if (!product?._id || !isVehicleSelectionActive || !selectedIds.length) {
+      return;
+    }
+
+    const checkFitment = async () => {
+      setFitmentStatus({ loading: true, matches: false, checked: false });
+      try {
+        const compatibility = await getProductCompatibility(product._id);
+        const ids = new Set();
+        Object.values(compatibility || {}).forEach((list) => {
+          if (!Array.isArray(list)) return;
+          list.forEach((item) => {
+            const id = String(item?._id || '');
+            if (id) ids.add(id);
+          });
+        });
+        const matches = selectedIds.some((id) => ids.has(id));
+        setFitmentStatus({ loading: false, matches, checked: true });
+      } catch {
+        setFitmentStatus({ loading: false, matches: false, checked: true });
+      }
+    };
+
+    checkFitment();
+  }, [product?._id, selection?.vehicleIds, isVehicleSelectionActive]);
 
   const {
     reviews,
@@ -366,6 +395,22 @@ const ProductDetail = () => {
               </div>
 
               <h1 className="text-2xl md:text-4xl font-bold text-slate-900 leading-tight mb-3">{product.name}</h1>
+              {isVehicleSelectionActive && (
+                <div className="mb-3">
+                  <Badge className={fitmentStatus.loading
+                    ? 'bg-slate-100 text-slate-700 border border-slate-200'
+                    : fitmentStatus.matches
+                      ? 'bg-green-100 text-green-800 border border-green-200'
+                      : 'bg-amber-100 text-amber-800 border border-amber-200'}
+                  >
+                    {fitmentStatus.loading
+                      ? 'Checking fitment...'
+                      : fitmentStatus.matches
+                        ? 'Fits selected vehicle'
+                        : 'Check compatibility for selected vehicle'}
+                  </Badge>
+                </div>
+              )}
 
               <div className="flex flex-wrap items-center gap-4 mb-6">
                 <div className="flex items-center gap-1 bg-amber-50 px-2 py-1 rounded-md border border-amber-100">
