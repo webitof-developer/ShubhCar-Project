@@ -5,6 +5,8 @@ const generateInvoiceNumber = require('../../utils/invoiceNumber');
 const { error } = require('../../utils/apiResponse');
 const invoiceRepo = require('./invoice.repo');
 const orderRepo = require('../orders/order.repo');
+const paymentRepo = require('../payments/payment.repo');
+const orderEventRepo = require('../orders/orderEvent.repo');
 const User = require('../../models/User.model');
 const UserAddress = require('../../models/UserAddress.model');
 const logger = require('../../config/logger');
@@ -37,6 +39,56 @@ type CreditNoteTemplateVars = {
 };
 
 class InvoiceService {
+  async buildInvoicePaymentSnapshot(order) {
+    const orderPaymentSnapshot = order?.paymentSnapshot || {};
+    const paymentMethod = String(order?.paymentMethod || '').toLowerCase();
+    const latestPayment =
+      orderPaymentSnapshot.paymentId
+        ? await paymentRepo.findByIdLean(orderPaymentSnapshot.paymentId).catch(() => null)
+        : await paymentRepo.findLatestLeanByOrder(order?._id).catch(() => null);
+    const latestCodEntry = Array.isArray(order?.codPayments) && order.codPayments.length
+      ? order.codPayments[order.codPayments.length - 1]
+      : null;
+
+    return {
+      paymentMethod: order?.paymentMethod || null,
+      gateway:
+        latestPayment?.paymentGateway ||
+        orderPaymentSnapshot.gateway ||
+        (paymentMethod === 'cod' ? null : null),
+      paymentId: latestPayment?._id || orderPaymentSnapshot.paymentId || null,
+      gatewayOrderId: latestPayment?.gatewayOrderId || orderPaymentSnapshot.gatewayOrderId || null,
+      transactionId: latestPayment?.transactionId || orderPaymentSnapshot.transactionId || null,
+      status:
+        order?.paymentStatus ||
+        latestPayment?.status ||
+        orderPaymentSnapshot.status ||
+        null,
+      capturedAt:
+        orderPaymentSnapshot.updatedAt ||
+        latestCodEntry?.createdAt ||
+        latestPayment?.updatedAt ||
+        latestPayment?.createdAt ||
+        null,
+      manualReference: paymentMethod === 'cod' ? String(latestCodEntry?.note || '').trim() || null : null,
+    };
+  }
+
+  buildCreditNoteRefundMeta(order, originalInvoice) {
+    const paymentMethod = String(order?.paymentMethod || '').toLowerCase();
+    const originalPayment = originalInvoice?.paymentSnapshot || {};
+
+    return {
+      refundId: null,
+      refundTransactionId: null,
+      gateway: originalPayment.gateway || null,
+      refundMode: paymentMethod === 'cod' ? 'manual' : (originalPayment.gateway || null),
+      refundReference: paymentMethod === 'cod' ? (originalPayment.manualReference || null) : null,
+      refundDate: new Date(),
+      refundNote: String(order?.cancelDetails || '').trim() || null,
+    };
+  }
+
   async generateFromOrder(order) {
     if (order.paymentStatus !== 'paid') {
       error('Invoice can only be generated for paid orders', 409);
@@ -85,9 +137,12 @@ class InvoiceService {
       }
     }
 
+    const paymentSnapshot = await this.buildInvoicePaymentSnapshot(order);
+
     const invoice = await Invoice.create({
       orderId: order._id,
       invoiceNumber,
+      status: 'issued',
       customerSnapshot,
       items,
       totals: {
@@ -104,9 +159,22 @@ class InvoiceService {
         placedAt: order.placedAt,
         paymentMethod: order.paymentMethod,
       },
+      paymentSnapshot,
     });
 
     await this.emailInvoice(order, invoice);
+    await orderEventRepo.log({
+      orderId: order._id,
+      type: 'INVOICE_ISSUED',
+      previousStatus: order.orderStatus,
+      newStatus: order.orderStatus,
+      actor: { id: 'system', role: 'system' },
+      meta: {
+        invoiceId: invoice._id,
+        invoiceNumber: invoice.invoiceNumber,
+        type: invoice.type,
+      },
+    }).catch(() => null);
 
     return invoice;
   }
@@ -165,10 +233,16 @@ class InvoiceService {
     const creditNoteNumber = `CN-${originalInvoice.invoiceNumber}`;
 
     // Create credit note (same data as invoice but marked as credit_note)
+    const refundMeta = {
+      ...this.buildCreditNoteRefundMeta(order, originalInvoice),
+      ...(order?.refundMeta || {}),
+    };
+
     const creditNote = await Invoice.create({
       type: 'credit_note',
       orderId: order._id,
       invoiceNumber: creditNoteNumber,
+      status: 'issued',
       relatedInvoiceId: originalInvoice._id,
       customerSnapshot: originalInvoice.customerSnapshot,
       items: originalInvoice.items, // Same items as original
@@ -177,7 +251,8 @@ class InvoiceService {
         ...originalInvoice.orderSnapshot,
         cancelledAt: order.updatedAt || new Date(),
       },
-      refundMeta: order.refundMeta || {},
+      paymentSnapshot: originalInvoice.paymentSnapshot || null,
+      refundMeta,
     });
 
     // Email credit note to customer
@@ -189,6 +264,19 @@ class InvoiceService {
       });
     });
     
+    await orderEventRepo.log({
+      orderId: order._id,
+      type: 'CREDIT_NOTE_ISSUED',
+      previousStatus: order.orderStatus,
+      newStatus: order.orderStatus,
+      actor: { id: 'system', role: 'system' },
+      meta: {
+        invoiceId: creditNote._id,
+        invoiceNumber: creditNote.invoiceNumber,
+        relatedInvoiceId: originalInvoice._id,
+      },
+    }).catch(() => null);
+
     return creditNote;
   }
 

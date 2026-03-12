@@ -171,10 +171,10 @@ export const getOrder = async (accessToken = null, orderId) => {
  * @param {string} reason - Cancellation reason
  * @returns {Promise<object|null>} - Updated order or null
  */
-export const cancelOrder = async (accessToken, orderId, reason) => {
+export const cancelOrder = async (accessToken, orderId, reason, details = '') => {
   
   try {
-    return await api.authPost(`/orders/${orderId}/cancel`, { reason }, accessToken);
+    return await api.authPost(`/orders/${orderId}/cancel`, { reason, details }, accessToken);
   } catch (error) {
     logger.error('[ORDER_SERVICE] Cancel order error:', error);
     throw error;

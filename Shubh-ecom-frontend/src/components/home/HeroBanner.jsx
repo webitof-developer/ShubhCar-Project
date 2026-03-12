@@ -80,6 +80,9 @@ export const HeroBanner = () => {
   const [years, setYears] = useState([]);
   const [modificationGroups, setModificationGroups] = useState([]);
   const [modificationOptions, setModificationOptions] = useState([]);
+  const [modelFetchError, setModelFetchError] = useState("");
+  const [yearFetchError, setYearFetchError] = useState("");
+  const [modificationFetchError, setModificationFetchError] = useState("");
 
   useEffect(() => {
     const fetchBrands = async () => {
@@ -102,12 +105,16 @@ export const HeroBanner = () => {
     setYears([]);
     setModificationGroups([]);
     setModificationOptions([]);
+    setModelFetchError("");
+    setYearFetchError("");
+    setModificationFetchError("");
 
     if (val) {
       try {
         const data = await getModelsByBrand(val);
         setModels(Array.isArray(data) ? data : []);
       } catch (error) {
+        setModelFetchError("Unable to load models");
         logger.error("Failed to fetch models", error);
       }
     }
@@ -120,6 +127,8 @@ export const HeroBanner = () => {
     setYears([]);
     setModificationGroups([]);
     setModificationOptions([]);
+    setYearFetchError("");
+    setModificationFetchError("");
 
     if (val) {
       try {
@@ -129,6 +138,7 @@ export const HeroBanner = () => {
           : [];
         setYears(sorted);
       } catch (error) {
+        setYearFetchError("Unable to load years");
         logger.error("Failed to fetch years", error);
       }
     }
@@ -139,6 +149,7 @@ export const HeroBanner = () => {
     setVariantId("");
     setModificationGroups([]);
     setModificationOptions([]);
+    setModificationFetchError("");
 
     if (val) {
       try {
@@ -150,6 +161,7 @@ export const HeroBanner = () => {
         );
         setModificationOptions(options);
       } catch (error) {
+        setModificationFetchError("Unable to load modifications");
         logger.error("Failed to fetch modifications", error);
       }
     }
@@ -179,11 +191,39 @@ export const HeroBanner = () => {
     router.push(`/categories`);
   };
 
-  const isSearchEnabled =
-    brandId &&
-    (!models.length || modelId) &&
-    (!years.length || yearId) &&
-    (!modificationOptions.length || variantId);
+  const isValidModel = Boolean(
+    modelId && models.some((item) => toId(item._id || item.id) === toId(modelId))
+  );
+  const isValidYear = Boolean(
+    yearId && years.some((item) => toId(item._id || item.id) === toId(yearId))
+  );
+  const isValidModification = Boolean(
+    variantId &&
+    modificationOptions.some((item) => toId(item.vehicleId || item._id || item.id) === toId(variantId))
+  );
+  const isSearchEnabled = Boolean(brandId && isValidModel && isValidYear && isValidModification);
+
+  const modelPlaceholder = !brandId
+    ? "Select Brand First"
+    : modelFetchError
+      ? modelFetchError
+      : models.length
+        ? "Select Model"
+        : "No models available";
+  const yearPlaceholder = !modelId
+    ? "Select Model First"
+    : yearFetchError
+      ? yearFetchError
+      : years.length
+        ? "Select Year"
+        : "No years available";
+  const modificationPlaceholder = !yearId
+    ? "Select Year First"
+    : modificationFetchError
+      ? modificationFetchError
+      : modificationOptions.length
+        ? "Select Modification"
+        : "No modifications available";
 
   return (
     <section className="relative min-h-[550px] md:min-h-[600px] h-auto py-20 md:py-0 flex items-center justify-center overflow-hidden">
@@ -223,30 +263,48 @@ export const HeroBanner = () => {
               </SelectContent>
             </Select>
 
-            <Select value={modelId} onValueChange={handleModelChange} disabled={!brandId || models.length === 0}>
+            <Select value={modelId} onValueChange={handleModelChange} disabled={!brandId}>
               <SelectTrigger className="h-12 w-full bg-white/10 hover:bg-white/20 border border-white/20 focus:ring-2 focus:ring-primary text-white font-medium data-[placeholder]:text-white [&>span]:text-white [&_svg]:!text-white [&_svg]:!opacity-100 disabled:opacity-80 disabled:cursor-not-allowed">
-                <SelectValue placeholder="Select Model" />
+                <SelectValue placeholder={modelPlaceholder} />
               </SelectTrigger>
               <SelectContent className="max-h-[300px]">
-                {renderSelectItems(models)}
+                {modelFetchError ? (
+                  <SelectItem value="none" disabled>{modelFetchError}</SelectItem>
+                ) : models.length ? (
+                  renderSelectItems(models)
+                ) : (
+                  <SelectItem value="none" disabled>No models available</SelectItem>
+                )}
               </SelectContent>
             </Select>
 
-            <Select value={yearId} onValueChange={handleYearChange} disabled={!modelId || years.length === 0}>
+            <Select value={yearId} onValueChange={handleYearChange} disabled={!modelId}>
               <SelectTrigger className="h-12 w-full bg-white/10 hover:bg-white/20 border border-white/20 focus:ring-2 focus:ring-primary text-white font-medium data-[placeholder]:text-white [&>span]:text-white [&_svg]:!text-white [&_svg]:!opacity-100 disabled:opacity-80 disabled:cursor-not-allowed">
-                <SelectValue placeholder="Select Year" />
+                <SelectValue placeholder={yearPlaceholder} />
               </SelectTrigger>
               <SelectContent className="max-h-[300px]">
-                {renderSelectItems(years, (y) => y.year)}
+                {yearFetchError ? (
+                  <SelectItem value="none" disabled>{yearFetchError}</SelectItem>
+                ) : years.length ? (
+                  renderSelectItems(years, (y) => y.year)
+                ) : (
+                  <SelectItem value="none" disabled>No years available</SelectItem>
+                )}
               </SelectContent>
             </Select>
 
-            <Select value={variantId} onValueChange={setVariantId} disabled={!yearId || modificationGroups.length === 0}>
+            <Select value={variantId} onValueChange={setVariantId} disabled={!yearId}>
               <SelectTrigger className="h-12 w-full bg-white/10 hover:bg-white/20 border border-white/20 focus:ring-2 focus:ring-primary text-white font-medium data-[placeholder]:text-white [&>span]:text-white [&_svg]:!text-white [&_svg]:!opacity-100 disabled:opacity-80 disabled:cursor-not-allowed">
-                <SelectValue placeholder={!yearId ? "Select Year" : (modificationOptions.length ? "Select Modification" : "No Modifications Found")} />
+                <SelectValue placeholder={modificationPlaceholder} />
               </SelectTrigger>
               <SelectContent className="max-h-[300px]">
-                {renderModificationItems(modificationGroups)}
+                {modificationFetchError ? (
+                  <SelectItem value="none" disabled>{modificationFetchError}</SelectItem>
+                ) : modificationOptions.length ? (
+                  renderModificationItems(modificationGroups)
+                ) : (
+                  <SelectItem value="none" disabled>No modifications available</SelectItem>
+                )}
               </SelectContent>
             </Select>
 

@@ -77,7 +77,7 @@ export function OrderRow({ order, accessToken }) {
     paymentMethodNormalized.includes('cod') ||
     paymentMethodNormalized.includes('cash');
   const isRazorpayOrder = paymentMethodNormalized.includes('razor');
-  const hasCapturedPayment = ['paid', 'partially_paid', 'refunded'].includes(
+  const hasCapturedPayment = ['paid', 'refunded'].includes(
     String(displayOrder?.paymentStatus || '').toLowerCase(),
   );
   const normalizedPaymentStatus =
@@ -131,7 +131,7 @@ export function OrderRow({ order, accessToken }) {
 
     try {
       setIsCancelling(true);
-      await cancelOrder(accessToken, displayOrder._id, cancelReason);
+      await cancelOrder(accessToken, displayOrder._id, cancelReason, cancelDetails);
 
       toast.success('Order cancelled successfully.');
 
@@ -139,7 +139,9 @@ export function OrderRow({ order, accessToken }) {
       setDetail((prev) => ({
         ...(prev || displayOrder),
         orderStatus: 'cancelled',
-        paymentStatus: ['paid', 'partially_paid'].includes(
+        cancelReason,
+        cancelDetails,
+        paymentStatus: ['paid', 'refunded'].includes(
           String(displayOrder?.paymentStatus || '').toLowerCase(),
         )
           ? 'refunded'
@@ -147,6 +149,7 @@ export function OrderRow({ order, accessToken }) {
       }));
 
       setRequestOpen(false);
+      setCancelDetails('');
     } catch (err) {
       toast.error(
         err.message || 'Failed to cancel the order. Please try again.',
@@ -158,7 +161,7 @@ export function OrderRow({ order, accessToken }) {
   };
 
   return (
-    <div className='border border-border/60 rounded-xl overflow-hidden bg-card hover:border-primary/30 transition-colors'>
+    <div className='group border border-border/60 rounded-xl overflow-hidden bg-card hover:border-primary/30 transition-colors'>
       {/* ── Summary Row ── */}
       <div className='p-4 md:p-5'>
         <div className='flex flex-col sm:flex-row sm:items-start gap-4'>
@@ -246,10 +249,12 @@ export function OrderRow({ order, accessToken }) {
               )}
             </div>
 
-            {/* Compact timeline */}
-            <div className='mt-3'>
-              <OrderTimeline status={displayOrder.orderStatus} />
-            </div>
+            {/* Compact timeline: desktop hover only while collapsed */}
+            {!expanded ? (
+              <div className='mt-3 hidden md:group-hover:block'>
+                <OrderTimeline status={displayOrder.orderStatus} />
+              </div>
+            ) : null}
           </div>
 
           {/* Price + actions */}
@@ -263,8 +268,16 @@ export function OrderRow({ order, accessToken }) {
               </p>
             </div>
             <div className='flex items-center gap-2'>
-              <Link href={`/invoice/${displayOrder._id}`} target='_blank'>
-                <Button variant='ghost' size='sm' className='h-8 text-xs px-2'>
+              <Link
+                href={hasCapturedPayment ? `/invoice/${displayOrder._id}` : '#'}
+                target={hasCapturedPayment ? '_blank' : undefined}
+                onClick={(event) => {
+                  if (!hasCapturedPayment) {
+                    event.preventDefault();
+                    toast.error('Invoice is not available yet. It becomes available after successful payment capture.');
+                  }
+                }}>
+                <Button variant='ghost' size='sm' className='h-8 text-xs px-2' disabled={!hasCapturedPayment}>
                   <FileText className='w-3.5 h-3.5 mr-1' />
                   Invoice
                 </Button>
@@ -364,10 +377,12 @@ export function OrderRow({ order, accessToken }) {
                   </div>
                 </div>
 
-                 {/* Compact timeline */}
-            <div className="mt-5 p-2">
-              <OrderTimeline status={displayOrder.orderStatus} />
-            </div>
+                <div className='mt-4 p-3 rounded-lg bg-background border border-border/40'>
+                  <p className='text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3'>
+                    Order Progress
+                  </p>
+                  <OrderTimeline status={displayOrder.orderStatus} />
+                </div>
               </div>
 
               {/* Right sidebar: address + payment + tracking */}

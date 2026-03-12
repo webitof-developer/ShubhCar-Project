@@ -119,6 +119,8 @@ const orderSchema = new mongoose.Schema(
     placedAt: { type: Date, default: Date.now },
     shippedAt: { type: Date },
     deliveredAt: { type: Date },
+    cancelReason: { type: String, default: null },
+    cancelDetails: { type: String, default: null },
     shipment: {
       carrier: { type: String },
       trackingNumber: { type: String },

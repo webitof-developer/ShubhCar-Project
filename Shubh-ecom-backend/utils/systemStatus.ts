@@ -2,6 +2,7 @@
 const mongoose = require('mongoose');
 const { redis, redisEnabled } = require('../config/redis');
 const env = require('../config/env');
+const { checkRequiredEmailTemplates } = require('./emailTemplateHealth');
 
 const getDatabaseStatus = async () => {
     const mongoStatus = {
@@ -61,13 +62,23 @@ const getConfigurationStatus = () => {
 };
 
 const getSystemStatus = async () => {
-    const dbStatus = await getDatabaseStatus();
-    const configStatus = getConfigurationStatus();
+  const dbStatus = await getDatabaseStatus();
+  const configStatus = getConfigurationStatus();
+  const templateStatus = await checkRequiredEmailTemplates({ silent: true });
+  const emailTemplateConfig = {
+    'Email Templates': {
+      status: templateStatus.ready ? 'Configured' : 'Missing',
+      details: templateStatus.ready
+        ? 'All required templates are available'
+        : `Missing: ${templateStatus.missing.join(', ')}`,
+    },
+  };
 
-    return {
-        ...dbStatus,
-        ...configStatus,
-    };
+  return {
+    ...dbStatus,
+    ...configStatus,
+    ...emailTemplateConfig,
+  };
 };
 
 module.exports = { getSystemStatus };

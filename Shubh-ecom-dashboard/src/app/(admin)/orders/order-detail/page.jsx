@@ -63,12 +63,12 @@ const OrderDetailPage = () => {
     }
   };
 
-  const handleStatusUpdate = async (status) => {
+  const handleStatusUpdate = async (statusOrPayload) => {
     if (!canManageOrders) return;
     if (!orderId || !session?.accessToken) return;
     try {
       setUpdatingStatus(true);
-      await orderAPI.updateStatus(orderId, status, session.accessToken);
+      await orderAPI.updateStatus(orderId, statusOrPayload, session.accessToken);
       toast.success('Order status updated');
       await fetchOrderDetail();
     } catch (error) {
@@ -117,27 +117,26 @@ const OrderDetailPage = () => {
     }
   };
 
-  const handleDownloadInvoice = () => {
+  const buildDocumentViewerUrl = (documentType, action = 'view') => {
     if (!orderId) return;
-    window.open(`/invoice/invoice-details?id=${orderId}&action=download`, '_blank');
+    const params = new URLSearchParams({
+      id: orderId,
+      orderId,
+      documentType,
+      source: 'order_detail',
+    });
+    if (action !== 'view') params.set('action', action);
+    return `/invoice/invoice-details?${params.toString()}`;
   };
 
-  const handleDownloadCreditNote = async () => {
-    if (!orderId || !session?.accessToken) return;
-    try {
-      const blob = await orderAPI.getCreditNotePdfByOrder(orderId, session.accessToken, true);
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `credit-note-${orderId}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      logger.error('Failed to download credit note:', error);
-      toast.error(error.message || 'Failed to download credit note');
-    }
+  const handleDownloadInvoice = () => {
+    const url = buildDocumentViewerUrl('invoice', 'download');
+    if (url) window.open(url, '_blank');
+  };
+
+  const handleDownloadCreditNote = () => {
+    const url = buildDocumentViewerUrl('credit_note', 'download');
+    if (url) window.open(url, '_blank');
   };
 
   const handleUpsertShipment = async (orderItemId, payload, hasExisting) => {
@@ -339,6 +338,10 @@ const OrderDetailPage = () => {
   }
 
   const { order, items } = orderData;
+  const normalizedPaymentStatus = String(order?.paymentStatus || '').toLowerCase();
+  const normalizedOrderStatus = String(order?.orderStatus || '').toLowerCase();
+  const invoiceDisabled = !['paid', 'refunded'].includes(normalizedPaymentStatus);
+  const creditNoteDisabled = !['cancelled', 'returned', 'refunded'].includes(normalizedOrderStatus);
 
   return (
     <>
@@ -385,9 +388,9 @@ const OrderDetailPage = () => {
               <Documents
                 order={order}
                 onDownloadInvoice={handleDownloadInvoice}
-                invoiceDisabled={order.paymentStatus !== 'paid'}
+                invoiceDisabled={invoiceDisabled}
                 onDownloadCreditNote={handleDownloadCreditNote}
-                creditNoteDisabled={order.orderStatus !== 'cancelled' && order.orderStatus !== 'returned'}
+                creditNoteDisabled={creditNoteDisabled}
               />
             </Col>
             <Col md={6}>

@@ -2,7 +2,7 @@
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import { currency } from '@/context/constants'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { Card, CardBody, CardFooter, CardTitle, Col, Row, Spinner, Alert } from 'react-bootstrap'
 import { invoiceAPI } from '@/helpers/invoiceApi'
@@ -38,13 +38,7 @@ const InvoiceList = () => {
     return () => clearTimeout(timer)
   }, [searchInput])
 
-  useEffect(() => {
-    if (session?.accessToken) {
-      fetchInvoices()
-    }
-  }, [session, page, documentType, searchQuery])
-
-  const fetchInvoices = async () => {
+  const fetchInvoices = useCallback(async () => {
     try {
       setLoading(true)
       setError('')
@@ -69,18 +63,38 @@ const InvoiceList = () => {
     } finally {
       setLoading(false)
     }
+  }, [documentType, page, searchQuery, session?.accessToken])
+
+  useEffect(() => {
+    if (session?.accessToken) {
+      fetchInvoices()
+    }
+  }, [fetchInvoices, session])
+
+  const buildViewerUrl = (invoiceId, type, action = 'view') => {
+    const params = new URLSearchParams({
+      id: invoiceId,
+      documentType: type || 'invoice',
+      source: 'invoice_list',
+    })
+
+    if (action !== 'view') {
+      params.set('action', action)
+    }
+
+    return `/invoice/invoice-details?${params.toString()}`
   }
 
-  const handleView = (invoiceId) => {
-    window.open(`/invoice/invoice-details?id=${invoiceId}`, '_blank')
+  const handleView = (invoiceId, type) => {
+    window.open(buildViewerUrl(invoiceId, type), '_blank')
   }
 
-  const handleDownload = (invoiceId) => {
-    window.open(`/invoice/invoice-details?id=${invoiceId}&action=download`, '_blank')
+  const handleDownload = (invoiceId, type) => {
+    window.open(buildViewerUrl(invoiceId, type, 'download'), '_blank')
   }
 
-  const handlePrint = (invoiceId) => {
-    window.open(`/invoice/invoice-details?id=${invoiceId}&action=print`, '_blank')
+  const handlePrint = (invoiceId, type) => {
+    window.open(buildViewerUrl(invoiceId, type, 'print'), '_blank')
   }
 
   const handleTabChange = (type) => {
@@ -89,6 +103,10 @@ const InvoiceList = () => {
   }
 
   const getDocumentLabel = (type) => (type === 'credit_note' ? 'Credit Note' : 'Invoice')
+  const getStatusLabel = (status) =>
+    String(status || 'issued')
+      .replace(/[_-]+/g, ' ')
+      .replace(/\b\w/g, (match) => match.toUpperCase())
   const hasActiveSearch = searchInput.trim().length > 0
   const isSearchActive = searchFocused || hasActiveSearch || !!searchQuery
 
@@ -97,10 +115,10 @@ const InvoiceList = () => {
       <Col xl={12}>
         <Card>
           <div className="card-header">
-            <div className="d-flex flex-wrap justify-content-between align-items-center gap-3">
-              <div>
-                <CardTitle as={'h4'} className="mb-0">Invoices</CardTitle>
-              </div>
+            <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+              <CardTitle as={'h4'} className="mb-0">Invoices</CardTitle>
+            </div>
+            <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
               <div className="d-flex flex-wrap align-items-center gap-2">
                 {DOCUMENT_TABS.map((tab) => (
                   <button
@@ -113,18 +131,18 @@ const InvoiceList = () => {
                   </button>
                 ))}
               </div>
-            </div>
-            <div className="mt-3 d-flex flex-wrap align-items-center gap-2">
-              <div style={{ minWidth: '280px', maxWidth: '420px', width: '100%' }}>
+              <div className="ms-auto" style={{ minWidth: '280px', maxWidth: '460px', width: '100%' }}>
                 <div
-                  className="d-flex align-items-center rounded-pill bg-body border px-2 py-1"
+                  className="d-flex align-items-center rounded-pill bg-body border px-2"
                   onFocusCapture={() => setSearchFocused(true)}
                   onBlurCapture={(event) => {
                     if (!event.currentTarget.contains(event.relatedTarget)) {
                       setSearchFocused(false)
                     }
                   }}
+                  aria-label="Invoice search container"
                   style={{
+                    minHeight: '42px',
                     borderColor: isSearchActive ? 'rgba(13, 110, 253, 0.25)' : 'var(--bs-border-color)',
                     boxShadow: isSearchActive
                       ? '0 0 0 2px rgba(13, 110, 253, 0.12)'
@@ -134,7 +152,7 @@ const InvoiceList = () => {
                 >
                   <input
                     type="search"
-                    className="form-control border-0 bg-transparent shadow-none fs-6 px-2"
+                    className="form-control border-0 bg-transparent shadow-none fs-6 px-2 py-0"
                     placeholder="Search..."
                     value={searchInput}
                     onChange={(event) => setSearchInput(event.target.value)}
@@ -151,6 +169,8 @@ const InvoiceList = () => {
                   </button>
                 </div>
               </div>
+            </div>
+            <div className="mt-2 d-flex flex-wrap align-items-center gap-2">
               {searchQuery && (
                 <div className="d-flex align-items-center gap-2">
                   <span className="badge bg-primary-subtle text-primary border border-primary-subtle">
@@ -229,19 +249,19 @@ const InvoiceList = () => {
                         <td>{item.issuedAt ? new Date(item.issuedAt).toLocaleDateString('en-IN') : '-'}</td>
                         <td>{currency}{item.totals?.grandTotal ?? 0}</td>
                         <td>
-                          <span className="badge bg-success-subtle text-success py-1 px-2">
-                            {item.status || 'Paid'}
+                          <span className={`badge py-1 px-2 ${item.status === 'voided' ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success'}`}>
+                            {getStatusLabel(item.status)}
                           </span>
                         </td>
                         <td>
                           <div className="d-flex gap-2">
-                            <button className="btn btn-light btn-sm" onClick={() => handleView(item._id)}>
+                            <button className="btn btn-light btn-sm" onClick={() => handleView(item._id, item.type)}>
                               <IconifyIcon icon="solar:eye-broken" className="align-middle fs-18" />
                             </button>
-                            <button className="btn btn-soft-primary btn-sm" onClick={() => handleDownload(item._id)}>
+                            <button className="btn btn-soft-primary btn-sm" onClick={() => handleDownload(item._id, item.type)}>
                               <IconifyIcon icon="solar:download-broken" className="align-middle fs-18" />
                             </button>
-                            <button className="btn btn-soft-secondary btn-sm" onClick={() => handlePrint(item._id)}>
+                            <button className="btn btn-soft-secondary btn-sm" onClick={() => handlePrint(item._id, item.type)}>
                               <IconifyIcon icon="solar:printer-broken" className="align-middle fs-18" />
                             </button>
                           </div>

@@ -40,6 +40,10 @@ const schema = Joi.object({
   SMTP_PORT: Joi.number().required(),
   SMTP_USER: Joi.string().required(),
   SMTP_PASS: Joi.string().required(),
+  SMTP_FROM: Joi.string().email().required(),
+  SMTP_SECURE: Joi.boolean().default(false),
+  SMTP_ALLOW_USER_AS_FROM: Joi.boolean().default(false),
+  APP_NAME: Joi.string().default('SHUBH CAR SPARES'),
 
   FRONTEND_ORIGIN: Joi.string().uri().default('http://localhost:3000'),
   ADMIN_ORIGIN: Joi.string().uri().default('http://localhost:5173'),

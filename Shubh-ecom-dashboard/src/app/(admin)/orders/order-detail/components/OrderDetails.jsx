@@ -15,6 +15,9 @@ import OrderTotals from './OrderTotals'
 
 const OrderActions = ({ order, onStatusUpdate, updatingStatus }) => {
   const [selectedStatus, setSelectedStatus] = useState(order.orderStatus || 'created')
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [cancelReason, setCancelReason] = useState('ordered_by_mistake')
+  const [cancelDetails, setCancelDetails] = useState('')
 
   useEffect(() => {
     setSelectedStatus(order.orderStatus || 'created')
@@ -32,7 +35,19 @@ const OrderActions = ({ order, onStatusUpdate, updatingStatus }) => {
   const canUpdate =
     selectedStatus &&
     selectedStatus !== order.orderStatus &&
-    ADMIN_STATUS_UPDATES.includes(selectedStatus)
+    ADMIN_STATUS_UPDATES.includes(selectedStatus) &&
+    selectedStatus !== 'cancelled'
+
+  const handleConfirmCancel = () => {
+    const reason = String(cancelReason || '').trim()
+    if (!reason) return
+    onStatusUpdate?.({
+      status: 'cancelled',
+      reason,
+      details: String(cancelDetails || '').trim(),
+    })
+    setShowCancelModal(false)
+  }
 
   return (
     <Card className="mb-3 border-0 shadow-sm">
@@ -73,7 +88,7 @@ const OrderActions = ({ order, onStatusUpdate, updatingStatus }) => {
             variant="outline-danger"
             size="sm"
             disabled={!ADMIN_STATUS_UPDATES.includes('cancelled') || order.orderStatus === 'cancelled' || updatingStatus}
-            onClick={() => onStatusUpdate?.('cancelled')}
+            onClick={() => setShowCancelModal(true)}
           >
             Cancel Order
           </Button>
@@ -86,7 +101,48 @@ const OrderActions = ({ order, onStatusUpdate, updatingStatus }) => {
             {updatingStatus ? 'Updating...' : 'Update'}
           </Button>
         </div>
+        {selectedStatus === 'cancelled' ? (
+          <div className="text-muted fs-12 mt-2">
+            Use the <strong>Cancel Order</strong> button to capture cancellation reason.
+          </div>
+        ) : null}
       </CardBody>
+      <Modal show={showCancelModal} onHide={() => setShowCancelModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Cancel Order</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form.Group className="mb-3">
+            <Form.Label>Reason</Form.Label>
+            <Form.Select value={cancelReason} onChange={(event) => setCancelReason(event.target.value)}>
+              <option value="ordered_by_mistake">Ordered by mistake</option>
+              <option value="found_better_price">Found a better price</option>
+              <option value="delivery_too_long">Delivery taking too long</option>
+              <option value="change_of_mind">Change of mind</option>
+              <option value="other">Other</option>
+            </Form.Select>
+          </Form.Group>
+          <Form.Group>
+            <Form.Label>Additional Note (optional)</Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={3}
+              maxLength={500}
+              value={cancelDetails}
+              onChange={(event) => setCancelDetails(event.target.value)}
+              placeholder="Add cancellation details"
+            />
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="light" onClick={() => setShowCancelModal(false)}>
+            Close
+          </Button>
+          <Button variant="danger" onClick={handleConfirmCancel} disabled={updatingStatus}>
+            {updatingStatus ? 'Cancelling...' : 'Confirm Cancel'}
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </Card>
   )
 }
@@ -659,10 +715,13 @@ export const PaymentInformation = ({ order, onPaymentUpdate, updatingPayment, on
 
 export const Documents = ({ order, onDownloadInvoice, invoiceDisabled, onDownloadCreditNote, creditNoteDisabled }) => {
   const paymentStatus = String(order?.paymentStatus || '').toLowerCase()
-  const hasCapturedPayment = ['paid', 'partially_paid', 'refunded'].includes(paymentStatus)
+  const orderStatus = String(order?.orderStatus || '').toLowerCase()
+  const hasCapturedPayment = ['paid', 'refunded'].includes(paymentStatus)
   const showCreditNoteInfo = !creditNoteDisabled
   const showUnpaidCancellationInfo =
-    ['cancelled', 'returned'].includes(String(order?.orderStatus || '').toLowerCase()) && !hasCapturedPayment
+    ['cancelled', 'returned'].includes(orderStatus) && !hasCapturedPayment
+  const showCreditNoteUnavailableInfo =
+    creditNoteDisabled && !showUnpaidCancellationInfo && !['refunded'].includes(orderStatus)
 
   return (
     <Card className="mb-3 border-0 shadow-sm">
@@ -708,7 +767,48 @@ export const Documents = ({ order, onDownloadInvoice, invoiceDisabled, onDownloa
               This order was cancelled before payment capture. No refund is pending.
             </p>
           ) : null}
+          {showCreditNoteUnavailableInfo ? (
+            <p className="mb-0 mt-2 text-muted fs-12">
+              Credit note is not available for this order yet.
+            </p>
+          ) : null}
         </div>
+      </CardBody>
+    </Card>
+  )
+}
+
+const CancellationInfo = ({ order }) => {
+  const reason = String(order?.cancelReason || '').trim()
+  const details = String(order?.cancelDetails || '').trim()
+  const formattedReason = reason
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/\b\w/g, (match) => match.toUpperCase())
+
+  if (!reason && !details && order?.orderStatus !== 'cancelled') return null
+
+  return (
+    <Card className="mb-3 border-0 shadow-sm">
+      <CardHeader className="bg-light-subtle border-bottom border-light">
+        <CardTitle as={'h5'} className="mb-0">Cancellation Info</CardTitle>
+      </CardHeader>
+      <CardBody>
+        {reason ? (
+          <div className="mb-2">
+            <div className="text-muted fs-12 text-uppercase fw-semibold mb-1">Reason</div>
+            <div className="text-dark">{formattedReason}</div>
+          </div>
+        ) : null}
+        {details ? (
+          <div>
+            <div className="text-muted fs-12 text-uppercase fw-semibold mb-1">Additional Note</div>
+            <div className="text-dark" style={{ whiteSpace: 'pre-wrap' }}>{details}</div>
+          </div>
+        ) : null}
+        {!reason && !details && order?.orderStatus === 'cancelled' ? (
+          <div className="text-muted fs-13">No cancellation reason was captured for this order.</div>
+        ) : null}
       </CardBody>
     </Card>
   )
@@ -733,6 +833,7 @@ const OrderDetails = ({ order, shipments, items, notes, onStatusUpdate, updating
       )}
       {canManage && <OrderActions order={order} onStatusUpdate={onStatusUpdate} updatingStatus={updatingStatus} />}
       <OrderTotals order={order} />
+      <CancellationInfo order={order} />
       {canManage && (
         <PaymentInformation
           order={order}

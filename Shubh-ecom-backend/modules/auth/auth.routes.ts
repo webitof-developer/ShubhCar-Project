@@ -386,7 +386,7 @@ router.post('/refresh', validate(refreshSchema), controller.refresh);
  * @openapi
  * /api/v1/auth/forgot-password:
  *   post:
- *     summary: Send a password reset link or OTP
+ *     summary: Send a password reset OTP if account exists
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -395,10 +395,10 @@ router.post('/refresh', validate(refreshSchema), controller.refresh);
  *           schema:
  *             type: object
  *             properties:
- *               email:
+ *               identifier:
  *                 type: string
- *                 format: email
- *             required: [email]
+ *                 description: Registered email or phone
+ *             required: [identifier]
  *     responses:
  *       200:
  *         description: Reset instructions sent if account exists
@@ -432,7 +432,7 @@ router.post(
  * @openapi
  * /api/v1/auth/reset-password:
  *   post:
- *     summary: Reset account password using a valid token
+ *     summary: Reset account password using a valid OTP
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -441,12 +441,17 @@ router.post(
  *           schema:
  *             type: object
  *             properties:
- *               token:
+ *               identifier:
  *                 type: string
+ *                 description: Registered email or phone
+ *               otp:
+ *                 type: string
+ *                 minLength: 6
+ *                 maxLength: 6
  *               newPassword:
  *                 type: string
  *                 format: password
- *             required: [token, newPassword]
+ *             required: [identifier, otp, newPassword]
  *     responses:
  *       200:
  *         description: Password reset successful
@@ -455,7 +460,7 @@ router.post(
  *             schema:
  *               $ref: '#/components/schemas/GenericSuccess'
  *       400:
- *         description: Invalid or expired token
+ *         description: Invalid OTP, expired OTP, or invalid request
  *         content:
  *           application/json:
  *             schema:

@@ -995,17 +995,17 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
   }
 
   const handleViewInvoice = (orderId) => {
-    const target = `/invoice/invoice-details?id=${orderId}`
+    const target = `/invoice/invoice-details?id=${orderId}&orderId=${orderId}&documentType=invoice&source=order_detail`
     window.open(target, '_blank')
   }
 
   const handleDownloadInvoice = (orderId) => {
-    const target = `/invoice/invoice-details?id=${orderId}&action=download`
+    const target = `/invoice/invoice-details?id=${orderId}&orderId=${orderId}&documentType=invoice&source=order_detail&action=download`
     window.open(target, '_blank')
   }
 
   const handlePrintInvoice = (orderId) => {
-    const target = `/invoice/invoice-details?id=${orderId}&action=print`
+    const target = `/invoice/invoice-details?id=${orderId}&orderId=${orderId}&documentType=invoice&source=order_detail&action=print`
     window.open(target, '_blank')
   }
 
@@ -1896,6 +1896,17 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
             <CardBody className="p-0">
               <div className="table-responsive">
                 <table className="table align-middle mb-0 table-centered" style={{ fontSize: '0.9rem' }}>
+                  <colgroup>
+                    <col style={{ width: '40px' }} />
+                    <col style={{ width: '160px' }} />
+                    <col style={{ width: '280px' }} />
+                    <col style={{ width: '140px' }} />
+                    <col style={{ width: '130px' }} />
+                    <col style={{ width: '220px' }} />
+                    <col style={{ width: '120px' }} />
+                    <col style={{ width: '150px' }} />
+                    <col style={{ width: '130px' }} />
+                  </colgroup>
                   <thead className="bg-light-subtle text-secondary text-uppercase fs-12">
                     <tr>
                       <th style={{ width: '40px' }} className="ps-3 py-3 rounded-start-3">
@@ -1986,7 +1997,7 @@ const OrdersList = ({ initialShowCreate = false, hideList = false } = {}) => {
                                 </div>
                               </div>
                             </td>
-                            <td className="w-50 text-muted py-3">
+                            <td className="text-muted py-3">
                               {order.createdAt
                                 ? new Date(order.createdAt).toLocaleDateString('en-IN', {
                                     day: 'numeric',

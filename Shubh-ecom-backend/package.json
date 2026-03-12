@@ -7,6 +7,7 @@
     "test": "jest",
     "test:coverage": "jest --coverage",
     "build": "tsc -p tsconfig.json",
+    "backfill:invoice-payment-snapshots": "node -r ts-node/register/transpile-only scripts/migrations/backfill-invoice-payment-snapshots.js --confirm",
     "check:no-console": "powershell -NoProfile -Command \"if (rg -n 'console\\.(log|debug|info|warn|error|trace)\\(' modules models middlewares utils --glob '!**/lib/logger.ts') { exit 1 } else { exit 0 }\"",
     "start": "node dist/server.js",
     "start:ts": "node dist/server.js",
@@ -14,6 +15,7 @@
     "dev": "ts-node-dev --respawn --transpile-only server.ts",
     "dev:ts": "ts-node-dev --respawn --transpile-only server.ts",
     "seed:client": "node scripts/seed-client-data.js",
+    "seed:email-templates": "node scripts/seed-email-templates.js",
     "search:reindex": "node scripts/reindex-products-elastic.js",
     "vehicles:transform:xlsx": "node scripts/transform-merged-vehicles-xlsx.js",
     "vehicles:import:xlsx": "node scripts/import-vehicles-from-mapped-xlsx.js"

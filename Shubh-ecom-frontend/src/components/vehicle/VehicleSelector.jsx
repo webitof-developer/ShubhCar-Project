@@ -40,6 +40,9 @@ export const VehicleSelector = ({
   const [selectedVehicleIds, setSelectedVehicleIds] = useState([]);
   const [loading, setLoading] = useState({ brands: false, models: false, years: false, vehicles: false });
   const [error, setError] = useState("");
+  const [modelFetchError, setModelFetchError] = useState("");
+  const [yearFetchError, setYearFetchError] = useState("");
+  const [vehicleFetchError, setVehicleFetchError] = useState("");
 
   useEffect(() => {
     if (!selection) return;
@@ -73,14 +76,19 @@ export const VehicleSelector = ({
       setVehicles([]);
       setModificationGroups([]);
       setSelectedVehicleIds([]);
+      setModelFetchError("");
+      setYearFetchError("");
+      setVehicleFetchError("");
       return;
     }
     const fetchModels = async () => {
       setLoading((prev) => ({ ...prev, models: true }));
+      setModelFetchError("");
       try {
         const data = await getModelsByBrand(brandId);
         setModels(Array.isArray(data) ? data : []);
       } catch (err) {
+        setModelFetchError("Unable to load models");
         setError(err.message || "Failed to load vehicle models");
       } finally {
         setLoading((prev) => ({ ...prev, models: false }));
@@ -96,10 +104,13 @@ export const VehicleSelector = ({
       setVehicles([]);
       setModificationGroups([]);
       setSelectedVehicleIds([]);
+      setYearFetchError("");
+      setVehicleFetchError("");
       return;
     }
     const fetchYears = async () => {
       setLoading((prev) => ({ ...prev, years: true }));
+      setYearFetchError("");
       try {
         const data = await getModelYears(modelId);
         const sorted = Array.isArray(data)
@@ -107,6 +118,7 @@ export const VehicleSelector = ({
           : [];
         setYears(sorted);
       } catch (err) {
+        setYearFetchError("Unable to load years");
         setError(err.message || "Failed to load years");
       } finally {
         setLoading((prev) => ({ ...prev, years: false }));
@@ -120,10 +132,12 @@ export const VehicleSelector = ({
       setVehicles([]);
       setModificationGroups([]);
       setSelectedVehicleIds([]);
+      setVehicleFetchError("");
       return;
     }
     const fetchVehicles = async () => {
       setLoading((prev) => ({ ...prev, vehicles: true }));
+      setVehicleFetchError("");
       try {
         const groups = await getVehicleModificationGroups({ brandId, modelId, yearId });
         const normalizedGroups = Array.isArray(groups) ? groups : [];
@@ -133,6 +147,7 @@ export const VehicleSelector = ({
         );
         setVehicles(options);
       } catch (err) {
+        setVehicleFetchError("Unable to load modifications");
         setError(err.message || "Failed to load modifications");
       } finally {
         setLoading((prev) => ({ ...prev, vehicles: false }));
@@ -228,27 +243,59 @@ export const VehicleSelector = ({
 
         <Select value={modelId} onValueChange={setModelId} disabled={!brandId}>
           <SelectTrigger className="w-full">
-            <SelectValue placeholder={!brandId ? "Select brand first" : "Select Model"} />
+            <SelectValue
+              placeholder={
+                !brandId
+                  ? "Select brand first"
+                  : modelFetchError
+                    ? modelFetchError
+                    : models.length
+                      ? "Select Model"
+                      : "No models available"
+              }
+            />
           </SelectTrigger>
           <SelectContent>
-            {models.map((m) => (
-              <SelectItem key={m._id || m.id} value={toId(m._id || m.id)}>
-                {m.name}
-              </SelectItem>
-            ))}
+            {modelFetchError ? (
+              <SelectItem value="none" disabled>{modelFetchError}</SelectItem>
+            ) : models.length ? (
+              models.map((m) => (
+                <SelectItem key={m._id || m.id} value={toId(m._id || m.id)}>
+                  {m.name}
+                </SelectItem>
+              ))
+            ) : (
+              <SelectItem value="none" disabled>No models available</SelectItem>
+            )}
           </SelectContent>
         </Select>
 
         <Select value={yearId} onValueChange={setYearId} disabled={!modelId}>
           <SelectTrigger className="w-full">
-            <SelectValue placeholder={!modelId ? "Select model first" : "Select Year"} />
+            <SelectValue
+              placeholder={
+                !modelId
+                  ? "Select model first"
+                  : yearFetchError
+                    ? yearFetchError
+                    : years.length
+                      ? "Select Year"
+                      : "No years available"
+              }
+            />
           </SelectTrigger>
           <SelectContent>
-            {years.map((y) => (
-              <SelectItem key={y._id || y.id} value={toId(y._id || y.id)}>
-                {y.year}
-              </SelectItem>
-            ))}
+            {yearFetchError ? (
+              <SelectItem value="none" disabled>{yearFetchError}</SelectItem>
+            ) : years.length ? (
+              years.map((y) => (
+                <SelectItem key={y._id || y.id} value={toId(y._id || y.id)}>
+                  {y.year}
+                </SelectItem>
+              ))
+            ) : (
+              <SelectItem value="none" disabled>No years available</SelectItem>
+            )}
           </SelectContent>
         </Select>
       </div>
@@ -259,8 +306,10 @@ export const VehicleSelector = ({
           <div className="text-sm text-muted-foreground">Select brand, model, and year to view variants.</div>
         ) : loading.vehicles ? (
           <div className="text-sm text-muted-foreground">Loading variants...</div>
+        ) : vehicleFetchError ? (
+          <div className="text-sm text-muted-foreground">{vehicleFetchError}</div>
         ) : vehicles.length === 0 ? (
-          <div className="text-sm text-muted-foreground">No variants found for this selection.</div>
+          <div className="text-sm text-muted-foreground">No modifications available for this year.</div>
         ) : (
           <div className="max-h-72 overflow-y-auto rounded-lg border border-border/60">
             {modificationGroups.map((group) => (

@@ -76,6 +76,9 @@ export const VehicleFinder = () => {
   const [years, setYears] = useState([]);
   const [modificationGroups, setModificationGroups] = useState([]);
   const [modificationOptions, setModificationOptions] = useState([]);
+  const [modelFetchError, setModelFetchError] = useState("");
+  const [yearFetchError, setYearFetchError] = useState("");
+  const [modificationFetchError, setModificationFetchError] = useState("");
 
   useEffect(() => {
     const fetchBrands = async () => {
@@ -98,12 +101,16 @@ export const VehicleFinder = () => {
     setYears([]);
     setModificationGroups([]);
     setModificationOptions([]);
+    setModelFetchError("");
+    setYearFetchError("");
+    setModificationFetchError("");
 
     if (val) {
       try {
         const data = await getModelsByBrand(val);
         setModels(Array.isArray(data) ? data : []);
       } catch (error) {
+        setModelFetchError("Unable to load models");
         logger.error("Failed to fetch models", error);
       }
     }
@@ -116,6 +123,8 @@ export const VehicleFinder = () => {
     setYears([]);
     setModificationGroups([]);
     setModificationOptions([]);
+    setYearFetchError("");
+    setModificationFetchError("");
 
     if (val) {
       try {
@@ -126,6 +135,7 @@ export const VehicleFinder = () => {
           : [];
         setYears(sorted);
       } catch (error) {
+        setYearFetchError("Unable to load years");
         logger.error("Failed to fetch years", error);
       }
     }
@@ -136,6 +146,7 @@ export const VehicleFinder = () => {
     setVariantId("");
     setModificationGroups([]);
     setModificationOptions([]);
+    setModificationFetchError("");
 
     if (val) {
       try {
@@ -145,6 +156,7 @@ export const VehicleFinder = () => {
         const options = normalizedGroups.flatMap((group) => Array.isArray(group.options) ? group.options : []);
         setModificationOptions(options);
       } catch (error) {
+        setModificationFetchError("Unable to load modifications");
         logger.error("Failed to fetch modifications", error);
       }
     }
@@ -185,11 +197,39 @@ export const VehicleFinder = () => {
     setModificationOptions([]);
   };
 
-  const isSearchEnabled = 
-    brandId && 
-    (!models.length || modelId) && 
-    (!years.length || yearId) && 
-    (!modificationOptions.length || variantId);
+  const isValidModel = Boolean(
+    modelId && models.some((item) => toId(item._id || item.id) === toId(modelId))
+  );
+  const isValidYear = Boolean(
+    yearId && years.some((item) => toId(item._id || item.id) === toId(yearId))
+  );
+  const isValidModification = Boolean(
+    variantId &&
+    modificationOptions.some((item) => toId(item.vehicleId || item._id || item.id) === toId(variantId))
+  );
+  const isSearchEnabled = Boolean(brandId && isValidModel && isValidYear && isValidModification);
+
+  const modelPlaceholder = !brandId
+    ? "Select Brand First"
+    : modelFetchError
+      ? modelFetchError
+      : models.length
+        ? "Select Model"
+        : "No models available";
+  const yearPlaceholder = !modelId
+    ? "Select Model First"
+    : yearFetchError
+      ? yearFetchError
+      : years.length
+        ? "Select Year"
+        : "No years available";
+  const modificationPlaceholder = !yearId
+    ? "Select Year First"
+    : modificationFetchError
+      ? modificationFetchError
+      : modificationOptions.length
+        ? "Select Modification"
+        : "No modifications available";
 
   return (
     <section className="py-8 md:py-12">
@@ -226,13 +266,19 @@ export const VehicleFinder = () => {
             <Select 
               value={modelId} 
               onValueChange={handleModelChange} 
-              disabled={!brandId || (models.length === 0)}
+              disabled={!brandId}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder={!brandId ? "Select Brand First" : (models.length ? "Select Model" : "No Models Found")} />
+                <SelectValue placeholder={modelPlaceholder} />
               </SelectTrigger>
               <SelectContent className="bg-popover border-zinc-200" sideOffset={5}>
-                 {renderSelectItems(models)}
+                {modelFetchError ? (
+                  <SelectItem value="none" disabled>{modelFetchError}</SelectItem>
+                ) : models.length ? (
+                  renderSelectItems(models)
+                ) : (
+                  <SelectItem value="none" disabled>No models available</SelectItem>
+                )}
               </SelectContent>
             </Select>
 
@@ -240,13 +286,19 @@ export const VehicleFinder = () => {
             <Select 
               value={yearId} 
               onValueChange={handleYearChange} 
-              disabled={!modelId || (years.length === 0)}
+              disabled={!modelId}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder={!modelId ? "Select Model First" : (years.length ? "Select Year" : "No Years Found")} />
+                <SelectValue placeholder={yearPlaceholder} />
               </SelectTrigger>
               <SelectContent className="bg-popover border-zinc-200" sideOffset={5}>
-                {renderSelectItems(years, (y) => y.year)}
+                {yearFetchError ? (
+                  <SelectItem value="none" disabled>{yearFetchError}</SelectItem>
+                ) : years.length ? (
+                  renderSelectItems(years, (y) => y.year)
+                ) : (
+                  <SelectItem value="none" disabled>No years available</SelectItem>
+                )}
               </SelectContent>
             </Select>
 
@@ -254,13 +306,19 @@ export const VehicleFinder = () => {
             <Select 
               value={variantId} 
               onValueChange={setVariantId} 
-              disabled={!yearId || (modificationGroups.length === 0)}
+              disabled={!yearId}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder={!yearId ? "Select Year First" : (modificationOptions.length ? "Select Modification" : "No Modifications Found")} />
+                <SelectValue placeholder={modificationPlaceholder} />
               </SelectTrigger>
               <SelectContent className="bg-popover border-zinc-200" sideOffset={5}>
-                {renderModificationItems(modificationGroups)}
+                {modificationFetchError ? (
+                  <SelectItem value="none" disabled>{modificationFetchError}</SelectItem>
+                ) : modificationOptions.length ? (
+                  renderModificationItems(modificationGroups)
+                ) : (
+                  <SelectItem value="none" disabled>No modifications available</SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>

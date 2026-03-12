@@ -13,6 +13,7 @@ const PDFDocument = require('pdfkit');
 const logger = require('../../config/logger');
 const invoiceService = require('./invoice.service');
 const settingsService = require('../settings/settings.service');
+const paymentRepo = require('../payments/payment.repo');
 const Order = require('../../models/Order.model');
 const { listInvoicesQuerySchema, pdfQuerySchema } = require('./invoice.validator');
 
@@ -59,6 +60,71 @@ const readAssetBuffer = async (assetUrl = '') => {
   }
 
   return fs.readFile(source);
+};
+
+const hasCapturedPaymentStatus = (paymentStatus = '') =>
+  ['paid', 'refunded'].includes(
+    String(paymentStatus || '').trim().toLowerCase(),
+  );
+
+const resolveDocumentPaymentSnapshot = async (invoice, order, relatedInvoice) => {
+  if (invoice?.paymentSnapshot?.paymentMethod || invoice?.paymentSnapshot?.transactionId) {
+    return invoice.paymentSnapshot;
+  }
+
+  if (relatedInvoice?.paymentSnapshot?.paymentMethod || relatedInvoice?.paymentSnapshot?.transactionId) {
+    return relatedInvoice.paymentSnapshot;
+  }
+
+  if (order) {
+    return invoiceService.buildInvoicePaymentSnapshot(order);
+  }
+
+  if (invoice?.orderId) {
+    const latestPayment = await paymentRepo.findLatestLeanByOrder(invoice.orderId).catch(() => null);
+    if (latestPayment) {
+      return {
+        paymentMethod: invoice?.orderSnapshot?.paymentMethod || null,
+        gateway: latestPayment.paymentGateway || null,
+        paymentId: latestPayment._id || null,
+        gatewayOrderId: latestPayment.gatewayOrderId || null,
+        transactionId: latestPayment.transactionId || null,
+        status: latestPayment.status || null,
+        capturedAt: latestPayment.updatedAt || latestPayment.createdAt || null,
+        manualReference: null,
+      };
+    }
+  }
+
+  return null;
+};
+
+const buildDocumentPayload = async (invoice) => {
+  if (!invoice) return null;
+
+  const [relatedInvoice, order] = await Promise.all([
+    invoice.type === 'credit_note' && invoice.relatedInvoiceId
+      ? Invoice.findById(invoice.relatedInvoiceId).lean().catch(() => null)
+      : Promise.resolve(null),
+    invoice.orderId ? Order.findById(invoice.orderId).lean().catch(() => null) : Promise.resolve(null),
+  ]);
+
+  const paymentSnapshot = await resolveDocumentPaymentSnapshot(invoice, order, relatedInvoice);
+
+  return {
+    ...invoice,
+    status: invoice.status || 'issued',
+    paymentSnapshot,
+    refundMeta: invoice.refundMeta || {},
+    displayMeta: {
+      ...(invoice.displayMeta || {}),
+      originalInvoiceNumber: relatedInvoice?.invoiceNumber || invoice.displayMeta?.originalInvoiceNumber || '',
+      originalInvoiceDate: getDateLabel(relatedInvoice?.issuedAt || invoice.displayMeta?.originalInvoiceDate),
+      refundReason: order?.cancelReason || '',
+      refundStatus: String(order?.paymentStatus || '').toLowerCase(),
+      cancelDetails: order?.cancelDetails || '',
+    },
+  };
 };
 
 const getDocumentLabels = (invoice) => ({
@@ -465,7 +531,7 @@ router.get(
       return res.fail('Invoice not found', 404);
     }
 
-    return res.ok({ invoice });
+    return res.ok({ invoice: await buildDocumentPayload(invoice) });
   }),
 );
 
@@ -525,13 +591,23 @@ router.get(
   auth([ROLES.ADMIN]),
   validateId('orderId'),
   asyncHandler(async (req, res) => {
-    const invoice = await Invoice.findOne({ orderId: req.params.orderId }).lean();
+    let invoice = await Invoice.findOne({ orderId: req.params.orderId, type: 'invoice' }).lean();
+
+    if (!invoice) {
+      const order = await Order.findById(req.params.orderId);
+      if (order && hasCapturedPaymentStatus(order.paymentStatus)) {
+        invoice = await invoiceService.generateFromOrder(order);
+        if (invoice && typeof invoice.toObject === 'function') {
+          invoice = invoice.toObject();
+        }
+      }
+    }
 
     if (!invoice) {
       return res.fail('Invoice not found for this order', 404);
     }
 
-    return res.ok({ invoice });
+    return res.ok({ invoice: await buildDocumentPayload(invoice) });
   }),
 );
 
@@ -561,11 +637,11 @@ router.get(
   validateId('orderId'),
   validate(pdfQuerySchema, 'query'),
   asyncHandler(async (req, res) => {
-    let invoice = await Invoice.findOne({ orderId: req.params.orderId }).lean();
+    let invoice = await Invoice.findOne({ orderId: req.params.orderId, type: 'invoice' }).lean();
 
     if (!invoice) {
       const order = await Order.findById(req.params.orderId);
-      if (order && order.paymentStatus === 'paid') {
+      if (order && hasCapturedPaymentStatus(order.paymentStatus)) {
         invoice = await invoiceService.generateFromOrder(order);
         if (invoice && typeof invoice.toObject === 'function') {
           invoice = invoice.toObject();
@@ -578,6 +654,39 @@ router.get(
     }
     const download = String(req.query.download || '').toLowerCase() === 'true';
     return streamInvoicePdf(invoice, res, { download });
+  }),
+);
+
+router.get(
+  '/order/:orderId/credit-note',
+  adminLimiter,
+  auth([ROLES.ADMIN]),
+  validateId('orderId'),
+  asyncHandler(async (req, res) => {
+    let creditNote = await Invoice.findOne({ orderId: req.params.orderId, type: 'credit_note' }).lean();
+
+    if (!creditNote) {
+      const order = await Order.findById(req.params.orderId);
+      if (
+        order &&
+        ['cancelled', 'refunded', 'returned'].includes(String(order.orderStatus || '').toLowerCase()) &&
+        hasCapturedPaymentStatus(order.paymentStatus)
+      ) {
+        const originalInvoice = await Invoice.findOne({ orderId: order._id, type: 'invoice' });
+        if (originalInvoice) {
+          creditNote = await invoiceService.generateCreditNote(order, originalInvoice);
+          if (creditNote && typeof creditNote.toObject === 'function') {
+            creditNote = creditNote.toObject();
+          }
+        }
+      }
+    }
+
+    if (!creditNote) {
+      return res.fail('Credit note not found for this order', 404);
+    }
+
+    return res.ok({ invoice: await buildDocumentPayload(creditNote) });
   }),
 );
 
@@ -615,7 +724,11 @@ router.get(
       // In case it hasn't been generated but the order is cancelled, we might generate it here.
       // Easiest is to just check if original invoice exists and attempt generation:
       const order = await Order.findById(req.params.orderId);
-      if (order && order.orderStatus === 'cancelled') {
+      if (
+        order &&
+        ['cancelled', 'refunded', 'returned'].includes(String(order.orderStatus || '').toLowerCase()) &&
+        hasCapturedPaymentStatus(order.paymentStatus)
+      ) {
         const originalInvoice = await Invoice.findOne({ orderId: order._id, type: 'invoice' });
         if (originalInvoice) {
            creditNote = await invoiceService.generateCreditNote(order, originalInvoice);
@@ -631,6 +744,82 @@ router.get(
     }
     const download = String(req.query.download || '').toLowerCase() === 'true';
     return streamInvoicePdf(creditNote, res, { download });
+  }),
+);
+
+router.get(
+  '/my/order/:orderId',
+  auth([ROLES.CUSTOMER, ROLES.ADMIN]),
+  validateId('orderId'),
+  asyncHandler(async (req, res) => {
+    const order = await Order.findById(req.params.orderId).lean();
+
+    if (!order) {
+      return res.fail('Order not found', 404);
+    }
+
+    const isAdmin = String(req.user?.role || '').toLowerCase() === ROLES.ADMIN;
+    if (!isAdmin && String(order.userId || '') !== String(req.user?.id || '')) {
+      return res.fail('Invoice not found', 404);
+    }
+
+    let invoice = await Invoice.findOne({
+      orderId: order._id,
+      type: 'invoice',
+    }).lean();
+
+    if (!invoice && hasCapturedPaymentStatus(order.paymentStatus)) {
+      const generated = await invoiceService.generateFromOrder(order);
+      invoice = typeof generated?.toObject === 'function' ? generated.toObject() : generated;
+    }
+
+    if (!invoice) {
+      return res.fail(
+        'Invoice is not available yet. It becomes available after successful payment capture.',
+        404,
+      );
+    }
+
+    return res.ok({ invoice: await buildDocumentPayload(invoice) });
+  }),
+);
+
+router.get(
+  '/my/order/:orderId/pdf',
+  auth([ROLES.CUSTOMER, ROLES.ADMIN]),
+  validateId('orderId'),
+  validate(pdfQuerySchema, 'query'),
+  asyncHandler(async (req, res) => {
+    const order = await Order.findById(req.params.orderId);
+
+    if (!order) {
+      return res.fail('Order not found', 404);
+    }
+
+    const isAdmin = String(req.user?.role || '').toLowerCase() === ROLES.ADMIN;
+    if (!isAdmin && String(order.userId || '') !== String(req.user?.id || '')) {
+      return res.fail('Invoice not found', 404);
+    }
+
+    let invoice = await Invoice.findOne({
+      orderId: order._id,
+      type: 'invoice',
+    }).lean();
+
+    if (!invoice && hasCapturedPaymentStatus(order.paymentStatus)) {
+      const generated = await invoiceService.generateFromOrder(order);
+      invoice = typeof generated?.toObject === 'function' ? generated.toObject() : generated;
+    }
+
+    if (!invoice) {
+      return res.fail(
+        'Invoice is not available yet. It becomes available after successful payment capture.',
+        404,
+      );
+    }
+
+    const download = String(req.query.download || '').toLowerCase() === 'true';
+    return streamInvoicePdf(invoice, res, { download });
   }),
 );
 

@@ -9,6 +9,7 @@ const express = require('express');
 // const performanceMiddleware = require('../middlewares/performance.middleware');
 // const { rateLimiter } = require('../config/rateLimiter');
 const sanitize = require('../middlewares/sanitize.middleware');
+const activityLoggerMiddleware = require('../middlewares/activityLogger.middleware');
 // const metricsMiddleware = require('../middlewares/metrics.middleware');
 // const { sentryErrorHandler } = require('../config/observability');
 
@@ -62,14 +63,17 @@ apiGateway.use((req, res, next) => {
 // 5. Metrics
 // apiGateway.use(metricsMiddleware);
 
-// 6. Standard response helpers
+// 6. Dashboard/admin write-action audit logging.
+apiGateway.use(activityLoggerMiddleware);
+
+// 7. Standard response helpers
 const responseMiddleware = require('../middlewares/response.middleware');
 apiGateway.use(responseMiddleware);
 
-// 7. Register all application routes
+// 8. Register all application routes
 registerRoutes(apiGateway);
 
-// 8. Centralized error handler (LAST)
+// 9. Centralized error handler (LAST)
 const { sentryErrorHandler } = require('../config/observability');
 apiGateway.use(sentryErrorHandler());
 apiGateway.use(errorHandler);

@@ -23,6 +23,13 @@ const InvoiceSchema = new mongoose.Schema(
       index: true,
     },
 
+    status: {
+      type: String,
+      enum: ['issued', 'voided'],
+      default: 'issued',
+      index: true,
+    },
+
     customerSnapshot: {
       name: String,
       email: String,
@@ -57,7 +64,12 @@ const InvoiceSchema = new mongoose.Schema(
 
     refundMeta: {
       refundId: String,
+      refundTransactionId: String,
       gateway: String,
+      refundMode: String,
+      refundReference: String,
+      refundDate: Date,
+      refundNote: String,
     },
 
     totals: {
@@ -77,6 +89,20 @@ const InvoiceSchema = new mongoose.Schema(
       orderNumber: String,
       placedAt: Date,
       paymentMethod: String,
+    },
+
+    paymentSnapshot: {
+      paymentMethod: String,
+      gateway: String,
+      paymentId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Payment',
+      },
+      gatewayOrderId: String,
+      transactionId: String,
+      status: String,
+      capturedAt: Date,
+      manualReference: String,
     },
 
     issuedAt: { type: Date, default: Date.now },

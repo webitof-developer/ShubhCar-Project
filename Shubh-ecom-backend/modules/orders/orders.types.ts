@@ -181,6 +181,7 @@ export interface PlaceOrderInput {
 export interface UpdateOrderStatusInput {
   status: OrderStatus;
   reason?: string;
+  details?: string;
   note?: string;
 }
 

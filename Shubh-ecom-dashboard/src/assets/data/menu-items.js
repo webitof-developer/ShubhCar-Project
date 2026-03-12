@@ -28,6 +28,13 @@ export const MENU_ITEMS = [
     permission: 'analytics.view',
   },
   {
+    key: 'activity',
+    label: 'Activity',
+    icon: 'solar:history-bold-duotone',
+    url: '/activity',
+    permission: 'activity.view',
+  },
+  {
     key: 'salesman-analytics',
     label: 'Salesman Analytics',
     icon: 'solar:chart-2-bold-duotone',

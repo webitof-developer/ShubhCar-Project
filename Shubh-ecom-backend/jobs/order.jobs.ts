@@ -14,7 +14,6 @@ const {
   cancelAutoCancel: cancelAutoCancelJob,
 } = require('../queues/order.queue');
 const { payoutQueue } = require('../queues/payout.queue');
-const { enqueueEmail } = require('../queues/email.queue');
 const userRepo = require('../modules/users/user.repo'); // or wherever user lookup is
 const notificationsService = require('../modules/notifications/notifications.service');
 const checkoutDraftService = require('../modules/checkout-drafts/checkoutDrafts.service');
@@ -169,16 +168,6 @@ const enqueueStatusNotification = async (orderId, status) => {
     });
   }
 
-  // 5️⃣ enqueue email (DO NOT await)
-  enqueueEmail({
-    templateName,
-    to: user.email,
-    variables: {
-      orderNumber: order.orderNumber,
-      status,
-    },
-  });
-
   // In-app notification for customer
   await notificationsService.create({
     userId: order.userId,
@@ -219,7 +208,7 @@ const sendOrderEmailOnce = async ({
 
   await emailNotification.send({
     to,
-    template,
+    templateName: template,
     variables,
   });
 

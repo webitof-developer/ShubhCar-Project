@@ -143,6 +143,9 @@ class SettingsService {
             'quotation_terms',
             'quotation_notes',
             'quotation_validity_days',
+            'credit_note_title',
+            'credit_note_info_title',
+            'credit_note_info_body',
             'credit_note_terms',
             'credit_note_notes',
             'flash_deal_today',
@@ -220,6 +223,9 @@ class SettingsService {
             quotation_terms: 'invoice',
             quotation_notes: 'invoice',
             quotation_validity_days: 'invoice',
+            credit_note_title: 'invoice',
+            credit_note_info_title: 'invoice',
+            credit_note_info_body: 'invoice',
             credit_note_terms: 'invoice',
             credit_note_notes: 'invoice',
             storage_driver: 'storage',
@@ -312,6 +318,11 @@ class SettingsService {
             invoice_template_image_url: null,
             invoice_terms: 'Goods once sold will not be taken back or exchanged. All disputes are subject to local jurisdiction.',
             invoice_notes: 'This is a computer generated invoice.',
+            credit_note_title: 'CREDIT NOTE',
+            credit_note_info_title: 'Credit note information',
+            credit_note_info_body: 'This credit note reverses the original invoice for accounting and tax purposes. Refund settlement, if applicable, is tracked separately against the original payment method.',
+            credit_note_terms: 'Goods once sold will not be taken back or exchanged. All disputes are subject to local jurisdiction.',
+            credit_note_notes: 'This is a computer generated credit note.',
         };
 
         // Merge user settings with defaults (user settings take precedence)

@@ -14,7 +14,6 @@ if (!queuesEnabled) {
   const orderRepo = require('../modules/orders/order.repo');
   const orderService = require('../modules/orders/orders.service');
   const invoiceService = require('../modules/invoice/invoice.service');
-  const creditNoteService = require('../modules/invoice/creditNote.service');
 
   const { PAYMENT_RECORD_STATUS } = require('../constants/paymentStatus');
 
@@ -77,7 +76,6 @@ if (!queuesEnabled) {
       });
       if (order) {
         await orderService.markRefunded(orderId, isFullRefund);
-        await creditNoteService.generateFromOrder(order);
       }
     }
   };
@@ -178,7 +176,6 @@ if (!queuesEnabled) {
       });
       if (order) {
         await orderService.markRefunded(payment.orderId, isFullRefund);
-        await creditNoteService.generateFromOrder(order);
       }
       return;
     }

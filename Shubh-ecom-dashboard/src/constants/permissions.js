@@ -1,6 +1,7 @@
 export const PERMISSION_MATRIX = [
   { resource: 'dashboard', label: 'Dashboard', actions: ['view'] },
   { resource: 'analytics', label: 'Analytics', actions: ['view'] },
+  { resource: 'activity', label: 'Activity', actions: ['view'] },
   { resource: 'orders', label: 'Orders', actions: ['view', 'create', 'update', 'delete'] },
   { resource: 'invoices', label: 'Invoices', actions: ['view', 'create', 'update', 'delete'] },
   { resource: 'products', label: 'Products', actions: ['view', 'create', 'update', 'delete'] },

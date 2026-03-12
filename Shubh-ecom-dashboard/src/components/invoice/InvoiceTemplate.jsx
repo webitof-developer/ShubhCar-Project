@@ -5,10 +5,44 @@ import Image from 'next/image';
 import { formatPrice } from '@/services/pricingService';
 import { formatTaxBreakdown } from '@/services/taxDisplayService';
 
+const formatCancellationReason = (value) =>
+  String(value || '')
+    .trim()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/\b\w/g, (match) => match.toUpperCase());
+
+const formatDocumentStatus = (value) =>
+  String(value || 'issued')
+    .trim()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, (match) => match.toUpperCase());
+
+const getPaymentReferenceRows = (order = {}) => {
+  const snapshot = order.paymentSnapshot || {};
+  const method = String(snapshot.paymentMethod || order.paymentMethod || '').toLowerCase();
+  const rows = [
+    ['Payment Method', snapshot.paymentMethod || order.paymentMethod || '-'],
+    ['Payment Status', snapshot.status || order.paymentStatus || '-'],
+  ];
+
+  if (snapshot.gateway) rows.push(['Gateway', String(snapshot.gateway).toUpperCase()]);
+  if (snapshot.transactionId) rows.push(['Transaction ID', snapshot.transactionId]);
+  if (snapshot.gatewayOrderId) rows.push(['Gateway Order ID', snapshot.gatewayOrderId]);
+  if (snapshot.capturedAt) {
+    rows.push(['Captured On', new Date(snapshot.capturedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })]);
+  }
+  if (method === 'cod' && snapshot.manualReference) {
+    rows.push(['Collection Reference', snapshot.manualReference]);
+  }
+
+  return rows;
+};
+
 const InvoiceTemplate = forwardRef(({ order, items = [], address, settings = {} }, ref) => {
   if (!order) return null;
   const isCreditNote = order.type === 'credit_note';
-  const documentTitle = isCreditNote ? 'CREDIT NOTE' : 'TAX INVOICE';
+  const documentTitle = isCreditNote ? (settings.credit_note_title || 'CREDIT NOTE') : 'TAX INVOICE';
   const documentNumberLabel = isCreditNote ? 'Credit Note No' : 'Invoice No';
   const documentDateLabel = isCreditNote ? 'Credit Note Date' : 'Invoice Date';
 
@@ -25,6 +59,10 @@ const InvoiceTemplate = forwardRef(({ order, items = [], address, settings = {} 
   const companyWebsite = settings.invoice_company_website || '';
   const termsText = String(isCreditNote ? (settings.credit_note_terms || settings.invoice_terms || '') : (settings.invoice_terms || '')).trim();
   const notesText = String(isCreditNote ? (settings.credit_note_notes || settings.invoice_notes || '') : (settings.invoice_notes || '')).trim();
+  const creditNoteInfoTitle = settings.credit_note_info_title || 'Credit note information';
+  const creditNoteInfoBody =
+    settings.credit_note_info_body ||
+    'This credit note reverses the original invoice for accounting and tax purposes. Refund settlement, if applicable, is tracked separately against the original payment method.';
   const termsLines = termsText
     ? termsText.split('\n').map((line) => line.trim()).filter(Boolean)
     : [
@@ -52,6 +90,8 @@ const InvoiceTemplate = forwardRef(({ order, items = [], address, settings = {} 
   const shippingFee = order.shippingFee || 0;
   const grandTotal = order.grandTotal || 0;
   const taxBreakdown = order.taxBreakdown || { cgst: 0, sgst: 0, igst: 0 };
+  const refundMeta = order.refundMeta || {};
+  const paymentReferenceRows = getPaymentReferenceRows(order);
   const pricesIncludeTax =
     Math.abs((subtotal - discount + shippingFee) - grandTotal) < 0.01;
   const subtotalLabel = pricesIncludeTax ? 'Subtotal (Incl. Tax)' : 'Subtotal';
@@ -100,6 +140,7 @@ const InvoiceTemplate = forwardRef(({ order, items = [], address, settings = {} 
             <p className="mb-1">{documentNumberLabel}: <span className="fw-bold text-dark">{invoiceNumber}</span></p>
             <p className="mb-1">{documentDateLabel}: <span className="fw-bold text-dark">{invoiceDate}</span></p>
             <p className="mb-0">Order No: <span className="fw-bold text-dark">{order.orderNumber}</span></p>
+            <p className="mb-0 mt-1">Document Status: <span className="fw-bold text-dark">{formatDocumentStatus(order.status)}</span></p>
             {isCreditNote && order.relatedInvoiceNumber ? (
               <p className="mb-0 mt-1">Original Invoice: <span className="fw-bold text-dark">{order.relatedInvoiceNumber}</span></p>
             ) : null}
@@ -213,11 +254,26 @@ const InvoiceTemplate = forwardRef(({ order, items = [], address, settings = {} 
 
       {isCreditNote ? (
         <div className="mb-4 rounded border border-info-subtle bg-info-subtle px-3 py-2 print-compact-box print-no-break" style={{ fontSize: '12px' }}>
-          <p className="mb-1 fw-semibold text-dark">Credit note information</p>
+          <p className="mb-1 fw-semibold text-dark">{creditNoteInfoTitle}</p>
           <p className="mb-0 text-muted">
-            This credit note reverses the original invoice for accounting and tax purposes. Refund settlement, if
-            applicable, is tracked separately against the original payment method.
+            {creditNoteInfoBody}
           </p>
+          {order.cancelReason ? (
+            <p className="mb-0 mt-2 text-muted">
+              <strong className="text-dark">Cancellation reason:</strong> {formatCancellationReason(order.cancelReason)}
+            </p>
+          ) : null}
+          {order.cancelDetails ? (
+            <p className="mb-0 mt-1 text-muted">
+              <strong className="text-dark">Additional note:</strong> {order.cancelDetails}
+            </p>
+          ) : null}
+          {refundMeta.refundReference || refundMeta.refundMode || refundMeta.refundTransactionId ? (
+            <p className="mb-0 mt-1 text-muted">
+              <strong className="text-dark">Refund Reference:</strong>{' '}
+              {refundMeta.refundReference || refundMeta.refundTransactionId || refundMeta.refundMode}
+            </p>
+          ) : null}
         </div>
       ) : null}
 
@@ -227,8 +283,9 @@ const InvoiceTemplate = forwardRef(({ order, items = [], address, settings = {} 
           <div className="col-6 print-col-6">
             <h6 className="text-muted text-uppercase fw-bold mb-2" style={{ fontSize: '11px', letterSpacing: '0.5px' }}>Payment Information</h6>
             <div className="small text-muted" style={{ fontSize: '12px' }}>
-              <p className="mb-0">Payment Method: <span className="text-dark">{order.paymentMethod}</span></p>
-              <p className="mb-0">Payment Status: <span className="text-success fw-medium">{order.paymentStatus}</span></p>
+              {paymentReferenceRows.map(([label, value]) => (
+                <p key={label} className="mb-0">{label}: <span className="text-dark">{value}</span></p>
+              ))}
             </div>
           </div>
           <div className="col-6 print-col-6">

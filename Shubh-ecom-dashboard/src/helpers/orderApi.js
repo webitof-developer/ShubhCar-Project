@@ -43,11 +43,15 @@ export const orderAPI = {
    * @param {string} status - New status
    * @param {string} token - Authentication token
    */
-  updateStatus: async (orderId, status, token) => {
+  updateStatus: async (orderId, statusOrPayload, token) => {
     const url = `${API_BASE_URL}/orders/${orderId}/status`;
+    const payload =
+      typeof statusOrPayload === 'string'
+        ? { status: statusOrPayload }
+        : statusOrPayload;
     return fetchWithAuth(url, {
       method: 'POST',
-      body: JSON.stringify({ status }),
+      body: JSON.stringify(payload),
       headers: { Authorization: `Bearer ${token}` },
     });
   },
@@ -112,34 +116,9 @@ export const orderAPI = {
     return fetchWithAuth(url, { headers: { Authorization: `Bearer ${token}` } });
   },
 
-  /**
-   * Get invoice PDF by order ID
-   */
-  getInvoicePdfByOrder: async (orderId, token, download = false) => {
-    const url = `${API_BASE_URL}/invoices/order/${orderId}/pdf${download ? '?download=true' : ''}`;
-    const response = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || `API Error: ${response.statusText}`);
-    }
-    return response.blob();
-  },
-
-  /**
-   * Get credit note PDF by order ID
-   */
-  getCreditNotePdfByOrder: async (orderId, token, download = false) => {
-    const url = `${API_BASE_URL}/invoices/order/${orderId}/credit-note/pdf${download ? '?download=true' : ''}`;
-    const response = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || `API Error: ${response.statusText}`);
-    }
-    return response.blob();
+  getCreditNoteByOrder: async (orderId, token) => {
+    const url = `${API_BASE_URL}/invoices/order/${orderId}/credit-note`;
+    return fetchWithAuth(url, { headers: { Authorization: `Bearer ${token}` } });
   },
 
   /**

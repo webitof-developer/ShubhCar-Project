@@ -26,6 +26,8 @@ const {
 } = require('./modules/vehicle-management/migrations/vehicle-management.migration');
 const paymentWebhookWorker = require('./workers/payment-webhook.worker');
 const orderWorker = require('./workers/order.worker');
+const { verifySmtpConnection } = require('./utils/email');
+const { checkRequiredEmailTemplates } = require('./utils/emailTemplateHealth');
 
 const start = async () => {
   try {
@@ -40,6 +42,8 @@ const start = async () => {
   startAutoConfirmCron();
   await ensureVehicleAttributeDefaults();
   await migrateVariantNameAttribute();
+  await verifySmtpConnection();
+  await checkRequiredEmailTemplates();
 
   logger.info('payment_webhook_worker_status', {
     disabled: Boolean(paymentWebhookWorker?.disabled),

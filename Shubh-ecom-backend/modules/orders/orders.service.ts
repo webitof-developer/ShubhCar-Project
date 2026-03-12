@@ -107,6 +107,10 @@ const normalizeOrderStatus = (status) =>
     .trim()
     .toLowerCase()
     .replace(/[\s-]+/g, '_');
+const hasCapturedPaymentStatus = (paymentStatus) =>
+  ['paid', 'refunded'].includes(
+    String(paymentStatus || '').trim().toLowerCase(),
+  );
 const isSalesmanUser = async (user) => {
   if (!user) return false;
   if (String(user.role || '').toLowerCase() === ROLES.SALESMAN) return true;
@@ -844,12 +848,14 @@ class OrderService {
         });
       }
 
-      if (order.paymentStatus === PAYMENT_STATUS.PAID) {
+      if (hasCapturedPaymentStatus(order.paymentStatus)) {
         order.paymentStatus = PAYMENT_STATUS.REFUNDED;
       } else if (order.paymentStatus === PAYMENT_STATUS.PENDING) {
         order.paymentStatus = PAYMENT_STATUS.FAILED;
       }
 
+      order.cancelReason = String(payload?.reason || '').trim() || null;
+      order.cancelDetails = String(payload?.details || '').trim() || null;
       order.orderStatus = ORDER_STATUS.CANCELLED;
       await order.save({ session });
 
@@ -875,6 +881,19 @@ class OrderService {
             error: err.message,
           });
         });
+      }
+
+      if (hasCapturedPaymentStatus(order.paymentStatus)) {
+        const originalInvoice = await invoiceRepo.findByOrder(order._id);
+        if (originalInvoice && originalInvoice.type === 'invoice') {
+          await invoiceService.generateCreditNote(order, originalInvoice).catch((err) => {
+            logger.error('Failed to generate credit note for user-cancelled order', {
+              orderId: order._id,
+              invoiceId: originalInvoice._id,
+              error: err.message,
+            });
+          });
+        }
       }
 
       return await this.getOrderDetail(user, order._id);
@@ -946,6 +965,17 @@ class OrderService {
           error: err.message,
         });
       });
+
+      const invoice = await invoiceRepo.findByOrder(order._id);
+      if (invoice && invoice.type === 'invoice') {
+        await invoiceService.generateCreditNote(order, invoice).catch((err) => {
+          logger.error('Failed to generate credit note for refunded order', {
+            orderId: order._id,
+            invoiceId: invoice._id,
+            error: err.message,
+          });
+        });
+      }
 
       return order;
     } catch (e) {
@@ -1228,6 +1258,12 @@ class OrderService {
       reason: 'admin_update',
       mutateFn: (o) => {
         o.orderStatus = nextStatus;
+        if (nextStatus === ORDER_STATUS.CANCELLED) {
+          const cancelReason = String(payload?.reason || '').trim();
+          const cancelDetails = String(payload?.details || '').trim();
+          o.cancelReason = cancelReason || null;
+          o.cancelDetails = cancelDetails || null;
+        }
       },
     });
 
@@ -1241,8 +1277,8 @@ class OrderService {
       });
     }
 
-    // Generate credit note if order was cancelled and invoice exists
-    if (updated.orderStatus === 'cancelled' && previousStatus !== 'cancelled') {
+      // Generate credit note only when a captured-payment order is cancelled and invoice exists
+      if (updated.orderStatus === 'cancelled' && previousStatus !== 'cancelled') {
       // Restore stock for each item in the order (async-safe, non-blocking on error)
       orderRepo.findItemsByOrder(orderId).then(async (items) => {
         for (const item of items || []) {
@@ -1267,9 +1303,12 @@ class OrderService {
         });
       });
 
-      // Check if invoice exists and generate credit note
       const invoice = await invoiceRepo.findByOrder(updated._id);
-      if (invoice && invoice.type === 'invoice') {
+      if (
+        invoice &&
+        invoice.type === 'invoice' &&
+        hasCapturedPaymentStatus(previousPaymentStatus || updated.paymentStatus)
+      ) {
         await invoiceService
           .generateCreditNote(updated, invoice)
           .catch((err) => {

@@ -37,6 +37,9 @@ const defaultData = {
   quotation_terms: '',
   quotation_notes: '',
   quotation_validity_days: 15,
+  credit_note_title: 'CREDIT NOTE',
+  credit_note_info_title: 'Credit note information',
+  credit_note_info_body: 'This credit note reverses the original invoice for accounting and tax purposes. Refund settlement, if applicable, is tracked separately against the original payment method.',
   credit_note_terms: '',
   credit_note_notes: '',
 }
@@ -91,6 +94,11 @@ const InvoiceSettings = () => {
       'quotation_terms',
       'quotation_notes',
       'quotation_validity_days',
+    ],
+    creditNoteFormat: [
+      'credit_note_title',
+      'credit_note_info_title',
+      'credit_note_info_body',
       'credit_note_terms',
       'credit_note_notes',
     ],
@@ -263,6 +271,9 @@ const InvoiceSettings = () => {
         quotation_terms: formData.quotation_terms,
         quotation_notes: formData.quotation_notes,
         quotation_validity_days: Number(formData.quotation_validity_days || 15),
+        credit_note_title: formData.credit_note_title,
+        credit_note_info_title: formData.credit_note_info_title,
+        credit_note_info_body: formData.credit_note_info_body,
         credit_note_terms: formData.credit_note_terms,
         credit_note_notes: formData.credit_note_notes,
         ...overrides,
@@ -345,6 +356,11 @@ const InvoiceSettings = () => {
                 <Nav.Item>
                   <Nav.Link eventKey="terms">
                     Terms & Notes {isTabDirty('terms') && <Badge bg="warning" text="dark" className="ms-1">Unsaved</Badge>}
+                  </Nav.Link>
+                </Nav.Item>
+                <Nav.Item>
+                  <Nav.Link eventKey="creditNoteFormat">
+                    Credit Note Format {isTabDirty('creditNoteFormat') && <Badge bg="warning" text="dark" className="ms-1">Unsaved</Badge>}
                   </Nav.Link>
                 </Nav.Item>
               </Nav>
@@ -726,8 +742,45 @@ const InvoiceSettings = () => {
                     </Col>
 
                     <Col md={12}><hr /></Col>
+                  </Row>
+                </Tab.Pane>
+
+                <Tab.Pane eventKey="creditNoteFormat">
+                  <div className="d-flex align-items-center gap-2 mb-3">
+                    <Badge bg="light" text="dark">
+                      Missing fields: {missingCountForTab('creditNoteFormat')}
+                    </Badge>
+                    <span className="text-muted small">These fields control only the credit note document layout and copy.</span>
+                  </div>
+                  <Row className="g-3">
                     <Col md={12}>
-                      <h6 className="text-uppercase text-muted fs-12">Credit Note Terms</h6>
+                      <Form.Label>Document Title</Form.Label>
+                      {renderDefaultBadge('credit_note_title')}
+                      <Form.Control
+                        value={formData.credit_note_title}
+                        onChange={(e) => setFormData(prev => ({ ...prev, credit_note_title: e.target.value }))}
+                        placeholder="CREDIT NOTE"
+                      />
+                    </Col>
+                    <Col md={12}>
+                      <Form.Label>Info Box Title</Form.Label>
+                      {renderDefaultBadge('credit_note_info_title')}
+                      <Form.Control
+                        value={formData.credit_note_info_title}
+                        onChange={(e) => setFormData(prev => ({ ...prev, credit_note_info_title: e.target.value }))}
+                        placeholder="Credit note information"
+                      />
+                    </Col>
+                    <Col md={12}>
+                      <Form.Label>Info Box Body</Form.Label>
+                      {renderDefaultBadge('credit_note_info_body')}
+                      <Form.Control
+                        as="textarea"
+                        rows={3}
+                        value={formData.credit_note_info_body}
+                        onChange={(e) => setFormData(prev => ({ ...prev, credit_note_info_body: e.target.value }))}
+                        placeholder="Explain what this credit note represents and how refund settlement is handled."
+                      />
                     </Col>
                     <Col md={12}>
                       <Form.Label>Terms</Form.Label>
