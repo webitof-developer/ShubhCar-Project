@@ -157,6 +157,9 @@ const CategoryContent = () => {
         }
         setChildCategories(childList);
 
+        const findHierarchyNodeById = (id) =>
+          flatHierarchy.find((node) => String(getEntityId(node)) === String(id)) || null;
+
         // If this is a leaf (no children), show siblings in sidebar
         if (childList.length === 0 && breadcrumbList.length >= 2) {
           // Parent is second-to-last in breadcrumb
@@ -167,6 +170,12 @@ const CategoryContent = () => {
           if ((!siblings || siblings.length === 0) && parentCrumbId) {
             siblings = flatHierarchy.filter((node) => String(getParentId(node)) === String(parentCrumbId));
           }
+          if ((!siblings || siblings.length === 0) && parentCrumb?.slug) {
+            const parentHierarchyNode = flatHierarchy.find(
+              (node) => String(node?.slug || '') === String(parentCrumb.slug),
+            );
+            siblings = Array.isArray(parentHierarchyNode?.children) ? parentHierarchyNode.children : [];
+          }
           setSiblingCategories(siblings || []);
         } else if (childList.length === 0 && getParentId(resolvedCategory)) {
           // fallback: use parentId if no breadcrumb depth
@@ -174,6 +183,10 @@ const CategoryContent = () => {
           let siblings = await getChildCategories(parentId);
           if ((!siblings || siblings.length === 0) && parentId) {
             siblings = flatHierarchy.filter((node) => String(getParentId(node)) === String(parentId));
+          }
+          if ((!siblings || siblings.length === 0) && parentId) {
+            const parentHierarchyNode = findHierarchyNodeById(parentId);
+            siblings = Array.isArray(parentHierarchyNode?.children) ? parentHierarchyNode.children : [];
           }
           setSiblingCategories(siblings || []);
         }

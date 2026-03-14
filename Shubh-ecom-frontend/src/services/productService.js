@@ -78,6 +78,14 @@ const unwrapPayload = (payload) =>
     ? payload.data
     : payload;
 
+const getCategoryEntityId = (category) => {
+  if (!category || typeof category !== 'object') return '';
+  if (category._id) return String(category._id);
+  if (category.id) return String(category.id);
+  if (category.categoryCode) return String(category.categoryCode);
+  return '';
+};
+
 /**
  * Apply fallback strategy
  */
@@ -283,12 +291,13 @@ export const getProductsByCategory = async (categorySlug, options = {}) => {
   try {
     logDataSource('PRODUCTS', 'REAL');
     const category = await getCategoryBySlug(categorySlug);
-    if (!category?._id) return [];
+    const resolvedCategoryId = getCategoryEntityId(category);
+    if (!resolvedCategoryId) return [];
 
     const params = new URLSearchParams();
     params.set('page', String(options.page || 1));
     params.set('limit', String(options.limit || 12));
-    params.set('categoryId', category._id);
+    params.set('categoryId', resolvedCategoryId);
     if (hasVehicleFilter)
       params.set('vehicle_id', options.vehicleIds.join(','));
     if (options.productType) params.set('productType', options.productType);
