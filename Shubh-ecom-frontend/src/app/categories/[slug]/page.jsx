@@ -59,17 +59,19 @@ const getEntityId = (entity) => {
   if (typeof entity === 'object') {
     if (entity._id) return String(entity._id);
     if (entity.id) return String(entity.id);
+    if (entity.categoryCode) return String(entity.categoryCode);
   }
   return '';
 };
 
 const getParentId = (entity) => {
-  const raw = entity?.parentId;
+  const raw = entity?.parentId || entity?.parentCategoryId || entity?.parentCategoryCode;
   if (!raw) return '';
   if (typeof raw === 'string') return raw;
   if (typeof raw === 'object') {
     if (raw._id) return String(raw._id);
     if (raw.id) return String(raw.id);
+    if (raw.categoryCode) return String(raw.categoryCode);
   }
   return '';
 };
@@ -135,9 +137,10 @@ const CategoryContent = () => {
 
         const breadcrumbList = Array.isArray(crumbs) ? crumbs : [];
         const breadcrumbLastNode = breadcrumbList.length > 0 ? breadcrumbList[breadcrumbList.length - 1] : null;
-        const resolvedCategory = cat || breadcrumbLastNode || null;
-        const resolvedCategoryId = getEntityId(resolvedCategory);
         const flatHierarchy = flattenHierarchy(hierarchy || []);
+        const hierarchyCategoryBySlug = flatHierarchy.find((node) => String(node?.slug || '') === String(slug)) || null;
+        const resolvedCategory = cat || breadcrumbLastNode || hierarchyCategoryBySlug || null;
+        const resolvedCategoryId = getEntityId(resolvedCategory) || getEntityId(hierarchyCategoryBySlug);
 
         setCategory(resolvedCategory);
         setBreadcrumb(breadcrumbList);
@@ -148,6 +151,9 @@ const CategoryContent = () => {
         }
         if (childList.length === 0 && resolvedCategoryId) {
           childList = flatHierarchy.filter((node) => String(getParentId(node)) === String(resolvedCategoryId));
+        }
+        if (childList.length === 0 && hierarchyCategoryBySlug && Array.isArray(hierarchyCategoryBySlug.children) && hierarchyCategoryBySlug.children.length > 0) {
+          childList = hierarchyCategoryBySlug.children;
         }
         setChildCategories(childList);
 
