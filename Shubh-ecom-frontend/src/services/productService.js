@@ -112,6 +112,7 @@ export const getProducts = async ({
   limit = 12,
   search,
   sort,
+  categoryId,
   vehicleIds,
   productType,
   manufacturerBrand,
@@ -213,6 +214,7 @@ export const getProducts = async ({
     if (search) params.set('search', search);
     const resolvedSort = resolveSort(sort);
     if (resolvedSort) params.set('sort', resolvedSort);
+    if (categoryId) params.set('categoryId', String(categoryId));
     if (hasVehicleFilter) params.set('vehicle_id', vehicleIds.join(','));
     if (productType) params.set('productType', productType);
     if (manufacturerBrand) params.set('manufacturerBrand', manufacturerBrand);
@@ -231,6 +233,7 @@ export const getProducts = async ({
     if (search) catchParams.set('search', search);
     const resolvedSortCatch = resolveSort(sort);
     if (resolvedSortCatch) catchParams.set('sort', resolvedSortCatch);
+    if (categoryId) catchParams.set('categoryId', String(categoryId));
     if (hasVehicleFilter) catchParams.set('vehicle_id', vehicleIds.join(','));
     if (productType) catchParams.set('productType', productType);
     if (manufacturerBrand)

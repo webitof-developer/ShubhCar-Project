@@ -116,6 +116,7 @@ const CategoryContent = () => {
   const [rootCategories, setRootCategories] = useState([]);
   const [breadcrumb, setBreadcrumb] = useState([]);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [resolvedCategoryId, setResolvedCategoryId] = useState('');
 
   /* Load root categories for sidebar fallback */
   useEffect(() => {
@@ -127,6 +128,7 @@ const CategoryContent = () => {
     const load = async () => {
       setInitialLoading(true);
       setSiblingCategories([]); setParentCategory(null);
+      setResolvedCategoryId('');
       if (!slug) { setInitialLoading(false); return; }
       try {
         const [cat, crumbs, hierarchy] = await Promise.all([
@@ -141,6 +143,7 @@ const CategoryContent = () => {
         const hierarchyCategoryBySlug = flatHierarchy.find((node) => String(node?.slug || '') === String(slug)) || null;
         const resolvedCategory = cat || breadcrumbLastNode || hierarchyCategoryBySlug || null;
         const resolvedCategoryId = getEntityId(resolvedCategory) || getEntityId(hierarchyCategoryBySlug);
+        setResolvedCategoryId(resolvedCategoryId || '');
 
         setCategory(resolvedCategory);
         setBreadcrumb(breadcrumbList);
@@ -159,6 +162,14 @@ const CategoryContent = () => {
 
         const findHierarchyNodeById = (id) =>
           flatHierarchy.find((node) => String(getEntityId(node)) === String(id)) || null;
+        const getParentKeys = (node) => {
+          if (!node) return [];
+          return Array.from(
+            new Set(
+              [node._id, node.id, node.categoryCode].filter(Boolean).map((value) => String(value)),
+            ),
+          );
+        };
 
         // If this is a leaf (no children), show siblings in sidebar
         if (childList.length === 0 && breadcrumbList.length >= 2) {
@@ -169,6 +180,10 @@ const CategoryContent = () => {
           let siblings = parentCrumbId ? await getChildCategories(parentCrumbId) : [];
           if ((!siblings || siblings.length === 0) && parentCrumbId) {
             siblings = flatHierarchy.filter((node) => String(getParentId(node)) === String(parentCrumbId));
+          }
+          if ((!siblings || siblings.length === 0)) {
+            const parentKeys = getParentKeys(parentCrumb);
+            siblings = flatHierarchy.filter((node) => parentKeys.includes(String(getParentId(node))));
           }
           if ((!siblings || siblings.length === 0) && parentCrumb?.slug) {
             const parentHierarchyNode = flatHierarchy.find(
@@ -205,7 +220,9 @@ const CategoryContent = () => {
     const vehicleIds = selection?.vehicleIds || [];
     const productType = filterType.length > 0 ? filterType.join(',') : undefined;
     let list = [];
-    if (slug) {
+    if (resolvedCategoryId) {
+      list = await getProducts({ categoryId: resolvedCategoryId, vehicleIds, productType, page: targetPage, limit: PAGE_SIZE });
+    } else if (slug) {
       list = await getProductsByCategory(slug, { vehicleIds, productType, page: targetPage, limit: PAGE_SIZE });
     } else if (searchQuery) {
       list = await searchProductsService(searchQuery, { vehicleIds, productType, page: targetPage, limit: PAGE_SIZE });
@@ -232,7 +249,7 @@ const CategoryContent = () => {
     };
     load();
     return () => { active = false; };
-  }, [slug, searchQuery, vehicleKey, filterType]);
+  }, [slug, searchQuery, vehicleKey, filterType, resolvedCategoryId]);
 
   /* Derived / filtered list */
   const filteredProducts = useMemo(() => {
