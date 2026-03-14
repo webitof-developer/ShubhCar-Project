@@ -2,20 +2,12 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import {
-  Disc3,
-  Cog,
-  Filter,
-  ArrowDownUp,
-  Zap,
-  Car,
-  ChevronRight,
-} from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { getRootCategories } from '@/services/categoryService';
 import { resolveAssetUrl } from '@/utils/media';
 import { logger } from '@/utils/logger';
 
-const iconMap = { Disc3, Cog, Filter, ArrowDownUp, Zap, Car };
+const CATEGORY_PLACEHOLDER_IMAGE = '/categoryplaceholder.png';
 
 export const CategoryGrid = async ({ categories } = {}) => {
   let rootCategories = Array.isArray(categories) ? categories : [];
@@ -42,11 +34,11 @@ export const CategoryGrid = async ({ categories } = {}) => {
         </div>
         <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6'>
           {rootCategories.slice(0, 12).map((cat, index) => {
-            const Icon = iconMap[cat.icon || 'Car'] || Car;
             const categoryImage = cat.imageUrl || cat.image || null;
+            const usesDefaultImage = !categoryImage;
             const resolvedImage = categoryImage
               ? resolveAssetUrl(categoryImage)
-              : null;
+              : CATEGORY_PLACEHOLDER_IMAGE;
             return (
               <Link
                 key={cat._id || cat.id || index}
@@ -54,19 +46,13 @@ export const CategoryGrid = async ({ categories } = {}) => {
                 className='group relative flex flex-col items-center justify-center p-5 md:p-6 bg-white rounded-2xl shadow-sm border border-slate-100 hover:border-primary/20 hover:shadow-xl hover:-translate-y-1 transition-all duration-300'>
                 {/* Image or Icon Container */}
                 <div className='relative mb-4 flex items-center justify-center w-20 h-20 md:w-24 md:h-24'>
-                  {resolvedImage ? (
-                    <Image
-                      src={resolvedImage}
-                      alt={cat.name}
-                      fill
-                      className='object-contain rounded-lg transition-transform duration-500 group-hover:scale-110'
-                      sizes='(max-width: 768px) 80px, 96px'
-                    />
-                  ) : (
-                    <div className='w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-primary/5 transition-colors duration-300'>
-                      <Icon className='h-8 w-8 text-slate-400 group-hover:text-primary transition-colors duration-300' />
-                    </div>
-                  )}
+                  <Image
+                    src={resolvedImage}
+                    alt={cat.name}
+                    fill
+                    className={`${usesDefaultImage ? 'object-cover scale-[1.50]' : 'object-contain'} rounded-lg transition-transform duration-500 group-hover:scale-110`}
+                    sizes='(max-width: 768px) 80px, 96px'
+                  />
                 </div>
 
                 {/* Text Content */}

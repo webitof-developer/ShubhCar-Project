@@ -8,6 +8,7 @@ export const SubCategoryGrid = ({ categories }) => (
   <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4'>
     {categories.map((sub, i) => {
       const categoryImage = sub.imageUrl || sub.image || null;
+      const usesDefaultImage = !categoryImage;
       const resolvedImage = categoryImage
         ? resolveAssetUrl(categoryImage)
         : CATEGORY_PLACEHOLDER_IMAGE;
@@ -21,7 +22,7 @@ export const SubCategoryGrid = ({ categories }) => (
               src={resolvedImage}
               alt={sub.name}
               fill
-              className='object-contain transition-transform duration-500 group-hover:scale-110'
+              className={`${usesDefaultImage ? 'object-cover scale-[1.50]' : 'object-contain'} transition-transform duration-500 group-hover:scale-110`}
               sizes='(max-width: 768px) 56px, 64px'
             />
           </div>

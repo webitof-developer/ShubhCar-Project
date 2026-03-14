@@ -85,6 +85,7 @@ const CategoriesContent = async () => {
           <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4'>
             {categories.map((cat, i) => {
               const categoryImage = cat.imageUrl || cat.image || null;
+              const usesDefaultImage = !categoryImage;
               const resolvedImage = categoryImage
                 ? resolveAssetUrl(categoryImage)
                 : CATEGORY_PLACEHOLDER_IMAGE;
@@ -99,7 +100,7 @@ const CategoriesContent = async () => {
                       src={resolvedImage}
                       alt={cat.name}
                       fill
-                      className='object-contain transition-transform duration-500 group-hover:scale-110'
+                      className={`${usesDefaultImage ? 'object-cover scale-[1.50]' : 'object-contain'} transition-transform duration-500 group-hover:scale-110`}
                       sizes='(max-width: 768px) 80px, 96px'
                     />
                   </div>
