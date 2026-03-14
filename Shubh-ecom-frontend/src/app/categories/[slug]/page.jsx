@@ -114,6 +114,7 @@ const CategoryContent = () => {
   const [siblingCategories, setSiblingCategories] = useState([]);
   const [parentCategory, setParentCategory] = useState(null);
   const [rootCategories, setRootCategories] = useState([]);
+  const [categoryHierarchy, setCategoryHierarchy] = useState([]);
   const [breadcrumb, setBreadcrumb] = useState([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [resolvedCategoryId, setResolvedCategoryId] = useState('');
@@ -140,6 +141,7 @@ const CategoryContent = () => {
         const breadcrumbList = Array.isArray(crumbs) ? crumbs : [];
         const breadcrumbLastNode = breadcrumbList.length > 0 ? breadcrumbList[breadcrumbList.length - 1] : null;
         const flatHierarchy = flattenHierarchy(hierarchy || []);
+        setCategoryHierarchy(Array.isArray(hierarchy) ? hierarchy : []);
         const hierarchyCategoryBySlug = flatHierarchy.find((node) => String(node?.slug || '') === String(slug)) || null;
         const resolvedCategory = cat || breadcrumbLastNode || hierarchyCategoryBySlug || null;
         const resolvedCategoryId = getEntityId(resolvedCategory) || getEntityId(hierarchyCategoryBySlug);
@@ -279,6 +281,29 @@ const CategoryContent = () => {
   const hasChildren = childCategories.length > 0;
   const hasProducts = filteredProducts.length > 0;
   const showEmpty = !loadingProducts && !hasChildren && !hasProducts && !inlineSearch && filterType.length === 0;
+  const hierarchyFlat = useMemo(() => flattenHierarchy(categoryHierarchy), [categoryHierarchy]);
+  const fallbackParent = breadcrumb.length >= 2 ? breadcrumb[breadcrumb.length - 2] : null;
+  const fallbackParentSlug = fallbackParent?.slug || '';
+  const fallbackSiblingCategories = useMemo(() => {
+    if (!fallbackParentSlug || hierarchyFlat.length === 0) return [];
+    const parentNode = hierarchyFlat.find((node) => String(node?.slug || '') === String(fallbackParentSlug));
+    return Array.isArray(parentNode?.children) ? parentNode.children : [];
+  }, [fallbackParentSlug, hierarchyFlat]);
+  const effectiveSidebarCategories =
+    childCategories.length > 0
+      ? childCategories
+      : siblingCategories.length > 0
+        ? siblingCategories
+        : fallbackSiblingCategories.length > 0
+          ? fallbackSiblingCategories
+          : rootCategories;
+  const resolvedSidebarParentName = parentCategory?.name || fallbackParent?.name || '';
+  const effectiveSidebarTitle =
+    childCategories.length > 0
+      ? 'Sub-categories'
+      : resolvedSidebarParentName
+        ? resolvedSidebarParentName
+        : 'Categories';
 
   if (initialLoading) return <PageSkeleton />;
 
@@ -328,20 +353,8 @@ const CategoryContent = () => {
           */}
           <LeftSidebar
             currentSlug={slug}
-            sidebarCategories={
-              childCategories.length > 0
-                ? childCategories
-                : siblingCategories.length > 0
-                  ? siblingCategories
-                  : rootCategories
-            }
-            sidebarTitle={
-              childCategories.length > 0
-                ? 'Sub-categories'
-                : parentCategory
-                  ? parentCategory.name
-                  : 'Categories'
-            }
+            sidebarCategories={effectiveSidebarCategories}
+            sidebarTitle={effectiveSidebarTitle}
             filterType={filterType}
             onToggleFilter={handleFilterToggle}
             products={products}
