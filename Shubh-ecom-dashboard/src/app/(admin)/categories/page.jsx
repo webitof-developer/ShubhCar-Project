@@ -69,6 +69,8 @@ const resolveImageUrl = (url) => {
   return url.startsWith('http') ? url : `${API_ORIGIN}${url}`
 }
 
+const getImageMode = (imageUrl) => (imageUrl ? 'custom' : 'default')
+
 
 const flattenCategories = (nodes = []) => {
   const result = []
@@ -486,18 +488,29 @@ const CategoriesPage = () => {
                 columns={[
                   { key: 'checkbox', label: '', width: 20, render: () => <Form.Check /> },
                   { key: 'image', label: 'Image', render: (cat) => (
-                    cat.imageUrl ? (
-                      <Image
-                        src={resolveImageUrl(cat.imageUrl)}
-                        alt={cat.name}
-                        width={36}
-                        height={36}
-                        unoptimized
-                        style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover' }}
-                      />
-                    ) : (
-                      <span className="text-muted small">No image</span>
-                    )
+                    <div className="d-flex align-items-center gap-2">
+                      {cat.imageUrl ? (
+                        <Image
+                          src={resolveImageUrl(cat.imageUrl)}
+                          alt={cat.name}
+                          width={36}
+                          height={36}
+                          unoptimized
+                          style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover' }}
+                        />
+                      ) : (
+                        <span
+                          className="d-inline-flex align-items-center justify-content-center rounded"
+                          style={{ width: 36, height: 36, background: '#f1f5f9', color: '#64748b' }}
+                          aria-label="Default category image"
+                        >
+                          <IconifyIcon icon="solar:gallery-minimalistic-broken" />
+                        </span>
+                      )}
+                      <Badge bg={getImageMode(cat.imageUrl) === 'custom' ? 'primary' : 'secondary'} className="badge-subtle">
+                        {getImageMode(cat.imageUrl) === 'custom' ? 'Custom' : 'Default'}
+                      </Badge>
+                    </div>
                   ) },
                   { key: 'name', label: 'Name', render: (cat) => <span className="fw-medium">{cat.name}</span> },
                   { key: 'slug', label: 'Slug', render: (cat) => <code>{cat.slug}</code> },
@@ -659,8 +672,8 @@ const CategoriesPage = () => {
               <Form.Text className="text-muted d-block" style={{ fontSize: '0.75rem' }}>
                 Use JPG/JPEG/PNG/WEBP only, exactly {CATEGORY_ICON_SIZE_PX}x{CATEGORY_ICON_SIZE_PX}px, max 2MB.
               </Form.Text>
-              {formData.imageUrl && (
-                <div className="mt-2">
+              <div className="mt-2 d-flex align-items-center gap-2">
+                {formData.imageUrl ? (
                   <Image
                     src={resolveImageUrl(formData.imageUrl)}
                     alt="Category preview"
@@ -669,8 +682,19 @@ const CategoriesPage = () => {
                     unoptimized
                     style={{ width: 72, height: 72, borderRadius: 10, objectFit: 'cover' }}
                   />
-                </div>
-              )}
+                ) : (
+                  <span
+                    className="d-inline-flex align-items-center justify-content-center rounded"
+                    style={{ width: 72, height: 72, background: '#f1f5f9', color: '#64748b' }}
+                    aria-label="Default category image in use"
+                  >
+                    <IconifyIcon icon="solar:gallery-minimalistic-broken" width={24} />
+                  </span>
+                )}
+                <Badge bg={getImageMode(formData.imageUrl) === 'custom' ? 'primary' : 'secondary'} className="badge-subtle">
+                  {getImageMode(formData.imageUrl) === 'custom' ? 'Custom image in use' : 'Default image in use'}
+                </Badge>
+              </div>
             </Form.Group>
 
             <Form.Group className="mb-2">

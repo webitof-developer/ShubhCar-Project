@@ -11,6 +11,7 @@ import { ChevronRight, Folder, Search, Home, LayoutGrid } from 'lucide-react';
 import { logger } from '@/utils/logger';
 
 export const revalidate = 60;
+const CATEGORY_PLACEHOLDER_IMAGE = '/categoryplaceholder.png';
 
 // Sidebar
 const Sidebar = ({ categories }) => (
@@ -86,7 +87,7 @@ const CategoriesContent = async () => {
               const categoryImage = cat.imageUrl || cat.image || null;
               const resolvedImage = categoryImage
                 ? resolveAssetUrl(categoryImage)
-                : null;
+                : CATEGORY_PLACEHOLDER_IMAGE;
               return (
                 <Link
                   key={cat._id || cat.id || i}
@@ -94,19 +95,13 @@ const CategoriesContent = async () => {
                   className='group relative flex flex-col items-center justify-center p-5 md:p-6 bg-white rounded-2xl shadow-sm border border-slate-100 hover:border-primary/20 hover:shadow-xl hover:-translate-y-1 transition-all duration-300'>
                   {/* Category image / icon */}
                   <div className='relative mb-4 flex items-center justify-center w-20 h-20 md:w-24 md:h-24'>
-                    {resolvedImage ? (
-                      <Image
-                        src={resolvedImage}
-                        alt={cat.name}
-                        fill
-                        className='object-contain transition-transform duration-500 group-hover:scale-110'
-                        sizes='(max-width: 768px) 80px, 96px'
-                      />
-                    ) : (
-                      <div className='w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-primary/5 transition-colors duration-300'>
-                        <Folder className='w-8 h-8 text-slate-400 group-hover:text-primary transition-colors duration-300' />
-                      </div>
-                    )}
+                    <Image
+                      src={resolvedImage}
+                      alt={cat.name}
+                      fill
+                      className='object-contain transition-transform duration-500 group-hover:scale-110'
+                      sizes='(max-width: 768px) 80px, 96px'
+                    />
                   </div>
 
                   <h3 className='text-sm md:text-base font-bold text-slate-800 text-center leading-tight group-hover:text-primary transition-colors duration-300 line-clamp-2'>
