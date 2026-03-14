@@ -256,6 +256,18 @@ const parseYearFromText = (value = '') => {
   return match ? Number(match[0]) : null;
 };
 
+const isOngoingText = (value = '') => {
+  const text = normalizeName(normalizeCell(value));
+  if (!text) return false;
+  return (
+    text.includes('present') ||
+    text.includes('ongoing') ||
+    text.includes('current') ||
+    text.includes('till date') ||
+    text.includes('till now')
+  );
+};
+
 const resolveYearBounds = (row: Record<string, string>) => {
   const fromRaw = normalizeCell(row.year_start || row.year_from);
   const toRaw = normalizeCell(row.year_end || row.year_to);
@@ -268,6 +280,10 @@ const resolveYearBounds = (row: Record<string, string>) => {
     const years = (rangeRaw.match(/(19|20)\d{2}/g) || []).map(Number);
     if (!start && years.length) start = years[0];
     if (!end && years.length) end = years[years.length - 1];
+  }
+
+  if (!end && (isOngoingText(toRaw) || isOngoingText(rangeRaw))) {
+    end = new Date().getFullYear();
   }
 
   if (!start || !end) return { yearStart: null, yearEnd: null };
@@ -896,10 +912,20 @@ class VehiclesService {
 
   async listAvailableYears(query: Record<string, unknown> = {}) {
     if (!query.modelId) error('modelId is required', 400);
-    const yearIds = await Vehicle.distinct('yearId', {
+    const filter: Record<string, unknown> = {
       modelId: query.modelId,
       isDeleted: false,
-    });
+      status:
+        query.status && String(query.status).trim()
+          ? String(query.status).trim()
+          : 'active',
+    };
+
+    if (query.brandId) {
+      filter.brandId = query.brandId;
+    }
+
+    const yearIds = await Vehicle.distinct('yearId', filter);
     if (!yearIds.length) return [];
     return VehicleYear.find({ _id: { $in: yearIds }, status: 'active' })
       .sort({ year: -1 })

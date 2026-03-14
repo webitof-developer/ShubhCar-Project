@@ -1,6 +1,6 @@
 const dotenv = require('dotenv');
 const mongoose = require('mongoose');
-const EmailTemplate = require('../models/EmailTemplate.model');
+const EmailTemplate = require('../models/EmailTemplate.model.ts');
 
 dotenv.config();
 
@@ -22,7 +22,7 @@ const DEFAULT_TEMPLATE_BODIES = {
   auth_email_verification:
     '<p>Hello {{firstName}},</p><p>Your verification OTP is <strong>{{otp}}</strong>.</p><p>Regards,<br />{{appName}}</p>',
   forgot_password_otp:
-    '<p>Hello,</p><p>Your password reset OTP is <strong>{{otp}}</strong>. It expires in 10 minutes.</p><p>Regards,<br />{{appName}}</p>',
+    '<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #0f172a;"><h2 style="margin-bottom: 8px;">Password Reset OTP</h2><p>Use the OTP below to reset your password:</p><div style="font-size: 28px; font-weight: 700; letter-spacing: 6px; margin: 16px 0; color: #2563eb;">{{otp}}</div><p>This OTP is valid for 10 minutes.</p></div>',
   order_invoice:
     '<p>Hello,</p><p>Your invoice <strong>{{invoiceNo}}</strong> is ready.</p><p>Regards,<br />{{appName}}</p>',
   credit_note:

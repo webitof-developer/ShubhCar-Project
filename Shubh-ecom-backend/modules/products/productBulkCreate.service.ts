@@ -1,15 +1,23 @@
+// @ts-nocheck
 const ExcelJS = require('exceljs');
 const crypto = require('crypto');
 const mongoose = require('mongoose');
 const { Readable } = require('stream');
+const slugify = require('slugify');
 const { error } = require('../../utils/apiResponse');
 const { redis, redisEnabled } = require('../../config/redis');
 const { productBulkCreateQueue } = require('../../queues/productBulkCreate.queue');
 const Product = require('../../models/Product.model');
+const ProductImage = require('../../models/ProductImage.model');
+const ProductCompatibility = require('../../models/ProductCompatibility.model');
 const Category = require('../../models/Category.model');
 const Vehicle = require('../vehicle-management/models/Vehicle.model');
+const sanitize = require('../../utils/sanitizeHtml');
+const { deletePatterns } = require('../../lib/cache/invalidate');
 
 const UPLOAD_TTL_SECONDS = 60 * 60; // 1 hour
+const localUploads = new Map();
+const localJobs = new Map();
 type ParsedBulkCreateRow = {
   rowNumber: number;
   productCode: string;
@@ -145,6 +153,11 @@ const isValidUrl = (value) => {
   }
 };
 
+const getRowCellValue = (row, columnNumber) => {
+  if (!row || !columnNumber) return undefined;
+  return row.getCell(columnNumber)?.value;
+};
+
 const parseSheetRows = (sheet) => {
   const headerRow = sheet.getRow(1);
   const headerMap: Record<string, number> = {};
@@ -165,40 +178,40 @@ const parseSheetRows = (sheet) => {
     const row = sheet.getRow(rowNumber);
     if (!row || row.cellCount === 0) continue;
 
-    const productCode = toCellString(row.getCell(headerMap.productCode)?.value);
-    const name = toCellString(row.getCell(headerMap.name)?.value);
-    const categoryCode = toCellString(row.getCell(headerMap.categoryCode)?.value);
-    const categoryId = toCellString(row.getCell(headerMap.categoryId)?.value);
-    const productType = toCellString(row.getCell(headerMap.productType)?.value).toUpperCase();
-    const manufacturerBrand = toCellString(row.getCell(headerMap.manufacturerBrand)?.value);
-    const vehicleBrand = toCellString(row.getCell(headerMap.vehicleBrand)?.value);
-    const oemNumber = toCellString(row.getCell(headerMap.oemNumber)?.value);
-    const sku = toCellString(row.getCell(headerMap.sku)?.value);
-    const hsnCode = toCellString(row.getCell(headerMap.hsnCode)?.value);
-    const shortDescription = toCellString(row.getCell(headerMap.shortDescription)?.value);
-    const longDescription = toCellString(row.getCell(headerMap.longDescription)?.value);
-    const taxClassKey = toCellString(row.getCell(headerMap.taxClassKey)?.value);
-    const taxRate = toNumber(row.getCell(headerMap.taxRate)?.value);
-    const stockQty = toNumber(row.getCell(headerMap.stockQty)?.value);
-    const weight = toNumber(row.getCell(headerMap.weight)?.value);
-    const length = toNumber(row.getCell(headerMap.length)?.value);
-    const width = toNumber(row.getCell(headerMap.width)?.value);
-    const height = toNumber(row.getCell(headerMap.height)?.value);
-    const minOrderQty = toNumber(row.getCell(headerMap.minOrderQty)?.value);
-    const minWholesaleQty = toNumber(row.getCell(headerMap.minWholesaleQty)?.value);
-    const retailMrp = toNumber(row.getCell(headerMap.retailMrp)?.value);
-    const retailSalePrice = toNumber(row.getCell(headerMap.retailSalePrice)?.value);
-    const wholesaleMrp = toNumber(row.getCell(headerMap.wholesaleMrp)?.value);
-    const wholesaleSalePrice = toNumber(row.getCell(headerMap.wholesaleSalePrice)?.value);
-    const status = toCellString(row.getCell(headerMap.status)?.value);
-    const vehicleCodes = parseVehicleCodes(row.getCell(headerMap.vehicleCodes)?.value);
+    const productCode = toCellString(getRowCellValue(row, headerMap.productCode));
+    const name = toCellString(getRowCellValue(row, headerMap.name));
+    const categoryCode = toCellString(getRowCellValue(row, headerMap.categoryCode));
+    const categoryId = toCellString(getRowCellValue(row, headerMap.categoryId));
+    const productType = toCellString(getRowCellValue(row, headerMap.productType)).toUpperCase();
+    const manufacturerBrand = toCellString(getRowCellValue(row, headerMap.manufacturerBrand));
+    const vehicleBrand = toCellString(getRowCellValue(row, headerMap.vehicleBrand));
+    const oemNumber = toCellString(getRowCellValue(row, headerMap.oemNumber));
+    const sku = toCellString(getRowCellValue(row, headerMap.sku));
+    const hsnCode = toCellString(getRowCellValue(row, headerMap.hsnCode));
+    const shortDescription = toCellString(getRowCellValue(row, headerMap.shortDescription));
+    const longDescription = toCellString(getRowCellValue(row, headerMap.longDescription));
+    const taxClassKey = toCellString(getRowCellValue(row, headerMap.taxClassKey));
+    const taxRate = toNumber(getRowCellValue(row, headerMap.taxRate));
+    const stockQty = toNumber(getRowCellValue(row, headerMap.stockQty));
+    const weight = toNumber(getRowCellValue(row, headerMap.weight));
+    const length = toNumber(getRowCellValue(row, headerMap.length));
+    const width = toNumber(getRowCellValue(row, headerMap.width));
+    const height = toNumber(getRowCellValue(row, headerMap.height));
+    const minOrderQty = toNumber(getRowCellValue(row, headerMap.minOrderQty));
+    const minWholesaleQty = toNumber(getRowCellValue(row, headerMap.minWholesaleQty));
+    const retailMrp = toNumber(getRowCellValue(row, headerMap.retailMrp));
+    const retailSalePrice = toNumber(getRowCellValue(row, headerMap.retailSalePrice));
+    const wholesaleMrp = toNumber(getRowCellValue(row, headerMap.wholesaleMrp));
+    const wholesaleSalePrice = toNumber(getRowCellValue(row, headerMap.wholesaleSalePrice));
+    const status = toCellString(getRowCellValue(row, headerMap.status));
+    const vehicleCodes = parseVehicleCodes(getRowCellValue(row, headerMap.vehicleCodes));
 
-    const featuredImageUrl = toCellString(row.getCell(headerMap.featuredImageUrl)?.value);
-    const galleryImageUrl1 = toCellString(row.getCell(headerMap.galleryImageUrl1)?.value);
-    const galleryImageUrl2 = toCellString(row.getCell(headerMap.galleryImageUrl2)?.value);
-    const galleryImageUrl3 = toCellString(row.getCell(headerMap.galleryImageUrl3)?.value);
-    const galleryImageUrl4 = toCellString(row.getCell(headerMap.galleryImageUrl4)?.value);
-    const galleryImageUrl5 = toCellString(row.getCell(headerMap.galleryImageUrl5)?.value);
+    const featuredImageUrl = toCellString(getRowCellValue(row, headerMap.featuredImageUrl));
+    const galleryImageUrl1 = toCellString(getRowCellValue(row, headerMap.galleryImageUrl1));
+    const galleryImageUrl2 = toCellString(getRowCellValue(row, headerMap.galleryImageUrl2));
+    const galleryImageUrl3 = toCellString(getRowCellValue(row, headerMap.galleryImageUrl3));
+    const galleryImageUrl4 = toCellString(getRowCellValue(row, headerMap.galleryImageUrl4));
+    const galleryImageUrl5 = toCellString(getRowCellValue(row, headerMap.galleryImageUrl5));
 
     rows.push({
       rowNumber,
@@ -335,7 +348,6 @@ const validateRow = (row: ParsedBulkCreateRow) => {
 
 const parseUpload = async (file) => {
   if (!file) error('File is required', 400);
-  if (!redisEnabled) error('Redis is required for bulk updates', 503);
 
   const workbook = new ExcelJS.Workbook();
   const ext = (file.originalname || '').toLowerCase();
@@ -355,16 +367,232 @@ const parseUpload = async (file) => {
 };
 
 const storeUpload = async (uploadId, payload) => {
+  if (!redisEnabled) {
+    localUploads.set(uploadId, {
+      payload,
+      expiresAt: Date.now() + UPLOAD_TTL_SECONDS * 1000,
+    });
+    return `local:${uploadId}`;
+  }
+
   const key = `bulk-create:upload:${uploadId}`;
   await redis.setEx(key, UPLOAD_TTL_SECONDS, JSON.stringify(payload));
   return key;
 };
 
 const loadUpload = async (uploadId) => {
+  if (!redisEnabled) {
+    const item = localUploads.get(uploadId);
+    if (!item) return null;
+    if (item.expiresAt <= Date.now()) {
+      localUploads.delete(uploadId);
+      return null;
+    }
+    return { key: `local:${uploadId}`, payload: item.payload };
+  }
+
   const key = `bulk-create:upload:${uploadId}`;
   const raw = await redis.get(key);
   if (!raw) return null;
   return { key, payload: JSON.parse(raw) };
+};
+
+const toNumberOrNull = (value) => (Number.isFinite(value) ? Number(value) : null);
+
+const normalizeSlug = (name, fallback) => {
+  const base = slugify(name || fallback || '', { lower: true, strict: true, trim: true });
+  if (base) return base;
+  return slugify(fallback || 'product', { lower: true, strict: true, trim: true });
+};
+
+const buildUniqueSlug = (name, productCode, usedSlugs, existingSlugs) => {
+  const base = normalizeSlug(name, productCode || 'product');
+  let next = base || productCode || `product-${Math.random().toString(36).slice(2, 8)}`;
+  if (existingSlugs.has(next) || usedSlugs.has(next)) {
+    next = `${base || 'product'}-${String(productCode || '').toLowerCase()}`;
+  }
+  let counter = 1;
+  while (existingSlugs.has(next) || usedSlugs.has(next)) {
+    next = `${base || 'product'}-${String(productCode || '').toLowerCase()}-${counter}`;
+    counter += 1;
+  }
+  usedSlugs.add(next);
+  return next;
+};
+
+const buildProductDocs = (rows, existingSlugs) => {
+  const usedSlugs = new Set();
+  return rows.map((row) => {
+    const retailPrice = { mrp: Number(row.retailMrp) };
+    if (Number.isFinite(row.retailSalePrice)) retailPrice.salePrice = Number(row.retailSalePrice);
+
+    let wholesalePrice = undefined;
+    if (Number.isFinite(row.wholesaleMrp)) {
+      wholesalePrice = { mrp: Number(row.wholesaleMrp) };
+      if (Number.isFinite(row.wholesaleSalePrice)) {
+        wholesalePrice.salePrice = Number(row.wholesaleSalePrice);
+      }
+    }
+
+    const status =
+      row.status && ['draft', 'active', 'inactive', 'blocked'].includes(row.status)
+        ? row.status
+        : 'draft';
+
+    return {
+      productId: row.productCode,
+      name: row.name,
+      slug: buildUniqueSlug(row.name, row.productCode, usedSlugs, existingSlugs),
+      categoryId: row.categoryId,
+      productType: row.productType,
+      manufacturerBrand: row.productType === 'AFTERMARKET' ? row.manufacturerBrand : null,
+      vehicleBrand: row.productType === 'OEM' ? row.vehicleBrand : null,
+      oemNumber: row.productType === 'OEM' ? row.oemNumber : null,
+      sku: row.sku || undefined,
+      hsnCode: row.hsnCode || undefined,
+      shortDescription: row.shortDescription ? sanitize(row.shortDescription) : undefined,
+      longDescription: row.longDescription ? sanitize(row.longDescription) : undefined,
+      taxClassKey: row.taxClassKey || undefined,
+      taxRate: toNumberOrNull(row.taxRate) ?? undefined,
+      stockQty: Number.isFinite(row.stockQty) ? Number(row.stockQty) : 0,
+      weight: toNumberOrNull(row.weight) ?? undefined,
+      length: toNumberOrNull(row.length) ?? undefined,
+      width: toNumberOrNull(row.width) ?? undefined,
+      height: toNumberOrNull(row.height) ?? undefined,
+      minOrderQty: Number.isFinite(row.minOrderQty) ? Number(row.minOrderQty) : 1,
+      minWholesaleQty: toNumberOrNull(row.minWholesaleQty) ?? undefined,
+      retailPrice,
+      wholesalePrice,
+      status,
+      listingFeeStatus: 'waived',
+    };
+  });
+};
+
+const extractImageDocs = (productRow, productId, productName) => {
+  const featured = productRow.featuredImageUrl || '';
+  const gallery = Array.isArray(productRow.galleryImageUrls)
+    ? productRow.galleryImageUrls.filter(Boolean)
+    : [];
+  const images = [];
+
+  if (featured) {
+    images.push({
+      productId,
+      url: featured,
+      altText: productName || 'Product',
+      isPrimary: true,
+      sortOrder: 0,
+    });
+  }
+
+  gallery.forEach((url, index) => {
+    if (!url) return;
+    images.push({
+      productId,
+      url,
+      altText: productName || 'Product',
+      isPrimary: !featured && index === 0,
+      sortOrder: featured ? index + 1 : index,
+    });
+  });
+
+  return images;
+};
+
+const resolveVehicleMap = async (rows) => {
+  const vehicleCodes = new Set();
+  rows.forEach((row) => {
+    (row.vehicleCodes || []).forEach((code) => vehicleCodes.add(String(code).toUpperCase()));
+  });
+  if (!vehicleCodes.size) return new Map();
+
+  const vehicles = await Vehicle.find({ vehicleCode: { $in: Array.from(vehicleCodes) } })
+    .select('_id vehicleCode')
+    .lean();
+  return new Map(vehicles.map((item) => [String(item.vehicleCode).toUpperCase(), item._id]));
+};
+
+const processRowsInline = async (rows) => {
+  const productCodes = rows.map((row) => String(row.productCode).toUpperCase());
+  const existingProducts = await Product.find({ productId: { $in: productCodes } })
+    .select('productId')
+    .lean();
+  const existingSet = new Set(existingProducts.map((item) => String(item.productId).toUpperCase()));
+
+  const toInsertRows = rows.filter((row) => !existingSet.has(String(row.productCode).toUpperCase()));
+  const skipped = rows.length - toInsertRows.length;
+  let failed = skipped;
+  let success = 0;
+
+  if (toInsertRows.length) {
+    const slugsToCheck = toInsertRows.map((row) => normalizeSlug(row.name, row.productCode));
+    const existingSlugs = await Product.find({ slug: { $in: slugsToCheck } })
+      .select('slug')
+      .lean();
+    const existingSlugSet = new Set(existingSlugs.map((item) => item.slug));
+    const docs = buildProductDocs(toInsertRows, existingSlugSet);
+
+    try {
+      await Product.bulkWrite(docs.map((doc) => ({ insertOne: { document: doc } })), {
+        ordered: false,
+      });
+    } catch (_err) {
+      // continue with post-insert lookup
+    }
+
+    const insertedProducts = await Product.find({
+      productId: { $in: toInsertRows.map((row) => row.productCode) },
+    })
+      .select('_id productId name')
+      .lean();
+    const insertedMap = new Map(insertedProducts.map((item) => [String(item.productId).toUpperCase(), item]));
+    const vehicleMap = await resolveVehicleMap(toInsertRows);
+    const imageDocs = [];
+    const compatOps = [];
+
+    toInsertRows.forEach((row) => {
+      const inserted = insertedMap.get(String(row.productCode).toUpperCase());
+      if (!inserted) {
+        failed += 1;
+        return;
+      }
+      success += 1;
+      imageDocs.push(...extractImageDocs(row, inserted._id, inserted.name));
+      if (row.vehicleCodes && row.vehicleCodes.length) {
+        const vehicleIds = row.vehicleCodes
+          .map((code) => vehicleMap.get(String(code).toUpperCase()))
+          .filter(Boolean);
+        if (vehicleIds.length) {
+          compatOps.push({
+            updateOne: {
+              filter: { productId: inserted._id },
+              update: { $set: { vehicleIds } },
+              upsert: true,
+            },
+          });
+        }
+      }
+    });
+
+    if (imageDocs.length) {
+      try {
+        await ProductImage.insertMany(imageDocs, { ordered: false });
+      } catch (_err) {
+        // ignore partial duplicates
+      }
+    }
+    if (compatOps.length) {
+      try {
+        await ProductCompatibility.bulkWrite(compatOps, { ordered: false });
+      } catch (_err) {
+        // ignore partial duplicates
+      }
+    }
+  }
+
+  await deletePatterns(['catalog:products:*']).catch(() => null);
+  return { total: rows.length, processed: rows.length, success, failed, skipped };
 };
 
 class ProductBulkCreateService {
@@ -501,7 +729,6 @@ class ProductBulkCreateService {
   }
 
   async confirm(uploadId, actor) {
-    if (!redisEnabled) error('Redis is required for bulk updates', 503);
     if (!uploadId) error('uploadId is required', 400);
 
     const entry = await loadUpload(uploadId);
@@ -510,6 +737,41 @@ class ProductBulkCreateService {
 // @ts-ignore
     const { payload, key } = entry;
     const total = payload.rows.length;
+
+    if (!redisEnabled) {
+      const localJobId = `local-${crypto.randomUUID()}`;
+      localJobs.set(localJobId, {
+        jobId: localJobId,
+        status: 'processing',
+        progress: { total, processed: 0, success: 0, failed: 0, skipped: 0 },
+        total,
+        result: null,
+      });
+      try {
+        const result = await processRowsInline(payload.rows || []);
+        localJobs.set(localJobId, {
+          jobId: localJobId,
+          status: 'completed',
+          progress: result,
+          total: result.total,
+          result,
+        });
+      } catch (err) {
+        localJobs.set(localJobId, {
+          jobId: localJobId,
+          status: 'failed',
+          progress: { total, processed: total, success: 0, failed: total, skipped: 0 },
+          total,
+          result: { error: err?.message || 'Bulk create failed' },
+        });
+      }
+
+      return {
+        jobId: localJobId,
+        status: 'completed',
+        total,
+      };
+    }
 
     const job = await productBulkCreateQueue.add(
       'bulk-product-create',
@@ -534,8 +796,13 @@ class ProductBulkCreateService {
   }
 
   async getJobStatus(jobId) {
-    if (!redisEnabled) error('Redis is required for bulk updates', 503);
     if (!jobId) error('jobId is required', 400);
+
+    if (!redisEnabled) {
+      const localJob = localJobs.get(jobId);
+      if (!localJob) error('Job not found', 404);
+      return localJob;
+    }
 
     const job = await productBulkCreateQueue.getJob(jobId);
     if (!job) error('Job not found', 404);

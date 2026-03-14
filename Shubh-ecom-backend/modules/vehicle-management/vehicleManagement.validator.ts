@@ -116,7 +116,9 @@ const vehicleExportQuerySchema = Joi.object({
   format: Joi.string().valid('csv', 'xlsx').default('csv'),
 });
 const vehicleAvailableYearsQuerySchema = Joi.object({
+  brandId: Joi.string(),
   modelId: Joi.string().required(),
+  status: Joi.string().valid('active', 'inactive'),
 });
 const vehicleAvailableAttributesQuerySchema = Joi.object({
   modelId: Joi.string().required(),

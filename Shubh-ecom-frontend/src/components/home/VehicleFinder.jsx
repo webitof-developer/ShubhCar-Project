@@ -128,7 +128,7 @@ export const VehicleFinder = () => {
 
     if (val) {
       try {
-        const data = await getModelYears(val);
+        const data = await getModelYears(val, brandId);
         // Sort years descending like in VehicleSelector
         const sorted = Array.isArray(data) 
           ? [...data].sort((a, b) => Number(b.year || 0) - Number(a.year || 0)) 

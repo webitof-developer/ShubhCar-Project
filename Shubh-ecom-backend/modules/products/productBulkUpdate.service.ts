@@ -1,3 +1,4 @@
+// @ts-nocheck
 const ExcelJS = require('exceljs');
 const crypto = require('crypto');
 const mongoose = require('mongoose');
@@ -5,8 +6,11 @@ const { Readable } = require('stream');
 const { error } = require('../../utils/apiResponse');
 const { redis, redisEnabled } = require('../../config/redis');
 const { productBulkUpdateQueue } = require('../../queues/productBulkUpdate.queue');
+const Product = require('../../models/Product.model');
 
 const UPLOAD_TTL_SECONDS = 60 * 60; // 1 hour
+const localUploads = new Map();
+const localJobs = new Map();
 type ProductBulkUpdateRow = {
   rowNumber: number;
   productId: string;
@@ -69,6 +73,111 @@ const toNumber = (value) => {
   return Number.isFinite(parsed) ? parsed : NaN;
 };
 
+const getRowCellValue = (row, columnNumber) => {
+  if (!row || !columnNumber) return undefined;
+  return row.getCell(columnNumber)?.value;
+};
+
+const resolveRowIdentifier = (row) => {
+  if (row.productId && mongoose.Types.ObjectId.isValid(row.productId)) {
+    return { type: 'productId', value: String(row.productId) };
+  }
+  if (row.productCode) {
+    return { type: 'productCode', value: String(row.productCode).trim().toUpperCase() };
+  }
+  if (row.sku) {
+    return { type: 'sku', value: String(row.sku) };
+  }
+  return null;
+};
+
+const buildBulkOps = (rows, productIdMap, skuMap, productCodeMap) => {
+  const ops = [];
+  const skipped = [];
+
+  rows.forEach((row) => {
+    const identifier = resolveRowIdentifier(row);
+    if (!identifier) {
+      skipped.push({ row: row.rowNumber, reason: 'Missing identifier' });
+      return;
+    }
+
+    let targetId = null;
+    if (identifier.type === 'productId') targetId = productIdMap.get(identifier.value) || null;
+    else if (identifier.type === 'productCode') targetId = productCodeMap.get(identifier.value) || null;
+    else if (identifier.type === 'sku') targetId = skuMap.get(identifier.value) || null;
+
+    if (!targetId) {
+      skipped.push({ row: row.rowNumber, reason: 'Product not found' });
+      return;
+    }
+
+    ops.push({
+      updateOne: {
+        filter: { _id: targetId },
+        update: {
+          $set: {
+            'retailPrice.mrp': Number(row.retailMrp),
+            'retailPrice.salePrice': Number(row.retailSalePrice),
+            'wholesalePrice.mrp': Number(row.wholesaleMrp),
+            'wholesalePrice.salePrice': Number(row.wholesaleSalePrice),
+            stockQty: Number(row.stock),
+            updatedAt: new Date(),
+          },
+        },
+      },
+    });
+  });
+
+  return { ops, skipped };
+};
+
+const processRowsInline = async (rows) => {
+  const productIds = rows
+    .filter((row) => row.productId && mongoose.Types.ObjectId.isValid(row.productId))
+    .map((row) => String(row.productId));
+  const productCodes = rows
+    .filter((row) => !row.productId && row.productCode)
+    .map((row) => String(row.productCode).trim().toUpperCase());
+  const skus = rows
+    .filter((row) => !row.productId && !row.productCode && row.sku)
+    .map((row) => String(row.sku));
+
+  const [productsById, productsBySku, productsByCode] = await Promise.all([
+    productIds.length ? Product.find({ _id: { $in: productIds } }).select('_id').lean() : [],
+    skus.length ? Product.find({ sku: { $in: skus } }).select('_id sku').lean() : [],
+    productCodes.length
+      ? Product.find({ productId: { $in: productCodes } }).select('_id productId').lean()
+      : [],
+  ]);
+
+  const productIdMap = new Map(productsById.map((product) => [String(product._id), product._id]));
+  const skuMap = new Map(productsBySku.map((product) => [String(product.sku), product._id]));
+  const productCodeMap = new Map(
+    productsByCode.map((product) => [String(product.productId).toUpperCase(), product._id]),
+  );
+
+  const { ops, skipped } = buildBulkOps(rows, productIdMap, skuMap, productCodeMap);
+  let success = 0;
+  let failed = skipped.length;
+  if (ops.length) {
+    try {
+      await Product.bulkWrite(ops, { ordered: false });
+      success = ops.length;
+    } catch (_err) {
+      failed += ops.length;
+    }
+  }
+
+  return {
+    total: rows.length,
+    processed: rows.length,
+    success,
+    failed,
+    skipped: skipped.length,
+  };
+};
+
 const parseSheetRows = (sheet) => {
   const headerRow = sheet.getRow(1);
   const headerMap: Record<string, number> = {};
@@ -90,15 +199,15 @@ const parseSheetRows = (sheet) => {
     const row = sheet.getRow(rowNumber);
     if (!row || row.cellCount === 0) continue;
 
-    const productId = toCellString(row.getCell(headerMap.productId)?.value);
-    const productCode = toCellString(row.getCell(headerMap.productCode)?.value);
-    const sku = toCellString(row.getCell(headerMap.sku)?.value);
-    const productName = toCellString(row.getCell(headerMap.productName)?.value);
-    const retailMrp = toNumber(row.getCell(headerMap.retailMrp)?.value);
-    const retailSalePrice = toNumber(row.getCell(headerMap.retailSalePrice)?.value);
-    const wholesaleMrp = toNumber(row.getCell(headerMap.wholesaleMrp)?.value);
-    const wholesaleSalePrice = toNumber(row.getCell(headerMap.wholesaleSalePrice)?.value);
-    const stock = toNumber(row.getCell(headerMap.stock)?.value);
+    const productId = toCellString(getRowCellValue(row, headerMap.productId));
+    const productCode = toCellString(getRowCellValue(row, headerMap.productCode));
+    const sku = toCellString(getRowCellValue(row, headerMap.sku));
+    const productName = toCellString(getRowCellValue(row, headerMap.productName));
+    const retailMrp = toNumber(getRowCellValue(row, headerMap.retailMrp));
+    const retailSalePrice = toNumber(getRowCellValue(row, headerMap.retailSalePrice));
+    const wholesaleMrp = toNumber(getRowCellValue(row, headerMap.wholesaleMrp));
+    const wholesaleSalePrice = toNumber(getRowCellValue(row, headerMap.wholesaleSalePrice));
+    const stock = toNumber(getRowCellValue(row, headerMap.stock));
 
     rows.push({
       rowNumber,
@@ -163,7 +272,6 @@ const validateRow = (row: ProductBulkUpdateRow) => {
 
 const parseUpload = async (file) => {
   if (!file) error('File is required', 400);
-  if (!redisEnabled) error('Redis is required for bulk updates', 503);
 
   const workbook = new ExcelJS.Workbook();
   const ext = (file.originalname || '').toLowerCase();
@@ -183,12 +291,28 @@ const parseUpload = async (file) => {
 };
 
 const storeUpload = async (uploadId, payload) => {
+  if (!redisEnabled) {
+    localUploads.set(uploadId, {
+      payload,
+      expiresAt: Date.now() + UPLOAD_TTL_SECONDS * 1000,
+    });
+    return `local:${uploadId}`;
+  }
   const key = `bulk-price-stock:upload:${uploadId}`;
   await redis.setEx(key, UPLOAD_TTL_SECONDS, JSON.stringify(payload));
   return key;
 };
 
 const loadUpload = async (uploadId) => {
+  if (!redisEnabled) {
+    const item = localUploads.get(uploadId);
+    if (!item) return null;
+    if (item.expiresAt <= Date.now()) {
+      localUploads.delete(uploadId);
+      return null;
+    }
+    return { key: `local:${uploadId}`, payload: item.payload };
+  }
   const key = `bulk-price-stock:upload:${uploadId}`;
   const raw = await redis.get(key);
   if (!raw) return null;
@@ -234,7 +358,6 @@ class ProductBulkUpdateService {
   }
 
   async confirm(uploadId, actor) {
-    if (!redisEnabled) error('Redis is required for bulk updates', 503);
     if (!uploadId) error('uploadId is required', 400);
 
     const entry = await loadUpload(uploadId);
@@ -243,6 +366,36 @@ class ProductBulkUpdateService {
 // @ts-ignore
     const { payload, key } = entry;
     const total = payload.rows.length;
+
+    if (!redisEnabled) {
+      const localJobId = `local-${crypto.randomUUID()}`;
+      localJobs.set(localJobId, {
+        jobId: localJobId,
+        status: 'processing',
+        progress: { total, processed: 0, success: 0, failed: 0, skipped: 0 },
+        total,
+        result: null,
+      });
+      try {
+        const result = await processRowsInline(payload.rows || []);
+        localJobs.set(localJobId, {
+          jobId: localJobId,
+          status: 'completed',
+          progress: result,
+          total: result.total,
+          result,
+        });
+      } catch (err) {
+        localJobs.set(localJobId, {
+          jobId: localJobId,
+          status: 'failed',
+          progress: { total, processed: total, success: 0, failed: total, skipped: 0 },
+          total,
+          result: { error: err?.message || 'Bulk update failed' },
+        });
+      }
+      return { jobId: localJobId, status: 'completed', total };
+    }
 
     const job = await productBulkUpdateQueue.add(
       'bulk-price-stock-update',
@@ -267,8 +420,13 @@ class ProductBulkUpdateService {
   }
 
   async getJobStatus(jobId) {
-    if (!redisEnabled) error('Redis is required for bulk updates', 503);
     if (!jobId) error('jobId is required', 400);
+
+    if (!redisEnabled) {
+      const localJob = localJobs.get(jobId);
+      if (!localJob) error('Job not found', 404);
+      return localJob;
+    }
 
     const job = await productBulkUpdateQueue.getJob(jobId);
     if (!job) error('Job not found', 404);

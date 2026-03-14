@@ -13,6 +13,7 @@ const {
   registerSchema,
   refreshSchema,
   forgotPasswordSchema,
+  forgotPasswordDebugSchema,
   resetPasswordSchema,
   verifyResetPasswordOtpSchema,
   sendPhoneOtpSchema,
@@ -21,6 +22,7 @@ const {
   sendEmailOtpSchema,
   verifyEmailOtpSchema,
 } = require('./auth.validator');
+const ROLES = require('../../constants/roles');
 
 const router = express.Router();
 
@@ -426,6 +428,13 @@ router.post(
   passwordResetLimiter,
   validate(verifyResetPasswordOtpSchema),
   controller.verifyResetPasswordOtp,
+);
+
+router.post(
+  '/forgot-password/debug',
+  auth([ROLES.ADMIN]),
+  validate(forgotPasswordDebugSchema),
+  controller.forgotPasswordDebug,
 );
 
 /**

@@ -1,0 +1,195 @@
+[
+  {
+    "productCode": "PRO-000011",
+    "reason": "no_brand_on_product",
+    "vehicleBrand": "",
+    "name": "Strut Damper - SONET"
+  },
+  {
+    "productCode": "PRO-000012",
+    "reason": "no_brand_on_product",
+    "vehicleBrand": "",
+    "name": "IBJ / Rack End - Assy - SELTOS"
+  },
+  {
+    "productCode": "PRO-000016",
+    "reason": "no_brand_on_product",
+    "vehicleBrand": "",
+    "name": "Motor & Coupler Assy - CARENS"
+  },
+  {
+    "productCode": "PRO-000020",
+    "reason": "brand_not_in_vehicle_master",
+    "vehicleBrand": "KIA",
+    "name": "Motor Assy - SELTOS"
+  },
+  {
+    "productCode": "PRO-000021",
+    "reason": "brand_not_in_vehicle_master",
+    "vehicleBrand": "VW",
+    "name": "Shock Absorber - Octovia/Rapid/Vento"
+  },
+  {
+    "productCode": "PRO-000023",
+    "reason": "brand_not_in_vehicle_master",
+    "vehicleBrand": "MAHINDRA",
+    "name": "Shock Absorber - Bolero PickUp Extra Long"
+  },
+  {
+    "productCode": "PRO-000025",
+    "reason": "model_not_detected_in_text",
+    "vehicleBrand": "HYUNDAI",
+    "resolvedBrand": "HYUNDAI",
+    "name": "Strut Damper - CARENS"
+  },
+  {
+    "productCode": "PRO-000026",
+    "reason": "brand_not_in_vehicle_master",
+    "vehicleBrand": "MARUTI SUZUKI",
+    "name": "Shock Absorber - Wagon R"
+  },
+  {
+    "productCode": "PRO-000028",
+    "reason": "brand_not_in_vehicle_master",
+    "vehicleBrand": "RENAULT",
+    "name": "Shock Absorber - Logan"
+  },
+  {
+    "productCode": "PRO-000029",
+    "reason": "brand_not_in_vehicle_master",
+    "vehicleBrand": "MARUTI SUZUKI",
+    "name": "Shock Absorber - Ertiga"
+  },
+  {
+    "productCode": "PRO-000030",
+    "reason": "model_not_detected_in_text",
+    "vehicleBrand": "HYUNDAI",
+    "resolvedBrand": "HYUNDAI",
+    "name": "Steering Gear Assy - CARENS"
+  },
+  {
+    "productCode": "PRO-000004",
+    "reason": "no_brand_on_product",
+    "vehicleBrand": "",
+    "name": "Shock Absorber - Xylo"
+  },
+  {
+    "productCode": "PRO-000031",
+    "reason": "brand_not_in_vehicle_master",
+    "vehicleBrand": "RENAULT",
+    "name": "Shock Absorber - Duster"
+  },
+  {
+    "productCode": "PRO-000034",
+    "reason": "brand_not_in_vehicle_master",
+    "vehicleBrand": "KIA",
+    "name": "Shock Absorber - SELTOS"
+  },
+  {
+    "productCode": "PRO-000035",
+    "reason": "brand_not_in_vehicle_master",
+    "vehicleBrand": "MARUTI SUZUKI",
+    "name": "Shock Absorber - Ignis"
+  },
+  {
+    "productCode": "PRO-000036",
+    "reason": "model_not_detected_in_text",
+    "vehicleBrand": "HYUNDAI",
+    "resolvedBrand": "HYUNDAI",
+    "name": "Shock Absorber - CARENS"
+  },
+  {
+    "productCode": "PRO-000043",
+    "reason": "brand_not_in_vehicle_master",
+    "vehicleBrand": "TATA",
+    "name": "Shock Absorber - Safari Dicor"
+  },
+  {
+    "productCode": "PRO-000044",
+    "reason": "model_not_detected_in_text",
+    "vehicleBrand": "HYUNDAI",
+    "resolvedBrand": "HYUNDAI",
+    "name": "Control Unit - EON"
+  },
+  {
+    "productCode": "PRO-000045",
+    "reason": "model_not_detected_in_text",
+    "vehicleBrand": "CHEVROLET",
+    "resolvedBrand": "CHEVROLET",
+    "name": "Shock Absorber - Chevrolet Tavera"
+  },
+  {
+    "productCode": "PRO-000046",
+    "reason": "no_brand_on_product",
+    "vehicleBrand": "???",
+    "name": "Shock Absorber - Rhino"
+  },
+  {
+    "productCode": "PRO-000047",
+    "reason": "brand_not_in_vehicle_master",
+    "vehicleBrand": "KIA",
+    "name": "Strut Damper - SONET"
+  },
+  {
+    "productCode": "PRO-000050",
+    "reason": "brand_not_in_vehicle_master",
+    "vehicleBrand": "MAHINDRA",
+    "name": "Shock Absorber - Bolero PickUp Extra Long"
+  },
+  {
+    "productCode": "PRO-000006",
+    "reason": "no_brand_on_product",
+    "vehicleBrand": "",
+    "name": "Shock Absorber - Alto"
+  },
+  {
+    "productCode": "PRO-000052",
+    "reason": "brand_not_in_vehicle_master",
+    "vehicleBrand": "MAHINDRA",
+    "name": "Shock Absorber - Scorpio S6/S8/S10"
+  },
+  {
+    "productCode": "PRO-000053",
+    "reason": "brand_not_in_vehicle_master",
+    "vehicleBrand": "KIA",
+    "name": "ECU Assy - SONET"
+  },
+  {
+    "productCode": "PRO-000054",
+    "reason": "brand_not_in_vehicle_master",
+    "vehicleBrand": "MAHINDRA",
+    "name": "Shock Absorber - Bolero Pickup"
+  },
+  {
+    "productCode": "PRO-000056",
+    "reason": "model_not_detected_in_text",
+    "vehicleBrand": "HYUNDAI",
+    "resolvedBrand": "HYUNDAI",
+    "name": "Shock Absorber - CARENS"
+  },
+  {
+    "productCode": "PRO-000057",
+    "reason": "model_not_detected_in_text",
+    "vehicleBrand": "HYUNDAI",
+    "resolvedBrand": "HYUNDAI",
+    "name": "ECU Assy - EON"
+  },
+  {
+    "productCode": "PRO-000007",
+    "reason": "no_brand_on_product",
+    "vehicleBrand": "",
+    "name": "Shock Absorber - Swift T2"
+  },
+  {
+    "productCode": "PRO-000010",
+    "reason": "no_brand_on_product",
+    "vehicleBrand": "",
+    "name": "IBJ / Rack End - Assy - SONET"
+  },
+  {
+    "productCode": "PRO-000061",
+    "reason": "no_brand_on_product",
+    "vehicleBrand": "TEST",
+    "name": "Test Fill Product"
+  }
+]

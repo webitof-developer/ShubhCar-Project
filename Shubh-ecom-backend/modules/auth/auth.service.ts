@@ -25,6 +25,7 @@ const {
   registerSchema,
   loginSchema,
   forgotPasswordSchema,
+  forgotPasswordDebugSchema,
   resetPasswordSchema,
   verifyResetPasswordOtpSchema,
 } = require('./auth.validator');
@@ -54,6 +55,24 @@ type SafeUserShape = {
 
 const DUMMY_PASSWORD_HASH =
   '$2b$10$8YKgCGjMln2L5PKu8Qj5UefIhQ8h1bS8Y7rN8Tg9fTg9Q8J6m1Q2W';
+const LOGIN_LOCK_DURATION_MS = 15 * 60 * 1000;
+
+const formatRemainingLockTime = (ms) => {
+  const safeMs = Math.max(0, Number(ms) || 0);
+  const totalSeconds = Math.ceil(safeMs / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  if (minutes <= 0) {
+    return `${seconds}s`;
+  }
+
+  if (seconds === 0) {
+    return `${minutes}m`;
+  }
+
+  return `${minutes}m ${seconds}s`;
+};
 
 class AuthService {
   /* =======================
@@ -337,14 +356,29 @@ class AuthService {
     const isLocked = user.lockUntil && user.lockUntil > Date.now();
     const ok = await comparePassword(password, user.passwordHash || DUMMY_PASSWORD_HASH);
 
+    if (isLocked) {
+      const remainingMs = new Date(user.lockUntil).getTime() - Date.now();
+      error(
+        `Too many failed attempts. Try again in ${formatRemainingLockTime(remainingMs)}.`,
+        429,
+      );
+    }
+
     if (!isPasswordProvider || !isActive || isLocked || !ok) {
       // Preserve lockout behavior for bad passwords on password accounts.
       if (isPasswordProvider && isActive && !isLocked && !ok) {
         user.loginAttempts = (user.loginAttempts || 0) + 1;
         if (user.loginAttempts >= 5) {
-          user.lockUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 min
+          user.lockUntil = new Date(Date.now() + LOGIN_LOCK_DURATION_MS);
         }
         await user.save();
+
+        if (user.lockUntil && user.lockUntil > Date.now()) {
+          error(
+            `Too many failed attempts. Try again in ${formatRemainingLockTime(LOGIN_LOCK_DURATION_MS)}.`,
+            429,
+          );
+        }
       }
       error('Invalid credentials', 401);
     }
@@ -474,22 +508,20 @@ class AuthService {
     const { error: err, value } = forgotPasswordSchema.validate(payload);
     if (err) error(err.details.map((d) => d.message).join(', '));
 
-    const identifier = String(value.identifier || '').trim().toLowerCase();
+    const rawIdentifier = String(value.identifier || '').trim();
+    const isEmailIdentifier = rawIdentifier.includes('@');
+    const identifier = isEmailIdentifier ? rawIdentifier.toLowerCase() : rawIdentifier;
 
-    const user = identifier.includes('@')
+    const user = isEmailIdentifier
       ? await userRepo.findDocByEmail(identifier)
       : await userRepo.findDocByPhone(identifier);
 
     if (!user) {
-      error('No account found for this email', 404);
+      return true;
     }
 
     if (user.authProvider && user.authProvider !== 'password') {
-      error('This account uses social or OTP login. Please use that sign-in method.', 400);
-    }
-
-    if (user.status !== 'active') {
-      error('Account disabled', 403);
+      return true;
     }
 
     const otp = randomOtp();
@@ -504,8 +536,9 @@ class AuthService {
 
     await user.save();
 
-    if (user.email) {
-      await sendEmailOtp({ email: user.email, otp });
+    if (isEmailIdentifier) {
+      // Always send reset OTP to the exact email identifier entered by user.
+      await sendEmailOtp({ email: identifier, otp });
     } else if (user.phone) {
       await sendSMSOtp({ phone: user.phone, otp });
     }
@@ -519,7 +552,10 @@ class AuthService {
     const { error: err, value } = verifyResetPasswordOtpSchema.validate(payload);
     if (err) error(err.details.map((d) => d.message).join(', '));
 
-    const identifier = String(value.identifier || '').trim().toLowerCase();
+    const rawIdentifier = String(value.identifier || '').trim();
+    const identifier = rawIdentifier.includes('@')
+      ? rawIdentifier.toLowerCase()
+      : rawIdentifier;
     const { otp } = value;
 
     const user = identifier.includes('@')
@@ -553,11 +589,70 @@ class AuthService {
     return true;
   }
 
+  async forgotPasswordDebug(payload) {
+    const { error: err, value } = forgotPasswordDebugSchema.validate(payload);
+    if (err) error(err.details.map((d) => d.message).join(', '));
+
+    const rawIdentifier = String(value.identifier || '').trim();
+    const isEmailIdentifier = rawIdentifier.includes('@');
+    const identifier = isEmailIdentifier ? rawIdentifier.toLowerCase() : rawIdentifier;
+
+    const user = isEmailIdentifier
+      ? await userRepo.findDocByEmail(identifier)
+      : await userRepo.findDocByPhone(identifier);
+
+    const userFound = Boolean(user);
+    const isPasswordProvider = user
+      ? !user.authProvider || user.authProvider === 'password'
+      : false;
+    const eligible = userFound && isPasswordProvider;
+
+    let sent = false;
+    if (eligible && value.send === true) {
+      const otp = randomOtp();
+      const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
+
+      user.resetPassword = {
+        otpHash,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        attempts: 0,
+      };
+      await user.save();
+
+      if (isEmailIdentifier) {
+        await sendEmailOtp({ email: identifier, otp });
+      } else if (user.phone) {
+        await sendSMSOtp({ phone: user.phone, otp });
+      }
+      sent = true;
+    }
+
+    return {
+      identifier,
+      channel: isEmailIdentifier ? 'email' : 'phone',
+      userFound,
+      authProvider: user?.authProvider || null,
+      eligible,
+      sent,
+      target: isEmailIdentifier ? identifier : user?.phone || identifier,
+      reason: !userFound
+        ? 'user_not_found'
+        : !isPasswordProvider
+          ? 'auth_provider_not_password'
+          : value.send === true
+            ? 'otp_sent'
+            : 'eligible_dry_run',
+    };
+  }
+
   async resetPassword(payload) {
     const { error: err, value } = resetPasswordSchema.validate(payload);
     if (err) error(err.details.map((d) => d.message).join(', '));
 
-    const identifier = String(value.identifier || '').trim().toLowerCase();
+    const rawIdentifier = String(value.identifier || '').trim();
+    const identifier = rawIdentifier.includes('@')
+      ? rawIdentifier.toLowerCase()
+      : rawIdentifier;
     const { otp, newPassword } = value;
 
     const user = identifier.includes('@')

@@ -4,12 +4,12 @@ const ExcelJS = require('exceljs');
 const slugify = require('slugify');
 require('dotenv').config();
 
-const Brand = require('../models/Brand.model');
-const VehicleModel = require('../modules/vehicle-management/models/VehicleModel.model');
-const VehicleYear = require('../modules/vehicle-management/models/VehicleYear.model');
-const VehicleModelYear = require('../modules/vehicle-management/models/VehicleModelYear.model');
-const VehicleVariant = require('../modules/vehicle-management/models/VehicleVariant.model');
-const Vehicle = require('../modules/vehicle-management/models/Vehicle.model');
+const Brand = require('../models/Brand.model.ts');
+const VehicleModel = require('../modules/vehicle-management/models/VehicleModel.model.ts');
+const VehicleYear = require('../modules/vehicle-management/models/VehicleYear.model.ts');
+const VehicleModelYear = require('../modules/vehicle-management/models/VehicleModelYear.model.ts');
+const VehicleVariant = require('../modules/vehicle-management/models/VehicleVariant.model.ts');
+const Vehicle = require('../modules/vehicle-management/models/Vehicle.model.ts');
 
 const DEFAULT_INPUT = path.resolve(
   __dirname,
@@ -22,6 +22,20 @@ const normalize = (value) => String(value || '').trim();
 const toStatus = (value) => (normalize(value).toLowerCase() === 'inactive' ? 'inactive' : 'active');
 const toSlug = (value) =>
   slugify(normalize(value), { lower: true, strict: true, trim: true });
+
+const buildUniqueModelSlug = async (name, brandId) => {
+  const base = toSlug(name) || `model-${String(brandId).slice(-6).toLowerCase()}`;
+  let next = base;
+  let counter = 1;
+  // Global unique slug is enforced in model schema.
+  // Make it deterministic across reruns by suffixing brand+counter only when needed.
+  // eslint-disable-next-line no-await-in-loop
+  while (await VehicleModel.exists({ slug: next })) {
+    counter += 1;
+    next = `${base}-${String(brandId).slice(-6).toLowerCase()}-${counter}`;
+  }
+  return next;
+};
 
 const toInt = (value) => {
   const num = Number(value);
@@ -71,7 +85,7 @@ const ensureVehicleModel = async (brandId, name, status) => {
   const created = await VehicleModel.create({
     brandId,
     name,
-    slug: toSlug(name),
+    slug: await buildUniqueModelSlug(name, brandId),
     status,
     isDeleted: false,
   });
@@ -182,7 +196,11 @@ async function run(inputPath) {
   header.forEach((h, i) => {
     idx[h] = i + 1;
   });
-  const val = (row, key) => normalize(row.getCell(idx[key] || 0).value);
+  const val = (row, key) => {
+    const col = idx[key];
+    if (!col) return '';
+    return normalize(row.getCell(col).value);
+  };
 
   const stats = {
     rows: 0,

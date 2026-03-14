@@ -72,6 +72,7 @@ const VehiclesPage = () => {
   const [previewGroups, setPreviewGroups] = useState([])
   const [previewLoading, setPreviewLoading] = useState(false)
   const [previewYears, setPreviewYears] = useState([])
+  const [filterYears, setFilterYears] = useState([])
   const [importFile, setImportFile] = useState(null)
   const [importScope, setImportScope] = useState({ pilot: true, brandName: 'TOYOTA', modelContains: 'ETIOS' })
   const [importBusy, setImportBusy] = useState(false)
@@ -183,6 +184,28 @@ const VehiclesPage = () => {
     setLoading(false)
   }
 
+  const fetchFilterYears = async (modelId = '', brandId = '') => {
+    if (!modelId || !session?.accessToken) {
+      setFilterYears([])
+      return
+    }
+    const params = new URLSearchParams({ modelId, status: 'active' })
+    if (brandId) params.append('brandId', brandId)
+
+    const response = await fetch(`${API_BASE_URL}/vehicles/filters/years?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${session.accessToken}` },
+    })
+    if (!response.ok) {
+      setFilterYears([])
+      return
+    }
+    const result = await response.json()
+    const data = result?.data || result
+    const list = Array.isArray(data) ? data : (Array.isArray(data?.items) ? data.items : [])
+    const sorted = [...list].sort((a, b) => Number(b.year || 0) - Number(a.year || 0))
+    setFilterYears(sorted)
+  }
+
   const fetchImportHistory = async () => {
     if (!session?.accessToken) return
     const response = await fetch(`${API_BASE_URL}/vehicles/import/history?limit=5`, {
@@ -239,7 +262,9 @@ const VehiclesPage = () => {
       setPreviewYears([])
       return
     }
-    const response = await fetch(`${API_BASE_URL}/vehicles/filters/years?modelId=${modelId}`, {
+    const params = new URLSearchParams({ modelId, status: 'active' })
+    if (previewFilters.brandId) params.append('brandId', previewFilters.brandId)
+    const response = await fetch(`${API_BASE_URL}/vehicles/filters/years?${params.toString()}`, {
       headers: { Authorization: `Bearer ${session.accessToken}` },
     })
     if (!response.ok) {
@@ -347,6 +372,14 @@ const VehiclesPage = () => {
     }
     fetchModificationPreview(previewFilters.brandId, previewFilters.modelId, previewFilters.yearId)
   }, [previewFilters, session?.accessToken])
+
+  useEffect(() => {
+    if (!filters.modelId) {
+      setFilterYears([])
+      return
+    }
+    fetchFilterYears(filters.modelId, filters.brandId)
+  }, [filters.modelId, filters.brandId, session?.accessToken])
 
   const handleOpenModal = (item = null) => {
     if (item) {
@@ -633,11 +666,19 @@ const VehiclesPage = () => {
       const next = { ...prev, [key]: value }
       if (key === 'brandId') {
         next.modelId = ''
+        next.yearId = ''
+      }
+      if (key === 'modelId') {
+        next.yearId = ''
       }
       return next
     })
     if (key === 'brandId') {
       fetchModels(value)
+      setFilterYears([])
+    }
+    if (key === 'modelId') {
+      fetchFilterYears(value, filters.brandId)
     }
   }
 
@@ -732,7 +773,7 @@ const VehiclesPage = () => {
                 <Col md={2}>
                   <Form.Select value={filters.yearId} onChange={(e) => updateFilter('yearId', e.target.value)}>
                     <option value="">All Years</option>
-                    {years.map((year) => (
+                    {(filters.modelId ? filterYears : years).map((year) => (
                       <option key={year._id} value={year._id}>{year.year}</option>
                     ))}
                   </Form.Select>

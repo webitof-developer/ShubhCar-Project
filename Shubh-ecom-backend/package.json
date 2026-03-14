@@ -17,6 +17,9 @@
     "seed:client": "node scripts/seed-client-data.js",
     "seed:email-templates": "node scripts/seed-email-templates.js",
     "search:reindex": "node scripts/reindex-products-elastic.js",
+    "products:reset:full:dry": "node -r ts-node/register/transpile-only scripts/reset-products-full.js --dry-run",
+    "products:reset:full": "node -r ts-node/register/transpile-only scripts/reset-products-full.js --confirm",
+    "products:prepare:test60": "node -r ts-node/register/transpile-only scripts/prepare-products-from-website-data.js --seed 20260313 --split 30:30 --ratio 70:30",
     "vehicles:transform:xlsx": "node scripts/transform-merged-vehicles-xlsx.js",
     "vehicles:import:xlsx": "node scripts/import-vehicles-from-mapped-xlsx.js"
   },

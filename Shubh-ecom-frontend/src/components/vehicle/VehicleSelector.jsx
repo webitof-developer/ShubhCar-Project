@@ -112,7 +112,7 @@ export const VehicleSelector = ({
       setLoading((prev) => ({ ...prev, years: true }));
       setYearFetchError("");
       try {
-        const data = await getModelYears(modelId);
+        const data = await getModelYears(modelId, brandId);
         const sorted = Array.isArray(data)
           ? [...data].sort((a, b) => Number(b.year || 0) - Number(a.year || 0))
           : [];
@@ -125,7 +125,7 @@ export const VehicleSelector = ({
       }
     };
     fetchYears();
-  }, [modelId]);
+  }, [modelId, brandId]);
 
   useEffect(() => {
     if (!brandId || !modelId || !yearId) {

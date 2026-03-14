@@ -189,17 +189,17 @@ const InvoiceList = () => {
           </div>
           <CardBody className="p-0">
             {error && <Alert variant="danger" className="m-3">{error}</Alert>}
-            <div className="table-responsive" style={{ maxHeight: '65vh', overflowY: 'auto' }}>
+            <div
+              className="table-responsive px-3"
+              style={{
+                maxHeight: '65vh',
+                overflowY: 'auto',
+              }}
+            >
               <table className="table align-middle mb-0 table-hover table-centered">
-                <thead className="bg-light-subtle" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                <thead className="bg-light-subtle">
                   <tr>
-                    <th style={{ width: 20 }}>
-                      <div className="form-check">
-                        <input type="checkbox" className="form-check-input" id="customCheck1" />
-                        <label className="form-check-label" htmlFor="customCheck1" />
-                      </div>
-                    </th>
-                    <th>Invoice</th>
+                    <th className="ps-3">Invoice</th>
                     <th>Type</th>
                     <th>Order</th>
                     <th>Customer</th>
@@ -212,13 +212,13 @@ const InvoiceList = () => {
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan="9" className="text-center py-4">
+                      <td colSpan="8" className="text-center py-4">
                         <Spinner animation="border" />
                       </td>
                     </tr>
                   ) : invoices.length === 0 ? (
                     <tr>
-                      <td colSpan="9" className="text-center py-4 text-muted">
+                      <td colSpan="8" className="text-center py-4 text-muted">
                         No {documentType === 'all' ? 'documents' : documentType === 'credit_note' ? 'credit notes' : 'invoices'} found
                         {searchQuery ? ` for "${searchQuery}"` : ''}
                       </td>
@@ -226,15 +226,7 @@ const InvoiceList = () => {
                   ) : (
                     invoices.map((item) => (
                       <tr key={item._id}>
-                        <td>
-                          <div className="form-check">
-                            <input type="checkbox" className="form-check-input" id={`invoice-${item._id}`} />
-                            <label className="form-check-label" htmlFor={`invoice-${item._id}`}>
-                              &nbsp;
-                            </label>
-                          </div>
-                        </td>
-                        <td>
+                        <td className="ps-3">
                           <Link href="#" className="text-body">
                             {item.invoiceNumber || item._id?.slice(0, 6)}
                           </Link>

@@ -25,6 +25,11 @@ const forgotPasswordSchema = Joi.object({
   identifier: Joi.string().required(),
 });
 
+const forgotPasswordDebugSchema = Joi.object({
+  identifier: Joi.string().required(),
+  send: Joi.boolean().default(false),
+});
+
 const resetPasswordSchema = Joi.object({
   identifier: Joi.string().required(),
   otp: Joi.string().length(6).required(),
@@ -73,6 +78,7 @@ module.exports = {
   loginSchema,
   refreshSchema,
   forgotPasswordSchema,
+  forgotPasswordDebugSchema,
   resetPasswordSchema,
   verifyResetPasswordOtpSchema,
   sendPhoneOtpSchema,

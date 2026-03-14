@@ -93,7 +93,11 @@ async function transform(inputPath, outputPath) {
     index[h] = i + 1;
   });
 
-  const get = (row, key) => normalize(row.getCell(index[key] || 0).value);
+  const get = (row, key) => {
+    const col = index[key];
+    if (!col) return '';
+    return normalize(row.getCell(col).value);
+  };
 
   const outWb = new ExcelJS.Workbook();
   const out = outWb.addWorksheet('VehicleSchemaReady');

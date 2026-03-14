@@ -34,12 +34,15 @@ export const getModelsByBrand = async (brandId) => {
   return normalized
 }
 
-export const getModelYears = async (modelId) => {
+export const getModelYears = async (modelId, brandId = '') => {
   if (!modelId) return []
-  if (cache.yearsByModel.has(modelId)) return cache.yearsByModel.get(modelId)
-  const data = await api.get(`/vehicles/filters/years?modelId=${modelId}`)
+  const key = `${brandId || ''}:${modelId}`
+  if (cache.yearsByModel.has(key)) return cache.yearsByModel.get(key)
+  const params = new URLSearchParams({ modelId, status: 'active' })
+  if (brandId) params.set('brandId', brandId)
+  const data = await api.get(`/vehicles/filters/years?${params.toString()}`)
   const list = normalizeList(data)
-  cache.yearsByModel.set(modelId, list)
+  cache.yearsByModel.set(key, list)
   return list
 }
 

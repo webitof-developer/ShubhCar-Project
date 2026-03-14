@@ -109,6 +109,16 @@ exports.verifyResetPasswordOtp = asyncHandler(async (req: AuthRequest, res: Resp
   return success(res, null, 'OTP verified successfully');
 });
 
+exports.forgotPasswordDebug = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    if (process.env.NODE_ENV === 'production') {
+      return success(res, null, 'Not available in production');
+    }
+    const result = await authService.forgotPasswordDebug(req.body);
+    return success(res, result, 'Forgot password debug result');
+  },
+);
+
 exports.resetPassword = asyncHandler(async (req: AuthRequest, res: Response) => {
   await authService.resetPassword(req.body);
   return success(res, null, 'Password reset successful');
