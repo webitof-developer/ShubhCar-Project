@@ -28,6 +28,7 @@ import {
   getCategoryBySlug,
   getChildCategories,
   getCategoryBreadcrumb,
+  getCategories,
   getRootCategories,
 } from '@/services/categoryService';
 import { filterProductsByAccess } from '@/services/productAccessService';
@@ -73,6 +74,20 @@ const getParentId = (entity) => {
   return '';
 };
 
+const flattenHierarchy = (nodes = []) => {
+  const flat = [];
+  const stack = Array.isArray(nodes) ? [...nodes] : [];
+  while (stack.length) {
+    const node = stack.pop();
+    if (!node) continue;
+    flat.push(node);
+    if (Array.isArray(node.children) && node.children.length) {
+      node.children.forEach((child) => stack.push(child));
+    }
+  }
+  return flat;
+};
+
 /* Main content component */
 const CategoryContent = () => {
   const { slug } = useParams();
@@ -112,28 +127,48 @@ const CategoryContent = () => {
       setSiblingCategories([]); setParentCategory(null);
       if (!slug) { setInitialLoading(false); return; }
       try {
-        const cat = await getCategoryBySlug(slug);
-        setCategory(cat);
-        const categoryId = getEntityId(cat);
-        const [children, crumbs] = await Promise.all([
-          categoryId ? getChildCategories(categoryId) : Promise.resolve([]),
+        const [cat, crumbs, hierarchy] = await Promise.all([
+          getCategoryBySlug(slug),
           getCategoryBreadcrumb(slug),
+          getCategories(),
         ]);
-        const childList = children || [];
+
+        const breadcrumbList = Array.isArray(crumbs) ? crumbs : [];
+        const breadcrumbLastNode = breadcrumbList.length > 0 ? breadcrumbList[breadcrumbList.length - 1] : null;
+        const resolvedCategory = cat || breadcrumbLastNode || null;
+        const resolvedCategoryId = getEntityId(resolvedCategory);
+        const flatHierarchy = flattenHierarchy(hierarchy || []);
+
+        setCategory(resolvedCategory);
+        setBreadcrumb(breadcrumbList);
+
+        let childList = [];
+        if (resolvedCategoryId) {
+          childList = (await getChildCategories(resolvedCategoryId)) || [];
+        }
+        if (childList.length === 0 && resolvedCategoryId) {
+          childList = flatHierarchy.filter((node) => String(getParentId(node)) === String(resolvedCategoryId));
+        }
         setChildCategories(childList);
-        setBreadcrumb(crumbs || []);
 
         // If this is a leaf (no children), show siblings in sidebar
-        if (childList.length === 0 && crumbs && crumbs.length >= 2) {
+        if (childList.length === 0 && breadcrumbList.length >= 2) {
           // Parent is second-to-last in breadcrumb
-          const parentCrumb = crumbs[crumbs.length - 2];
+          const parentCrumb = breadcrumbList[breadcrumbList.length - 2];
           setParentCategory(parentCrumb);
           const parentCrumbId = getEntityId(parentCrumb);
-          const siblings = parentCrumbId ? await getChildCategories(parentCrumbId) : [];
+          let siblings = parentCrumbId ? await getChildCategories(parentCrumbId) : [];
+          if ((!siblings || siblings.length === 0) && parentCrumbId) {
+            siblings = flatHierarchy.filter((node) => String(getParentId(node)) === String(parentCrumbId));
+          }
           setSiblingCategories(siblings || []);
-        } else if (childList.length === 0 && getParentId(cat)) {
+        } else if (childList.length === 0 && getParentId(resolvedCategory)) {
           // fallback: use parentId if no breadcrumb depth
-          const siblings = await getChildCategories(getParentId(cat));
+          const parentId = getParentId(resolvedCategory);
+          let siblings = await getChildCategories(parentId);
+          if ((!siblings || siblings.length === 0) && parentId) {
+            siblings = flatHierarchy.filter((node) => String(getParentId(node)) === String(parentId));
+          }
           setSiblingCategories(siblings || []);
         }
       } catch (e) {
