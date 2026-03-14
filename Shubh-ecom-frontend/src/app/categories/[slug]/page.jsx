@@ -52,6 +52,27 @@ import { SubCategoryGrid } from '@/components/category/SubCategoryGrid';
 import { PageSkeleton } from '@/components/category/PageSkeleton';
 import { logger } from '@/utils/logger';
 
+const getEntityId = (entity) => {
+  if (!entity) return '';
+  if (typeof entity === 'string') return entity;
+  if (typeof entity === 'object') {
+    if (entity._id) return String(entity._id);
+    if (entity.id) return String(entity.id);
+  }
+  return '';
+};
+
+const getParentId = (entity) => {
+  const raw = entity?.parentId;
+  if (!raw) return '';
+  if (typeof raw === 'string') return raw;
+  if (typeof raw === 'object') {
+    if (raw._id) return String(raw._id);
+    if (raw.id) return String(raw.id);
+  }
+  return '';
+};
+
 /* Main content component */
 const CategoryContent = () => {
   const { slug } = useParams();
@@ -93,8 +114,9 @@ const CategoryContent = () => {
       try {
         const cat = await getCategoryBySlug(slug);
         setCategory(cat);
+        const categoryId = getEntityId(cat);
         const [children, crumbs] = await Promise.all([
-          cat?._id ? getChildCategories(cat._id) : Promise.resolve([]),
+          categoryId ? getChildCategories(categoryId) : Promise.resolve([]),
           getCategoryBreadcrumb(slug),
         ]);
         const childList = children || [];
@@ -106,11 +128,12 @@ const CategoryContent = () => {
           // Parent is second-to-last in breadcrumb
           const parentCrumb = crumbs[crumbs.length - 2];
           setParentCategory(parentCrumb);
-          const siblings = await getChildCategories(parentCrumb._id);
+          const parentCrumbId = getEntityId(parentCrumb);
+          const siblings = parentCrumbId ? await getChildCategories(parentCrumbId) : [];
           setSiblingCategories(siblings || []);
-        } else if (childList.length === 0 && cat?.parentId) {
+        } else if (childList.length === 0 && getParentId(cat)) {
           // fallback: use parentId if no breadcrumb depth
-          const siblings = await getChildCategories(cat.parentId);
+          const siblings = await getChildCategories(getParentId(cat));
           setSiblingCategories(siblings || []);
         }
       } catch (e) {

@@ -48,6 +48,27 @@ const flattenHierarchy = (hierarchy = []) => {
   return flat;
 };
 
+const getEntityId = (value) => {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') {
+    if (value._id) return String(value._id);
+    if (value.id) return String(value.id);
+  }
+  return '';
+};
+
+const getParentId = (cat) => {
+  const parent = cat?.parentId;
+  if (!parent) return '';
+  if (typeof parent === 'string') return parent;
+  if (typeof parent === 'object') {
+    if (parent._id) return String(parent._id);
+    if (parent.id) return String(parent.id);
+  }
+  return '';
+};
+
 // ==================== PRIVATE HELPERS ====================
 
 /**
@@ -138,7 +159,7 @@ export const getRootCategories = async (fetchOptions) => {
     if (config.source === 'real') {
       try {
         const hierarchy = await getCategories(fetchOptions);
-        const fallbackRoots = flattenHierarchy(hierarchy).filter((cat) => !cat?.parentId);
+        const fallbackRoots = flattenHierarchy(hierarchy).filter((cat) => !getParentId(cat));
         if (fallbackRoots.length) return fallbackRoots;
       } catch (_err) {
         // continue to configured fallback
@@ -179,7 +200,7 @@ export const getChildCategories = async (parentId, fetchOptions) => {
       try {
         const hierarchy = await getCategories(fetchOptions);
         const flat = flattenHierarchy(hierarchy);
-        const fallbackChildren = flat.filter((cat) => String(cat?.parentId || '') === String(parentId));
+        const fallbackChildren = flat.filter((cat) => String(getParentId(cat)) === String(parentId));
         if (fallbackChildren.length) return fallbackChildren;
       } catch (_err) {
         // continue to configured fallback
@@ -248,7 +269,8 @@ export const getCategoryBreadcrumb = async (slug) => {
   while (stack.length) {
     const node = stack.pop();
     if (!node) continue;
-    flat.set(String(node._id || node.id), node);
+    const nodeId = getEntityId(node);
+    if (nodeId) flat.set(nodeId, node);
     if (Array.isArray(node.children)) {
       node.children.forEach((child) => stack.push(child));
     }
@@ -263,8 +285,9 @@ export const getCategoryBreadcrumb = async (slug) => {
   let current = target;
   while (current) {
     breadcrumb.unshift(current);
-    if (!current.parentId) break;
-    current = flat.get(String(current.parentId));
+    const parentId = getParentId(current);
+    if (!parentId) break;
+    current = flat.get(parentId);
   }
   
   return breadcrumb;
