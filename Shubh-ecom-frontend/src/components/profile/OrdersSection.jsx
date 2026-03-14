@@ -16,6 +16,22 @@ import {
   getOrderStatusLabel,
 } from '@/constants/orderStatus';
 
+const getItemName = (item = {}) =>
+  item?.product?.name ||
+  item?.productName ||
+  item?.name ||
+  item?.title ||
+  item?.snapshot?.name ||
+  item?.productSnapshot?.name ||
+  'Product';
+
+const getItemImages = (item = {}) =>
+  item?.product?.images ||
+  item?.productImage ||
+  item?.snapshot?.images ||
+  item?.productSnapshot?.images ||
+  [];
+
 export const OrdersSection = () => {
   const { accessToken, isAuthenticated } = useAuth();
   const [orders, setOrders] = useState([]);
@@ -82,10 +98,10 @@ export const OrdersSection = () => {
                 style={{ zIndex: displayItems.length - index }}>
                 <SafeImage
                   src={
-                    resolveProductImages(item.product?.images || [])[0] ||
+                    resolveProductImages(getItemImages(item))[0] ||
                     '/placeholder.jpg'
                   }
-                  alt={item.product?.name || 'Product'}
+                  alt={getItemName(item)}
                   fill
                   sizes='40px'
                   className='object-cover'

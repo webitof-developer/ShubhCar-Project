@@ -34,6 +34,20 @@ const unwrapPayload = (payload) =>
     ? payload.data
     : payload;
 
+const flattenHierarchy = (hierarchy = []) => {
+  const flat = [];
+  const stack = Array.isArray(hierarchy) ? [...hierarchy] : [];
+  while (stack.length) {
+    const node = stack.pop();
+    if (!node) continue;
+    flat.push(node);
+    if (Array.isArray(node.children) && node.children.length) {
+      node.children.forEach((child) => stack.push(child));
+    }
+  }
+  return flat;
+};
+
 // ==================== PRIVATE HELPERS ====================
 
 /**
@@ -121,6 +135,15 @@ export const getRootCategories = async (fetchOptions) => {
   } catch (error) {
     const url = `/categories/roots`;
     logger.error('[CATEGORY_SERVICE] getRootCategories failed:', { url, message: error.message });
+    if (config.source === 'real') {
+      try {
+        const hierarchy = await getCategories(fetchOptions);
+        const fallbackRoots = flattenHierarchy(hierarchy).filter((cat) => !cat?.parentId);
+        if (fallbackRoots.length) return fallbackRoots;
+      } catch (_err) {
+        // continue to configured fallback
+      }
+    }
     return applyFallback(config.fallback, demoCategories.filter(cat => !cat.parentId), 'CATEGORIES', config.source);
   }
 };
@@ -152,6 +175,16 @@ export const getChildCategories = async (parentId, fetchOptions) => {
   } catch (error) {
     const url = `/categories/children/${parentId}`;
     logger.error('[CATEGORY_SERVICE] getChildCategories failed:', { url, message: error.message });
+    if (config.source === 'real') {
+      try {
+        const hierarchy = await getCategories(fetchOptions);
+        const flat = flattenHierarchy(hierarchy);
+        const fallbackChildren = flat.filter((cat) => String(cat?.parentId || '') === String(parentId));
+        if (fallbackChildren.length) return fallbackChildren;
+      } catch (_err) {
+        // continue to configured fallback
+      }
+    }
     return applyFallback(config.fallback, demoCategories.filter(cat => cat.parentId === parentId), 'CATEGORIES', config.source);
   }
 };
@@ -184,6 +217,19 @@ export const getCategoryBySlug = async (slug, fetchOptions) => {
   } catch (error) {
     const url = `/categories/${slug}`;
     logger.error('[CATEGORY_SERVICE] getCategoryBySlug failed:', { url, message: error.message });
+    if (config.source === 'real') {
+      try {
+        const hierarchy = await getCategories(fetchOptions);
+        const fallbackCategory =
+          flattenHierarchy(hierarchy).find((cat) => String(cat?.slug || '') === String(slug)) || null;
+        if (fallbackCategory) {
+          cache.bySlug.set(slugKey, { value: fallbackCategory, expiresAt: Date.now() + CACHE_TTL_MS });
+          return fallbackCategory;
+        }
+      } catch (_err) {
+        // continue to configured fallback
+      }
+    }
     return applyFallback(config.fallback, demoCategories.find(cat => cat.slug === slug) || null, 'CATEGORIES', config.source);
   }
 };

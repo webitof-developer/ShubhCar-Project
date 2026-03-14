@@ -40,6 +40,22 @@ import {
   getPaymentStatusLabel,
 } from '@/constants/orderStatus';
 
+const getItemName = (item = {}) =>
+  item?.product?.name ||
+  item?.productName ||
+  item?.name ||
+  item?.title ||
+  item?.snapshot?.name ||
+  item?.productSnapshot?.name ||
+  'Product';
+
+const getItemImages = (item = {}) =>
+  item?.product?.images ||
+  item?.productImage ||
+  item?.snapshot?.images ||
+  item?.productSnapshot?.images ||
+  [];
+
 export function OrderRow({ order, accessToken }) {
   const [expanded, setExpanded] = useState(false);
   const [detail, setDetail] = useState(null);
@@ -174,10 +190,10 @@ export function OrderRow({ order, accessToken }) {
                 style={{ zIndex: displayItems.length - i }}>
                 <SafeImage
                   src={
-                    resolveProductImages(item.product?.images || [])[0] ||
+                    resolveProductImages(getItemImages(item))[0] ||
                     '/placeholder.jpg'
                   }
-                  alt={item.product?.name || 'Product'}
+                  alt={getItemName(item)}
                   fill
                   sizes='56px'
                   className='object-cover'
@@ -217,7 +233,7 @@ export function OrderRow({ order, accessToken }) {
             {/* Product names */}
             <p className='text-sm text-foreground font-medium truncate'>
               {(displayOrder.items || [])
-                .map((i) => i.product?.name)
+                .map((i) => getItemName(i))
                 .filter(Boolean)
                 .slice(0, 2)
                 .join(', ')}
@@ -325,10 +341,10 @@ export function OrderRow({ order, accessToken }) {
                     <div className='relative w-12 h-12 rounded-md bg-muted/50 overflow-hidden flex-shrink-0'>
                       <SafeImage
                         src={
-                          resolveProductImages(item.product?.images || [])[0] ||
+                          resolveProductImages(getItemImages(item))[0] ||
                           '/placeholder.jpg'
                         }
-                        alt={item.product?.name || 'Product'}
+                        alt={getItemName(item)}
                         fill
                         sizes='48px'
                         className='object-cover'
@@ -336,7 +352,7 @@ export function OrderRow({ order, accessToken }) {
                     </div>
                     <div className='flex-1 min-w-0'>
                       <p className='text-sm font-medium truncate'>
-                        {item.product?.name || 'Product'}
+                        {getItemName(item)}
                       </p>
                       <p className='text-xs text-muted-foreground'>
                         Qty: {item.quantity} × {formatPrice(item.price || 0)}

@@ -62,6 +62,7 @@ export function AuthProvider({ children }) {
   // Bootstrap auth state from HttpOnly cookies (via refresh endpoint).
   useEffect(() => {
     const loadAuthState = async () => {
+      const storedUser = getStorageItem('user');
       // Cleanup any legacy token persistence from previous builds.
       removeStorageItem('accessToken');
       removeStorageItem('refreshToken');
@@ -71,7 +72,7 @@ export function AuthProvider({ children }) {
         const cookieUser = refreshed?.user
           || (refreshed?.accessToken
             ? await authService.getCurrentUser(refreshed.accessToken)
-            : null);
+            : await authService.getCurrentUser(null));
 
         if (cookieUser) {
           persistSession({
@@ -86,11 +87,28 @@ export function AuthProvider({ children }) {
           setAccessToken(null);
           setRefreshToken(null);
         }
-      } catch {
-        removeStorageItem('user');
-        setUser(null);
-        setAccessToken(null);
-        setRefreshToken(null);
+      } catch (error) {
+        // Refresh endpoint may fail in some hosted setups even when auth cookie is valid.
+        const cookieUser = await authService.getCurrentUser(null);
+        if (cookieUser) {
+          persistSession({
+            user: cookieUser,
+            accessToken: null,
+            refreshToken: null,
+          });
+        } else if (error?.status === 0 && storedUser) {
+          // Keep last known user on transient network failure.
+          persistSession({
+            user: storedUser,
+            accessToken: null,
+            refreshToken: null,
+          });
+        } else {
+          removeStorageItem('user');
+          setUser(null);
+          setAccessToken(null);
+          setRefreshToken(null);
+        }
       }
 
       setLoading(false);

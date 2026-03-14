@@ -45,6 +45,12 @@ const parseDateSafe = (value) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
+const normalizeProductType = (value) => {
+  const type = String(value || '').trim().toUpperCase();
+  if (type === 'OEM' || type === 'OES' || type === 'AFTERMARKET') return type;
+  return value;
+};
+
 const isDemoFlashDealActive = (product) => {
   if (!product?.isFlashDeal) return false;
   const now = new Date();
@@ -59,6 +65,7 @@ const normalizeProduct = (product) => {
   if (!product) return product;
   return {
     ...product,
+    productType: normalizeProductType(product.productType),
     images: resolveProductImages(product.images || []),
   };
 };
@@ -698,9 +705,12 @@ export const getProductAlternatives = async (productId, fetchOptions) => {
     const url = `/products/id/${productId}/alternatives`;
     const data = await api.get(url, fetchOptions);
     const payload = unwrapPayload(data);
+    const oemRaw = payload?.oem || payload?.OEM || payload?.oemAlternatives || [];
+    const aftermarketRaw =
+      payload?.aftermarket || payload?.AFTERMARKET || payload?.aftermarketAlternatives || [];
     return {
-      oem: normalizeProductList(payload?.oem),
-      aftermarket: normalizeProductList(payload?.aftermarket),
+      oem: normalizeProductList(oemRaw),
+      aftermarket: normalizeProductList(aftermarketRaw),
     };
   } catch (error) {
     const url = `/products/id/${productId}/alternatives`;

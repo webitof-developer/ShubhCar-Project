@@ -336,22 +336,20 @@ const APP_CONFIG = {
 // ============================================================================
 // ENVIRONMENT AUTO-DETECTION
 // ============================================================================
-if (typeof window !== 'undefined') {
-  const isProd = process.env.NODE_ENV === 'production';
-  const isStaging = process.env.NEXT_PUBLIC_APP_ENV === 'staging';
+const isProdEnv = process.env.NODE_ENV === 'production';
+const isStagingEnv = process.env.NEXT_PUBLIC_APP_ENV === 'staging';
 
-  if (isProd) {
-    APP_CONFIG.dataSource.products = { source: 'real', fallback: 'error' };
-    APP_CONFIG.dataSource.categories = { source: 'real', fallback: 'error' };
-    APP_CONFIG.dataSource.orders = { source: 'real', fallback: 'error' };
-    APP_CONFIG.dataSource.reviews = { source: 'real', fallback: 'error' };
-    APP_CONFIG.dataSource.profile.address = { source: 'real', fallback: 'error' };
-    APP_CONFIG.dataSource.profile.wishlist = { source: 'real', fallback: 'error' };
-  } else if (isStaging) {
-    APP_CONFIG.dataSource.products = { source: 'real', fallback: 'error' };
-    APP_CONFIG.dataSource.categories = { source: 'real', fallback: 'error' };
-    APP_CONFIG.dataSource.profile.address = { source: 'real', fallback: 'error' };
-  }
+if (isProdEnv) {
+  APP_CONFIG.dataSource.products = { source: 'real', fallback: 'error' };
+  APP_CONFIG.dataSource.categories = { source: 'real', fallback: 'error' };
+  APP_CONFIG.dataSource.orders = { source: 'real', fallback: 'error' };
+  APP_CONFIG.dataSource.reviews = { source: 'real', fallback: 'error' };
+  APP_CONFIG.dataSource.profile.address = { source: 'real', fallback: 'error' };
+  APP_CONFIG.dataSource.profile.wishlist = { source: 'real', fallback: 'error' };
+} else if (isStagingEnv) {
+  APP_CONFIG.dataSource.products = { source: 'real', fallback: 'error' };
+  APP_CONFIG.dataSource.categories = { source: 'real', fallback: 'error' };
+  APP_CONFIG.dataSource.profile.address = { source: 'real', fallback: 'error' };
 }
 
 // ============================================================================

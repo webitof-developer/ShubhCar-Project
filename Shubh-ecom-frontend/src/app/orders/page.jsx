@@ -23,6 +23,15 @@ import {
 import { OrdersFilterPanel } from '@/components/orders/OrdersFilterPanel';
 import { logger } from '@/utils/logger';
 
+const getItemName = (item = {}) =>
+  item?.product?.name ||
+  item?.productName ||
+  item?.name ||
+  item?.title ||
+  item?.snapshot?.name ||
+  item?.productSnapshot?.name ||
+  '';
+
 const SORT_OPTIONS = [
   { value: 'date-desc', label: 'Newest First' },
   { value: 'date-asc', label: 'Oldest First' },
@@ -63,7 +72,7 @@ const OrdersV2 = () => {
       const q = searchQuery.toLowerCase();
       result = result.filter((o) =>
         o.orderNumber?.toLowerCase().includes(q) ||
-        (o.items || []).some((i) => i.product?.name?.toLowerCase().includes(q))
+        (o.items || []).some((i) => getItemName(i).toLowerCase().includes(q))
       );
     }
     if (statusFilter !== 'all') result = result.filter((o) => o.orderStatus === statusFilter);

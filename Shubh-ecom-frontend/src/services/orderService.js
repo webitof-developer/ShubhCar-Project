@@ -40,6 +40,42 @@ const extractOrdersArray = (payload) => {
   return [];
 };
 
+const resolveOrderItemName = (item = {}) =>
+  item?.product?.name ||
+  item?.productName ||
+  item?.name ||
+  item?.title ||
+  item?.snapshot?.name ||
+  item?.productSnapshot?.name ||
+  'Product';
+
+const resolveOrderItemImage = (item = {}) =>
+  item?.product?.images ||
+  item?.productImage ||
+  item?.snapshot?.images ||
+  item?.productSnapshot?.images ||
+  [];
+
+const normalizeOrderItem = (item = {}) => {
+  const name = resolveOrderItemName(item);
+  const images = resolveOrderItemImage(item);
+  const product = {
+    ...(item?.product || {}),
+    name,
+    images,
+  };
+  return {
+    ...item,
+    productName: item?.productName || name,
+    product,
+  };
+};
+
+const normalizeOrder = (order = {}) => ({
+  ...order,
+  items: Array.isArray(order?.items) ? order.items.map(normalizeOrderItem) : [],
+});
+
 /**
  * Log data source being used
  * @param {string} method - Method name
@@ -103,7 +139,7 @@ export const getMyOrders = async (accessToken = null, { includeItems } = {}) => 
     const path = params.toString() ? `/orders/my?${params.toString()}` : '/orders/my';
     const payload = await api.authGet(path, accessToken || null);
     const orders = extractOrdersArray(payload);
-    return orders;
+    return orders.map(normalizeOrder);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     logger.error(`[ORDER_SERVICE] Fetch orders error: ${message}`);
@@ -144,7 +180,22 @@ export const getOrder = async (accessToken = null, orderId) => {
   logDataSource('getOrder', false);
 
   try {
-    return await api.authGet(`/orders/${orderId}`, accessToken || null);
+    const payload = await api.authGet(`/orders/${orderId}`, accessToken || null);
+    if (payload?.order) {
+      const normalizedItems = Array.isArray(payload?.items)
+        ? payload.items.map(normalizeOrderItem)
+        : [];
+      const normalizedOrder = normalizeOrder({
+        ...payload.order,
+        items: normalizedItems.length ? normalizedItems : payload.order?.items,
+      });
+      return {
+        ...payload,
+        order: normalizedOrder,
+        items: normalizedItems.length ? normalizedItems : normalizedOrder.items,
+      };
+    }
+    return normalizeOrder(payload || {});
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     logger.error(`[ORDER_SERVICE] Fetch order error: ${message}`);

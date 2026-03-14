@@ -1,13 +1,21 @@
 import { NextResponse } from 'next/server';
 
-const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+const isProduction = process.env.NODE_ENV === 'production';
+const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+if (isProduction && !RAW_API_URL) {
+  throw new Error('NEXT_PUBLIC_API_URL is required in production');
+}
 
 const resolveBackendConfig = () => {
   try {
-    const parsed = new URL(RAW_API_URL);
+    const parsed = new URL(RAW_API_URL || 'http://localhost:5000/api/v1');
     const basePath = parsed.pathname.replace(/\/$/, '') || '/api/v1';
     return { origin: parsed.origin, basePath };
   } catch {
+    if (isProduction) {
+      throw new Error('Invalid NEXT_PUBLIC_API_URL in production');
+    }
     return { origin: 'http://localhost:5000', basePath: '/api/v1' };
   }
 };
