@@ -50,7 +50,7 @@ export const CategoryGrid = async ({ categories } = {}) => {
                     src={resolvedImage}
                     alt={cat.name}
                     fill
-                    className={`${usesDefaultImage ? 'object-cover scale-[1.50]' : 'object-contain'} rounded-lg transition-transform duration-500 group-hover:scale-110`}
+                    className={`${usesDefaultImage ? 'object-cover scale-[1.50] group-hover:scale-[1.60]' : 'object-contain group-hover:scale-110'} rounded-lg transition-transform duration-500`}
                     sizes='(max-width: 768px) 80px, 96px'
                   />
                 </div>
